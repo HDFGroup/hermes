@@ -361,7 +361,7 @@ class vector : public ShmContainer {
   }
 
   /** Destroy all shared memory allocated by the vector */
-  void shm_destroy_main() {
+  HSHM_ALWAYS_INLINE void shm_destroy_main() {
     erase(begin(), end());
     GetAllocator()->Free(vec_ptr_);
   }
@@ -373,7 +373,7 @@ class vector : public ShmContainer {
   /**
    * Convert to std::vector
    * */
-  std::vector<T> vec() {
+  HSHM_ALWAYS_INLINE std::vector<T> vec() {
     std::vector<T> v;
     v.reserve(size());
     for (T& entry : *this) {
@@ -390,7 +390,7 @@ class vector : public ShmContainer {
    * @param args the arguments to construct
    * */
   template<typename ...Args>
-  void reserve(size_t length, Args&& ...args) {
+  HSHM_ALWAYS_INLINE void reserve(size_t length, Args&& ...args) {
     if (length == 0) { return; }
     grow_vector(data_ar(), length, false, std::forward<Args>(args)...);
   }
@@ -470,25 +470,25 @@ class vector : public ShmContainer {
 
   /** Replace an element at a position */
   template<typename ...Args>
-  void replace(iterator_t pos, Args&&... args) {
+  HSHM_ALWAYS_INLINE void replace(iterator_t pos, Args&&... args) {
     if (pos.is_end()) {
       return;
     }
     ShmArchive<T> *vec = data_ar();
-    (*this)[pos.i_].shm_destroy();
+    hipc::Allocator::DestructObj((*this)[pos.i_]);
     HSHM_MAKE_AR(vec[pos.i_], GetAllocator(),
                  std::forward<Args>(args)...)
   }
 
   /** Delete the element at \a pos position */
-  void erase(iterator_t pos) {
+  HSHM_ALWAYS_INLINE void erase(iterator_t pos) {
     if (pos.is_end()) return;
     shift_left(pos, 1);
     length_ -= 1;
   }
 
   /** Delete elements between first and last  */
-  void erase(iterator_t first, iterator_t last) {
+  HSHM_ALWAYS_INLINE void erase(iterator_t first, iterator_t last) {
     size_t last_i;
     if (first.is_end()) return;
     if (last.is_end()) {

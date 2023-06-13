@@ -88,20 +88,15 @@ if(HERMES_CXX_PROFILE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
     message("CXX PROFILER IS ON")
 endif()
-function(make_gprof exec_name exec_dir)
-    message("gprof -b -A -p -q ${exec_dir}/${exec_name} gmon.out > gprof_out.txt")
-    add_custom_target(
-      ${exec_name}_gprof
-      COMMAND gprof -b -A -p -q ${exec_dir}/${exec_name} gmon.out)
-endfunction()
+#function(make_gprof exec_name exec_dir)
+#    add_custom_target(
+#      ${exec_name}_gprof
+#      COMMAND gprof -b -A -p -q ${exec_dir}/${exec_name} gmon.out)
+#endfunction()
 
 #------------------------------------------------------------------------------
 # External libraries
 #------------------------------------------------------------------------------
-
-# YAML-CPP
-find_package(yaml-cpp REQUIRED)
-message(STATUS "found yaml-cpp at ${yaml-cpp_DIR}")
 
 # Catch2
 find_package(Catch2 3.0.1 REQUIRED)
@@ -200,3 +195,15 @@ endif()
 # Install hshm
 #------------------------------------------------------------------------------
 install(DIRECTORY include DESTINATION ${CMAKE_INSTALL_PREFIX})
+
+configure_file(
+        ${CMAKE_SOURCE_DIR}/CMake/HermesShmConfig.cmake
+        ${PROJECT_BINARY_DIR}/CMakeFiles/HermesShmConfig.cmake @ONLY
+)
+
+install(
+    FILES
+        ${PROJECT_BINARY_DIR}/CMakeFiles/HermesShmConfig.cmake
+    DESTINATION
+        ${CMAKE_INSTALL_PREFIX}/cmake
+)

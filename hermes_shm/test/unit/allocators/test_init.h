@@ -37,6 +37,8 @@ Allocator* Pretest() {
   std::string shm_url = "test_allocators";
   allocator_id_t alloc_id(0, 1);
   auto mem_mngr = HERMES_MEMORY_MANAGER;
+  mem_mngr->UnregisterAllocator(alloc_id);
+  mem_mngr->UnregisterBackend(shm_url);
   mem_mngr->CreateBackend<BackendT>(
     MemoryManager::GetDefaultBackendSize(), shm_url);
   mem_mngr->CreateAllocator<AllocT>(

@@ -16,22 +16,22 @@
 
 #include "hermes_shm/thread/thread_model/thread_model.h"
 #include "hermes_shm/thread/thread_model/thread_model_factory.h"
-#include <hermes_shm/constants/data_structure_singleton_macros.h>
 #include <hermes_shm/introspect/system_info.h>
 #include <mutex>
 
-#define US_TO_CLOCKS(x) (x * 56)
+#include "hermes_shm/util/singleton/_global_singleton.h"
+#define HERMES_THREAD_MODEL \
+  hshm::GlobalSingleton<hshm::ThreadModelManager>::GetInstance()
+#define HERMES_THREAD_MODEL_T \
+  hshm::ThreadModelManager*
 
 namespace hshm {
-
-union NodeThreadId;
 
 class ThreadModelManager {
  public:
   ThreadType type_; /**< The type of threads used in this program */
   std::unique_ptr<thread_model::ThreadModel>
     thread_static_; /**< Functions static to all threads */
-  std::mutex lock_; /**< Synchronize */
 
   /** Default constructor */
   ThreadModelManager() {
@@ -39,34 +39,16 @@ class ThreadModelManager {
   }
 
   /** Set the threading model of this application */
-  void SetThreadModel(ThreadType type) {
-    lock_.lock();
-    if (type_ == type) {
-      lock_.unlock();
-      return;
-    }
-    type_ = type;
-    thread_static_ = thread_model::ThreadFactory::Get(type);
-    if (thread_static_ == nullptr) {
-      HELOG(kFatal, "Could not load the threading model");
-    }
-    lock_.unlock();
-  }
+  void SetThreadModel(ThreadType type);
 
   /** Sleep for a period of time (microseconds) */
-  void SleepForUs(size_t us) {
-    thread_static_->SleepForUs(us);
-  }
+  void SleepForUs(size_t us);
 
   /** Call Yield */
-  void Yield() {
-    thread_static_->Yield();
-  }
+  void Yield();
 
   /** Call GetTid */
-  tid_t GetTid() {
-    return thread_static_->GetTid();
-  }
+  tid_t GetTid();
 };
 
 /** A unique identifier of this thread across processes */

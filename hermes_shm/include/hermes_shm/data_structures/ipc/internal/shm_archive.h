@@ -90,13 +90,14 @@ class ShmArchive {
 
   /** Initialize */
   template<typename ...Args>
-  void shm_init(Args&& ...args) {
+  HSHM_ALWAYS_INLINE void shm_init(Args&& ...args) {
     Allocator::ConstructObj<T>(get_ref(), std::forward<Args>(args)...);
   }
 
   /** Initialize piecewise */
   template<typename ArgPackT_1, typename ArgPackT_2>
-  void shm_init_piecewise(ArgPackT_1 &&args1, ArgPackT_2 &&args2) {
+  HSHM_ALWAYS_INLINE void shm_init_piecewise(ArgPackT_1 &&args1,
+                                             ArgPackT_2 &&args2) {
     return hshm::PassArgPack::Call(
       MergeArgPacks::Merge(
         make_argpack(get_ref()),

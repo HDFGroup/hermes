@@ -15,13 +15,13 @@
 #define HERMES_MEMORY_ALLOCATOR_STACK_ALLOCATOR_H_
 
 #include "allocator.h"
+#include "heap.h"
 #include "hermes_shm/thread/lock.h"
 
 namespace hshm::ipc {
 
 struct StackAllocatorHeader : public AllocatorHeader {
-  std::atomic<size_t> region_off_;
-  std::atomic<size_t> region_size_;
+  HeapAllocator heap_;
   std::atomic<size_t> total_alloc_;
 
   StackAllocatorHeader() = default;
@@ -32,15 +32,15 @@ struct StackAllocatorHeader : public AllocatorHeader {
                  size_t region_size) {
     AllocatorHeader::Configure(alloc_id, AllocatorType::kStackAllocator,
                                custom_header_size);
-    region_off_ = region_off;
-    region_size_ = region_size;
+    heap_.shm_init(region_off, region_size);
     total_alloc_ = 0;
   }
 };
 
 class StackAllocator : public Allocator {
- private:
+ public:
   StackAllocatorHeader *header_;
+  HeapAllocator *heap_;
 
  public:
   /**

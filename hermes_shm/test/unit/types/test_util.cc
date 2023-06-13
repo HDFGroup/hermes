@@ -102,10 +102,12 @@ TEST_CASE("TestLogger") {
   HILOG(kInfo, "I'm more likely to be printed (2): {}", 0)
   HILOG(kDebug, "I won't be printed: {}", 10)
 
-#ifdef TEST_ERRORS
-  HELOG(kError, "I will NOT cause an EXIT!")
+  HELOG(kWarning, "I am a WARNING! Will NOT cause an EXIT!")
+  HELOG(kError, "I am an ERROR! I will NOT cause an EXIT!")
+}
+
+TEST_CASE("TestFatalLogger", "[error=FatalError]") {
   HELOG(kFatal, "I will cause an EXIT!")
-#endif
 }
 
 TEST_CASE("TestFormatter") {

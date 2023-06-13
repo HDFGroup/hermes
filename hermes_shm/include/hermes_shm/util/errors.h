@@ -26,6 +26,8 @@ namespace hshm {
   const Error MMAP_FAILED("Could not mmap file: {}");
   const Error LAZY_ERROR("Error in function {}");
   const Error PTHREAD_CREATE_FAILED("Failed to create a pthread");
+  const Error MEMORY_BACKEND_REPEATED("Attempted to register two backends "
+                                      "with the same id");
   const Error NOT_IMPLEMENTED("{} not implemented");
 
   const Error DLSYM_MODULE_NOT_FOUND("Module {} was not loaded; error {}");
@@ -51,6 +53,7 @@ namespace hshm {
   const Error ALIGNED_ALLOC_NOT_SUPPORTED("Allocator does not support aligned allocations");
   const Error PAGE_SIZE_UNSUPPORTED("Allocator does not support size: {}");
   const Error OUT_OF_MEMORY("{}: could not allocate memory of size {}");
+  const Error OUT_OF_CACHE("{}: could not cache a page. Allocator overloaded.");
   const Error INVALID_FREE("{}: could not free memory of size {}");
   const Error DOUBLE_FREE("Freeing the same memory twice!");
 

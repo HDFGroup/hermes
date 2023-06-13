@@ -70,7 +70,7 @@ class ShmContainer {};
 
 /** Typed nullptr */
 template<typename T>
-static inline T* typed_nullptr() {
+HSHM_ALWAYS_INLINE static T* typed_nullptr() {
   return reinterpret_cast<T*>(NULL);
 }
 

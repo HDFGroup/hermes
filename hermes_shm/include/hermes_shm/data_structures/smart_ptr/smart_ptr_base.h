@@ -199,7 +199,8 @@ class smart_ptr_base {
   }
 
   /** Deserialize from an offset pointer */
-  HSHM_ALWAYS_INLINE void shm_deserialize(Allocator *alloc, const OffsetPointer &ar) {
+  HSHM_ALWAYS_INLINE void shm_deserialize(Allocator *alloc,
+                                          const OffsetPointer &ar) {
     obj_ = alloc->template Convert<T, OffsetPointer>(ar);
     if constexpr(unique) {
       flags_.UnsetBits(POINTER_IS_OWNED);

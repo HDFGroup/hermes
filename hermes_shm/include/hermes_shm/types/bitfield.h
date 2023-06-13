@@ -14,6 +14,7 @@
 #define HERMES_INCLUDE_HERMES_TYPES_BITFIELD_H_
 
 #include <cstdint>
+#include <hermes_shm/constants/macros.h>
 
 namespace hshm {
 
@@ -27,35 +28,35 @@ template<typename T = uint32_t>
 struct bitfield {
   T bits_;
 
-  bitfield() : bits_(0) {}
+  HSHM_ALWAYS_INLINE bitfield() : bits_(0) {}
 
-  explicit bitfield(T mask) : bits_(mask) {}
+  HSHM_ALWAYS_INLINE explicit bitfield(T mask) : bits_(mask) {}
 
-  inline void SetBits(T mask) {
+  HSHM_ALWAYS_INLINE void SetBits(T mask) {
     bits_ |= mask;
   }
 
-  inline void UnsetBits(T mask) {
+  HSHM_ALWAYS_INLINE void UnsetBits(T mask) {
     bits_ &= ~mask;
   }
 
-  inline bool Any(T mask) const {
+  HSHM_ALWAYS_INLINE bool Any(T mask) const {
     return bits_ & mask;
   }
 
-  inline bool All(T mask) const {
+  HSHM_ALWAYS_INLINE bool All(T mask) const {
     return Any(mask) == mask;
   }
 
-  inline void CopyBits(bitfield field, T mask) {
+  HSHM_ALWAYS_INLINE void CopyBits(bitfield field, T mask) {
     bits_ &= (field.bits_ & mask);
   }
 
-  inline void Clear() {
+  HSHM_ALWAYS_INLINE void Clear() {
     bits_ = 0;
   }
 
-  static T MakeMask(int start, int length) {
+  HSHM_ALWAYS_INLINE static T MakeMask(int start, int length) {
     return ((((T)1) << length) - 1) << start;
   }
 } __attribute__((packed));
@@ -82,13 +83,13 @@ template<size_t NUM_BITS,
 struct big_bitfield {
   bitfield32_t bits_[LEN::value];
 
-  big_bitfield() : bits_() {}
+  HSHM_ALWAYS_INLINE big_bitfield() : bits_() {}
 
-  inline size_t size() const {
+  HSHM_ALWAYS_INLINE size_t size() const {
     return LEN::value;
   }
 
-  inline void SetBits(int start, int length) {
+  HSHM_ALWAYS_INLINE void SetBits(int start, int length) {
     int bf_idx = start / 32;
     int bf_idx_count = 32 - bf_idx;
     int rem = length;
@@ -104,7 +105,7 @@ struct big_bitfield {
     }
   }
 
-  inline void UnsetBits(int start, int length) {
+  HSHM_ALWAYS_INLINE void UnsetBits(int start, int length) {
     int bf_idx = start / 32;
     int bf_idx_count = 32 - bf_idx;
     int rem = length;
@@ -120,7 +121,7 @@ struct big_bitfield {
     }
   }
 
-  inline bool Any(int start, int length) const {
+  HSHM_ALWAYS_INLINE bool Any(int start, int length) const {
     int bf_idx = start / 32;
     int bf_idx_count = 32 - bf_idx;
     int rem = length;
@@ -139,7 +140,7 @@ struct big_bitfield {
     return false;
   }
 
-  inline bool All(int start, int length) const {
+  HSHM_ALWAYS_INLINE bool All(int start, int length) const {
     int bf_idx = start / 32;
     int bf_idx_count = 32 - bf_idx;
     int rem = length;
@@ -158,7 +159,7 @@ struct big_bitfield {
     return true;
   }
 
-  inline void Clear() {
+  HSHM_ALWAYS_INLINE void Clear() {
     memset((void*)bits_, 0, sizeof(bitfield32_t) * LEN::value);
   }
 } __attribute__((packed));

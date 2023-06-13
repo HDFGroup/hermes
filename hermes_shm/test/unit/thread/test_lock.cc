@@ -40,19 +40,8 @@ void MutexTest() {
   }
 }
 
-void barrier_for_reads(std::vector<int> &tid_start, size_t left) {
-  size_t count;
-  do {
-    count = 0;
-    for (size_t i = 0; i < left; ++i) {
-      count += tid_start[i];
-    }
-  } while (count < left);
-}
-
-void RwLockTest(int producers, int consumers) {
+void RwLockTest(int producers, int consumers, size_t loop_count) {
   size_t nthreads = producers + consumers;
-  size_t loop_count = 100000;
   size_t count = 0;
   RwLock lock;
 
@@ -69,7 +58,7 @@ void RwLockTest(int producers, int consumers) {
       // The left 2 threads will be readers
       lock.ReadLock(tid);
       for (size_t i = 0; i < loop_count; ++i) {
-        REQUIRE(count < total_size);
+        REQUIRE(count <= total_size);
       }
       lock.ReadUnlock();
     } else {
@@ -91,7 +80,7 @@ TEST_CASE("Mutex") {
 }
 
 TEST_CASE("RwLock") {
-  RwLockTest(8, 0);
-  RwLockTest(7, 1);
-  RwLockTest(4, 4);
+  RwLockTest(8, 0, 1000000);
+  RwLockTest(7, 1, 1000000);
+  RwLockTest(4, 4, 1000000);
 }

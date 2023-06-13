@@ -27,6 +27,7 @@ void StackAllocator::shm_init(allocator_id_t id,
   size_t region_off = (custom_header_ - buffer_) + custom_header_size;
   size_t region_size = buffer_size_ - region_off;
   header_->Configure(id, custom_header_size, region_off, region_size);
+  heap_ = &header_->heap_;
 }
 
 void StackAllocator::shm_deserialize(char *buffer,
@@ -35,6 +36,7 @@ void StackAllocator::shm_deserialize(char *buffer,
   buffer_size_ = buffer_size;
   header_ = reinterpret_cast<StackAllocatorHeader*>(buffer_);
   custom_header_ = reinterpret_cast<char*>(header_ + 1);
+  heap_ = &header_->heap_;
 }
 
 size_t StackAllocator::GetCurrentlyAllocatedSize() {
@@ -43,15 +45,11 @@ size_t StackAllocator::GetCurrentlyAllocatedSize() {
 
 OffsetPointer StackAllocator::AllocateOffset(size_t size) {
   size += sizeof(MpPage);
-  if (header_->region_size_ < size) {
-    return OffsetPointer::GetNull();
-  }
-  OffsetPointer p(header_->region_off_.fetch_add(size));
+  OffsetPointer p = heap_->AllocateOffset(size);
   auto hdr = Convert<MpPage>(p);
   hdr->SetAllocated();
   hdr->page_size_ = size;
   hdr->off_ = 0;
-  header_->region_size_.fetch_sub(hdr->page_size_);
   header_->total_alloc_.fetch_add(hdr->page_size_);
   return p + sizeof(MpPage);
 }

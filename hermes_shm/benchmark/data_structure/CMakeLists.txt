@@ -15,6 +15,7 @@ add_executable(benchmark_data_structures
         vector.cc
         unordered_map.cc
         queue.cc
+        lock.cc
 )
 add_dependencies(benchmark_data_structures hermes_shm_data_structures)
 target_link_libraries(benchmark_data_structures
@@ -24,4 +25,4 @@ target_link_libraries(benchmark_data_structures
         OpenMP::OpenMP_CXX
         ${Boost_LIBRARIES})
 
-make_gprof(benchmark_data_structures ${CMAKE_CURRENT_BINARY_DIR})
+# make_gprof(benchmark_data_structures ${CMAKE_CURRENT_BINARY_DIR})

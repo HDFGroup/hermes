@@ -21,6 +21,9 @@ add_executable(test_data_structure_exec
         unique_ptr.cc
         unordered_map.cc
         mpsc_queue.cc
+        spsc_queue.cc
+        charbuf.cc
+        ticket_queue.cc
 )
 
 add_dependencies(test_data_structure_exec hermes_shm_data_structures)
@@ -37,36 +40,48 @@ add_test(NAME test_string COMMAND
         ${CMAKE_BINARY_DIR}/bin/test_data_structure_exec "String")
 
 # VECTOR TESTS
-add_test(NAME test_vector_of_int COMMAND
-        ${CMAKE_BINARY_DIR}/bin/test_data_structure_exec "VectorOfInt")
-add_test(NAME test_vector_of_string COMMAND
-        ${CMAKE_BINARY_DIR}/bin/test_data_structure_exec "VectorOfString")
-add_test(NAME test_vector_of_list_of_string COMMAND
-        ${CMAKE_BINARY_DIR}/bin/test_data_structure_exec "VectorOfListOfString")
+add_test(NAME test_vector COMMAND
+        ${CMAKE_BINARY_DIR}/bin/test_data_structure_exec "Vector*")
 
 # LIST TESTS
-add_test(NAME test_list_of_int COMMAND
-        ${CMAKE_BINARY_DIR}/bin/test_data_structure_exec "ListOfInt")
-add_test(NAME test_list_of_string COMMAND
-        ${CMAKE_BINARY_DIR}/bin/test_data_structure_exec "ListOfString")
+add_test(NAME test_list COMMAND
+        ${CMAKE_BINARY_DIR}/bin/test_data_structure_exec "List*")
+
+# SLIST TESTS
+add_test(NAME test_slist COMMAND
+        ${CMAKE_BINARY_DIR}/bin/test_data_structure_exec "Slist*")
 
 # MANUAL PTR TESTS
-add_test(NAME test_manual_ptr_of_string COMMAND
-        ${CMAKE_BINARY_DIR}/bin/test_data_structure_exec "ManualPtrOfString")
+add_test(NAME test_manual_ptr COMMAND
+        ${CMAKE_BINARY_DIR}/bin/test_data_structure_exec "ManualPtr*")
 
 # UNIQUE PTR TESTS
-add_test(NAME test_unique_ptr_of_string COMMAND
-        ${CMAKE_BINARY_DIR}/bin/test_data_structure_exec "UniquePtrOfString")
+add_test(NAME test_unique_ptr COMMAND
+        ${CMAKE_BINARY_DIR}/bin/test_data_structure_exec "UniquePtr*")
 
 # UNORDERED_MAP TESTS
-add_test(NAME test_unordered_map_of_int_int COMMAND
-        ${CMAKE_BINARY_DIR}/bin/test_data_structure_exec "UnorderedMapOfIntInt")
-add_test(NAME test_unordered_map_of_int_str COMMAND
-        ${CMAKE_BINARY_DIR}/bin/test_data_structure_exec "UnorderedMapOfIntString")
-add_test(NAME test_unordered_map_of_str_int COMMAND
-        ${CMAKE_BINARY_DIR}/bin/test_data_structure_exec "UnorderedMapOfStringInt")
-add_test(NAME test_unordered_map_of_str_str COMMAND
-        ${CMAKE_BINARY_DIR}/bin/test_data_structure_exec "UnorderedMapOfStringString")
+add_test(NAME test_unordered_map COMMAND
+        ${CMAKE_BINARY_DIR}/bin/test_data_structure_exec "UnorderedMap*")
+
+# PAIR TESTS
+add_test(NAME test_pair COMMAND
+        ${CMAKE_BINARY_DIR}/bin/test_data_structure_exec "Pair*")
+
+# IQUEUE TESTS
+add_test(NAME test_iqueue COMMAND
+        ${CMAKE_BINARY_DIR}/bin/test_data_structure_exec "IqueueOfMpPage")
+
+# SPSC TESTS
+add_test(NAME test_spsc COMMAND
+        ${CMAKE_BINARY_DIR}/bin/test_data_structure_exec "TestSpsc*")
+
+# MPSC TESTS
+add_test(NAME test_mpsc COMMAND
+        ${CMAKE_BINARY_DIR}/bin/test_data_structure_exec "TestMpsc*")
+
+# TicketQueue TESTS
+add_test(NAME test_tkt_queue COMMAND
+        ${CMAKE_BINARY_DIR}/bin/test_data_structure_exec "TestTicket*")
 
 #------------------------------------------------------------------------------
 # Install Targets
@@ -78,3 +93,10 @@ install(TARGETS
         LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
         ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
         RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR})
+
+#-----------------------------------------------------------------------------
+# Coverage
+#-----------------------------------------------------------------------------
+if(HERMES_ENABLE_COVERAGE)
+    set_coverage_flags(test_data_structure_exec)
+endif()

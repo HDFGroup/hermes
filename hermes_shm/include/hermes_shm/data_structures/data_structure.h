@@ -14,14 +14,24 @@
 #ifndef HERMES_DATA_STRUCTURES_DATA_STRUCTURE_H_
 #define HERMES_DATA_STRUCTURES_DATA_STRUCTURE_H_
 
-#include "hermes_shm/data_structures/ipc/internal/shm_internal.h"
+#include "ipc/internal/shm_internal.h"
 #include "hermes_shm/memory/memory_manager.h"
-#include "hermes_shm/data_structures/ipc/pair.h"
-#include "hermes_shm/data_structures/ipc/string.h"
+
+#include "containers/charbuf.h"
+#include "containers/converters.h"
+#include "containers/functional.h"
+#include "containers/tuple_base.h"
+
+#include "ipc/pair.h"
+#include "ipc/string.h"
 #include "ipc/list.h"
 #include "ipc/vector.h"
+#include "ipc/mpsc_queue.h"
+#include "ipc/slist.h"
+#include "ipc/split_ticket_queue.h"
+#include "ipc/spsc_queue.h"
+#include "ipc/ticket_queue.h"
 #include "ipc/unordered_map.h"
-#include "hermes_shm/memory/memory_manager.h"
 
 namespace hipc = hshm::ipc;
 

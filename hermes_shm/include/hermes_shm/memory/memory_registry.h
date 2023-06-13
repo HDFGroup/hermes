@@ -17,6 +17,7 @@
 #include "backend/memory_backend.h"
 #include "hermes_shm/memory/allocator/stack_allocator.h"
 #include "hermes_shm/memory/backend/posix_mmap.h"
+#include "hermes_shm/util/errors.h"
 
 namespace hipc = hshm::ipc;
 
@@ -42,26 +43,34 @@ class MemoryRegistry {
    * */
   MemoryRegistry();
 
-  /** Register a memory backend */
-  MemoryBackend* RegisterBackend(const std::string &url,
-                                 std::unique_ptr<MemoryBackend> &backend) {
+  /**
+   * Register a unique memory backend. Throws an exception if the backend
+   * already exists. This is because unregistering a backend can cause
+   * ramifications across allocators.
+   *
+   * @param url the backend's unique identifier
+   * @param backend the backend to register
+   * */
+  HSHM_ALWAYS_INLINE MemoryBackend* RegisterBackend(
+      const std::string &url,
+      std::unique_ptr<MemoryBackend> &backend) {
     auto ptr = backend.get();
-    if (backends_.find(url) != backends_.end()) {
-      backends_.erase(url);
+    if (GetBackend(url)) {
+      throw MEMORY_BACKEND_REPEATED.format();
     }
     backends_.emplace(url, std::move(backend));
     return ptr;
   }
 
   /** Unregister memory backend */
-  void UnregisterBackend(const std::string &url) {
+  HSHM_ALWAYS_INLINE void UnregisterBackend(const std::string &url) {
     backends_.erase(url);
   }
 
   /**
    * Returns a pointer to a backend that has already been attached.
    * */
-  MemoryBackend* GetBackend(const std::string &url) {
+  HSHM_ALWAYS_INLINE MemoryBackend* GetBackend(const std::string &url) {
     auto iter = backends_.find(url);
     if (iter == backends_.end()) {
       return nullptr;
@@ -70,26 +79,28 @@ class MemoryRegistry {
   }
 
   /** Registers an allocator. */
-  Allocator* RegisterAllocator(std::unique_ptr<Allocator> &alloc) {
+  HSHM_ALWAYS_INLINE Allocator* RegisterAllocator(
+      std::unique_ptr<Allocator> &alloc) {
     if (default_allocator_ == nullptr ||
-        default_allocator_ == &root_allocator_ ||
-        default_allocator_->GetId() == alloc->GetId()) {
+      default_allocator_ == &root_allocator_ ||
+      default_allocator_->GetId() == alloc->GetId()) {
       default_allocator_ = alloc.get();
     }
+    RegisterAllocator(alloc.get());
     auto idx = alloc->GetId().ToIndex();
-    allocators_made_[idx] = std::move(alloc);
-    allocators_[idx] = allocators_made_[idx].get();
-    return allocators_[idx];
+    auto &alloc_made = allocators_made_[idx];
+    alloc_made = std::move(alloc);
+    return alloc_made.get();
   }
 
   /** Registers an allocator. */
-  void RegisterAllocator(Allocator *alloc) {
+  HSHM_ALWAYS_INLINE void RegisterAllocator(Allocator *alloc) {
     auto idx = alloc->GetId().ToIndex();
     allocators_[idx] = alloc;
   }
 
   /** Unregisters an allocator */
-  void UnregisterAllocator(allocator_id_t alloc_id) {
+  HSHM_ALWAYS_INLINE void UnregisterAllocator(allocator_id_t alloc_id) {
     if (alloc_id == default_allocator_->GetId()) {
       default_allocator_ = &root_allocator_;
     }

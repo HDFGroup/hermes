@@ -90,121 +90,125 @@ struct OffsetPointerBase {
   atomic_t off_; /**< Offset within the allocator's slot */
 
   /** Default constructor */
-  OffsetPointerBase() = default;
+  HSHM_ALWAYS_INLINE OffsetPointerBase() = default;
 
   /** Full constructor */
-  explicit OffsetPointerBase(size_t off) : off_(off) {}
+  HSHM_ALWAYS_INLINE explicit OffsetPointerBase(size_t off) : off_(off) {}
 
   /** Full constructor */
-  explicit OffsetPointerBase(atomic_t off) : off_(off.load()) {}
+  HSHM_ALWAYS_INLINE explicit OffsetPointerBase(atomic_t off)
+  : off_(off.load()) {}
 
   /** Pointer constructor */
-  explicit OffsetPointerBase(allocator_id_t alloc_id, size_t off) : off_(off) {
+  HSHM_ALWAYS_INLINE explicit OffsetPointerBase(allocator_id_t alloc_id,
+                                                size_t off)
+  : off_(off) {
     (void) alloc_id;
   }
 
   /** Copy constructor */
-  OffsetPointerBase(const OffsetPointerBase &other)
+  HSHM_ALWAYS_INLINE OffsetPointerBase(const OffsetPointerBase &other)
   : off_(other.off_.load()) {}
 
   /** Other copy constructor */
-  OffsetPointerBase(const OffsetPointerBase<!ATOMIC> &other)
+  HSHM_ALWAYS_INLINE OffsetPointerBase(const OffsetPointerBase<!ATOMIC> &other)
   : off_(other.off_.load()) {}
 
   /** Move constructor */
-  OffsetPointerBase(OffsetPointerBase &&other) noexcept
+  HSHM_ALWAYS_INLINE OffsetPointerBase(OffsetPointerBase &&other) noexcept
     : off_(other.off_.load()) {
     other.SetNull();
   }
 
   /** Get the offset pointer */
-  OffsetPointerBase<false> ToOffsetPointer() {
+  HSHM_ALWAYS_INLINE OffsetPointerBase<false> ToOffsetPointer() {
     return OffsetPointerBase<false>(off_.load());
   }
 
   /** Set to null */
-  void SetNull() {
+  HSHM_ALWAYS_INLINE void SetNull() {
     off_ = (size_t)-1;
   }
 
   /** Check if null */
-  bool IsNull() const {
+  HSHM_ALWAYS_INLINE bool IsNull() const {
     return off_.load() == (size_t)-1;
   }
 
   /** Get the null pointer */
-  static OffsetPointerBase GetNull() {
+  HSHM_ALWAYS_INLINE static OffsetPointerBase GetNull() {
     static const OffsetPointerBase p(-1);
     return p;
   }
 
   /** Atomic load wrapper */
-  inline size_t load(
+  HSHM_ALWAYS_INLINE size_t load(
     std::memory_order order = std::memory_order_seq_cst) const {
     return off_.load(order);
   }
 
   /** Atomic exchange wrapper */
-  inline void exchange(
+  HSHM_ALWAYS_INLINE void exchange(
     size_t count, std::memory_order order = std::memory_order_seq_cst) {
     off_.exchange(count, order);
   }
 
   /** Atomic compare exchange weak wrapper */
-  inline bool compare_exchange_weak(size_t& expected, size_t desired,
-                                    std::memory_order order =
-                                    std::memory_order_seq_cst) {
+  HSHM_ALWAYS_INLINE bool compare_exchange_weak(
+    size_t& expected, size_t desired,
+    std::memory_order order = std::memory_order_seq_cst) {
     return off_.compare_exchange_weak(expected, desired, order);
   }
 
   /** Atomic compare exchange strong wrapper */
-  inline bool compare_exchange_strong(size_t& expected, size_t desired,
-                                      std::memory_order order =
-                                      std::memory_order_seq_cst) {
+  HSHM_ALWAYS_INLINE bool compare_exchange_strong(
+    size_t& expected, size_t desired,
+    std::memory_order order = std::memory_order_seq_cst) {
     return off_.compare_exchange_weak(expected, desired, order);
   }
 
   /** Atomic add operator */
-  inline OffsetPointerBase operator+(size_t count) const {
+  HSHM_ALWAYS_INLINE OffsetPointerBase operator+(size_t count) const {
     return OffsetPointerBase(off_ + count);
   }
 
   /** Atomic subtract operator */
-  inline OffsetPointerBase operator-(size_t count) const {
+  HSHM_ALWAYS_INLINE OffsetPointerBase operator-(size_t count) const {
     return OffsetPointerBase(off_ - count);
   }
 
   /** Atomic add assign operator */
-  inline OffsetPointerBase& operator+=(size_t count) {
+  HSHM_ALWAYS_INLINE OffsetPointerBase& operator+=(size_t count) {
     off_ += count;
     return *this;
   }
 
   /** Atomic subtract assign operator */
-  inline OffsetPointerBase& operator-=(size_t count) {
+  HSHM_ALWAYS_INLINE OffsetPointerBase& operator-=(size_t count) {
     off_ -= count;
     return *this;
   }
 
   /** Atomic assign operator */
-  inline OffsetPointerBase& operator=(size_t count) {
+  HSHM_ALWAYS_INLINE OffsetPointerBase& operator=(size_t count) {
     off_ = count;
     return *this;
   }
 
   /** Atomic copy assign operator */
-  inline OffsetPointerBase& operator=(const OffsetPointerBase &count) {
+  HSHM_ALWAYS_INLINE OffsetPointerBase& operator=(
+    const OffsetPointerBase &count) {
     off_ = count.load();
     return *this;
   }
 
   /** Equality check */
-  bool operator==(const OffsetPointerBase &other) const {
+  HSHM_ALWAYS_INLINE bool operator==(const OffsetPointerBase &other) const {
     return off_ == other.off_;
   }
 
   /** Inequality check */
-  bool operator!=(const OffsetPointerBase &other) const {
+  HSHM_ALWAYS_INLINE bool operator!=(const OffsetPointerBase &other) const {
     return off_ != other.off_;
   }
 };
@@ -236,51 +240,51 @@ struct PointerBase {
   PointerBase() = default;
 
   /** Full constructor */
-  explicit PointerBase(allocator_id_t id, size_t off) :
-    allocator_id_(id), off_(off) {}
+  HSHM_ALWAYS_INLINE explicit PointerBase(allocator_id_t id, size_t off)
+  : allocator_id_(id), off_(off) {}
 
   /** Full constructor using offset pointer */
-  explicit PointerBase(allocator_id_t id, OffsetPointer off) :
-    allocator_id_(id), off_(off) {}
+  HSHM_ALWAYS_INLINE explicit PointerBase(allocator_id_t id, OffsetPointer off)
+  : allocator_id_(id), off_(off) {}
 
   /** Copy constructor */
-  PointerBase(const PointerBase &other)
+  HSHM_ALWAYS_INLINE PointerBase(const PointerBase &other)
   : allocator_id_(other.allocator_id_), off_(other.off_) {}
 
   /** Other copy constructor */
-  PointerBase(const PointerBase<!ATOMIC> &other)
+  HSHM_ALWAYS_INLINE PointerBase(const PointerBase<!ATOMIC> &other)
   : allocator_id_(other.allocator_id_), off_(other.off_.load()) {}
 
   /** Move constructor */
-  PointerBase(PointerBase &&other) noexcept
+  HSHM_ALWAYS_INLINE PointerBase(PointerBase &&other) noexcept
   : allocator_id_(other.allocator_id_), off_(other.off_) {
     other.SetNull();
   }
 
   /** Get the offset pointer */
-  OffsetPointerBase<false> ToOffsetPointer() const {
+  HSHM_ALWAYS_INLINE OffsetPointerBase<false> ToOffsetPointer() const {
     return OffsetPointerBase<false>(off_.load());
   }
 
   /** Set to null */
-  void SetNull() {
+  HSHM_ALWAYS_INLINE void SetNull() {
     allocator_id_.SetNull();
   }
 
   /** Check if null */
-  bool IsNull() const {
+  HSHM_ALWAYS_INLINE bool IsNull() const {
     return allocator_id_.IsNull();
   }
 
   /** Get the null pointer */
-  static PointerBase GetNull() {
+  HSHM_ALWAYS_INLINE static PointerBase GetNull() {
     static const PointerBase p(allocator_id_t::GetNull(),
                                OffsetPointer::GetNull());
     return p;
   }
 
   /** Copy assignment operator */
-  PointerBase& operator=(const PointerBase &other) {
+  HSHM_ALWAYS_INLINE PointerBase& operator=(const PointerBase &other) {
     if (this != &other) {
       allocator_id_ = other.allocator_id_;
       off_ = other.off_;
@@ -289,7 +293,7 @@ struct PointerBase {
   }
 
   /** Move assignment operator */
-  PointerBase& operator=(PointerBase &&other) {
+  HSHM_ALWAYS_INLINE PointerBase& operator=(PointerBase &&other) {
     if (this != &other) {
       allocator_id_ = other.allocator_id_;
       off_.exchange(other.off_.load());
@@ -299,7 +303,7 @@ struct PointerBase {
   }
 
   /** Addition operator */
-  PointerBase operator+(size_t size) const {
+  HSHM_ALWAYS_INLINE PointerBase operator+(size_t size) const {
     PointerBase p;
     p.allocator_id_ = allocator_id_;
     p.off_ = off_ + size;
@@ -307,7 +311,7 @@ struct PointerBase {
   }
 
   /** Subtraction operator */
-  PointerBase operator-(size_t size) const {
+  HSHM_ALWAYS_INLINE PointerBase operator-(size_t size) const {
     PointerBase p;
     p.allocator_id_ = allocator_id_;
     p.off_ = off_ - size;
@@ -315,24 +319,24 @@ struct PointerBase {
   }
 
   /** Addition assignment operator */
-  PointerBase& operator+=(size_t size) {
+  HSHM_ALWAYS_INLINE PointerBase& operator+=(size_t size) {
     off_ += size;
     return *this;
   }
 
   /** Subtraction assignment operator */
-  PointerBase& operator-=(size_t size) {
+  HSHM_ALWAYS_INLINE PointerBase& operator-=(size_t size) {
     off_ -= size;
     return *this;
   }
 
   /** Equality check */
-  bool operator==(const PointerBase &other) const {
+  HSHM_ALWAYS_INLINE bool operator==(const PointerBase &other) const {
     return (other.allocator_id_ == allocator_id_ && other.off_ == off_);
   }
 
   /** Inequality check */
-  bool operator!=(const PointerBase &other) const {
+  HSHM_ALWAYS_INLINE bool operator!=(const PointerBase &other) const {
     return (other.allocator_id_ != allocator_id_ || other.off_ != off_);
   }
 };
@@ -351,23 +355,35 @@ using TypedPointer = Pointer;
 template<typename T>
 using TypedAtomicPointer = AtomicPointer;
 
-/** Round up to the nearest multiple of the alignment */
-static inline size_t NextAlignmentMultiple(size_t alignment, size_t size) {
-  auto page_size = HERMES_SYSTEM_INFO->page_size_;
-  size_t new_size = size;
-  size_t page_off = size % alignment;
-  if (page_off) {
-    new_size = size + page_size - page_off;
+class MemoryAlignment {
+ public:
+  /**
+   * Round up to the nearest multiple of the alignment
+   * @param alignment the alignment value (e.g., 4096)
+   * @param size the size to make a multiple of alignment (e.g., 4097)
+   * @return the new size  (e.g., 8192)
+   * */
+  HSHM_ALWAYS_INLINE static size_t AlignTo(size_t alignment,
+                                           size_t size) {
+    auto page_size = HERMES_SYSTEM_INFO->page_size_;
+    size_t new_size = size;
+    size_t page_off = size % alignment;
+    if (page_off) {
+      new_size = size + page_size - page_off;
+    }
+    return new_size;
   }
-  return new_size;
-}
 
-/** Round up to the nearest multiple of page size */
-static inline size_t NextPageSizeMultiple(size_t size) {
-  auto page_size = HERMES_SYSTEM_INFO->page_size_;
-  size_t new_size = NextAlignmentMultiple(page_size, size);
-  return new_size;
-}
+  /**
+   * Round up to the nearest multiple of page size
+   * @param size the size to align to the PAGE_SIZE
+   * */
+  HSHM_ALWAYS_INLINE static size_t AlignToPageSize(size_t size) {
+    auto page_size = HERMES_SYSTEM_INFO->page_size_;
+    size_t new_size = AlignTo(page_size, size);
+    return new_size;
+  }
+};
 
 }  // namespace hshm::ipc
 
@@ -376,7 +392,8 @@ namespace std {
 /** Allocator ID hash */
 template <>
 struct hash<hshm::ipc::allocator_id_t> {
-  std::size_t operator()(const hshm::ipc::allocator_id_t &key) const {
+  HSHM_ALWAYS_INLINE std::size_t operator()(
+    const hshm::ipc::allocator_id_t &key) const {
     return std::hash<uint64_t>{}(key.int_);
   }
 };

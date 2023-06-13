@@ -21,7 +21,8 @@ TEST_CASE("SerializePod") {
   int a = 1;
   double b = 2;
   float c = 3;
-  int size = sizeof(int) + sizeof(double) + sizeof(float) + sizeof(allocator_id_t);
+  size_t size = sizeof(int) + sizeof(double) +
+    sizeof(float) + sizeof(allocator_id_t);
   REQUIRE(istream.shm_buf_size(alloc->GetId(), a, b, c) == size);
   char *buf = istream.serialize(alloc, a, b, c);
 
@@ -39,18 +40,12 @@ TEST_CASE("SerializePod") {
 TEST_CASE("SerializeString") {
   hipc::ShmSerializer istream;
   Allocator *alloc = HERMES_MEMORY_MANAGER->GetDefaultAllocator();
-  hipc::mptr<hipc::string> i;
-  bool string_ar = IS_SHM_ARCHIVEABLE(hipc::string);
-  bool string_star_ar = IS_SHM_ARCHIVEABLE(std::remove_reference<decltype(*i)>);
-  bool string_ar2 = IS_SHM_ARCHIVEABLE(std::remove_reference<hipc::string&>::type);
-
-  hipc::string &y = *i;
-
 
   auto a = hipc::make_uptr<hipc::string>(alloc, "h1");
   auto b = hipc::make_uptr<hipc::string>(alloc, "h2");
   int c;
-  int size = 2 * sizeof(hipc::OffsetPointer) + sizeof(int) + sizeof(allocator_id_t);
+  size_t size = 2 * sizeof(hipc::OffsetPointer) +
+    sizeof(int) + sizeof(allocator_id_t);
   REQUIRE(istream.shm_buf_size(alloc->GetId(), *a, *b, c) == size);
   char *buf = istream.serialize(alloc, *a, *b, c);
 

@@ -19,11 +19,15 @@ void MainPretest() {
   std::string shm_url = "HermesBench";
   allocator_id_t alloc_id(0, 1);
   auto mem_mngr = HERMES_MEMORY_MANAGER;
-  mem_mngr->CreateBackend<hipc::PosixShmMmap>(
+  mem_mngr->UnregisterAllocator(alloc_id);
+  mem_mngr->UnregisterBackend(shm_url);
+  auto backend = mem_mngr->CreateBackend<hipc::PosixShmMmap>(
     MemoryManager::GetDefaultBackendSize(), shm_url);
+  memset(backend->data_, 0, MEGABYTES(16));
   // TODO(llogan): back to good allocator
   mem_mngr->CreateAllocator<hipc::ScalablePageAllocator>(
     shm_url, alloc_id, 0);
+
 
   // Boost shared memory
   BOOST_SEGMENT;

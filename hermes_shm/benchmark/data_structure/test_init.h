@@ -25,6 +25,8 @@
 #include <hermes_shm/util/timer.h>
 #include <hermes_shm/util/type_switch.h>
 
+#include <omp.h>
+
 using hshm::ipc::MemoryBackendType;
 using hshm::ipc::MemoryBackend;
 using hshm::ipc::allocator_id_t;

@@ -15,9 +15,6 @@
 
 #include <hermes_shm/util/singleton.h>
 
-#define HERMES_SYSTEM_INFO hshm::GlobalSingleton<hshm::SystemInfo>::GetInstance()
-#define HERMES_SYSTEM_INFO_T hshm::SystemInfo*
-
 #define HERMES_MEMORY_REGISTRY hshm::GlobalSingleton<hshm::ipc::MemoryRegistry>::GetInstance()
 #define HERMES_MEMORY_REGISTRY_REF hshm::GlobalSingleton<hshm::ipc::MemoryRegistry>::GetRef()
 #define HERMES_MEMORY_REGISTRY_T hshm::ipc::MemoryRegistry*
@@ -25,8 +22,5 @@
 #define HERMES_MEMORY_MANAGER hshm::GlobalSingleton<hshm::ipc::MemoryManager>::GetInstance()
 #define HERMES_MEMORY_MANAGER_REF hshm::GlobalSingleton<hshm::ipc::MemoryManager>::GetRef()
 #define HERMES_MEMORY_MANAGER_T hshm::ipc::MemoryManager*
-
-#define HERMES_THREAD_MODEL hshm::GlobalSingleton<hshm::ThreadModelManager>::GetInstance()
-#define HERMES_THREAD_MODEL_T hshm::ThreadModelManager*
 
 #endif  // HERMES_INCLUDE_HERMES_CONSTANTS_DATA_STRUCTURE_SINGLETON_MACROS_H_H

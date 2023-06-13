@@ -15,19 +15,30 @@ find_path(
 if( HermesShm_INCLUDE_DIR )
   get_filename_component(HermesShm_DIR ${HermesShm_INCLUDE_DIR} PATH)
 
+  #-----------------------------------------------------------------------------
+  # Find all packages needed by hermes_shm
+  #-----------------------------------------------------------------------------
   find_library(
     HermesShm_LIBRARY
     NAMES hermes_shm_data_structures
   )
+  find_library(LIBRT rt)
+  if(NOT LIBRT)
+    message(FATAL_ERROR "librt is required for POSIX shared memory")
+  endif()
 
+  #-----------------------------------------------------------------------------
+  # Mark hermes as found and set all needed packages
+  #-----------------------------------------------------------------------------
   if( HermesShm_LIBRARY )
     set(HermesShm_LIBRARY_DIR "")
     get_filename_component(HermesShm_LIBRARY_DIRS ${HermesShm_LIBRARY} PATH)
     # Set uncached variables as per standard.
     set(HermesShm_FOUND ON)
     set(HermesShm_INCLUDE_DIRS ${HermesShm_INCLUDE_DIR})
-    set(HermesShm_LIBRARIES ${HermesShm_LIBRARY})
+    set(HermesShm_LIBRARIES -lrt -ldl ${HermesShm_LIBRARY})
   endif(HermesShm_LIBRARY)
+
 else(HermesShm_INCLUDE_DIR)
   message(STATUS "FindHermesShm: Could not find hermes_shm.h")
 endif(HermesShm_INCLUDE_DIR)

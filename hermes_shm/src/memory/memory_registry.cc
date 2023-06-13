@@ -23,6 +23,7 @@ MemoryRegistry::MemoryRegistry() {
                            root_backend_.data_,
                            root_backend_.data_size_);
   default_allocator_ = &root_allocator_;
+  memset(allocators_, 0, sizeof(allocators_));
   RegisterAllocator(&root_allocator_);
 }
 

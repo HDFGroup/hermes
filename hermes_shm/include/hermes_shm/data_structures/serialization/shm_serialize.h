@@ -1,9 +1,17 @@
-//
-// Created by llogan on 5/9/23.
-//
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_INCLUDE_HERMES_SHM_DATA_STRUCTURES_SERIALIZATION_SHM_SERIALIZE_H_
-#define HERMES_SHM_INCLUDE_HERMES_SHM_DATA_STRUCTURES_SERIALIZATION_SHM_SERIALIZE_H_
+#ifndef HERMES_SHM_DATA_STRUCTURES_SERIALIZATION_SHM_SERIALIZE_H_
+#define HERMES_SHM_DATA_STRUCTURES_SERIALIZATION_SHM_SERIALIZE_H_
 
 #define NOREF typename std::remove_reference<decltype(arg)>::type
 
@@ -29,14 +37,16 @@ class ShmSerializer {
         throw IPC_ARGS_NOT_SHM_COMPATIBLE.format();
       }
     };
-    ForwardIterateArgpack::Apply(make_argpack(std::forward<Args>(args)...), lambda);
+    ForwardIterateArgpack::Apply(make_argpack(
+      std::forward<Args>(args)...), lambda);
     return size;
   }
 
   /** Serialize a set of arguments into shared memory */
   template<typename ...Args>
   HSHM_ALWAYS_INLINE char* serialize(Allocator *alloc, Args&& ...args) {
-    size_t buf_size = sizeof(allocator_id_t) + shm_buf_size(std::forward<Args>(args)...);
+    size_t buf_size = sizeof(allocator_id_t) + shm_buf_size(
+      std::forward<Args>(args)...);
     Pointer p;
     char *buf = alloc->AllocatePtr<char>(buf_size, p);
     memcpy(buf, &p.allocator_id_, sizeof(allocator_id_t));
@@ -53,7 +63,8 @@ class ShmSerializer {
         throw IPC_ARGS_NOT_SHM_COMPATIBLE.format();
       }
     };
-    ForwardIterateArgpack::Apply(make_argpack(std::forward<Args>(args)...), lambda);
+    ForwardIterateArgpack::Apply(make_argpack(
+      std::forward<Args>(args)...), lambda);
     return buf;
   }
 
@@ -80,7 +91,8 @@ class ShmSerializer {
 
   /** Deserialize an argument from the SHM buffer */
   template<typename T, typename ...Args>
-  HSHM_ALWAYS_INLINE void deserialize(Allocator *alloc, char *buf, hipc::mptr<T> &arg) {
+  HSHM_ALWAYS_INLINE void deserialize(Allocator *alloc,
+                                      char *buf, hipc::mptr<T> &arg) {
     if constexpr(IS_SHM_ARCHIVEABLE(T)) {
       OffsetPointer p;
       memcpy((void*)&p, buf + off_, sizeof(p));
@@ -92,8 +104,8 @@ class ShmSerializer {
   }
 };
 
-}  // namespace hshm
+}  // namespace hshm::ipc
 
 #undef NOREF
 
-#endif  // HERMES_SHM_INCLUDE_HERMES_SHM_DATA_STRUCTURES_SERIALIZATION_SHM_SERIALIZE_H_
+#endif  // HERMES_SHM_DATA_STRUCTURES_SERIALIZATION_SHM_SERIALIZE_H_

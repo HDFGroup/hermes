@@ -114,7 +114,6 @@ OffsetPointer ScalablePageAllocator::AllocateOffset(size_t size) {
   header_->total_alloc_.fetch_add(page->page_size_);
   auto p = Convert<MpPage, OffsetPointer>(page);
   page->SetAllocated();
-  page->cpu_ = cpu;
   return p + sizeof(MpPage);
 }
 
@@ -219,7 +218,7 @@ void ScalablePageAllocator::DividePage(FreeListStats &stats,
     if (num_divisions > max_divide) { num_divisions = max_divide; }
     for (size_t i = 0; i < num_divisions; ++i) {
       rem_page->page_size_ = size_mp;
-      rem_page->flags_ = 0;
+      rem_page->flags_.Clear();
       rem_page->off_ = 0;
       stats.AddAlloc();
       free_list.enqueue(rem_page);
@@ -231,7 +230,7 @@ void ScalablePageAllocator::DividePage(FreeListStats &stats,
   // Case 3: There is still remaining space after the divisions
   if (rem_size > 0) {
     rem_page->page_size_ = rem_size;
-    rem_page->flags_ = 0;
+    rem_page->flags_.Clear();
     rem_page->off_ = 0;
   } else {
     rem_page = nullptr;

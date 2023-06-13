@@ -7,7 +7,6 @@ class HermesShm(CMakePackage):
     depends_on('mochi-thallium~cereal@0.8.3')
     depends_on('catch2@3.0.1')
     depends_on('mpich@3.3.2:')
-    depends_on('yaml-cpp')
     depends_on('boost@1.7:')
     depends_on('doxygen@1.9.3')
 
@@ -17,8 +16,11 @@ class HermesShm(CMakePackage):
     def set_include(self, env, path):
         env.append_flags('CFLAGS', '-I{}'.format(path))
         env.append_flags('CXXFLAGS', '-I{}'.format(path))
+        env.prepend_path('INCLUDE', '{}'.format(path))
+        env.prepend_path('CPATH', '{}'.format(path))
 
     def set_lib(self, env, path):
+        env.prepend_path('LIBRARY_PATH', path)
         env.prepend_path('LD_LIBRARY_PATH', path)
         env.append_flags('LDFLAGS', '-L{}'.format(path))
 

@@ -18,22 +18,21 @@
 namespace hshm::ipc {
 
 struct MpPage {
-  iqueue_entry entry_;  /**< Position of page in free list */
-  size_t page_size_;    /**< The size of the page allocated */
-  int flags_;           /**< Page flags (e.g., is_allocated?) */
-  uint32_t off_;        /**< The offset within the page */
-  uint32_t cpu_;        /**< The CPU the page was alloc'd from */
+  bitfield32_t flags_;  /**< Flags of the page (e.g., free/alloc) */
+  /** Offset from the start of the page to the beginning of this header */
+  uint32_t off_;
+  size_t page_size_;    /**< The total size of the page allocated */
 
-  void SetAllocated() {
-    flags_ = 0x1;
+  HSHM_ALWAYS_INLINE void SetAllocated() {
+    flags_.SetBits(0x1);
   }
 
-  void UnsetAllocated() {
-    flags_ = 0;
+  HSHM_ALWAYS_INLINE void UnsetAllocated() {
+    flags_.Clear();
   }
 
-  bool IsAllocated() const {
-    return flags_ & 0x1;
+  HSHM_ALWAYS_INLINE bool IsAllocated() const {
+    return flags_.All(0x1);
   }
 };
 

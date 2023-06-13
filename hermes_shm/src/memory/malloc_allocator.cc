@@ -21,9 +21,8 @@ struct MallocPage {
 
 void MallocAllocator::shm_init(allocator_id_t id,
                                size_t custom_header_size,
-                               char *buffer,
                                size_t buffer_size) {
-  buffer_ = buffer;
+  buffer_ = nullptr;
   buffer_size_ = buffer_size;
   header_ = reinterpret_cast<MallocAllocatorHeader*>(
     malloc(sizeof(MallocAllocatorHeader) + custom_header_size));
@@ -45,7 +44,7 @@ OffsetPointer MallocAllocator::AllocateOffset(size_t size) {
     malloc(sizeof(MallocPage) + size));
   page->page_size_ = size;
   header_->total_alloc_size_ += size;
-  return OffsetPointer(size_t(page + 1));
+  return OffsetPointer((size_t)(page + 1));
 }
 
 OffsetPointer MallocAllocator::AlignedAllocateOffset(size_t size,

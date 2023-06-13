@@ -19,7 +19,7 @@
 using hshm::ipc::slist;
 
 template<typename T>
-void ListTest() {
+void SlistTest() {
   Allocator *alloc = alloc_g;
   auto lp = hipc::make_uptr<slist<T>>(alloc);
   ListTestSuite<T, slist<T>> test(*lp, alloc);
@@ -40,20 +40,20 @@ void ListTest() {
 TEST_CASE("SlistOfInt") {
   Allocator *alloc = alloc_g;
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
-  ListTest<int>();
+  SlistTest<int>();
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
 }
 
 TEST_CASE("SlistOfString") {
   Allocator *alloc = alloc_g;
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
-  ListTest<hipc::string>();
+  SlistTest<hipc::string>();
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
 }
 
 TEST_CASE("SlistOfStdString") {
   Allocator *alloc = alloc_g;
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
-  ListTest<std::string>();
+  SlistTest<std::string>();
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
 }

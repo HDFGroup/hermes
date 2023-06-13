@@ -15,7 +15,11 @@
 
 #include <unistd.h>
 #include <sys/sysinfo.h>
-#include "hermes_shm/constants/data_structure_singleton_macros.h"
+#include "hermes_shm/util/singleton/_global_singleton.h"
+
+#define HERMES_SYSTEM_INFO \
+  hshm::GlobalSingleton<hshm::SystemInfo>::GetInstance()
+#define HERMES_SYSTEM_INFO_T hshm::SystemInfo*
 
 namespace hshm {
 

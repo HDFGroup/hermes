@@ -28,6 +28,7 @@ struct charbuf {
   hipc::Allocator *alloc_; /**< The allocator used to allocate data */
   char *data_; /**< The pointer to data */
   size_t size_; /**< The size of data */
+  size_t total_size_; /**< The true size of data buffer */
   bool destructable_;  /**< Whether or not this container owns data */
 
   /**====================================
@@ -35,26 +36,28 @@ struct charbuf {
    * ===================================*/
 
   /** Default constructor */
-  charbuf() : alloc_(nullptr), data_(nullptr), size_(0), destructable_(false) {}
+  HSHM_ALWAYS_INLINE charbuf()
+  : alloc_(nullptr), data_(nullptr), size_(0),
+    total_size_(0), destructable_(false) {}
 
   /**====================================
    * Destructor
    * ===================================*/
 
   /** Destructor */
-  ~charbuf() { Free(); }
+  HSHM_ALWAYS_INLINE ~charbuf() { Free(); }
 
   /**====================================
    * Emplace Constructors
    * ===================================*/
 
   /** Size-based constructor */
-  explicit charbuf(size_t size) {
+  HSHM_ALWAYS_INLINE explicit charbuf(size_t size) {
     Allocate(HERMES_MEMORY_REGISTRY->GetDefaultAllocator(), size);
   }
 
   /** Allocator + Size-based constructor */
-  explicit charbuf(hipc::Allocator *alloc, size_t size) {
+  HSHM_ALWAYS_INLINE explicit charbuf(hipc::Allocator *alloc, size_t size) {
     Allocate(alloc, size);
   }
 
@@ -63,30 +66,31 @@ struct charbuf {
   * ===================================*/
 
   /** Reference constructor. From char* + size */
-  explicit charbuf(char *data, size_t size)
-    : alloc_(nullptr), data_(data), size_(size), destructable_(false) {}
+  HSHM_ALWAYS_INLINE explicit charbuf(char *data, size_t size)
+  : alloc_(nullptr), data_(data), size_(size),
+    total_size_(size), destructable_(false) {}
 
   /**
    * Reference constructor. From const char*
    * We assume that the data will not be modified by the user, but
    * we must cast away the const anyway.
    * */
-  explicit charbuf(const char *data, size_t size)
-    : alloc_(nullptr), data_(const_cast<char*>(data)),
-      size_(size), destructable_(false) {}
+  HSHM_ALWAYS_INLINE explicit charbuf(const char *data, size_t size)
+  : alloc_(nullptr), data_(const_cast<char*>(data)),
+    size_(size), total_size_(size), destructable_(false) {}
 
   /**====================================
    * Copy Constructors
    * ===================================*/
 
   /** Copy constructor. From std::string. */
-  explicit charbuf(const std::string &data) {
+  HSHM_ALWAYS_INLINE explicit charbuf(const std::string &data) {
     Allocate(HERMES_MEMORY_REGISTRY->GetDefaultAllocator(), data.size());
     memcpy(data_, data.data(), data.size());
   }
 
   /** Copy constructor. From charbuf. */
-  charbuf(const charbuf &other) {
+  HSHM_ALWAYS_INLINE charbuf(const charbuf &other) {
     if (!Allocate(HERMES_MEMORY_REGISTRY->GetDefaultAllocator(),
                   other.size())) {
       return;
@@ -95,7 +99,7 @@ struct charbuf {
   }
 
   /** Copy assignment operator */
-  charbuf& operator=(const charbuf &other) {
+  HSHM_ALWAYS_INLINE charbuf& operator=(const charbuf &other) {
     if (this != &other) {
       Free();
       if (!Allocate(HERMES_MEMORY_REGISTRY->GetDefaultAllocator(),
@@ -116,20 +120,24 @@ struct charbuf {
     alloc_ = other.alloc_;
     data_ = other.data_;
     size_ = other.size_;
+    total_size_ = other.total_size_;
     destructable_ = other.destructable_;
     other.size_ = 0;
+    other.total_size_ = 0;
     other.destructable_ = false;
   }
 
   /** Move assignment operator */
-  charbuf& operator=(charbuf &&other) {
+  charbuf& operator=(charbuf &&other) noexcept {
     if (this != &other) {
       Free();
       alloc_ = other.alloc_;
       data_ = other.data_;
       size_ = other.size_;
+      total_size_ = other.total_size_;
       destructable_ = other.destructable_;
       other.size_ = 0;
+      other.total_size_ = 0;
       other.destructable_ = false;
     }
     return *this;
@@ -141,7 +149,7 @@ struct charbuf {
 
   /** Destroy and resize */
   void resize(size_t new_size) {
-    if (new_size <= size()) {
+    if (new_size <= total_size_) {
       size_ = new_size;
       return;
     }
@@ -155,30 +163,31 @@ struct charbuf {
     }
     destructable_ = true;
     size_ = new_size;
+    total_size_ = new_size;
   }
 
   /** Reference data */
-  char* data() {
+  HSHM_ALWAYS_INLINE char* data() {
     return data_;
   }
 
   /** Reference data */
-  char* data() const {
+  HSHM_ALWAYS_INLINE char* data() const {
     return data_;
   }
 
   /** Reference size */
-  size_t size() const {
+  HSHM_ALWAYS_INLINE size_t size() const {
     return size_;
   }
 
   /** Get allocator */
-  hipc::Allocator* GetAllocator() {
+  HSHM_ALWAYS_INLINE hipc::Allocator* GetAllocator() {
     return alloc_;
   }
 
   /** Convert to std::string */
-  std::string str() {
+  HSHM_ALWAYS_INLINE std::string str() {
     return std::string(data(), size());
   }
 
@@ -186,8 +195,8 @@ struct charbuf {
    * Comparison Operators
    * ===================================*/
 
-  int _strncmp(const char *a, size_t len_a,
-               const char *b, size_t len_b) const {
+  HSHM_ALWAYS_INLINE int _strncmp(const char *a, size_t len_a,
+                                  const char *b, size_t len_b) const {
     if (len_a != len_b) {
       return int((int64_t)len_a - (int64_t)len_b);
     }
@@ -231,19 +240,21 @@ struct charbuf {
       alloc_ = nullptr;
       data_ = nullptr;
       size_ = 0;
+      total_size_ = 0;
       destructable_ = false;
       return false;
     }
     alloc_ = alloc;
     data_ = alloc->AllocatePtr<char>(size, p);
     size_ = size;
+    total_size_ = size;
     destructable_ = true;
     return true;
   }
 
   /** Explicitly free the charbuf */
   void Free() {
-    if (destructable_ && data_ && size_) {
+    if (destructable_ && data_ && total_size_) {
       alloc_->FreePtr<char>(data_);
     }
   }

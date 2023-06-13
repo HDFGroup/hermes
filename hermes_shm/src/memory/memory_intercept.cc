@@ -70,7 +70,7 @@ void* valloc(size_t size) {
  * that is, round up size to nearest pagesize.
  * */
 void* pvalloc(size_t size) {
-  size_t new_size = hshm::ipc::NextPageSizeMultiple(size);
+  size_t new_size = hipc::MemoryAlignment::AlignToPageSize(size);
   return valloc(new_size);
 }
 

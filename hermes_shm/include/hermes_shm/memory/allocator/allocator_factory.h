@@ -45,7 +45,6 @@ class AllocatorFactory {
       auto alloc = std::make_unique<MallocAllocator>();
       alloc->shm_init(alloc_id,
                       custom_header_size,
-                      backend->data_,
                       backend->data_size_,
                       std::forward<Args>(args)...);
       return alloc;

@@ -55,7 +55,6 @@ class MallocAllocator : public Allocator {
    * */
   void shm_init(allocator_id_t id,
                 size_t custom_header_size,
-                char *buffer,
                 size_t buffer_size);
 
   /**
