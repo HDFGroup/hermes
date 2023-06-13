@@ -9,6 +9,7 @@ class Hermes(CMakePackage):
     version('dev-priv', git='https://github.com/lukemartinlogan/hermes.git', branch='dev')
     variant('vfd', default=False, description='Enable HDF5 VFD')
     variant('ares', default=False, description='Enable full libfabric install')
+    variant('debug', default=False, description='Enable debug mode')
     depends_on('mochi-thallium~cereal@0.8.3')
     depends_on('cereal')
     depends_on('catch2@3.0.1')
@@ -26,6 +27,8 @@ class Hermes(CMakePackage):
                 '-DHERMES_RPC_THALLIUM=ON',
                 '-DHERMES_INSTALL_TESTS=ON',
                 '-DBUILD_TESTING=ON']
+        if '+debug' in self.spec:
+            args.append('-DCMAKE_BUILD_TYPE=Debug')
         if '+vfd' in self.spec:
             args.append(self.define('HERMES_ENABLE_VFD', 'ON'))
         return args
@@ -33,12 +36,12 @@ class Hermes(CMakePackage):
     def set_include(self, env, path):
         env.append_flags('CFLAGS', '-I{}'.format(path))
         env.append_flags('CXXFLAGS', '-I{}'.format(path))
-        env.append_flags('CPATH', '{}'.format(path))
-        env.append_flags('CMAKE_PREFIX_PATH', '-I{}'.format(path))
+        env.prepend_path('CPATH', '{}'.format(path))
+        env.prepend_path('CMAKE_PREFIX_PATH', '{}'.format(path))
 
     def set_lib(self, env, path):
         env.prepend_path('LD_LIBRARY_PATH', path)
-        env.append_flags('LIBRARY_PATH', '{}'.format(path))
+        env.prepend_path('LIBRARY_PATH', '{}'.format(path))
         env.append_flags('LDFLAGS', '-L{}'.format(path))
 
     def set_flags(self, env):
