@@ -247,6 +247,18 @@ struct TracingInfo {
   std::string output_;
 };
 
+/** MDM information */
+struct MdmInfo {
+  /** Number of buckets in mdm bucket map before collisions */
+  size_t num_bkts_;
+
+  /** Number of blobs in mdm blob map before collisions */
+  size_t num_blobs_;
+
+  /** Number of traits in mdm trait map before collisions */
+  size_t num_traits_;
+};
+
 /**
  * System configuration for Hermes
  */
@@ -269,6 +281,9 @@ class ServerConfig : public BaseConfig {
 
   /** Prefetcher information */
   PrefetchInfo prefetcher_;
+
+  /** Metadata Manager information */
+  MdmInfo mdm_;
 
   /** Trait repo information */
   std::vector<std::string> trait_paths_;
@@ -298,6 +313,7 @@ class ServerConfig : public BaseConfig {
   void ParsePrefetchInfo(YAML::Node yaml_conf);
   void ParseTracingInfo(YAML::Node yaml_conf);
   void ParseTraitInfo(YAML::Node yaml_conf);
+  void ParseMdmInfo(YAML::Node yaml_conf);
 };
 
 }  // namespace hermes::config

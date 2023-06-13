@@ -167,6 +167,13 @@ void ServerConfig::ParseTraitInfo(YAML::Node yaml_conf) {
   }
 }
 
+/** parse prefetch information from YAML config */
+void ServerConfig::ParseMdmInfo(YAML::Node yaml_conf) {
+  mdm_.num_blobs_ = yaml_conf["est_blob_count"].as<size_t>();
+  mdm_.num_bkts_ = yaml_conf["est_blob_count"].as<size_t>();
+  mdm_.num_traits_ = yaml_conf["est_num_traits"].as<size_t>();
+}
+
 /** parse the YAML node */
 void ServerConfig::ParseYAML(YAML::Node &yaml_conf) {
   if (yaml_conf["devices"]) {
@@ -182,10 +189,13 @@ void ServerConfig::ParseYAML(YAML::Node &yaml_conf) {
     ParseBorgInfo(yaml_conf["buffer_organizer"]);
   }
   if (yaml_conf["tracing"]) {
-    ParsePrefetchInfo(yaml_conf["tracing"]);
+    ParseTracingInfo(yaml_conf["tracing"]);
   }
   if (yaml_conf["prefetch"]) {
     ParsePrefetchInfo(yaml_conf["prefetch"]);
+  }
+  if (yaml_conf["mdm"]) {
+    ParseMdmInfo(yaml_conf["mdm"]);
   }
   if (yaml_conf["system_view_state_update_interval_ms"]) {
     system_view_state_update_interval_ms =

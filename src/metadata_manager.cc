@@ -35,12 +35,12 @@ void MetadataManager::shm_init(hipc::ShmArchive<MetadataManagerShm> &header,
   header_->node_id_ = rpc_->node_id_;
 
   // Create the metadata maps
-  HSHM_MAKE_AR(header_->blob_id_map_, alloc, 32000000)
-  HSHM_MAKE_AR(header_->blob_map_, alloc, 32000000)
-  HSHM_MAKE_AR(header_->tag_id_map_, alloc, 32000000)
-  HSHM_MAKE_AR(header_->tag_map_, alloc, 32000000)
-  HSHM_MAKE_AR(header_->trait_id_map_, alloc, 256)
-  HSHM_MAKE_AR(header_->trait_map_, alloc, 256)
+  HSHM_MAKE_AR(header_->blob_id_map_, alloc, config->mdm_.num_blobs_)
+  HSHM_MAKE_AR(header_->blob_map_, alloc, config->mdm_.num_blobs_)
+  HSHM_MAKE_AR(header_->tag_id_map_, alloc, config->mdm_.num_bkts_)
+  HSHM_MAKE_AR(header_->tag_map_, alloc, config->mdm_.num_bkts_)
+  HSHM_MAKE_AR(header_->trait_id_map_, alloc, config->mdm_.num_traits_)
+  HSHM_MAKE_AR(header_->trait_map_, alloc, config->mdm_.num_traits_)
 
   // Create the DeviceInfo vector
   HSHM_MAKE_AR(header_->devices_, alloc, *config->devices_)
