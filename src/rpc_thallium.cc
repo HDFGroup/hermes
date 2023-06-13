@@ -36,12 +36,12 @@ void ThalliumRpc::InitServer() {
     HELOG(kFatal, "RPC init failed for host: {}\n{}", addr, e.what());
   }
   std::string rpc_server_name = server_engine_->self();
+  DefineRpcs();
   HILOG(kInfo, "Serving {} (i.e., {}) with {} RPC threads as node id {}",
         rpc_server_name,
         addr,
         config_->rpc_.num_threads_,
         node_id_);
-  DefineRpcs();
 }
 
 /** initialize RPC clients */
