@@ -197,7 +197,7 @@ endif()
 install(DIRECTORY include DESTINATION ${CMAKE_INSTALL_PREFIX})
 
 configure_file(
-        ${CMAKE_SOURCE_DIR}/CMake/HermesShmConfig.cmake
+        ${CMAKE_CURRENT_SOURCE_DIR}/CMake/HermesShmConfig.cmake
         ${PROJECT_BINARY_DIR}/CMakeFiles/HermesShmConfig.cmake @ONLY
 )
 
