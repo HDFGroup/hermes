@@ -37,7 +37,8 @@ add_dependencies(hermes_posix_simple_io_omp hermes_posix)
 target_link_libraries(hermes_posix_simple_io_omp hermes_posix)
 
 add_executable(posix_simple_io_omp posix_simple_io_omp.cc)
-add_dependencies(posix_simple_io_omp hermes_posix)
+add_dependencies(posix_simple_io_omp hermes_shm_data_structures)
+target_link_libraries(posix_simple_io_omp hermes_shm_data_structures)
 
 pytest(posix test_hermes_posix_simple_io_omp_default)
 pytest(posix test_hermes_posix_simple_io_omp_scratch)
