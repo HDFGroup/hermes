@@ -44,7 +44,7 @@ class mpsc_queue_templ : public ShmContainer {
   ShmArchive<vector<pair<bitfield32_t, T>>> queue_;
   std::atomic<_qtok_t> tail_;
   std::atomic<_qtok_t> head_;
-  RwLock lock_;
+  Mutex lock_;
 
  public:
   /**====================================
@@ -57,6 +57,7 @@ class mpsc_queue_templ : public ShmContainer {
     shm_init_container(alloc);
     HSHM_MAKE_AR(queue_, GetAllocator(), depth);
     SetNull();
+    lock_.Init();
   }
 
   /**====================================
@@ -156,6 +157,8 @@ class mpsc_queue_templ : public ShmContainer {
     _qtok_t tail = tail_.fetch_add(1);
     size_t size = tail - head + 1;
 
+    ScopedMutex lock(lock_, 0);
+
     // Check if there's space in the queue. Resize if necessary.
     if (size > (*queue_).size()) {
       if constexpr(EXTENSIBLE) {
@@ -213,6 +216,8 @@ class mpsc_queue_templ : public ShmContainer {
  public:
   /** Consumer pops the head object */
   HSHM_ALWAYS_INLINE qtok_t pop(T &val) {
+    ScopedMutex lock(lock_, 0);
+
     if constexpr(EXTENSIBLE) {
       ScopedRwReadLock resize_lock(lock_, 0);
       return _pop(val);
