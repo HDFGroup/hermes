@@ -42,84 +42,83 @@ struct BpSlot {
   }
 };
 
-struct BpFreeListStat {
-  std::atomic<size_t> region_off_;  /**< Current offset in the target */
-  std::atomic<size_t> region_size_; /**< Current space remaining in the tgt */
-  size_t page_size_;  /**< The size of page in this buffer list */
-  size_t cur_count_;  /**< Current number of pages allocated */
-  size_t max_count_;  /**< Max pages allocated at one time */
-  Mutex lock_;        /**< The modifier lock for this slot */
-
-  /** Default constructor */
-  BpFreeListStat() = default;
-
-  /** Copy constructor */
-  BpFreeListStat(const BpFreeListStat &other) {
-    strong_copy(other);
-  }
-
-  /** Copy assignment operator */
-  BpFreeListStat& operator=(const BpFreeListStat &other) {
-    strong_copy(other);
-    return *this;
-  }
-
-  /** Move constructor */
-  BpFreeListStat(BpFreeListStat &&other) {
-    strong_copy(other);
-  }
-
-  /** Move assignment operator */
-  BpFreeListStat& operator=(BpFreeListStat &&other) {
-    strong_copy(other);
-    return *this;
-  }
-
-  /** Internal copy */
-  void strong_copy(const BpFreeListStat &other) {
-    region_off_ = other.region_off_.load();
-    region_size_ = other.region_size_.load();
-    page_size_ = other.page_size_;
-    cur_count_ = other.cur_count_;
-    max_count_ = other.max_count_;
-  }
-};
-
 /** Represents the list of available buffers */
 typedef hipc::slist<BpSlot> BpFreeList;
 
-/** Represents a cache of buffer size in the target */
-typedef hipc::pair<BpFreeListStat, BpFreeList> BpFreeListPair;
+/** Represents the set of slabs in shared memory */
+ struct BpTargetSlabSetIpc : public hipc::ShmContainer {
+  SHM_CONTAINER_TEMPLATE(BpTargetSlabSetIpc, BpTargetSlabSetIpc)
+  std::atomic<size_t> region_off_;  /**< Current offset in the target */
+   size_t region_size_; /**< Current space remaining in the tgt */
+  /** A free list per slab size */
+  hipc::ShmArchive<hipc::vector<BpFreeList>> slabs_;
+  /** Lock this target */
+  Mutex lock_;
 
-/** Represents the set of targets */
-typedef hipc::vector<BpFreeListPair> BpTargetAllocs;
+   /** SHM constructor. Default. */
+   explicit BpTargetSlabSetIpc(hipc::Allocator *alloc) {
+     shm_init_container(alloc);
+     HSHM_MAKE_AR0(slabs_, alloc)
+     SetNull();
+   }
+
+   /** SHM emplace constructor */
+   explicit BpTargetSlabSetIpc(hipc::Allocator *alloc,
+                               size_t nslabs) {
+     shm_init_container(alloc);
+     HSHM_MAKE_AR(slabs_, alloc, nslabs)
+     region_size_ = 0;
+     region_off_ =  0;
+     SetNull();
+   }
+
+   /** SHM copy constructor. */
+   explicit BpTargetSlabSetIpc(hipc::Allocator *alloc,
+                               const BpTargetSlabSetIpc &other) {
+     shm_init_container(alloc);
+     SetNull();
+   }
+
+   /** SHM copy assignment operator */
+   BpTargetSlabSetIpc& operator=(const BpTargetSlabSetIpc &other) {
+     if (this != &other) {
+       shm_destroy();
+       SetNull();
+     }
+     return *this;
+   }
+
+   /** Destructor. */
+   void shm_destroy_main() {
+     slabs_->shm_destroy();
+   }
+
+   /** Check if Null */
+   HSHM_ALWAYS_INLINE bool IsNull() {
+     return false;
+   }
+
+   /** Set to null */
+   HSHM_ALWAYS_INLINE void SetNull() {
+   }
+};
+
+struct BpTargetSlabSet {
+  std::atomic<size_t> *region_off_;  /**< Current offset in the target */
+  size_t region_size_; /**< Current space remaining in the tgt */
+  /** A free list per slab size */
+  std::vector<BpFreeList*> slabs_;
+  /** The set of slabs sizes */
+  std::vector<size_t> slab_sizes_;
+  /** Lock this target */
+  Mutex *lock_;
+};
 
 /**
  * The shared-memory representation of the BufferPool
  * */
 struct BufferPoolShm {
-  hipc::ShmArchive<BpTargetAllocs> free_lists_;
-  u16 ntargets_;
-  size_t concurrency_;
-  size_t nslabs_;
-
-  /**
-   * Get the free list of the target
-   * This is where region_off_ & region_size_ in the BpFreeListStat are valid
-   * */
-  size_t GetCpuTargetStat(u16 target, int cpu) {
-    return target * concurrency_ * nslabs_ + cpu * nslabs_;
-  }
-
-  /**
-   * Get the start of the vector of the free list for the CPU in the target
-   * This is where page_size_, cur_count_, and max_count_ are valid.
-   *
-   * [target] [cpu] [slab_id]
-   * */
-  size_t GetCpuFreeList(u16 target, int cpu, int slab_id) {
-    return target * concurrency_ * nslabs_ + cpu * nslabs_ + slab_id;
-  }
+  hipc::ShmArchive<hipc::vector<BpTargetSlabSetIpc>> target_allocs_;
 };
 
 /**
@@ -132,7 +131,7 @@ class BufferPool {
   RPC_TYPE *rpc_;
   BufferPoolShm *header_;
   /** Per-target allocator */
-  BpTargetAllocs *target_allocs_;
+  std::vector<BpTargetSlabSet> target_allocs_;
 
  public:
   /**====================================
@@ -152,6 +151,9 @@ class BufferPool {
    * */
   void shm_init(hipc::ShmArchive<BufferPoolShm> &header,
                 hipc::Allocator *alloc);
+
+  /** Create the free list cache */
+  void CreateTargetFreeListCache(int ntargets);
 
   /**====================================
    * SHM Deserialize
@@ -198,14 +200,12 @@ class BufferPool {
    * @param total_size the total amount of data being placed in this target
    * @param coins The requested number of slabs to allocate from this target
    * @param tid The ID of the (ideal) target to allocate from
-   * @param cpu The CPU we are currently scheduled on
    * @param blob_off [out] The current size of the blob which has been placed
    * @param buffers [out] The buffers which were allocated
    * */
   void AllocateBuffers(size_t total_size,
                        std::vector<BpCoin> &coins,
                        TargetId tid,
-                       int cpu,
                        size_t &blob_off,
                        std::vector<BufferInfo> &buffers);
 
@@ -225,25 +225,22 @@ class BufferPool {
                      size_t &slab_count,
                      size_t slab_id,
                      TargetId tid,
-                     int cpu,
                      size_t &blob_off,
                      std::vector<BufferInfo> &buffers);
 
   /**
-   * Allocate a buffer of a particular size
+   * Allocate a buffer of a particular size from the free list or stack
    *
-   * @param slab_id The size of slab to allocate
-   * @param tid The target to (ideally) allocate the slab from
-   * @param coin The buffer size information
+   * @param slab_size The size of slab to allocate
+   * @param free_list the free list to allocate from
+   * @param target_alloc the overall target allocator
    *
    * @return returns a BufferPool (BP) slot. The slot is NULL if the
    * target didn't have enough remaining space.
    * */
-  BpSlot AllocateSlabSize(int cpu,
-                          size_t slab_size,
-                          BpFreeList *free_list,
-                          BpFreeListStat *stat,
-                          BpFreeListStat *target_stat);
+  BpSlot AllocateSlabSize(size_t slab_size,
+                          BpFreeList &free_list,
+                          BpTargetSlabSet &target_alloc);
 
 
   /**====================================
@@ -259,15 +256,6 @@ class BufferPool {
   /**====================================
    * Helper Methods
    * ===================================*/
-
-  /** Get a free list reference */
-  void GetFreeListForCpu(u16 target_id, int cpu, int slab_id,
-                         BpFreeList* &free_list,
-                         BpFreeListStat* &free_list_stat);
-
-  /** Get the stack allocator from the cpu */
-  void GetTargetStatForCpu(u16 target_id, int cpu,
-                           BpFreeListStat* &target_stat);
 
   /** Find instance of unique target if it exists */
   static std::vector<std::pair<i32, size_t>>::iterator
