@@ -94,8 +94,6 @@ class AllocatorTestSuite {
 
   /** Allocate a window of pages, free the window. Random page sizes. */
   void AllocateAndFreeRandomWindow(size_t count) {
-    size_t min_page = 64;
-    size_t max_page = MEGABYTES(1);
     std::mt19937 rng(23522523);
     std::vector<size_t> sizes_;
 
@@ -186,7 +184,7 @@ Allocator* Pretest(MemoryBackendType backend_type,
     mem_mngr->UnregisterAllocator(alloc_id);
     mem_mngr->UnregisterBackend(shm_url);
     mem_mngr->CreateBackend<BackendT>(
-      MemoryManager::GetDefaultBackendSize(), shm_url);
+      mem_mngr->GetDefaultBackendSize(), shm_url);
     mem_mngr->CreateAllocator<AllocT>(
       shm_url, alloc_id, 0, std::forward<Args>(args)...);
   }

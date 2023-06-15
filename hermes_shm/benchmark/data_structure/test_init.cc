@@ -22,7 +22,7 @@ void MainPretest() {
   mem_mngr->UnregisterAllocator(alloc_id);
   mem_mngr->UnregisterBackend(shm_url);
   auto backend = mem_mngr->CreateBackend<hipc::PosixShmMmap>(
-    MemoryManager::GetDefaultBackendSize(), shm_url);
+    mem_mngr->GetDefaultBackendSize(), shm_url);
   memset(backend->data_, 0, MEGABYTES(16));
   // TODO(llogan): back to good allocator
   mem_mngr->CreateAllocator<hipc::ScalablePageAllocator>(

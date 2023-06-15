@@ -24,7 +24,7 @@ void MainPretest() {
   mem_mngr->UnregisterAllocator(alloc_id);
   mem_mngr->UnregisterBackend(shm_url);
   mem_mngr->CreateBackend<PosixShmMmap>(
-      MemoryManager::GetDefaultBackendSize(), shm_url);
+    MEGABYTES(100), shm_url);
   mem_mngr->CreateAllocator<hipc::ScalablePageAllocator>(shm_url, alloc_id, 0);
 }
 

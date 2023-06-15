@@ -40,7 +40,7 @@ Allocator* Pretest() {
   mem_mngr->UnregisterAllocator(alloc_id);
   mem_mngr->UnregisterBackend(shm_url);
   mem_mngr->CreateBackend<BackendT>(
-    MemoryManager::GetDefaultBackendSize(), shm_url);
+    GIGABYTES(1), shm_url);
   mem_mngr->CreateAllocator<AllocT>(
     shm_url, alloc_id, sizeof(SimpleAllocatorHeader));
   auto alloc = mem_mngr->GetAllocator(alloc_id);

@@ -43,7 +43,7 @@ void PretestRank0() {
   mem_mngr->UnregisterAllocator(alloc_id);
   mem_mngr->UnregisterBackend(shm_url);
   mem_mngr->CreateBackend<PosixShmMmap>(
-    MemoryManager::GetDefaultBackendSize(), shm_url);
+    GIGABYTES(1), shm_url);
   mem_mngr->CreateAllocator<AllocT>(shm_url, alloc_id, 0);
   alloc_g = mem_mngr->GetAllocator(alloc_id);
 }
