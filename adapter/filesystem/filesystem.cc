@@ -130,7 +130,7 @@ Status Filesystem::PartialPutOrCreate(hapi::Bucket &bkt,
                                       IoStatus &status,
                                       const FsIoOptions &opts,
                                       Context &ctx) {
-  Blob full_blob;
+  Blob full_blob(page_size);
   if (bkt.ContainsBlob(blob_name, blob_id)) {
     // Case 1: The blob already exists (read from hermes)
     // Read blob from Hermes
@@ -294,7 +294,7 @@ Status Filesystem::PartialGetOrCreate(hapi::Bucket &bkt,
                                       IoStatus &status,
                                       const FsIoOptions &opts,
                                       Context &ctx) {
-  Blob full_blob;
+  Blob full_blob(page_size);
   if (bkt.ContainsBlob(blob_name, blob_id)) {
     // Case 1: The blob already exists (read from hermes)
     // Read blob from Hermes

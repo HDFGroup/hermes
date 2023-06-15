@@ -118,7 +118,7 @@ class ScalablePageAllocator : public Allocator {
   static const size_t min_cached_size_ =
     (1 << min_cached_size_exp_) + sizeof(MpPage);
   /** The power-of-two exponent of the minimum size that can be cached (16KB) */
-  static const size_t max_cached_size_exp_ = 14;
+  static const size_t max_cached_size_exp_ = 24;
   /** The maximum size that can be cached directly */
   static const size_t max_cached_size_ =
     (1 << max_cached_size_exp_) + sizeof(MpPage);
