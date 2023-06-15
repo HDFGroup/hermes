@@ -26,7 +26,7 @@
 namespace hshm::ipc {
 
 struct FreeListSetIpc : public ShmContainer {
-  SHM_CONTAINER_TEMPLATE(FreeListSetIpc, FreeListSetIpc)
+ SHM_CONTAINER_TEMPLATE(FreeListSetIpc, FreeListSetIpc)
   ShmArchive<vector<pair<Mutex, iqueue<MpPage>>>> lists_;
   std::atomic<uint16_t> rr_free_;
   std::atomic<uint16_t> rr_alloc_;
@@ -117,17 +117,15 @@ class ScalablePageAllocator : public Allocator {
   /** The minimum size that can be cached directly (64 bytes) */
   static const size_t min_cached_size_ =
     (1 << min_cached_size_exp_) + sizeof(MpPage);
-  /** The power-of-two exponent of the minimum size that can be cached */
-  static const size_t max_cached_size_exp_ = 24;
-  /** The maximum size that can be cached directly (16MB) */
+  /** The power-of-two exponent of the minimum size that can be cached (16KB) */
+  static const size_t max_cached_size_exp_ = 14;
+  /** The maximum size that can be cached directly */
   static const size_t max_cached_size_ =
     (1 << max_cached_size_exp_) + sizeof(MpPage);
-  /** Cache every size between 64 (2^6) BYTES and 16MB (2^24): (19 entries) */
-  static const size_t num_caches_ = 24 - 6 + 1;
-  /**
-   * The last free list stores sizes larger than 16KB or sizes which are
-   * not exactly powers-of-two.
-   * */
+  /** The number of well-defined caches */
+  static const size_t num_caches_ =
+    max_cached_size_exp_ - min_cached_size_exp_ + 1;
+  /** An arbitrary free list */
   static const size_t num_free_lists_ = num_caches_ + 1;
 
  public:
@@ -234,9 +232,7 @@ class ScalablePageAllocator : public Allocator {
     }
   }
 
-  /**
-   * Find the first fit of an element in a free list
-   * */
+  /** Find the first fit of an element in a free list */
   HSHM_ALWAYS_INLINE MpPage* FindFirstFit(size_t size_mp,
                                           iqueue<MpPage> &free_list) {
     for (auto iter = free_list.begin(); iter != free_list.end(); ++iter) {
