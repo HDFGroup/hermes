@@ -33,10 +33,10 @@ void ScalablePageAllocator::shm_init(allocator_id_t id,
   HERMES_MEMORY_REGISTRY_REF.RegisterAllocator(&alloc_);
   header_->Configure(id, custom_header_size, &alloc_,
                      buffer_size, coalesce_trigger, coalesce_window);
-  vector<iqueue<MpPage>> *free_lists = header_->free_lists_.get();
-  free_lists->resize(num_free_lists_);
+  vector<FreeListSetIpc> *free_lists = header_->free_lists_.get();
+  size_t ncpu = HERMES_SYSTEM_INFO->ncpu_;
+  free_lists->resize(num_free_lists_, ncpu);
   CacheFreeLists();
-  // size_t ncpu = HERMES_SYSTEM_INFO->ncpu_;
 }
 
 void ScalablePageAllocator::shm_deserialize(char *buffer,
@@ -81,9 +81,9 @@ OffsetPointer ScalablePageAllocator::AllocateOffset(size_t size) {
   }
 
   // Mark as allocated
+  page->page_size_ = size_mp;
   header_->total_alloc_.fetch_add(page->page_size_);
   auto p = Convert<MpPage, OffsetPointer>(page);
-  page->page_size_ = size_mp;
   page->SetAllocated();
   return p + sizeof(MpPage);
 }
@@ -105,7 +105,6 @@ OffsetPointer ScalablePageAllocator::ReallocateOffsetNoNullCheck(
 }
 
 void ScalablePageAllocator::FreeOffsetNoNullCheck(OffsetPointer p) {
-  ScopedMutex lock(header_->lock_, 0);
   // Mark as free
   auto hdr_offset = p - sizeof(MpPage);
   auto hdr = Convert<MpPage>(hdr_offset);
@@ -119,11 +118,27 @@ void ScalablePageAllocator::FreeOffsetNoNullCheck(OffsetPointer p) {
 
   // Append to small buffer cache free list
   if (hdr->page_size_ <= max_cached_size_) {
-    iqueue<MpPage> *free_list = free_lists_[exp];
-    free_list->enqueue(hdr);
+    // Get buffer cache at exp
+    FreeListSet &free_list_set = free_lists_[exp];
+    uint16_t conc = free_list_set.rr_free_->fetch_add(1) %
+      free_list_set.lists_.size();
+    std::pair<Mutex*, iqueue<MpPage>*> free_list_pair =
+      free_list_set.lists_[conc];
+    Mutex &lock = *free_list_pair.first;
+    iqueue<MpPage> &free_list = *free_list_pair.second;
+    ScopedMutex scoped_lock(lock, 0);
+    free_list.enqueue(hdr);
   } else {
-    iqueue<MpPage> *last_free_list = free_lists_[num_caches_];
-    last_free_list->enqueue(hdr);
+    // Get buffer cache at exp
+    FreeListSet &free_list_set = free_lists_[num_caches_];
+    uint16_t conc = free_list_set.rr_free_->fetch_add(1) %
+      free_list_set.lists_.size();
+    std::pair<Mutex*, iqueue<MpPage>*> free_list_pair =
+      free_list_set.lists_[conc];
+    Mutex &lock = *free_list_pair.first;
+    iqueue<MpPage> &free_list = *free_list_pair.second;
+    ScopedMutex scoped_lock(lock, 0);
+    free_list.enqueue(hdr);
   }
 }
 

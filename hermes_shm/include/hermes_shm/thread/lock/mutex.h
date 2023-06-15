@@ -29,6 +29,9 @@ struct Mutex {
   /** Default constructor */
   HSHM_ALWAYS_INLINE Mutex() : lock_(0) {}
 
+  /** Copy constructor */
+  HSHM_ALWAYS_INLINE Mutex(const Mutex &other) {}
+
   /** Explicit initialization */
   HSHM_ALWAYS_INLINE void Init() {
     lock_ = 0;

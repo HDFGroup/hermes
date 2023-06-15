@@ -262,7 +262,7 @@ void FullAllocatorTestThreaded(int nthreads) {
 
 TEST_CASE("AllocatorBenchmark") {
   AllocatorTestSuite::PrintTestHeader();
-  FullAllocatorTestThreaded(8);
+  FullAllocatorTestThreaded(1);
   /*FullAllocatorTestThreaded(2);
   FullAllocatorTestThreaded(4);
   FullAllocatorTestThreaded(8);

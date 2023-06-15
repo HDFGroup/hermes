@@ -25,12 +25,69 @@
 
 namespace hshm::ipc {
 
+struct FreeListSetIpc : public ShmContainer {
+  SHM_CONTAINER_TEMPLATE(FreeListSetIpc, FreeListSetIpc)
+  ShmArchive<vector<pair<Mutex, iqueue<MpPage>>>> lists_;
+  std::atomic<uint16_t> rr_free_;
+  std::atomic<uint16_t> rr_alloc_;
+
+  /** SHM constructor. Default. */
+  explicit FreeListSetIpc(Allocator *alloc) {
+    shm_init_container(alloc);
+    HSHM_MAKE_AR0(lists_, alloc)
+    SetNull();
+  }
+
+  /** SHM emplace constructor */
+  explicit FreeListSetIpc(Allocator *alloc, size_t conc) {
+    shm_init_container(alloc);
+    HSHM_MAKE_AR(lists_, alloc, conc)
+    SetNull();
+  }
+
+  /** SHM copy constructor. */
+  explicit FreeListSetIpc(Allocator *alloc, const FreeListSetIpc &other) {
+    shm_init_container(alloc);
+    SetNull();
+  }
+
+  /** SHM copy assignment operator */
+  FreeListSetIpc& operator=(const FreeListSetIpc &other) {
+    if (this != &other) {
+      shm_destroy();
+      SetNull();
+    }
+    return *this;
+  }
+
+  /** Destructor. */
+  void shm_destroy_main() {
+    lists_->shm_destroy();
+  }
+
+  /** Check if Null */
+  HSHM_ALWAYS_INLINE bool IsNull() {
+    return false;
+  }
+
+  /** Set to null */
+  HSHM_ALWAYS_INLINE void SetNull() {
+    rr_free_ = 0;
+    rr_alloc_ = 0;
+  }
+};
+
+struct FreeListSet {
+  std::vector<std::pair<Mutex*, iqueue<MpPage>*>> lists_;
+  std::atomic<uint16_t> *rr_free_;
+  std::atomic<uint16_t> *rr_alloc_;
+};
+
 struct ScalablePageAllocatorHeader : public AllocatorHeader {
-  ShmArchive<vector<iqueue<MpPage>>> free_lists_;
+  ShmArchive<vector<FreeListSetIpc>> free_lists_;
   std::atomic<size_t> total_alloc_;
   size_t coalesce_trigger_;
   size_t coalesce_window_;
-  Mutex lock_;
 
   ScalablePageAllocatorHeader() = default;
 
@@ -47,14 +104,13 @@ struct ScalablePageAllocatorHeader : public AllocatorHeader {
     total_alloc_ = 0;
     coalesce_trigger_ = (coalesce_trigger * buffer_size).as_int();
     coalesce_window_ = coalesce_window;
-    lock_.Init();
   }
 };
 
 class ScalablePageAllocator : public Allocator {
  private:
   ScalablePageAllocatorHeader *header_;
-  std::vector<iqueue<MpPage>*> free_lists_;
+  std::vector<FreeListSet> free_lists_;
   StackAllocator alloc_;
   /** The power-of-two exponent of the minimum size that can be cached */
   static const size_t min_cached_size_exp_ = 6;
@@ -108,10 +164,25 @@ class ScalablePageAllocator : public Allocator {
    * Cache the free lists
    * */
   HSHM_ALWAYS_INLINE void CacheFreeLists() {
-    vector<iqueue<MpPage>> *free_lists = header_->free_lists_.get();
+    vector<FreeListSetIpc> *free_lists = header_->free_lists_.get();
     free_lists_.reserve(free_lists->size());
-    for (iqueue<MpPage> &free_list : *free_lists) {
-      free_lists_.emplace_back(&free_list);
+    // Iterate over page cache sets
+    for (FreeListSetIpc &free_list_set_ipc : *free_lists) {
+      free_lists_.emplace_back();
+      FreeListSet &free_list_set = free_lists_.back();
+      vector<pair<Mutex, iqueue<MpPage>>> &lists_ipc =
+        *free_list_set_ipc.lists_;
+      std::vector<std::pair<Mutex*, iqueue<MpPage>*>> &lists =
+        free_list_set.lists_;
+      free_list_set.lists_.reserve(free_list_set_ipc.lists_->size());
+      free_list_set.rr_alloc_ = &free_list_set_ipc.rr_alloc_;
+      free_list_set.rr_free_ = &free_list_set_ipc.rr_free_;
+      // Iterate over single page cache lane
+      for (pair<Mutex, iqueue<MpPage>> &free_list_pair_ipc : lists_ipc) {
+        Mutex &lock_ipc = free_list_pair_ipc.GetFirst();
+        iqueue<MpPage> &free_list_ipc = free_list_pair_ipc.GetSecond();
+        lists.emplace_back(&lock_ipc, &free_list_ipc);
+      }
     }
   }
 
@@ -125,23 +196,40 @@ class ScalablePageAllocator : public Allocator {
   /** Check if a cached page on this core can be re-used */
   HSHM_ALWAYS_INLINE MpPage* CheckLocalCaches(size_t size_mp, size_t exp) {
     MpPage *page;
-    ScopedMutex lock(header_->lock_, 0);
 
     // Check the small buffer caches
     if (size_mp <= max_cached_size_) {
-      // Check the nearest buffer cache
-      iqueue<MpPage> *free_list = free_lists_[exp];
-      if (free_list->size()) {
-        page = free_list->dequeue();
+      // Get buffer cache at exp
+      FreeListSet &free_list_set = free_lists_[exp];
+      uint16_t conc = free_list_set.rr_alloc_->fetch_add(1) %
+        free_list_set.lists_.size();
+      std::pair<Mutex*, iqueue<MpPage>*> free_list_pair =
+        free_list_set.lists_[conc];
+      Mutex &lock = *free_list_pair.first;
+      iqueue<MpPage> &free_list = *free_list_pair.second;
+      ScopedMutex scoped_lock(lock, 0);
+
+      // Check buffer cache
+      if (free_list.size()) {
+        page = free_list.dequeue();
         return page;
       } else {
         return nullptr;
       }
     } else {
+      // Get buffer cache at exp
+      FreeListSet &free_list_set = free_lists_[num_caches_];
+      uint16_t conc = free_list_set.rr_alloc_->fetch_add(1) %
+        free_list_set.lists_.size();
+      std::pair<Mutex*, iqueue<MpPage>*> free_list_pair =
+        free_list_set.lists_[conc];
+      Mutex &lock = *free_list_pair.first;
+      iqueue<MpPage> &free_list = *free_list_pair.second;
+      ScopedMutex scoped_lock(lock, 0);
+
       // Check the arbitrary buffer cache
-      iqueue<MpPage> *last_free_list = free_lists_[num_caches_];
       page = FindFirstFit(size_mp,
-                          *last_free_list);
+                          free_list);
       return page;
     }
   }
