@@ -12,6 +12,10 @@
 #include "affinity.h"
 #include "labstor/network/rpc_thallium.h"
 
+static inline pid_t GetLinuxTid() {
+  return syscall(SYS_gettid);
+}
+
 namespace labstor {
 
 #define WORKER_CONTINUOUS_POLLING BIT_OPT(u32, 0)
@@ -167,7 +171,7 @@ class Worker {
     EnableContinuousPolling();
     retries_ = 1;
     pid_ = 0;
-    pthread_id_ = gettid();
+    pthread_id_ = GetLinuxTid();
     // TODO(llogan): implement reserve for group
     group_.resize(512);
     group_.resize(0);

@@ -9,7 +9,7 @@
 namespace labstor {
 
 void Worker::Loop() {
-  pid_ = gettid();
+  pid_ = GetLinuxTid();
   WorkOrchestrator *orchestrator = LABSTOR_WORK_ORCHESTRATOR;
   while (orchestrator->IsAlive()) {
     try {
