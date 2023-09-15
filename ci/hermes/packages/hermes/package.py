@@ -1,9 +1,22 @@
 from spack import *
 
 class Hermes(CMakePackage):
-    homepage = "https://github.com/lukemartinlogan/labstor/wiki"
-    git = "https://github.com/lukemartinlogan/labstor.git"
-    version('master', branch='dev')
+    homepage = "http://www.cs.iit.edu/~scs/assets/projects/Hermes/Hermes.html"
+    url = "https://github.com/HDFGroup/hermes/tarball/master"
+    git = "https://github.com/HDFGroup/hermes.git"
+
+    version('master', branch='master')
+    version('pnnl', branch='pnnl')
+    version('dev-priv', git='https://github.com/lukemartinlogan/hermes.git', branch='dev')
+    version('dev-1.1', git='https://github.com/lukemartinlogan/hermes.git', branch='hermes-1.1')
+    version('hdf-1.1', git='https://github.com/HDFGroup/hermes.git', branch='hermes-1.1')
+
+    variant('vfd', default=False, description='Enable HDF5 VFD')
+    variant('ares', default=False, description='Enable full libfabric install')
+    variant('debug', default=False, description='Enable debug mode')
+    variant('debug', default=False, description='Build shared libraries')
+    variant('zmq', default=False, description='Build ZeroMQ tests')
+
     depends_on('mochi-thallium~cereal@0.10.1')
     depends_on('cereal')
     depends_on('catch2@3.0.1')
@@ -12,9 +25,6 @@ class Hermes(CMakePackage):
     depends_on('boost@1.7:')
     depends_on('hermes_shm')
     depends_on('libzmq', '+zmq')
-
-    variant('debug', default=False, description='Build shared libraries')
-    variant('zmq', default=False, description='Build ZeroMQ tests')
 
     def cmake_args(self):
         args = ['-DCMAKE_INSTALL_PREFIX={}'.format(self.prefix)]
