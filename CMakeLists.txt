@@ -1,504 +1,200 @@
-# CMakeLists files in this project can
-# refer to the root source directory of the project as ${HERMES_SOURCE_DIR} and
-# to the root binary directory of the project as ${HERMES_BINARY_DIR}.
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required(VERSION 3.10)
+project(labstor)
 
-if(CMAKE_SIZEOF_VOID_P LESS 8)
-  message(FATAL_ERROR "Hermes currently requires a 64-bit processor")
-endif()
+#-----------------------------------------------------------------------------
+# Define Options
+#-----------------------------------------------------------------------------
+option(BUILD_SHARED_LIBS "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" ON)
+option(BUILD_MPI_TESTS "Build tests which depend on MPI" ON)
+option(BUILD_OpenMP_TESTS "Build tests which depend on OpenMP" ON)
+option(LABSTOR_ENABLE_COVERAGE "Check how well tests cover code" OFF)
+option(LABSTOR_ENABLE_DOXYGEN "Check how well the code is documented" OFF)
 
-# Set a consistent MACOSX_RPATH default across all CMake versions.
-if(NOT DEFINED CMAKE_MACOSX_RPATH)
-  set(CMAKE_MACOSX_RPATH 0)
-endif()
+option(HERMES_ENABLE_POSIX_ADAPTER "Build the Hermes POSIX adapter." ON)
+option(HERMES_ENABLE_STDIO_ADAPTER "Build the Hermes stdio adapter." ON)
+option(HERMES_ENABLE_MPIIO_ADAPTER "Build the Hermes MPI-IO adapter." OFF)
+option(HERMES_ENABLE_PUBSUB_ADAPTER "Build the Hermes pub/sub adapter." OFF)
+option(HERMES_ENABLE_KVSTORE "Build the Hermes KVStore adapter." OFF)
+option(HERMES_ENABLE_VFD "Build the Hermes HDF5 Virtual File Driver" OFF)
 
-project(HERMES)
-set(IS_HERMES_MAIN ON)
-
-#------------------------------------------------------------------------------
-# Compiler optimization
-#------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
+# Compiler Optimization
+#-----------------------------------------------------------------------------
 set(CMAKE_CXX_STANDARD 17)
-add_compile_options("-fPIC")
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -fPIC")
-  # Ensure that debug logging is enabled
-  # This will keep logs which have beneath priority 10
-  add_compile_definitions(HERMES_LOG_VERBOSITY=10)
-  message("This is NOT a release build: ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_FLAGS}")
-elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -fPIC")
-  # Ensure that debug logging is enabled
-  # This will keep logs which have beneath priority 10
-  add_compile_definitions(HERMES_LOG_VERBOSITY=10)
-  message("This IS a release + debug build: ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_FLAGS}")
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message("IN DEBUG MODE")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0")
+    add_compile_definitions(HERMES_LOG_VERBOSITY=10)
 else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fPIC")
-  # Ensure that debug logging is disabled
-  # This will keep only VLOGs which have priroity 0
-  add_compile_definitions(HERMES_LOG_VERBOSITY=1)
-  message("This IS a release build: ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_FLAGS}")
+    message("IN RELEASE MODE")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O3")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O3")
+    add_compile_definitions(HERMES_LOG_VERBOSITY=1)
 endif()
-
-#------------------------------------------------------------------------------
-# Version information
-#------------------------------------------------------------------------------
-set(HERMES_VERSION_MAJOR "1")
-set(HERMES_VERSION_MINOR "0")
-set(HERMES_VERSION_PATCH "0")
-set(HERMES_PACKAGE "hermes")
-set(HERMES_PACKAGE_NAME "HERMES")
-set(HERMES_PACKAGE_VERSION "${HERMES_VERSION_MAJOR}.${HERMES_VERSION_MINOR}.${HERMES_VERSION_PATCH}")
-set(HERMES_PACKAGE_VERSION_MAJOR "${HERMES_VERSION_MAJOR}.${HERMES_VERSION_MINOR}")
-set(HERMES_PACKAGE_VERSION_MINOR "${HERMES_VERSION_PATCH}")
-set(HERMES_PACKAGE_STRING "${HERMES_PACKAGE_NAME} ${HERMES_PACKAGE_VERSION}")
-set(HERMES_PACKAGE_TARNAME "${HERMES_PACKAGE}")
-
-#set( CMAKE_VERBOSE_MAKEFILE on )
-
-#------------------------------------------------------------------------------
-# Setup install and output Directories
-#------------------------------------------------------------------------------
-if(NOT HERMES_INSTALL_BIN_DIR)
-  set(HERMES_INSTALL_BIN_DIR ${CMAKE_INSTALL_PREFIX}/bin)
-endif()
-if(NOT HERMES_INSTALL_LIB_DIR)
-  set(HERMES_INSTALL_LIB_DIR ${CMAKE_INSTALL_PREFIX}/lib)
-endif()
-if(NOT HERMES_INSTALL_INCLUDE_DIR)
-  set(HERMES_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_PREFIX}/include)
-endif()
-if(NOT HERMES_INSTALL_DATA_DIR)
-  set(HERMES_INSTALL_DATA_DIR ${CMAKE_INSTALL_PREFIX}/share)
-endif()
-
-#------------------------------------------------------------------------------
-# Setup CMake Environment
-#------------------------------------------------------------------------------
-# Export compile commands for autocode generation with CLANG
-# set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-if(APPLE)
-  # We are doing a unix-style install i.e. everything will be installed in
-  # CMAKE_INSTALL_PREFIX/bin and CMAKE_INSTALL_PREFIX/lib etc. as on other unix
-  # platforms. We still need to setup CMAKE_INSTALL_NAME_DIR correctly so that
-  # the binaries point to appropriate location for the libraries.
-
-  # 1. Make CMAKE_INSTALL_PREFIX publicly accessible, if it was hidden in
-  #    previous pass
-  get_property(is_internal CACHE CMAKE_INSTALL_PREFIX PROPERTY TYPE)
-  if(is_internal STREQUAL "INTERNAL")
-    set(CMAKE_INSTALL_PREFIX ${CACHED_CMAKE_INSTALL_PREFIX} CACHE PATH "Install prefix" FORCE)
-  else()
-    set(CMAKE_INSTALL_PREFIX ${CACHED_CMAKE_INSTALL_PREFIX} CACHE PATH "Install prefix")
-  endif()
-  unset(MACOSX_APP_INSTALL_PREFIX CACHE)
-
-  set(CMAKE_INSTALL_NAME_DIR "@rpath")
-  mark_as_advanced(
-    CMAKE_OSX_ARCHITECTURES
-    CMAKE_OSX_DEPLOYMENT_TARGET
-    CMAKE_OSX_SYSROOT
-    )
-endif()
-
-if(NOT CMAKE_INSTALL_RPATH)
-  set (CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-  set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-endif()
-
-#------------------------------------------------------------------------------
-if(NOT HERMES_EXTERNALLY_CONFIGURED)
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
-    ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all Executables."
-  )
-  set(EXECUTABLE_OUTPUT_PATH ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
-    ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all Libraries"
-  )
-  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
-    ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all static libraries."
-  )
-endif()
-
-set(HERMES_CMAKE_DIR "${HERMES_SOURCE_DIR}/CMake")
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${HERMES_CMAKE_DIR})
-set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${ORTOOLS_DIR} ${ORTOOLS_ROOT})
-
-#------------------------------------------------------------------------------
-# Disallow in-source build
-#------------------------------------------------------------------------------
-if("${HERMES_SOURCE_DIR}" STREQUAL "${HERMES_BINARY_DIR}")
-  message(FATAL_ERROR
-    "HERMES requires an out of source Build. "
-    "Please create a separate binary directory and run CMake there.")
-endif()
-
-#------------------------------------------------------------------------------
-# Set a default build type if none was specified
-#------------------------------------------------------------------------------
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  message(STATUS "Setting build type to 'RelWithDebInfo' as none was specified.")
-  set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Choose the type of build." FORCE)
-  # Set the possible values of build type for cmake-gui
-  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release"
-    "MinSizeRel" "RelWithDebInfo")
-endif()
-
-if(NOT "${CMAKE_CXX_STANDARD}")
-  set(CMAKE_CXX_STANDARD 17)
-  set(CMAKE_CXX_STANDARD_REQUIRED ON)
-  set(CMAKE_CXX_EXTENSIONS OFF)
-endif()
+add_compile_options(-march=native -fomit-frame-pointer)
 
 #-----------------------------------------------------------------------------
 # Targets built within this project are exported at Install time for use
 # by other projects.
 #-----------------------------------------------------------------------------
-if(NOT HERMES_EXPORTED_TARGETS)
-  set(HERMES_EXPORTED_TARGETS "hermes-targets")
+if(NOT LABSTOR_EXPORTED_TARGETS)
+    set(LABSTOR_EXPORTED_TARGETS "labstor-targets")
 endif()
-
-#------------------------------------------------------------------------------
-# Build options
-#------------------------------------------------------------------------------
-option(BUILD_SHARED_LIBS "Build with shared libraries." ON)
-option(HERMES_COMMUNICATION_MPI "Use MPI as the communication layer." ON)
-option(HERMES_ENABLE_DOXYGEN "Enable hermes documentation." OFF)
-option(HERMES_BUILD_BUFFER_POOL_VISUALIZER "Build the BufferPool visualizer" OFF)
-option(HERMES_USE_ADDRESS_SANITIZER "Enable -fsanitize=address in Debug builds" OFF)
-option(HERMES_USE_THREAD_SANITIZER "Enable -fsanitize=thread in Debug builds" OFF)
-option(HERMES_RPC_THALLIUM "Use Thallium as the RPC library." ON)
-option(HERMES_BUILD_BENCHMARKS "Build the Hermes benchmark suite." ON)
-option(HERMES_ENABLE_COVERAGE "Enable code coverage." OFF)
-option(HERMES_ENABLE_POSIX_ADAPTER "Build the Hermes POSIX adapter." ON)
-option(HERMES_ENABLE_STDIO_ADAPTER "Build the Hermes stdio adapter." ON)
-option(HERMES_ENABLE_MPIIO_ADAPTER "Build the Hermes MPI-IO adapter." ON)
-option(HERMES_ENABLE_PUBSUB_ADAPTER "Build the Hermes pub/sub adapter." ON)
-option(HERMES_ENABLE_KVSTORE "Build the Hermes KVStore adapter." OFF)
-option(HERMES_ENABLE_VFD "Build the Hermes HDF5 Virtual File Driver" OFF)
-option(HERMES_BUILD_ADAPTER_TESTS "Enable installation of tests." ON)
-option(HERMES_INSTALL_TESTS "Enable installation of tests." OFF)
-option(HERMES_ONLY_RPC "Avoids the shared-memory case in RPC for testing" OFF)
-option(HERMES_ENABLE_PROFILING "Enables profiling of certain functions" OFF)
-option(HERMES_ENABLE_C_BINDINGS "Used for compiling java API" OFF)
-option(HERMES_ENABLE_JAVA_BINDINGS "Used for compiling java API" OFF)
-option(HERMES_ENABLE_PYTHON_BINDINGS "Used for compiling python API" OFF)
-option(BUILD_HSHM_TESTS "Build data structure tests" OFF)
-
-option(HERMES_PTHREADS_ENABLED "Support spawning pthreads" ON)
-option(HERMES_DEBUG_LOCK "Used for debugging locks" OFF)
-
-# Compile definitions
-if (HERMES_PTHREADS_ENABLED)
-  add_compile_definitions(HERMES_PTHREADS_ENABLED)
-endif()
-if (HERMES_RPC_THALLIUM)
-  add_compile_definitions(HERMES_RPC_THALLIUM)
-endif()
-if (HERMES_DEBUG_LOCK)
-  message("Lock debugging enabled")
-  add_compile_definitions(HERMES_DEBUG_LOCK)
-endif()
-
-# Calculate code coverage with debug mode
-if(HERMES_ENABLE_COVERAGE)
-  if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-    message(STATUS "Use code coverage with debug mode")
-    set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "" FORCE)
-  endif()
-endif()
-
-if(BUILD_SHARED_LIBS)
-  set(HERMES_BUILD_SHARED_LIBS 1)
-  set(HERMES_LIBTYPE SHARED)
-else()
-  message(FATAL_ERROR "Must build hermes with shared libs")
-endif()
-
-# TODO(chogan): Expose this once we have more than one communication layer
-mark_as_advanced(HERMES_COMMUNICATION_MPI)
-# TODO(chogan): Expose this once we support more than one RPC layer
-mark_as_advanced(HERMES_RPC_THALLIUM)
-
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-  if (NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-g3.*")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3"
-        CACHE STRING "" FORCE)
-  endif()
-
-  if (HERMES_USE_ADDRESS_SANITIZER)
-    if(NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-fsanitize=address.*")
-      set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address"
-        CACHE STRING "" FORCE)
-    endif()
-  else()
-    string(REPLACE
-      "-fsanitize=address" "" FLAGS_NO_SANITIZE "${CMAKE_CXX_FLAGS_DEBUG}")
-    set(CMAKE_CXX_FLAGS_DEBUG "${FLAGS_NO_SANITIZE}" CACHE STRING "" FORCE)
-  endif()
-
-  if (HERMES_USE_THREAD_SANITIZER AND HERMES_USE_ADDRESS_SANITIZER)
-    message(FATAL_ERROR "Cannont use -fsanitize=address and -fsanitize=thread "
-                        "at the same time")
-  else()
-    if (HERMES_USE_THREAD_SANITIZER)
-      if(NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-fsanitize=thread.*")
-        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=thread"
-          CACHE STRING "" FORCE)
-      endif()
-    else()
-      string(REPLACE
-        "-fsanitize=thread" "" FLAGS_NO_SANITIZE "${CMAKE_CXX_FLAGS_DEBUG}")
-      set(CMAKE_CXX_FLAGS_DEBUG "${FLAGS_NO_SANITIZE}" CACHE STRING "" FORCE)
-    endif()
-  endif()
-endif()
-
-#-------------------------------------------------------------------------------
-function(hermes_set_lib_options libtarget libname libtype)
-  if(${libtype} MATCHES "SHARED")
-    if(WIN32 AND NOT MINGW)
-      set(LIB_RELEASE_NAME "${libname}")
-      set(LIB_DEBUG_NAME "${libname}_D")
-      set(LIB_VERSION ${HERMES_PACKAGE_VERSION_MAJOR})
-    else()
-      set(LIB_RELEASE_NAME "${libname}")
-      set(LIB_DEBUG_NAME "${libname}_debug")
-      set(LIB_VERSION ${HERMES_PACKAGE_VERSION})
-    endif()
-  else()
-    if(WIN32 AND NOT MINGW)
-      set(LIB_RELEASE_NAME "lib${libname}")
-      set(LIB_DEBUG_NAME "lib${libname}_D")
-    else()
-      # if the generator supports configuration types or if the CMAKE_BUILD_TYPE has a value
-      if(CMAKE_CONFIGURATION_TYPES OR CMAKE_BUILD_TYPE)
-        set(LIB_RELEASE_NAME "${libname}")
-        set(LIB_DEBUG_NAME "${libname}_debug")
-      else()
-        set(LIB_RELEASE_NAME "lib${libname}")
-        set(LIB_DEBUG_NAME "lib${libname}_debug")
-      endif()
-    endif()
-  endif()
-
-  set_target_properties(${libtarget}
-    PROPERTIES
-    DEBUG_OUTPUT_NAME          ${LIB_DEBUG_NAME}
-    RELEASE_OUTPUT_NAME        ${LIB_RELEASE_NAME}
-    MINSIZEREL_OUTPUT_NAME     ${LIB_RELEASE_NAME}
-    RELWITHDEBINFO_OUTPUT_NAME ${LIB_RELEASE_NAME}
-    VERSION                    ${LIB_VERSION}
-    SOVERSION                  ${LIB_VERSION}
-  )
-
-  #----- Use MSVC Naming conventions for Shared Libraries
-  if(MINGW AND ${libtype} MATCHES "SHARED")
-    set_target_properties(${libtarget}
-      PROPERTIES
-      IMPORT_SUFFIX ".lib"
-      IMPORT_PREFIX ""
-      PREFIX ""
-    )
-  endif()
-endfunction()
 
 #-----------------------------------------------------------------------------
-# Dependencies common to all subdirectories
+# Find Packages
 #-----------------------------------------------------------------------------
-# thallium
-if(HERMES_RPC_THALLIUM)
-  find_package(thallium CONFIG REQUIRED)
-  if(thallium_FOUND)
-    message(STATUS "found thallium at ${thallium_DIR}")
-  endif()
-endif()
 
-#YAML-CPP
+# HermesShm
+find_package(HermesShm CONFIG REQUIRED)
+message(STATUS "found hermes_shm.h at ${HermesShm_INCLUDE_DIRS}")
+
+# YAML-CPP
 find_package(yaml-cpp REQUIRED)
-if(yaml-cpp_FOUND)
-  message(STATUS "found yaml-cpp at ${yaml-cpp_DIR}")
+message(STATUS "found yaml-cpp at ${yaml-cpp_DIR}")
+
+# Catch2
+find_package(Catch2 3.0.1 REQUIRED)
+message(STATUS "found catch2.h at ${Catch2_CXX_INCLUDE_DIRS}")
+
+# MPICH
+if(BUILD_MPI_TESTS)
+    find_package(MPI REQUIRED COMPONENTS C CXX)
+    message(STATUS "found mpi.h at ${MPI_CXX_INCLUDE_DIRS}")
 endif()
 
-#Cereal
+# OpenMP
+if(BUILD_OpenMP_TESTS)
+    find_package(OpenMP REQUIRED COMPONENTS C CXX)
+    message(STATUS "found omp.h at ${OpenMP_CXX_INCLUDE_DIRS}")
+endif()
+
+# Cereal
 find_package(cereal REQUIRED)
 if(cereal)
-  message(STATUS "found cereal")
+    message(STATUS "found cereal")
 endif()
 
-#if(HERMES_COMMUNICATION_MPI)
-find_package(MPI REQUIRED COMPONENTS C CXX)
-message(STATUS "found mpi.h at ${MPI_CXX_INCLUDE_DIRS}")
-#endif()
-
-# librt
-if(NOT APPLE)
-  find_library(LIBRT rt)
-  if(NOT LIBRT)
-    message(FATAL_ERROR "librt is required for POSIX shared memory")
-  endif()
+# Pkg-Config
+find_package(PkgConfig REQUIRED)
+if(PkgConfig)
+    message(STATUS "found pkg config")
 endif()
 
-# HDF5
-if(HERMES_ENABLE_VFD)
-  set(HERMES_REQUIRED_HDF5_VERSION 1.14.0)
-  set(HERMES_REQUIRED_HDF5_COMPONENTS C)
-  find_package(HDF5 ${HERMES_REQUIRED_HDF5_VERSION} CONFIG NAMES hdf5
-    COMPONENTS ${HERMES_REQUIRED_HDF5_COMPONENTS} shared)
-  if(HDF5_FOUND)
-    message(STATUS "found HDF5 ${HDF5_VERSION} at ${HDF5_INCLUDE_DIR}")
-    set(HDF5_HERMES_VFD_EXT_INCLUDE_DEPENDENCIES
-      ${HDF5_HERMES_VFD_EXT_INCLUDE_DEPENDENCIES}
-      ${HDF5_INCLUDE_DIR})
-    set(HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES
-      ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES}
-      ${HDF5_C_SHARED_LIBRARY})
-  else()
-    # Allow for HDF5 autotools builds
-    find_package(HDF5 ${HERMES_REQUIRED_HDF5_VERSION} MODULE REQUIRED
-      COMPONENTS ${HERMES_REQUIRED_HDF5_COMPONENTS})
-    if(HDF5_FOUND)
-      set(HDF5_HERMES_VFD_EXT_INCLUDE_DEPENDENCIES
-        ${HDF5_HERMES_VFD_EXT_INCLUDE_DEPENDENCIES}
-        ${HDF5_INCLUDE_DIRS})
-      set(HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES
-        ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES}
-        ${HDF5_LIBRARIES})
-    else()
-      message(FATAL_ERROR "Could not find HDF5, please set HDF5_DIR (1.13.0) or HDF5_ROOT (1.13.1).")
-    endif()
-  endif()
+# Zeromq
+#pkg_check_modules(ZMQ REQUIRED libzmq)
+#include_directories(${ZMQ_INCLUDE_DIRS})
+#message("Found libzmq at: ${ZMQ_INCLUDE_DIRS}")
+
+# Thallium
+find_package(thallium CONFIG REQUIRED)
+if(thallium_FOUND)
+    message(STATUS "found thallium at ${thallium_DIR}")
 endif()
 
-#-----------------------------------------------------------------------------
-# Coverage
-#-----------------------------------------------------------------------------
-if(HERMES_ENABLE_COVERAGE)
-  set(COVERAGE_FLAGS "-fprofile-arcs -ftest-coverage" CACHE STRING
-    "Flags to the coverage program to perform coverage inspection"
-  )
-  mark_as_advanced(COVERAGE_FLAGS)
+#------------------------------------------------------------------------------
+# Setup CMake Environment
+#------------------------------------------------------------------------------
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
+        ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all Executables.")
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
+        ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all Libraries")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
+        ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all static libraries.")
 
-  macro(set_coverage_flags target)
-    set_target_properties(${target}
-      PROPERTIES
-        COMPILE_FLAGS ${COVERAGE_FLAGS}
-        LINK_FLAGS ${COVERAGE_FLAGS}
-    )
-  endmacro()
+#------------------------------------------------------------------------------
+# Setup install and output Directories
+#------------------------------------------------------------------------------
+if(NOT LABSTOR_INSTALL_BIN_DIR)
+    set(LABSTOR_INSTALL_BIN_DIR ${CMAKE_INSTALL_PREFIX}/bin)
+endif()
+if(NOT LABSTOR_INSTALL_LIB_DIR)
+    set(LABSTOR_INSTALL_LIB_DIR ${CMAKE_INSTALL_PREFIX}/lib)
+endif()
+if(NOT LABSTOR_INSTALL_INCLUDE_DIR)
+    set(LABSTOR_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_PREFIX}/include)
+endif()
+if(NOT LABSTOR_INSTALL_DATA_DIR)
+    set(LABSTOR_INSTALL_DATA_DIR ${CMAKE_INSTALL_PREFIX}/share)
 endif()
 
 #-----------------------------------------------------------------------------
-# Enable Testing
+# Build Labstor Main Packages
+#-----------------------------------------------------------------------------
+# Main includes
+include_directories(${HermesShm_INCLUDE_DIRS})
+include_directories(${CMAKE_SOURCE_DIR})
+include_directories(${CMAKE_SOURCE_DIR}/include)
+# Task includes
+include_directories(${CMAKE_SOURCE_DIR}/tasks_required)
+include_directories(${CMAKE_SOURCE_DIR}/tasks_required/labstor_admin/include)
+include_directories(${CMAKE_SOURCE_DIR}/tasks_required/small_message/include)
+include_directories(${CMAKE_SOURCE_DIR}/tasks_required/remote_queue/include)
+include_directories(${CMAKE_SOURCE_DIR}/tasks_required/worch_proc_round_robin/include)
+include_directories(${CMAKE_SOURCE_DIR}/tasks_required/worch_queue_round_robin/include)
+include_directories(${CMAKE_SOURCE_DIR}/tasks_required/proc_queue/include)
+
+include_directories(${CMAKE_SOURCE_DIR}/tasks)
+include_directories(${CMAKE_SOURCE_DIR}/tasks/hermes/include)
+include_directories(${CMAKE_SOURCE_DIR}/tasks/bdev/include)
+include_directories(${CMAKE_SOURCE_DIR}/tasks/ram_bdev/include)
+include_directories(${CMAKE_SOURCE_DIR}/tasks/posix_bdev/include)
+include_directories(${CMAKE_SOURCE_DIR}/tasks/hermes_mdm/include)
+include_directories(${CMAKE_SOURCE_DIR}/tasks/hermes_blob_mdm/include)
+include_directories(${CMAKE_SOURCE_DIR}/tasks/hermes_bucket_mdm/include)
+include_directories(${CMAKE_SOURCE_DIR}/tasks/hermes_adapters/include)
+
+# Test includes
+include_directories(${CMAKE_SOURCE_DIR}/test/unit)
+
+set(Labstor_CLIENT_LIBRARIES
+        ${HermesShm_LIBRARIES}
+        yaml-cpp
+        cereal::cereal
+        -ldl -lrt -lc -pthread labstor_client)
+set(Labstor_CLIENT_DEPS
+        labstor_client)
+set(Labstor_RUNTIME_LIBRARIES
+        ${Labstor_CLIENT_LIBRARIES}
+        labstor_runtime)
+set(Labstor_RUNTIME_DEPS
+        labstor_client labstor_runtime)
+
+set(TEST_MAIN ${CMAKE_SOURCE_DIR}/test/unit)
+add_subdirectory(src)
+add_subdirectory(tasks_required)
+add_subdirectory(tasks)
+add_subdirectory(benchmark)
+add_custom_target(lint COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/lint.sh ${CMAKE_SOURCE_DIR})
+
+#-----------------------------------------------------------------------------
+# Build + Enable Testing
 #-----------------------------------------------------------------------------
 # General function used to hook ctest to python test tool lib
 function(pytest test_type test_name)
-  set(script ${CMAKE_SOURCE_DIR}/ci/py_hermes_ci/bin/run_test)
-  add_test(NAME ${test_name}
-          COMMAND ${script} ${test_type} ${test_name} ${CMAKE_BINARY_DIR} ${HERMES_USE_ADDRESS_SANITIZER})
+    set(script ${CMAKE_SOURCE_DIR}/scripts/ci/py_hermes_ci/bin/run_test)
+    add_test(NAME ${test_name}
+            COMMAND ${script} ${test_type} ${test_name} ${CMAKE_BINARY_DIR} ${HERMES_USE_ADDRESS_SANITIZER})
 endfunction()
 
-include(CTest)
-
-# Add testing directory
-if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
-  find_package(Catch2 3.0.1 REQUIRED)
-  find_program(IOR_EXE ior)
-  if(IOR_EXE)
-    message(STATUS "Found ior at ${IOR_EXE}")
-    set(HERMES_HAVE_IOR "YES")
-  else()
-    message(WARNING "Couldn't find the 'ior' executable. Some tests will be skipped.")
-    set(HERMES_HAVE_IOR "NO")
-  endif()
-  enable_testing()
-endif()
+enable_testing()
+add_subdirectory(test)
 
 #-----------------------------------------------------------------------------
-# Source
+# Install LabStor Headers
 #-----------------------------------------------------------------------------
+install(DIRECTORY include DESTINATION ${CMAKE_INSTALL_PREFIX})
 
-set(HERMES_EXPORTED_LIBS "")
-
-include_directories(${CMAKE_SOURCE_DIR}/hermes_shm/include)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
-add_subdirectory(${CMAKE_SOURCE_DIR}/hermes_shm)
-add_subdirectory(${CMAKE_SOURCE_DIR}/wrapper)
-
-add_custom_target(rpc COMMAND bash
-        ${CMAKE_SOURCE_DIR}/code_generators/code_generators/rpc/rpcgen.sh
-        "${CMAKE_SOURCE_DIR}"
-        "${CMAKE_BINARY_DIR}")
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager)
-
-##### ADAPTERS
-if(HERMES_ENABLE_STDIO_ADAPTER OR HERMES_ENABLE_POSIX_ADAPTER OR
-    HERMES_ENABLE_MPIIO_ADAPTER OR HERMES_ENABLE_PUBSUB_ADAPTER OR
-    HERMES_ENABLE_VFD)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/adapter)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/traits)
-endif()
-
-#-----------------------------------------------------------------------------
-# Testing Sources
-#-----------------------------------------------------------------------------
-if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
-  add_subdirectory(test)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager/test)
-endif()
-
-#-----------------------------------------------------------------------------
-# Documentation
-#-----------------------------------------------------------------------------
-
-if(HERMES_ENABLE_DOXYGEN)
-  include(UseDoxygenDoc)
-
-  add_doxygen_doc(
-    BUILD_DIR
-      ${CMAKE_CURRENT_BINARY_DIR}/_build
-    DOXY_FILE
-      ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in
-    TARGET_NAME
-      dox
-    COMMENT
-      "HTML documentation"
-    )
-endif()
-
-#-----------------------------------------------------------------------------
-# Benchmarks
-#-----------------------------------------------------------------------------
-if(HERMES_BUILD_BENCHMARKS)
-  message("Building benchmarks")
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/benchmarks)
-endif()
-
-install(
-  FILES
-        test/data/hermes_server.yaml
-  TYPE
-    DATA
-  RENAME
-    hermes_sample.yaml
-)
-
-add_custom_target(lint
-  COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/lint.sh ${CMAKE_CURRENT_SOURCE_DIR}
-)
-
-#-----------------------------------------------------------------------------
-# Install HermesConfig.cmake
-#-----------------------------------------------------------------------------
 configure_file(
-        ${HERMES_SOURCE_DIR}/CMake/HermesConfig.cmake
-        ${HERMES_BINARY_DIR}/CMakeFiles/HermesConfig.cmake @ONLY
+        ${CMAKE_CURRENT_SOURCE_DIR}/CMake/LabstorConfig.cmake
+        ${PROJECT_BINARY_DIR}/CMakeFiles/LabstorConfig.cmake @ONLY
 )
 
 install(
-  FILES
-    ${HERMES_BINARY_DIR}/CMakeFiles/HermesConfig.cmake
-  DESTINATION
-    ${CMAKE_INSTALL_PREFIX}/cmake
+        FILES
+        ${PROJECT_BINARY_DIR}/CMakeFiles/LabstorConfig.cmake
+        DESTINATION
+        ${CMAKE_INSTALL_PREFIX}/cmake
 )

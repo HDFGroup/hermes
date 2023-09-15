@@ -1,118 +1,54 @@
-include_directories(${CMAKE_SOURCE_DIR})
-
-configure_file(hermes_version.h.in hermes_version.h)
-
-# Create rpc factory
-set(CMAKE_HERMES_COMMUNICATION_TYPE HERMES_RPC_NONE)
-if (HERMES_RPC_THALLIUM)
-  set(CMAKE_HERMES_RPC_TYPE HERMES_RPC_THALLIUM)
-  set(CMAKE_HERMES_RPC_TYPE_LIB thallium)
-endif()
-configure_file(rpc_factory.h.in rpc_factory.h)
-
 #------------------------------------------------------------------------------
 # External dependencies
 #------------------------------------------------------------------------------
 # None for now
 
 #------------------------------------------------------------------------------
-# Set sources
+# Build Labstor Client Library
 #------------------------------------------------------------------------------
-set(HERMES_SRCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/api/hermes_singleton.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/config_client.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/config_server.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/hermes_types.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/rpc.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/rpc_thallium.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/rpc_thallium_defs.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/metadata_types.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/metadata_manager.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/api/bucket.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/api/hermes.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/buffer_pool.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/buffer_organizer.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/prefetcher.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/prefetcher/apriori_prefetcher.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/trait_manager.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/data_placement_engine.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/dpe/random.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/dpe/round_robin.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/dpe/minimize_io_time.cc)
-
-#------------------------------------------------------------------------------
-# Build Hermes Shared Library
-#------------------------------------------------------------------------------
-set(HERMES_BUILD_INCLUDE_DEPENDENCIES
-  ${CMAKE_CURRENT_SOURCE_DIR}
-  ${CMAKE_CURRENT_SOURCE_DIR}/api
-  ${CMAKE_CURRENT_BINARY_DIR}
-)
-
-add_library(hermes SHARED ${HERMES_SRCS})
-include_directories(${CMAKE_SOURCE_DIR}/io_client)
-target_include_directories(hermes
-  PUBLIC "$<BUILD_INTERFACE:${HERMES_BUILD_INCLUDE_DEPENDENCIES}>"
-          $<INSTALL_INTERFACE:${HERMES_INSTALL_INCLUDE_INTERFACE}>
-)
-target_include_directories(hermes
-  SYSTEM PUBLIC ${HERMES_EXT_INCLUDE_DEPENDENCIES})
-add_dependencies(hermes
-        hermes_shm_data_structures)
-target_link_libraries(hermes
-  hermes_shm_data_structures
-  ${CMAKE_HERMES_RPC_TYPE_LIB}
+add_library(labstor_client SHARED
+        ${CMAKE_CURRENT_SOURCE_DIR}/config_client.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/config_server.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/labstor_client.cc)
+target_link_libraries(labstor_client
+  ${HermesShm_LIBRARIES}
   yaml-cpp
   cereal::cereal
-  MPI::MPI_CXX)
-
-if (HERMES_ENABLE_PROFILING)
-  message("profiling is enabled: ${HERMES_ENABLE_PROFILING}")
-endif()
-
-target_compile_definitions(hermes
-  PRIVATE $<$<BOOL:${HERMES_ONLY_RPC}>:HERMES_ONLY_RPC>
-  PRIVATE $<$<BOOL:${HERMES_ENABLE_PROFILING}>:HERMES_ENABLE_PROFILING>
-)
-
-hermes_set_lib_options(hermes "hermes" ${HERMES_LIBTYPE})
-set(HERMES_EXPORTED_LIBS hermes hermes_daemon finalize_hermes ${HERMES_EXPORTED_LIBS})
+  thallium
+  -ldl -lrt -lc -pthread)
 
 #------------------------------------------------------------------------------
-# Build Hermes Daemon
+# Build Labstor Runtime Library
 #------------------------------------------------------------------------------
-find_package(Catch2 REQUIRED)
-add_executable(hermes_daemon api/hermes_daemon.cc)
-add_dependencies(hermes_daemon hermes)
-target_link_libraries(hermes_daemon hermes -ldl -lc MPI::MPI_CXX)
-target_compile_definitions(hermes_daemon
-        PRIVATE $<$<BOOL:${HERMES_ENABLE_PROFILING}>:HERMES_ENABLE_PROFILING>)
-
+add_library(labstor_runtime
+        worker.cc
+        labstor_runtime.cc)
+add_dependencies(labstor_runtime ${Labstor_CLIENT_DEPS})
+target_link_libraries(labstor_runtime thallium ${Labstor_CLIENT_LIBRARIES})
 
 #------------------------------------------------------------------------------
-# Build Hermes Shared Library
+# Build Labstor Runtime Start Function
 #------------------------------------------------------------------------------
-add_executable(finalize_hermes api/finalize_hermes.cc)
-add_dependencies(finalize_hermes hermes)
-target_link_libraries(finalize_hermes hermes)
+add_executable(labstor_start_runtime
+        labstor_start_runtime.cc)
+add_dependencies(labstor_start_runtime ${Labstor_RUNTIME_DEPS})
+target_link_libraries(labstor_start_runtime ${Labstor_RUNTIME_LIBRARIES})
 
-#-----------------------------------------------------------------------------
-# Specify project header files to be installed
-#-----------------------------------------------------------------------------
-file(GLOB_RECURSE HERMES_HEADERS "*.h")
-set(HERMES_HEADERS
-        ${CMAKE_BINARY_DIR}/src/rpc_factory.h
-        ${CMAKE_BINARY_DIR}/src/hermes_version.h
-        ${HERMES_HEADERS})
+#------------------------------------------------------------------------------
+# Build LabStor Runtime Stop Function
+#------------------------------------------------------------------------------
+add_executable(labstor_stop_runtime labstor_stop_runtime.cc)
+add_dependencies(labstor_stop_runtime ${Labstor_CLIENT_DEPS})
+target_link_libraries(labstor_stop_runtime ${Labstor_CLIENT_LIBRARIES})
 
 #-----------------------------------------------------------------------------
 # Add file(s) to CMake Install
 #-----------------------------------------------------------------------------
 install(
   FILES
-    ${HERMES_HEADERS}
+    ${LABSTOR_HEADERS}
   DESTINATION
-    ${HERMES_INSTALL_INCLUDE_DIR}
+    ${LABSTOR_INSTALL_INCLUDE_DIR}
   COMPONENT
     headers
 )
@@ -122,61 +58,53 @@ install(
 #-----------------------------------------------------------------------------
 install(
   TARGETS
-    hermes
-    hermes_daemon
-    finalize_hermes
+    labstor_client
+    labstor_runtime
+    labstor_start_runtime
+    labstor_stop_runtime
   EXPORT
-    ${HERMES_EXPORTED_TARGETS}
-  LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
-  ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
-  RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR}
+  ${LABSTOR_EXPORTED_TARGETS}
+  LIBRARY DESTINATION ${LABSTOR_INSTALL_LIB_DIR}
+  ARCHIVE DESTINATION ${LABSTOR_INSTALL_LIB_DIR}
+  RUNTIME DESTINATION ${LABSTOR_INSTALL_BIN_DIR}
 )
 
 #-----------------------------------------------------------------------------
 # Add Target(s) to CMake Install for import into other projects
 #-----------------------------------------------------------------------------
 install(
-  EXPORT
-    ${HERMES_EXPORTED_TARGETS}
-  DESTINATION
-    ${HERMES_INSTALL_DATA_DIR}/cmake/hermes
-  FILE
-    ${HERMES_EXPORTED_TARGETS}.cmake
+        EXPORT
+        ${LABSTOR_EXPORTED_TARGETS}
+        DESTINATION
+        ${LABSTOR_INSTALL_DATA_DIR}/cmake/hermes
+        FILE
+        ${LABSTOR_EXPORTED_TARGETS}.cmake
 )
 
 #-----------------------------------------------------------------------------
 # Export all exported targets to the build tree for use by parent project
 #-----------------------------------------------------------------------------
-if(NOT HERMES_EXTERNALLY_CONFIGURED)
-EXPORT (
-  TARGETS
-    ${HERMES_EXPORTED_LIBS}
-  FILE
-    ${HERMES_EXPORTED_TARGETS}.cmake
-)
+set(LABSTOR_EXPORTED_LIBS
+        labstor_client
+        labstor_runtime
+        labstor_start_runtime
+        labstor_stop_runtime
+        ${LABSTOR_EXPORTED_LIBS})
+if(NOT LABSTOR_EXTERNALLY_CONFIGURED)
+  EXPORT (
+          TARGETS
+          ${LABSTOR_EXPORTED_LIBS}
+          FILE
+          ${LABSTOR_EXPORTED_TARGETS}.cmake
+  )
 endif()
-
-#------------------------------------------------------------------------------
-# Set variables for parent scope
-#------------------------------------------------------------------------------
-# Used by config.cmake.build.in and Testing
-set(HERMES_INCLUDES_BUILD_TIME
-  ${CMAKE_CURRENT_SOURCE_DIR}
-  ${CMAKE_CURRENT_BINARY_DIR}
-  ${HERMES_EXT_INCLUDE_DEPENDENCIES}
-  PARENT_SCOPE
-)
-
-# Used by config.cmake.install.in
-set(HERMES_INCLUDES_INSTALL_TIME
-  ${HERMES_INSTALL_INCLUDE_DIR}
-  ${HERMES_EXT_INCLUDE_DEPENDENCIES}
-  PARENT_SCOPE
-)
 
 #------------------------------------------------------------------------------
 # Coverage
 #------------------------------------------------------------------------------
-if(HERMES_ENABLE_COVERAGE)
-  set_coverage_flags(hermes)
+if(LABSTOR_ENABLE_COVERAGE)
+  set_coverage_flags(labstor_client)
+  set_coverage_flags(labstor_runtime)
+  set_coverage_flags(labstor_start_runtime)
+  set_coverage_flags(labstor_stop_runtime)
 endif()

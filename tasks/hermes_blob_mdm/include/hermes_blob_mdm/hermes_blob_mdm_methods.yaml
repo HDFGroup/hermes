@@ -1,0 +1,17 @@
+kPutBlob: 0
+kGetBlob: 1
+kTruncateBlob: 2
+kDestroyBlob: 3
+kTagBlob: 4
+#kUntagBlob: 5
+kBlobHasTag: 6
+#kGetBlobTags: 7
+kGetBlobId: 8
+kGetOrCreateBlobId: 9
+kGetBlobName: 10
+kGetBlobSize: 11
+kGetBlobScore: 12
+kGetBlobBuffers: 13
+kRenameBlob: 14
+kReorganizeBlob: 15
+kSetBucketMdm: 16

@@ -1,0 +1,176 @@
+#!/usr/bin/env python3
+
+"""
+USAGE: ./referesh_methods [TASK_ROOT]
+"""
+
+import yaml
+import os
+import sys
+from codegen.util.paths import LABSTOR_ROOT
+
+TASK_ROOT = sys.argv[1]
+TASK_NAME = os.path.basename(TASK_ROOT)
+METHODS_H = f'{TASK_ROOT}/include/{TASK_NAME}/{TASK_NAME}_methods.h'
+METHODS_YAML = f'{TASK_ROOT}/include/{TASK_NAME}/{TASK_NAME}_methods.yaml'
+LIB_EXEC_H = f'{TASK_ROOT}/include/{TASK_NAME}/{TASK_NAME}_lib_exec.h'
+METHOD_MACRO = f'LABSTOR_{TASK_NAME.upper()}_METHODS_H_'
+LIB_EXEC_MACRO = f'LABSTOR_{TASK_NAME.upper()}_LIB_EXEC_H_'
+
+with open(METHODS_YAML) as fp:
+    methods = yaml.load(fp, Loader=yaml.FullLoader)
+if methods is None:
+    methods = {}
+if 'kLast' in methods:
+    del methods['kLast']
+methods = sorted(methods.items(), key=lambda x: x[1])
+if TASK_NAME != 'labstor_admin':
+    methods.insert(0, ('kConstruct', -2))
+    methods.insert(1, ('kDestruct', -1))
+
+# Produce the TASK_NAME_methods.h file
+lines = []
+lines += [f'#ifndef {METHOD_MACRO}',
+          f'#define {METHOD_MACRO}',
+          '',
+          '/** The set of methods in the admin task */',
+          'struct Method : public TaskMethod {']
+for method_enum_name, method_off in methods:
+    if method_enum_name == 'kConstruct':
+        continue
+    if method_enum_name == 'kDestruct':
+        continue
+    lines += f'  TASK_METHOD_T {method_enum_name} = kLast + {method_off};',
+lines += ['};', '', f'#endif  // {METHOD_MACRO}']
+with open(METHODS_H, 'w') as fp:
+    fp.write('\n'.join(lines))
+
+
+# Produce the TASK_NAME_lib_exec.h file
+lines = []
+lines += [f'#ifndef {LIB_EXEC_MACRO}',
+          f'#define {LIB_EXEC_MACRO}',
+          '']
+## Create the Run method
+lines += ['/** Execute a task */',
+          'void Run(u32 method, Task *task) override {',
+          '  switch (method) {']
+for method_enum_name, method_off in methods:
+    method_name = method_enum_name.replace('k', '', 1)
+    task_name = method_name + "Task"
+    lines += [f'    case Method::{method_enum_name}: {{',
+              f'      {method_name}(reinterpret_cast<{task_name} *>(task));',
+              f'      break;',
+              f'    }}']
+lines += ['  }']
+lines += ['}']
+
+## Create the ReplicateStart method
+lines += ['/** Ensure there is space to store replicated outputs */',
+          'void ReplicateStart(u32 method, u32 count, Task *task) override {',
+          '  switch (method) {']
+for method_enum_name, method_off in methods:
+    method_name = method_enum_name.replace('k', '', 1)
+    task_name = method_name + "Task"
+    lines += [f'    case Method::{method_enum_name}: {{',
+              f'      labstor::CALL_REPLICA_START(count, reinterpret_cast<{task_name}*>(task));',
+              f'      break;',
+              f'    }}']
+lines += ['  }']
+lines += ['}']
+
+## Create the ReplicateEnd method
+lines += ['/** Determine success and handle failures */',
+          'void ReplicateEnd(u32 method, Task *task) override {',
+          '  switch (method) {']
+for method_enum_name, method_off in methods:
+    method_name = method_enum_name.replace('k', '', 1)
+    task_name = method_name + "Task"
+    lines += [f'    case Method::{method_enum_name}: {{',
+              f'      labstor::CALL_REPLICA_END(reinterpret_cast<{task_name}*>(task));',
+              f'      break;',
+              f'    }}']
+lines += ['  }']
+lines += ['}']
+
+## Create the SaveStart Method
+lines += ['/** Serialize a task when initially pushing into remote */',
+          'std::vector<DataTransfer> SaveStart(u32 method, BinaryOutputArchive<true> &ar, Task *task) override {',
+          '  switch (method) {']
+for method_enum_name, method_off in methods:
+    method_name = method_enum_name.replace('k', '', 1)
+    task_name = method_name + "Task"
+    lines += [f'    case Method::{method_enum_name}: {{',
+              f'      ar << *reinterpret_cast<{task_name}*>(task);',
+              f'      break;',
+              f'    }}']
+lines += ['  }']
+lines += ['  return ar.Get();']
+lines += ['}']
+
+## Create the LoadStart Method
+lines += ['/** Deserialize a task when popping from remote queue */',
+          'TaskPointer LoadStart(u32 method, BinaryInputArchive<true> &ar) override {',
+          '  TaskPointer task_ptr;',
+          '  switch (method) {']
+for method_enum_name, method_off in methods:
+    method_name = method_enum_name.replace('k', '', 1)
+    task_name = method_name + "Task"
+    lines += [f'    case Method::{method_enum_name}: {{',
+              f'      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<{task_name}>(task_ptr.p_);',
+              f'      ar >> *reinterpret_cast<{task_name}*>(task_ptr.task_);',
+              f'      break;',
+              f'    }}']
+lines += ['  }']
+lines += ['  return task_ptr;']
+lines += ['}']
+
+## Create the SaveEnd Method
+lines += ['/** Serialize a task when returning from remote queue */',
+          'std::vector<DataTransfer> SaveEnd(u32 method, BinaryOutputArchive<false> &ar, Task *task) override {',
+          '  switch (method) {']
+for method_enum_name, method_off in methods:
+    method_name = method_enum_name.replace('k', '', 1)
+    task_name = method_name + "Task"
+    lines += [f'    case Method::{method_enum_name}: {{',
+              f'      ar << *reinterpret_cast<{task_name}*>(task);',
+              f'      break;',
+              f'    }}']
+lines += ['  }']
+lines += ['  return ar.Get();']
+lines += ['}']
+
+## Create the LoadEnd Method
+lines += ['/** Deserialize a task when returning from remote queue */',
+          'void LoadEnd(u32 replica, u32 method, BinaryInputArchive<false> &ar, Task *task) override {',
+          '  switch (method) {']
+for method_enum_name, method_off in methods:
+    method_name = method_enum_name.replace('k', '', 1)
+    task_name = method_name + "Task"
+    lines += [f'    case Method::{method_enum_name}: {{',
+              f'      ar.Deserialize(replica, *reinterpret_cast<{task_name}*>(task));',
+              f'      break;',
+              f'    }}']
+lines += ['  }']
+lines += ['}']
+
+## Create the CheckIfConcurrent Method
+lines += ['/** Get the grouping of the task */',
+          'u32 GetGroup(u32 method, Task *task, hshm::charbuf &group) override {',
+          '  switch (method) {']
+for method_enum_name, method_off in methods:
+    method_name = method_enum_name.replace('k', '', 1)
+    task_name = method_name + "Task"
+    lines += [f'    case Method::{method_enum_name}: {{',
+              f'      return reinterpret_cast<{task_name}*>(task)->GetGroup(group);',
+              f'    }}']
+lines += ['  }']
+lines += ['  return -1;']
+lines += ['}']
+
+## Finish the file
+lines += ['', f'#endif  // {METHOD_MACRO}']
+
+## Write TASK_NAME_lib_exec.h
+with open(LIB_EXEC_H, 'w') as fp:
+    fp.write('\n'.join(lines))

@@ -1,4 +1,0 @@
-pytest(data_stager test_data_stager_posix_large_aligned)
-pytest(data_stager test_data_stager_posix_large_unaligned)
-pytest(data_stager test_data_stager_posix_small_misaligned)
-pytest(data_stager test_data_stager_directory)
