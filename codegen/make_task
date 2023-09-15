@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+
+"""
+USAGE: ./make_task [TASK_ROOT]
+"""
+
+import os
+import sys
+from codegen.util.paths import LABSTOR_ROOT
+
+def copy_replace(TASK_ROOT, TASK_TEMPL_ROOT, rel_path, TASK_NAME):
+    with open(f'{TASK_TEMPL_ROOT}/{rel_path}') as fp:
+        text = fp.read()
+    text = text.replace('TASK_NAME', TASK_NAME)
+    rel_path = rel_path.replace('TASK_NAME', TASK_NAME)
+    with open(f'{TASK_ROOT}/{rel_path}', 'w') as fp:
+        fp.write(text)
+
+TASK_ROOT = sys.argv[1]
+TASK_NAME = os.path.basename(TASK_ROOT)
+TASK_TEMPL_ROOT = f'{LABSTOR_ROOT}/tasks_required/TASK_NAME'
+
+os.makedirs(f'{TASK_ROOT}/src', exist_ok=True)
+os.makedirs(f'{TASK_ROOT}/include/{TASK_NAME}', exist_ok=True)
+copy_replace(TASK_ROOT, TASK_TEMPL_ROOT, 'CMakeLists.txt', TASK_NAME)
+copy_replace(TASK_ROOT, TASK_TEMPL_ROOT, 'src/CMakeLists.txt', TASK_NAME)
+copy_replace(TASK_ROOT, TASK_TEMPL_ROOT, 'src/TASK_NAME.cc', TASK_NAME)
+copy_replace(TASK_ROOT, TASK_TEMPL_ROOT, 'include/TASK_NAME/TASK_NAME.h', TASK_NAME)
+copy_replace(TASK_ROOT, TASK_TEMPL_ROOT, 'include/TASK_NAME/TASK_NAME_lib_exec.h', TASK_NAME)
+copy_replace(TASK_ROOT, TASK_TEMPL_ROOT, 'include/TASK_NAME/TASK_NAME_tasks.h', TASK_NAME)
+copy_replace(TASK_ROOT, TASK_TEMPL_ROOT, 'include/TASK_NAME/TASK_NAME_methods.h', TASK_NAME)
+copy_replace(TASK_ROOT, TASK_TEMPL_ROOT, 'include/TASK_NAME/TASK_NAME_methods.yaml', TASK_NAME)

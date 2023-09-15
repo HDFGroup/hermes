@@ -23,27 +23,13 @@ Hermes is a heterogeneous-aware, multi-tiered, dynamic, and distributed I/O buff
 [Spack](https://spack.io/) is the easiest way to get Hermes and all its dependencies installed.
 
 ```bash
-# Install spack if you don't already have it
-SPACK_DIR=~/spack
-git clone https://github.com/spack/spack ${SPACK_DIR}
-. ${SPACK_DIR}/share/spack/setup-env.sh
-spack install hermes
-```
-
-If this doesn't work, the Hermes and Mochi spack recipes might be out of sync
-with the version of spack you're using. In that case, you can try the most
-up-to-date repos.
-
-```bash
 # set location of hermes_file_staging
-STAGE_DIR=~/hermes_stage
-MOCHI_REPO=${STAGE_DIR}/mochi
-HERMES_REPO=${STAGE_DIR}/hermes
-git clone https://github.com/mochi-hpc/mochi-spack-packages.git ${MOCHI_REPO}
-git clone https://github.com/HDFGroup/hermes ${HERMES_REPO}
-spack repo add ${MOCHI_REPO}
+git clone https://github.com/HDFGroup/hermes
 spack repo add ${HERMES_REPO}/ci/hermes
-spack install hermes
+# The stable 1.1. development branch
+spack install hermes@hdf-1.1
+# The unstable 1.1. development branch
+spack install hermes@dev-1.1
 ```
 
 ### CMake

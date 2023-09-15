@@ -1,8 +1,18 @@
-project(UNIT_TESTS)
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required(VERSION 3.10)
+project(hermes_shm)
 
-set(CMAKE_MESSAGE_LOG_LEVEL "VERBOSE")
-find_package(Hermes CONFIG REQUIRED)
-message("Found Hermes at ${Hermes_INCLUDE_DIR} ${Hermes_LIBRARIES}")
-add_executable(test_hermes_install  test_install.cc)
-target_link_libraries(test_hermes_install ${Hermes_LIBRARIES})
+set(CMAKE_CXX_STANDARD 17)
+
+#------------------------------------------------------------------------------
+# External libraries
+#------------------------------------------------------------------------------
+
+find_package(HermesShm CONFIG REQUIRED)
+message(STATUS "found hermes_shm at ${HermesShm_DIR}")
+
+#------------------------------------------------------------------------------
+# Build
+#------------------------------------------------------------------------------
+
+add_executable(test test.cc)
+target_link_libraries(test ${HermesShm_LIBRARIES})
