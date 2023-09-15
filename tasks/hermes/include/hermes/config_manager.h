@@ -55,7 +55,7 @@ class ConfigurationManager {
   void LoadServerConfig(std::string &config_path) {
     // Load hermes config
     if (config_path.empty()) {
-      config_path = GetEnvSafe(Constant::kHermesClientConf);
+      config_path = GetEnvSafe(Constant::kHermesServerConf);
     }
     HILOG(kInfo, "Loading server configuration: {}", config_path)
     server_config_.LoadFromFile(config_path);
