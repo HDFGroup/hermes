@@ -66,10 +66,11 @@ class Client : public TaskLibClient {
   void AsyncUpdateSizeConstruct(UpdateSizeTask *task,
                                 const TaskNode &task_node,
                                 TagId tag_id,
-                                size_t update, bitfield32_t flags = bitfield32_t(0)) {
+                                size_t update,
+                                int mode) {
     LABSTOR_CLIENT->ConstructTask<UpdateSizeTask>(
         task, task_node, DomainId::GetNode(tag_id.node_id_), id_,
-        tag_id, update, flags);
+        tag_id, update, mode);
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(UpdateSize);
 

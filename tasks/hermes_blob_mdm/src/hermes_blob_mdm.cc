@@ -183,10 +183,20 @@ class Server : public TaskLib {
       PutBlobFreeBuffersPhase(blob_info, task);
     }
 
+    // Determine amount of additional buffering space needed
+    Context ctx;
+    size_t needed_space = task->blob_off_ + task->data_size_;
+    size_t size_diff = 0;
+    if (needed_space > blob_info.max_blob_size_) {
+      size_diff = needed_space - blob_info.max_blob_size_;
+    }
+    blob_info.blob_size_ += size_diff;
+    HILOG(kDebug, "The size diff is {} bytes", size_diff)
+
     // Stage in blob data from FS
     task->data_ptr_.ptr_ = LABSTOR_CLIENT->GetPrivatePointer<char>(task->data_);
     task->data_ptr_.shm_ = task->data_;
-    task->data_off_ = 0;
+    task->data_off_ = size_diff;
     if (task->filename_->size() > 0 && blob_info.blob_size_ == 0) {
       adapter::BlobPlacement plcmnt;
       plcmnt.DecodeBlobName(*task->blob_name_);
@@ -205,16 +215,6 @@ class Server : public TaskLib {
       task->data_off_ = plcmnt.bucket_off_ + task->blob_off_ + task->data_size_;
       task->flags_.SetBits(HERMES_DID_STAGE_IN);
     }
-
-    // Determine amount of additional buffering space needed
-    Context ctx;
-    size_t needed_space = task->blob_off_ + task->data_size_;
-    size_t size_diff = 0;
-    if (needed_space > blob_info.max_blob_size_) {
-      size_diff = needed_space - blob_info.max_blob_size_;
-    }
-    blob_info.blob_size_ += size_diff;
-    HILOG(kDebug, "The size diff is {} bytes", size_diff)
 
     // Initialize archives
     HSHM_MAKE_AR0(task->schema_, nullptr);
@@ -332,11 +332,14 @@ class Server : public TaskLib {
       LABSTOR_CLIENT->FreeBuffer(task->data_ptr_);
     }
     // Update the bucket statistics
-    if (task->data_off_) {
-      bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
-                               task->tag_id_,
-                               task->data_off_);
+    int update_mode = bucket_mdm::UpdateSizeMode::kAdd;
+    if (task->flags_.Any(HERMES_DID_STAGE_IN)) {
+      update_mode = bucket_mdm::UpdateSizeMode::kCap;
     }
+    bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
+                             task->tag_id_,
+                             task->data_off_,
+                             update_mode);
     if (task->flags_.Any(HERMES_BLOB_DID_CREATE)) {
       bkt_mdm_.AsyncTagAddBlob(task->task_node_ + 1,
                                task->tag_id_,
@@ -593,6 +596,11 @@ class Server : public TaskLib {
           LABSTOR_CLIENT->DelTask(free_task);
           free_tasks.pop_back();
         }
+        BlobInfo &blob_info = blob_map_[task->blob_id_];
+        bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
+                                 task->tag_id_,
+                                 -(ssize_t)blob_info.blob_size_,
+                                 bucket_mdm::UpdateSizeMode::kAdd);
         HSHM_DESTROY_AR(task->free_tasks_);
         blob_map_.erase(task->blob_id_);
         task->SetModuleComplete();

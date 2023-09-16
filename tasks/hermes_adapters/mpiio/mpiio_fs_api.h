@@ -149,7 +149,8 @@ class MpiioFs : public Filesystem {
                     MPI_Datatype datatype, MPI_Request *request,
                     FsIoOptions opts) {
     HILOG(kDebug, "Starting an asynchronous write")
-    auto mdm = HERMES_FS_METADATA_MANAGER;
+    // TODO(llogan): FIX
+    /*auto mdm = HERMES_FS_METADATA_MANAGER;
     auto pool = HERMES_FS_THREAD_POOL;
     Task* hreq = new HermesRequest();
     auto lambda = [](MpiioFs *fs, File &f, AdapterStat &stat, const void *ptr,
@@ -161,12 +162,13 @@ class MpiioFs : public Filesystem {
     auto func = std::bind(lambda, this, f, stat, ptr, count, datatype,
                           &hreq->io_status.mpi_status_, opts);
     hreq->return_future = pool->run(func);
-    mdm->request_map.emplace(reinterpret_cast<size_t>(request), hreq);
+    mdm->request_map.emplace(reinterpret_cast<size_t>(request), hreq);*/
     return MPI_SUCCESS;
   }
 
   int Wait(MPI_Request *req, MPI_Status *status) {
-    auto mdm = HERMES_FS_METADATA_MANAGER;
+    // TODO(llogan): FIX
+    /*auto mdm = HERMES_FS_METADATA_MANAGER;
     auto real_api = HERMES_MPIIO_API;
     auto iter = mdm->request_map.find(reinterpret_cast<size_t>(req));
     if (iter != mdm->request_map.end()) {
@@ -176,7 +178,7 @@ class MpiioFs : public Filesystem {
       mdm->request_map.erase(iter);
       delete (hreq);
       return MPI_SUCCESS;
-    }
+    }*/
     return real_api->MPI_Wait(req, status);
   }
 

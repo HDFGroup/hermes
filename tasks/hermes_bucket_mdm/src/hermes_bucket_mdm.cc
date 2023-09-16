@@ -49,8 +49,13 @@ class Server : public TaskLib {
   /** Update the size of the bucket */
   void UpdateSize(UpdateSizeTask *task) {
     TagInfo &tag_info = tag_map_[task->tag_id_];
-    tag_info.internal_size_ = std::max(task->update_,
-                                       tag_info.internal_size_);
+    ssize_t internal_size = (ssize_t) tag_info.internal_size_;
+    if (task->mode_ == UpdateSizeMode::kAdd) {
+      internal_size += task->update_;
+    } else {
+      internal_size = std::max(task->update_, internal_size);
+    }
+    tag_info.internal_size_ = (size_t) internal_size;
     task->SetModuleComplete();
   }
 
@@ -69,6 +74,8 @@ class Server : public TaskLib {
         size_t update_size = task->page_size_ - cur_page_off;
         size_t max_pages = task->data_size_ / task->page_size_ + 1;
         size_t cur_size = 0;
+        HILOG(kDebug, "(node {}) Bucket size {}, page_size {}, cur_page {} (task_node={})",
+              LABSTOR_CLIENT->node_id_, bucket_size, task->page_size_, cur_page, task->task_node_)
         HSHM_MAKE_AR0(task->append_info_, nullptr);
         std::vector<AppendInfo> &append_info = *task->append_info_;
         append_info.reserve(max_pages);

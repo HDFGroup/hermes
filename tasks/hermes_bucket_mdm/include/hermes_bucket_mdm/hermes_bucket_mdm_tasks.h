@@ -126,11 +126,17 @@ struct SetBlobMdmTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   void ReplicateEnd() {}
 };
 
+class UpdateSizeMode {
+ public:
+  TASK_METHOD_T kAdd = 0;
+  TASK_METHOD_T kCap = 0;
+};
+
 /** Update bucket size */
 struct UpdateSizeTask : public Task, TaskFlags<TF_SRL_SYM> {
   IN TagId tag_id_;
-  IN size_t update_;
-  IN bitfield32_t flags_;
+  IN ssize_t update_;
+  IN int mode_;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -143,8 +149,8 @@ struct UpdateSizeTask : public Task, TaskFlags<TF_SRL_SYM> {
               const DomainId &domain_id,
               const TaskStateId &state_id,
               const TagId &tag_id,
-              size_t update,
-              bitfield32_t flags) : Task(alloc) {
+              ssize_t update,
+              int mode) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = tag_id.unique_;
@@ -157,7 +163,7 @@ struct UpdateSizeTask : public Task, TaskFlags<TF_SRL_SYM> {
     // Custom params
     tag_id_ = tag_id;
     update_ = update;
-    flags_ = flags;
+    mode_ = mode;
   }
 
   /** Destructor */
@@ -167,7 +173,7 @@ struct UpdateSizeTask : public Task, TaskFlags<TF_SRL_SYM> {
   template<typename Ar>
   void SerializeStart(Ar &ar) {
     task_serialize<Ar>(ar);
-    ar(tag_id_, update_, flags_);
+    ar(tag_id_, update_, mode_);
   }
 
   /** (De)serialize message return */

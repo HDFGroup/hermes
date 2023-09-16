@@ -24,7 +24,6 @@ bool mpiio_intercepted = true;
 /**
  * Namespace declarations
  */
-using hermes::ThreadPool;
 using hermes::adapter::fs::MetadataManager;
 using hermes::adapter::fs::File;
 using hermes::adapter::fs::AdapterStat;

@@ -108,7 +108,5 @@ class MetadataManager {
   hshm::Singleton<hermes::adapter::fs::MetadataManager>::GetInstance()
 #define HERMES_FS_METADATA_MANAGER_T hermes::adapter::fs::MetadataManager*
 
-#define HERMES_FS_THREAD_POOL \
-  hshm::EasySingleton<hermes::ThreadPool>::GetInstance()
 
 #endif  // HERMES_ADAPTER_METADATA_MANAGER_H
