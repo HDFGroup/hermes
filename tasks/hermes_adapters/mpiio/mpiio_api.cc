@@ -12,8 +12,8 @@
 
 bool mpiio_intercepted = true;
 
-#include <hermes.h>
-#include <bucket.h>
+#include <hermes/hermes.h>
+#include <hermes/bucket.h>
 
 #include "mpiio_api.h"
 #include "mpiio_fs_api.h"
@@ -24,7 +24,6 @@ bool mpiio_intercepted = true;
 /**
  * Namespace declarations
  */
-using hermes::ThreadPool;
 using hermes::adapter::fs::MetadataManager;
 using hermes::adapter::fs::File;
 using hermes::adapter::fs::AdapterStat;
