@@ -186,30 +186,39 @@ class Server : public TaskLib {
     // Stage in blob data from FS
     task->data_ptr_.ptr_ = LABSTOR_CLIENT->GetPrivatePointer<char>(task->data_);
     task->data_ptr_.shm_ = task->data_;
-    if (task->filename_->size() > 0 && blob_info.blob_size_ == 0) {
+    if (task->filename_->size() > 0) {
       adapter::BlobPlacement plcmnt;
       plcmnt.DecodeBlobName(*task->blob_name_);
-      HILOG(kDebug, "Attempting to stage {} bytes from the backend file {} at offset {}",
-            task->page_size_, task->filename_->str(), plcmnt.bucket_off_);
-      LPointer<char> new_data_ptr = LABSTOR_CLIENT->AllocateBuffer(task->page_size_);
-      int fd = HERMES_POSIX_API->open(task->filename_->c_str(), O_RDONLY);
-      if (fd < 0) {
-        HELOG(kError, "Failed to open file {}", task->filename_->str());
-      }
-      int ret = HERMES_POSIX_API->pread(fd, new_data_ptr.ptr_, task->page_size_, (off_t)plcmnt.bucket_off_);
-      if (ret < 0) {
-        // TODO(llogan): ret != page_size_ will require knowing file size before-hand
-        HELOG(kError, "Failed to stage in {} bytes from {}", task->page_size_, task->filename_->str());
-      }
-      HERMES_POSIX_API->close(fd);
-      memcpy(new_data_ptr.ptr_ + plcmnt.blob_off_, task->data_ptr_.ptr_, task->data_size_);
-      task->data_ptr_ = new_data_ptr;
-      task->blob_off_ = 0;
-      task->data_size_ = ret;
+      task->flags_.SetBits(HERMES_IS_FILE);
       task->data_off_ = plcmnt.bucket_off_ + task->blob_off_ + task->data_size_;
-      task->flags_.SetBits(HERMES_DID_STAGE_IN);
-      HILOG(kDebug, "Staged {} bytes from the backend file {}",
-            task->data_size_, task->filename_->str());
+      if (blob_info.blob_size_ == 0 &&
+          task->blob_off_ == 0 &&
+          task->data_size_ < task->page_size_) {
+        HILOG(kDebug, "Attempting to stage {} bytes from the backend file {} at offset {}",
+              task->page_size_, task->filename_->str(), plcmnt.bucket_off_);
+        LPointer<char> new_data_ptr = LABSTOR_CLIENT->AllocateBuffer(task->page_size_);
+        int fd = HERMES_POSIX_API->open(task->filename_->c_str(), O_RDONLY);
+        if (fd < 0) {
+          HELOG(kError, "Failed to open file {}", task->filename_->str());
+        }
+        int ret = HERMES_POSIX_API->pread(fd, new_data_ptr.ptr_, task->page_size_, (off_t)plcmnt.bucket_off_);
+        if (ret < 0) {
+          // TODO(llogan): ret != page_size_ will require knowing file size before-hand
+          HELOG(kError, "Failed to stage in {} bytes from {}", task->page_size_, task->filename_->str());
+        }
+        HERMES_POSIX_API->close(fd);
+        memcpy(new_data_ptr.ptr_ + plcmnt.blob_off_, task->data_ptr_.ptr_, task->data_size_);
+        task->data_ptr_ = new_data_ptr;
+        task->blob_off_ = 0;
+        if (ret < task->blob_off_ + task->data_size_) {
+          task->data_size_ = task->blob_off_ + task->data_size_;
+        } else {
+          task->data_size_ = ret;
+        }
+        task->flags_.SetBits(HERMES_DID_STAGE_IN);
+        HILOG(kDebug, "Staged {} bytes from the backend file {}",
+              task->data_size_, task->filename_->str());
+      }
     }
 
     // Determine amount of additional buffering space needed
@@ -218,7 +227,7 @@ class Server : public TaskLib {
     if (needed_space > blob_info.max_blob_size_) {
       size_diff = needed_space - blob_info.max_blob_size_;
     }
-    if (!task->flags_.Any(HERMES_DID_STAGE_IN)) {
+    if (!task->flags_.Any(HERMES_IS_FILE)) {
       task->data_off_ = size_diff;
     }
     blob_info.blob_size_ += size_diff;
@@ -345,7 +354,7 @@ class Server : public TaskLib {
     }
     // Update the bucket statistics
     int update_mode = bucket_mdm::UpdateSizeMode::kAdd;
-    if (task->flags_.Any(HERMES_DID_STAGE_IN)) {
+    if (task->flags_.Any(HERMES_IS_FILE)) {
       update_mode = bucket_mdm::UpdateSizeMode::kCap;
     }
     bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,

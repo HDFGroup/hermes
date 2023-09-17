@@ -31,7 +31,7 @@ class Server : public TaskLib {
     dev_info.mount_point_ = canon;
     path_ = canon;
     fd_ = open(dev_info.mount_point_.c_str(),
-                  O_TRUNC | O_CREAT, 0666);
+                  O_TRUNC | O_CREAT | O_RDWR, 0666);
     if (fd_ < 0) {
       HELOG(kError, "Failed to open file: {}", dev_info.mount_point_);
     }
@@ -57,17 +57,17 @@ class Server : public TaskLib {
   }
 
   void Write(WriteTask *task) {
-    size_t count = pwrite(fd_, task->buf_, task->size_, (off_t)task->disk_off_);
+    ssize_t count = pwrite(fd_, task->buf_, task->size_, (off_t)task->disk_off_);
     if (count != task->size_) {
-      HELOG(kError, "BORG: wrote {} bytes, but expected {}",
-            count, task->size_);
+      HELOG(kError, "BORG: wrote {} bytes, but expected {}: {}",
+            count, task->size_, strerror(errno));
     }
     task->SetModuleComplete();
   }
 
   void Read(ReadTask *task) {
     memcpy(task->buf_, mem_ptr_ + task->disk_off_, task->size_);
-    size_t count = pread(fd_, task->buf_, task->size_, (off_t)task->disk_off_);
+    ssize_t count = pread(fd_, task->buf_, task->size_, (off_t)task->disk_off_);
     if (count != task->size_) {
       HELOG(kError, "BORG: read {} bytes, but expected {}",
             count, task->size_);

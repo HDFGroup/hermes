@@ -213,7 +213,8 @@ class PutBlobPhase {
 #define HERMES_BLOB_REPLACE BIT_OPT(u32, 0)
 #define HERMES_BLOB_APPEND BIT_OPT(u32, 1)
 #define HERMES_DID_STAGE_IN BIT_OPT(u32, 2)
-#define HERMES_BLOB_DID_CREATE BIT_OPT(u32, 3)
+#define HERMES_IS_FILE BIT_OPT(u32, 3)
+#define HERMES_BLOB_DID_CREATE BIT_OPT(u32, 4)
 
 
 /** A task to put data in a blob */

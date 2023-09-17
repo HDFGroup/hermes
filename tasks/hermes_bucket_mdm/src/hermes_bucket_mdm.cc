@@ -55,6 +55,8 @@ class Server : public TaskLib {
     } else {
       internal_size = std::max(task->update_, internal_size);
     }
+    HILOG(kInfo, "Updating size of tag {} from {} to {} with update {} (mode={})",
+          task->tag_id_, tag_info.internal_size_, internal_size, task->update_, task->mode_)
     tag_info.internal_size_ = (size_t) internal_size;
     task->SetModuleComplete();
   }
@@ -200,11 +202,11 @@ class Server : public TaskLib {
       HILOG(kDebug, "Creating tag for the first time: {} {}", tag_name.str(), tag_id)
       tag_id_map_.emplace(tag_name, tag_id);
       tag_map_.emplace(tag_id, TagInfo());
-      TagInfo &info = tag_map_[tag_id];
-      info.name_ = tag_name;
-      info.tag_id_ = tag_id;
-      info.owner_ = task->blob_owner_;
-      info.internal_size_ = task->backend_size_;
+      TagInfo &tag_info = tag_map_[tag_id];
+      tag_info.name_ = tag_name;
+      tag_info.tag_id_ = tag_id;
+      tag_info.owner_ = task->blob_owner_;
+      tag_info.internal_size_ = task->backend_size_;
     } else {
       if (tag_name.size()) {
         HILOG(kDebug, "Found existing tag: {}", tag_name.str())
