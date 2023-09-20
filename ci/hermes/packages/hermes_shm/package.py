@@ -5,7 +5,8 @@ class HermesShm(CMakePackage):
     git = "https://github.com/lukemartinlogan/hermes_shm.git"
     version('master', branch='master')
     depends_on('mochi-thallium~cereal@0.10.1')
-    depends_on('catch2@3.0.1')
+    # depends_on('catch2@3.0.1')
+    depends_on('catch2')
     depends_on('mpi')
     depends_on('boost@1.7:')
     depends_on('cereal')

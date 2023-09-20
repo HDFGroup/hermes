@@ -55,7 +55,7 @@ class Server : public TaskLib {
     } else {
       internal_size = std::max(task->update_, internal_size);
     }
-    HILOG(kInfo, "Updating size of tag {} from {} to {} with update {} (mode={})",
+    HILOG(kDebug, "Updating size of tag {} from {} to {} with update {} (mode={})",
           task->tag_id_, tag_info.internal_size_, internal_size, task->update_, task->mode_)
     tag_info.internal_size_ = (size_t) internal_size;
     task->SetModuleComplete();
