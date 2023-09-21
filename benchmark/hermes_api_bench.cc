@@ -67,6 +67,7 @@ void GetTest(int nprocs, int rank,
   t.Resume();
   for (int j = 0; j < repeat; ++j) {
     for (size_t i = 0; i < blobs_per_rank; ++i) {
+      hermes::Blob ret;
       size_t blob_name_int = rank * blobs_per_rank + i;
       std::string name = std::to_string(blob_name_int);
       bkt.Get(name, ret, ctx);
@@ -135,9 +136,9 @@ void PartialGetTest(int nprocs, int rank,
 void PartialPutGetTest(int nprocs, int rank, int repeat,
                        size_t blobs_per_rank, size_t blob_size,
                        size_t part_size) {
-  PartialPutTest(nprocs, rank, repeat, blobs_per_rank, blob_size);
+  PartialPutTest(nprocs, rank, repeat, blobs_per_rank, blob_size, part_size);
   MPI_Barrier(MPI_COMM_WORLD);
-  PartialGetTest(nprocs, rank, repeat, blobs_per_rank, blob_size);
+  PartialGetTest(nprocs, rank, repeat, blobs_per_rank, blob_size, part_size);
 }
 
 /** Each process creates a set of buckets */
