@@ -14,7 +14,6 @@ class Hermes(CMakePackage):
     variant('vfd', default=False, description='Enable HDF5 VFD')
     variant('ares', default=False, description='Enable full libfabric install')
     variant('debug', default=False, description='Enable debug mode')
-    variant('debug', default=False, description='Build shared libraries')
     variant('zmq', default=False, description='Build ZeroMQ tests')
 
     depends_on('mochi-thallium~cereal@0.10.1')

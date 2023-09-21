@@ -29,11 +29,11 @@ target_link_libraries(test_performance_exec
 #        ${Labstor_CLIENT_LIBRARIES} hermes Catch2::Catch2
 #        MPI::MPI_CXX ${ZMQ_LIBRARIES})
 
-add_executable(test_hermes_api
+add_executable(hermes_api_bench
         hermes_api_bench.cc)
-add_dependencies(test_hermes_api
+add_dependencies(hermes_api_bench
         ${Labstor_CLIENT_DEPS} hermes)
-target_link_libraries(test_hermes_api
+target_link_libraries(hermes_api_bench
         ${Labstor_CLIENT_LIBRARIES} hermes
         Catch2::Catch2 MPI::MPI_CXX)
 
@@ -50,7 +50,7 @@ add_test(NAME test_performance COMMAND
 #------------------------------------------------------------------------------
 install(TARGETS
         test_performance_exec
-        test_hermes_api
+        hermes_api_bench
         EXPORT
         ${LABSTOR_EXPORTED_TARGETS}
         LIBRARY DESTINATION ${LABSTOR_INSTALL_LIB_DIR}
