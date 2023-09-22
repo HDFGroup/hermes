@@ -50,7 +50,7 @@ class Server : public TaskLib {
  public:
   Server() = default;
 
-  void Construct(ConstructTask *task) {
+  void Construct(ConstructTask *task, RunContext &ctx) {
     id_alloc_ = 0;
     node_id_ = LABSTOR_CLIENT->node_id_;
     switch (task->phase_) {
@@ -97,7 +97,7 @@ class Server : public TaskLib {
     task->SetModuleComplete();
   }
 
-  void Destruct(DestructTask *task) {
+  void Destruct(DestructTask *task, RunContext &ctx) {
     task->SetModuleComplete();
   }
 
@@ -116,7 +116,7 @@ class Server : public TaskLib {
   /**
    * Set the Bucket MDM
    * */
-  void SetBucketMdm(SetBucketMdmTask *task) {
+  void SetBucketMdm(SetBucketMdmTask *task, RunContext &ctx) {
     bkt_mdm_.Init(task->bkt_mdm_);
     task->SetModuleComplete();
   }
@@ -124,24 +124,24 @@ class Server : public TaskLib {
   /**
    * Create a blob's metadata
    * */
-  void PutBlob(PutBlobTask *task) {
+  void PutBlob(PutBlobTask *task, RunContext &ctx) {
     if (task->phase_ == PutBlobPhase::kCreate) {
-      PutBlobCreatePhase(task);
+      PutBlobCreatePhase(task, ctx);
     }
     if (task->phase_ == PutBlobPhase::kAllocate) {
-      PutBlobAllocatePhase(task);
+      PutBlobAllocatePhase(task, ctx);
     }
     if (task->phase_ == PutBlobPhase::kWaitAllocate) {
       if (!task->cur_bdev_alloc_->IsComplete()){
         return;
       }
-      PutBlobWaitAllocatePhase(task);
+      PutBlobWaitAllocatePhase(task, ctx);
     }
     if (task->phase_ == PutBlobPhase::kModify) {
-      PutBlobModifyPhase(task);
+      PutBlobModifyPhase(task, ctx);
     }
     if (task->phase_ == PutBlobPhase::kWaitModify) {
-      PutBlobWaitModifyPhase(task);
+      PutBlobWaitModifyPhase(task, ctx);
       if (task->phase_ == PutBlobPhase::kWaitModify) {
         return;
       }
@@ -149,7 +149,7 @@ class Server : public TaskLib {
   }
 
   /** Create blob / update metadata for the PUT  */
-  void PutBlobCreatePhase(PutBlobTask *task) {
+  void PutBlobCreatePhase(PutBlobTask *task, RunContext &ctx) {
     HILOG(kDebug, "PutBlobPhase::kCreate {}", task->blob_id_);
     // Get the blob info data structure
     hshm::charbuf blob_name = hshm::to_charbuf(*task->blob_name_);
@@ -180,7 +180,7 @@ class Server : public TaskLib {
       blob_info.UpdateWriteStats();
     }
     if (task->flags_.Any(HERMES_BLOB_REPLACE)) {
-      PutBlobFreeBuffersPhase(blob_info, task);
+      PutBlobFreeBuffersPhase(blob_info, task, ctx);
     }
 
     // Stage in blob data from FS
@@ -250,7 +250,7 @@ class Server : public TaskLib {
   }
 
   /** Release buffers */
-  void PutBlobFreeBuffersPhase(BlobInfo &blob_info, PutBlobTask *task) {
+  void PutBlobFreeBuffersPhase(BlobInfo &blob_info, PutBlobTask *task, RunContext &ctx) {
     for (BufferInfo &buf : blob_info.buffers_) {
       TargetInfo &target = *target_map_[buf.tid_];
       std::vector<BufferInfo> buf_vec = {buf};
@@ -262,7 +262,7 @@ class Server : public TaskLib {
   }
 
   /** Resolve the current sub-placement using BPM */
-  void PutBlobAllocatePhase(PutBlobTask *task) {
+  void PutBlobAllocatePhase(PutBlobTask *task, RunContext &ctx) {
     BlobInfo &blob_info = blob_map_[task->blob_id_];
     PlacementSchema &schema = (*task->schema_)[task->plcmnt_idx_];
     SubPlacement &placement = schema.plcmnts_[task->sub_plcmnt_idx_];
@@ -275,7 +275,7 @@ class Server : public TaskLib {
   }
 
   /** Wait for the current-subplacement to complete */
-  void PutBlobWaitAllocatePhase(PutBlobTask *task) {
+  void PutBlobWaitAllocatePhase(PutBlobTask *task, RunContext &ctx) {
     BlobInfo &blob_info = blob_map_[task->blob_id_];
     PlacementSchema &schema = (*task->schema_)[task->plcmnt_idx_];
     ++task->sub_plcmnt_idx_;
@@ -301,7 +301,7 @@ class Server : public TaskLib {
   }
 
   /** Update the data on storage */
-  void PutBlobModifyPhase(PutBlobTask *task) {
+  void PutBlobModifyPhase(PutBlobTask *task, RunContext &ctx) {
     BlobInfo &blob_info = blob_map_[task->blob_id_];
     char *blob_buf = task->data_ptr_.ptr_;
     std::vector<bdev::WriteTask*> &write_tasks = *task->bdev_writes_;
@@ -336,7 +336,7 @@ class Server : public TaskLib {
   }
 
   /** Wait for the update to complete */
-  void PutBlobWaitModifyPhase(PutBlobTask *task) {
+  void PutBlobWaitModifyPhase(PutBlobTask *task, RunContext &ctx) {
     std::vector<bdev::WriteTask*> &write_tasks = *task->bdev_writes_;
     for (int i = (int)write_tasks.size() - 1; i >= 0; --i) {
       bdev::WriteTask *write_task = write_tasks[i];
@@ -370,18 +370,18 @@ class Server : public TaskLib {
   }
 
   /** Get a blob's data */
-  void GetBlob(GetBlobTask *task) {
+  void GetBlob(GetBlobTask *task, RunContext &ctx) {
     switch (task->phase_) {
       case GetBlobPhase::kStart: {
-        GetBlobGetPhase(task);
+        GetBlobGetPhase(task, ctx);
       }
       case GetBlobPhase::kWait: {
-        GetBlobWaitPhase(task);
+        GetBlobWaitPhase(task, ctx);
       }
     }
   }
 
-  void GetBlobGetPhase(GetBlobTask *task) {
+  void GetBlobGetPhase(GetBlobTask *task, RunContext &ctx) {
     BlobInfo &blob_info = blob_map_[task->blob_id_];
     HSHM_MAKE_AR0(task->bdev_reads_, nullptr);
     std::vector<bdev::ReadTask*> &read_tasks = *task->bdev_reads_;
@@ -417,7 +417,7 @@ class Server : public TaskLib {
     task->phase_ = GetBlobPhase::kWait;
   }
 
-  void GetBlobWaitPhase(GetBlobTask *task) {
+  void GetBlobWaitPhase(GetBlobTask *task, RunContext &ctx) {
     std::vector<bdev::ReadTask*> &read_tasks = *task->bdev_reads_;
     for (auto it = read_tasks.rbegin(); it != read_tasks.rend(); ++it) {
       bdev::ReadTask *read_task = *it;
@@ -435,7 +435,7 @@ class Server : public TaskLib {
   /**
    * Tag a blob
    * */
-  void TagBlob(TagBlobTask *task) {
+  void TagBlob(TagBlobTask *task, RunContext &ctx) {
     auto it = blob_map_.find(task->blob_id_);
     if (it == blob_map_.end()) {
       task->SetModuleComplete();
@@ -449,7 +449,7 @@ class Server : public TaskLib {
   /**
    * Check if blob has a tag
    * */
-  void BlobHasTag(BlobHasTagTask *task) {
+  void BlobHasTag(BlobHasTagTask *task, RunContext &ctx) {
     auto it = blob_map_.find(task->blob_id_);
     if (it == blob_map_.end()) {
       task->SetModuleComplete();
@@ -465,7 +465,7 @@ class Server : public TaskLib {
   /**
    * Create \a blob_id BLOB ID
    * */
-  void GetOrCreateBlobId(GetOrCreateBlobIdTask *task) {
+  void GetOrCreateBlobId(GetOrCreateBlobIdTask *task, RunContext &ctx) {
     hshm::charbuf blob_name = hshm::to_charbuf(*task->blob_name_);
     hshm::charbuf blob_name_unique = GetBlobNameWithBucket(task->tag_id_, blob_name);
     auto it = blob_id_map_.find(blob_name_unique);
@@ -483,7 +483,7 @@ class Server : public TaskLib {
    * Get \a blob_name BLOB from \a bkt_id bucket
    * */
   HSHM_ALWAYS_INLINE
-  void GetBlobId(GetBlobIdTask *task) {
+  void GetBlobId(GetBlobIdTask *task, RunContext &ctx) {
     hshm::charbuf blob_name = hshm::to_charbuf(*task->blob_name_);
     hshm::charbuf blob_name_unique = GetBlobNameWithBucket(task->tag_id_, blob_name);
     auto it = blob_id_map_.find(blob_name_unique);
@@ -501,7 +501,7 @@ class Server : public TaskLib {
   /**
    * Get \a blob_name BLOB name from \a blob_id BLOB id
    * */
-  void GetBlobName(GetBlobNameTask *task) {
+  void GetBlobName(GetBlobNameTask *task, RunContext &ctx) {
     auto it = blob_map_.find(task->blob_id_);
     if (it == blob_map_.end()) {
       task->SetModuleComplete();
@@ -515,7 +515,7 @@ class Server : public TaskLib {
   /**
    * Get \a score from \a blob_id BLOB id
    * */
-  void GetBlobSize(GetBlobSizeTask *task) {
+  void GetBlobSize(GetBlobSizeTask *task, RunContext &ctx) {
     auto it = blob_map_.find(task->blob_id_);
     if (it == blob_map_.end()) {
       task->SetModuleComplete();
@@ -529,7 +529,7 @@ class Server : public TaskLib {
   /**
    * Get \a score from \a blob_id BLOB id
    * */
-  void GetBlobScore(GetBlobScoreTask *task) {
+  void GetBlobScore(GetBlobScoreTask *task, RunContext &ctx) {
     auto it = blob_map_.find(task->blob_id_);
     if (it == blob_map_.end()) {
       task->SetModuleComplete();
@@ -543,7 +543,7 @@ class Server : public TaskLib {
   /**
    * Get \a blob_id blob's buffers
    * */
-  void GetBlobBuffers(GetBlobBuffersTask *task) {
+  void GetBlobBuffers(GetBlobBuffersTask *task, RunContext &ctx) {
     auto it = blob_map_.find(task->blob_id_);
     if (it == blob_map_.end()) {
       task->SetModuleComplete();
@@ -558,7 +558,7 @@ class Server : public TaskLib {
    * Rename \a blob_id blob to \a new_blob_name new blob name
    * in \a bkt_id bucket.
    * */
-  void RenameBlob(RenameBlobTask *task) {
+  void RenameBlob(RenameBlobTask *task, RunContext &ctx) {
     auto it = blob_map_.find(task->blob_id_);
     if (it == blob_map_.end()) {
       task->SetModuleComplete();
@@ -574,7 +574,7 @@ class Server : public TaskLib {
   /**
    * Truncate a blob to a new size
    * */
-  void TruncateBlob(TruncateBlobTask *task) {
+  void TruncateBlob(TruncateBlobTask *task, RunContext &ctx) {
     auto it = blob_map_.find(task->blob_id_);
     if (it == blob_map_.end()) {
       task->SetModuleComplete();
@@ -588,7 +588,7 @@ class Server : public TaskLib {
   /**
    * Destroy \a blob_id blob in \a bkt_id bucket
    * */
-  void DestroyBlob(DestroyBlobTask *task) {
+  void DestroyBlob(DestroyBlobTask *task, RunContext &ctx) {
     switch (task->phase_) {
       case DestroyBlobPhase::kFreeBuffers: {
         auto it = blob_map_.find(task->blob_id_);
@@ -635,7 +635,7 @@ class Server : public TaskLib {
   /**
    * Reorganize \a blob_id blob in \a bkt_id bucket
    * */
-  void ReorganizeBlob(ReorganizeBlobTask *task) {
+  void ReorganizeBlob(ReorganizeBlobTask *task, RunContext &ctx) {
     switch (task->phase_) {
       case ReorganizeBlobPhase::kGet: {
         auto it = blob_map_.find(task->blob_id_);

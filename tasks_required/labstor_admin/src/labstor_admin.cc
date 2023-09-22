@@ -16,25 +16,25 @@ class Server : public TaskLib {
  public:
   Server() : queue_sched_(nullptr), proc_sched_(nullptr) {}
 
-  void RegisterTaskLib(RegisterTaskLibTask *task) {
+  void RegisterTaskLib(RegisterTaskLibTask *task, RunContext &ctx) {
     std::string lib_name = task->lib_name_->str();
     LABSTOR_TASK_REGISTRY->RegisterTaskLib(lib_name);
     task->SetModuleComplete();
   }
 
-  void DestroyTaskLib(DestroyTaskLibTask *task) {
+  void DestroyTaskLib(DestroyTaskLibTask *task, RunContext &ctx) {
     std::string lib_name = task->lib_name_->str();
     LABSTOR_TASK_REGISTRY->DestroyTaskLib(lib_name);
     task->SetModuleComplete();
   }
 
-  void GetOrCreateTaskStateId(GetOrCreateTaskStateIdTask *task) {
+  void GetOrCreateTaskStateId(GetOrCreateTaskStateIdTask *task, RunContext &ctx) {
     std::string state_name = task->state_name_->str();
     task->id_ = LABSTOR_TASK_REGISTRY->GetOrCreateTaskStateId(state_name);
     task->SetModuleComplete();
   }
 
-  void CreateTaskState(CreateTaskStateTask *task) {
+  void CreateTaskState(CreateTaskStateTask *task, RunContext &ctx) {
     switch (task->phase_) {
       case CreateTaskStatePhase::kIdAllocStart: {
         std::string lib_name = task->lib_name_->str();
@@ -122,25 +122,25 @@ class Server : public TaskLib {
     }
   }
 
-  void GetTaskStateId(GetTaskStateIdTask *task) {
+  void GetTaskStateId(GetTaskStateIdTask *task, RunContext &ctx) {
     std::string state_name = task->state_name_->str();
     task->id_ = LABSTOR_TASK_REGISTRY->GetTaskStateId(state_name);
     task->SetModuleComplete();
   }
 
-  void DestroyTaskState(DestroyTaskStateTask *task) {
+  void DestroyTaskState(DestroyTaskStateTask *task, RunContext &ctx) {
     LABSTOR_TASK_REGISTRY->DestroyTaskState(task->id_);
     task->SetModuleComplete();
   }
 
-  void StopRuntime(StopRuntimeTask *task) {
+  void StopRuntime(StopRuntimeTask *task, RunContext &ctx) {
     HILOG(kInfo, "Stopping (server mode)");
     LABSTOR_WORK_ORCHESTRATOR->FinalizeRuntime();
     LABSTOR_THALLIUM->StopThisDaemon();
     task->SetModuleComplete();
   }
 
-  void SetWorkOrchQueuePolicy(SetWorkOrchQueuePolicyTask *task) {
+  void SetWorkOrchQueuePolicy(SetWorkOrchQueuePolicyTask *task, RunContext &ctx) {
     if (queue_sched_) {
       queue_sched_->SetModuleComplete();
     }
@@ -155,7 +155,7 @@ class Server : public TaskLib {
     task->SetModuleComplete();
   }
 
-  void SetWorkOrchProcPolicy(SetWorkOrchProcPolicyTask *task) {
+  void SetWorkOrchProcPolicy(SetWorkOrchProcPolicyTask *task, RunContext &ctx) {
     if (proc_sched_) {
       proc_sched_->SetModuleComplete();
     }

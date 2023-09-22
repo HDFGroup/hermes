@@ -22,6 +22,7 @@ using labstor::TaskLib;
 using labstor::TaskLibClient;
 using labstor::config::QueueManagerInfo;
 using labstor::TaskPrio;
+using labstor::RunContext;
 
 using hshm::RwLock;
 using hshm::Mutex;

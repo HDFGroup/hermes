@@ -13,25 +13,25 @@ class Server : public TaskLib {
   int count_ = 0;
 
  public:
-  void Construct(ConstructTask *task) {
+  void Construct(ConstructTask *task, RunContext &ctx) {
     task->SetModuleComplete();
   }
 
-  void Destruct(DestructTask *task) {
+  void Destruct(DestructTask *task, RunContext &ctx) {
     task->SetModuleComplete();
   }
 
-  void Md(MdTask *task) {
+  void Md(MdTask *task, RunContext &ctx) {
     task->ret_[0] = 1;
     task->SetModuleComplete();
   }
 
-  void MdPush(MdPushTask *task) {
+  void MdPush(MdPushTask *task, RunContext &ctx) {
     task->ret_[0] = 1;
     task->SetModuleComplete();
   }
 
-  void Io(IoTask *task) {
+  void Io(IoTask *task, RunContext &ctx) {
     task->ret_ = 1;
     for (int i = 0; i < 256; ++i) {
       if (task->data_[i] != 10) {

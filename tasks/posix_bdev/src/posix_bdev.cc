@@ -22,7 +22,7 @@ class Server : public TaskLib {
   std::string path_;
 
  public:
-  void Construct(ConstructTask *task) {
+  void Construct(ConstructTask *task, RunContext &ctx) {
     DeviceInfo &dev_info = task->info_;
     alloc_.Init(id_, dev_info.capacity_, dev_info.slab_sizes_);
     std::string text = dev_info.mount_dir_ +
@@ -40,23 +40,23 @@ class Server : public TaskLib {
     task->SetModuleComplete();
   }
 
-  void Destruct(DestructTask *task) {
+  void Destruct(DestructTask *task, RunContext &ctx) {
     free(mem_ptr_);
     task->SetModuleComplete();
   }
 
-  void Alloc(AllocateTask *task) {
+  void Allocate(AllocateTask *task, RunContext &ctx) {
     alloc_.Allocate(task->size_, *task->buffers_, task->alloc_size_);
     HILOG(kDebug, "Allocated {}/{} bytes ({})", task->alloc_size_, task->size_, path_);
     task->SetModuleComplete();
   }
 
-  void Free(FreeTask *task) {
+  void Free(FreeTask *task, RunContext &ctx) {
     alloc_.Free(task->buffers_);
     task->SetModuleComplete();
   }
 
-  void Write(WriteTask *task) {
+  void Write(WriteTask *task, RunContext &ctx) {
     ssize_t count = pwrite(fd_, task->buf_, task->size_, (off_t)task->disk_off_);
     if (count != task->size_) {
       HELOG(kError, "BORG: wrote {} bytes, but expected {}: {}",
@@ -65,7 +65,7 @@ class Server : public TaskLib {
     task->SetModuleComplete();
   }
 
-  void Read(ReadTask *task) {
+  void Read(ReadTask *task, RunContext &ctx) {
     memcpy(task->buf_, mem_ptr_ + task->disk_off_, task->size_);
     ssize_t count = pread(fd_, task->buf_, task->size_, (off_t)task->disk_off_);
     if (count != task->size_) {
@@ -75,10 +75,10 @@ class Server : public TaskLib {
     task->SetModuleComplete();
   }
 
-  void Monitor(MonitorTask *task) {
+  void Monitor(MonitorTask *task, RunContext &ctx) {
   }
 
-  void UpdateCapacity(UpdateCapacityTask *task) {
+  void UpdateCapacity(UpdateCapacityTask *task, RunContext &ctx) {
     task->SetModuleComplete();
   }
 

@@ -99,7 +99,7 @@ struct AllocateTask : public Task, TaskFlags<TF_LOCAL> {
     lane_hash_ = 0;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
-    method_ = Method::kAlloc;
+    method_ = Method::kAllocate;
     task_flags_.SetBits(TASK_UNORDERED);
     domain_id_ = domain_id;
 

@@ -45,6 +45,8 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
   Task *task;
   LaneData *entry;
   int off = 0;
+  RunContext ctx;
+  ctx.lane_id_ = work_entry.lane_id_;
   for (int i = 0; i < 1024; ++i) {
     // Get the task message
     if (lane->peek(entry, off).IsNull()) {
@@ -75,7 +77,7 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
         task->SetUnordered();
       } else {
         task->SetStarted();
-        exec->Run(task->method_, task);
+        exec->Run(task->method_, task, ctx);
       }
     }
     // Cleanup on task completion

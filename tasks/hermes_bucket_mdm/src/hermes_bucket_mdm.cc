@@ -27,27 +27,27 @@ class Server : public TaskLib {
  public:
   Server() = default;
 
-  void Construct(ConstructTask *task) {
+  void Construct(ConstructTask *task, RunContext &ctx) {
     id_alloc_ = 0;
     node_id_ = LABSTOR_CLIENT->node_id_;
     bkt_mdm_.Init(id_);
     task->SetModuleComplete();
   }
 
-  void Destruct(DestructTask *task) {
+  void Destruct(DestructTask *task, RunContext &ctx) {
     task->SetModuleComplete();
   }
 
   /**
    * Set the Blob MDM
    * */
-  void SetBlobMdm(SetBlobMdmTask *task) {
+  void SetBlobMdm(SetBlobMdmTask *task, RunContext &ctx) {
     blob_mdm_.Init(task->blob_mdm_);
     task->SetModuleComplete();
   }
 
   /** Update the size of the bucket */
-  void UpdateSize(UpdateSizeTask *task) {
+  void UpdateSize(UpdateSizeTask *task, RunContext &ctx) {
     TagInfo &tag_info = tag_map_[task->tag_id_];
     ssize_t internal_size = (ssize_t) tag_info.internal_size_;
     if (task->mode_ == UpdateSizeMode::kAdd) {
@@ -64,7 +64,7 @@ class Server : public TaskLib {
   /**
    * Create the PartialPuts for append operations.
    * */
-  void AppendBlobSchema(AppendBlobSchemaTask *task) {
+  void AppendBlobSchema(AppendBlobSchemaTask *task, RunContext &ctx) {
     switch (task->phase_) {
       case AppendBlobPhase::kGetBlobIds: {
         HILOG(kDebug, "(node {}) Getting blob IDs for tag {} (task_node={})",
@@ -123,7 +123,7 @@ class Server : public TaskLib {
    * are named 0 ... N. Each blob is assumed to have a certain
    * fixed page size.
    * */
-  void AppendBlob(AppendBlobTask *task) {
+  void AppendBlob(AppendBlobTask *task, RunContext &ctx) {
     switch (task->phase_) {
       case AppendBlobPhase::kGetBlobIds: {
         HILOG(kDebug, "(node {}) Appending {} bytes to bucket {} (task_node={})",
@@ -184,7 +184,7 @@ class Server : public TaskLib {
   }
 
   /** Get or create a tag */
-  void GetOrCreateTag(GetOrCreateTagTask *task) {
+  void GetOrCreateTag(GetOrCreateTagTask *task, RunContext &ctx) {
     TagId tag_id;
     HILOG(kDebug, "Creating a tag")
 
@@ -223,7 +223,7 @@ class Server : public TaskLib {
   }
 
   /** Get tag ID */
-  void GetTagId(GetTagIdTask *task) {
+  void GetTagId(GetTagIdTask *task, RunContext &ctx) {
     hshm::charbuf tag_name = hshm::to_charbuf(*task->tag_name_);
     auto it = tag_id_map_.find(tag_name);
     if (it == tag_id_map_.end()) {
@@ -236,7 +236,7 @@ class Server : public TaskLib {
   }
 
   /** Get tag name */
-  void GetTagName(GetTagNameTask *task) {
+  void GetTagName(GetTagNameTask *task, RunContext &ctx) {
     auto it = tag_map_.find(task->tag_id_);
     if (it == tag_map_.end()) {
       task->SetModuleComplete();
@@ -247,7 +247,7 @@ class Server : public TaskLib {
   }
 
   /** Rename tag */
-  void RenameTag(RenameTagTask *task) {
+  void RenameTag(RenameTagTask *task, RunContext &ctx) {
     auto it = tag_map_.find(task->tag_id_);
     if (it == tag_map_.end()) {
       task->SetModuleComplete();
@@ -258,7 +258,7 @@ class Server : public TaskLib {
   }
 
   /** Destroy tag */
-  void DestroyTag(DestroyTagTask *task) {
+  void DestroyTag(DestroyTagTask *task, RunContext &ctx) {
     switch (task->phase_) {
       case DestroyTagPhase::kDestroyBlobs: {
         TagInfo &tag = tag_map_[task->tag_id_];
@@ -292,7 +292,7 @@ class Server : public TaskLib {
   }
 
   /** Add a blob to a tag */
-  void TagAddBlob(TagAddBlobTask *task) {
+  void TagAddBlob(TagAddBlobTask *task, RunContext &ctx) {
     auto it = tag_map_.find(task->tag_id_);
     if (it == tag_map_.end()) {
       task->SetModuleComplete();
@@ -304,7 +304,7 @@ class Server : public TaskLib {
   }
 
   /** Remove a blob from a tag */
-  void TagRemoveBlob(TagRemoveBlobTask *task) {
+  void TagRemoveBlob(TagRemoveBlobTask *task, RunContext &ctx) {
     auto it = tag_map_.find(task->tag_id_);
     if (it == tag_map_.end()) {
       task->SetModuleComplete();
@@ -317,7 +317,7 @@ class Server : public TaskLib {
   }
 
   /** Clear blobs from a tag */
-  void TagClearBlobs(TagClearBlobsTask *task) {
+  void TagClearBlobs(TagClearBlobsTask *task, RunContext &ctx) {
     auto it = tag_map_.find(task->tag_id_);
     if (it == tag_map_.end()) {
       task->SetModuleComplete();
@@ -330,7 +330,7 @@ class Server : public TaskLib {
   }
 
   /** Get size of the bucket */
-  void GetSize(GetSizeTask *task) {
+  void GetSize(GetSizeTask *task, RunContext &ctx) {
     auto it = tag_map_.find(task->tag_id_);
     if (it == tag_map_.end()) {
       task->size_ = 0;

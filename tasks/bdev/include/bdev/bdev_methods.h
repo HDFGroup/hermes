@@ -5,7 +5,7 @@
 struct Method : public TaskMethod {
   TASK_METHOD_T kWrite = kLast + 0;
   TASK_METHOD_T kRead = kLast + 1;
-  TASK_METHOD_T kAlloc = kLast + 2;
+  TASK_METHOD_T kAllocate = kLast + 2;
   TASK_METHOD_T kFree = kLast + 3;
   TASK_METHOD_T kMonitor = kLast + 4;
   TASK_METHOD_T kUpdateCapacity = kLast + 5;

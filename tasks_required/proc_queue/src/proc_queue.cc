@@ -12,15 +12,15 @@ class Server : public TaskLib {
  public:
   Server() = default;
 
-  void Construct(ConstructTask *task) {
+  void Construct(ConstructTask *task, RunContext &ctx) {
     task->SetModuleComplete();
   }
 
-  void Destruct(DestructTask *task) {
+  void Destruct(DestructTask *task, RunContext &ctx) {
     task->SetModuleComplete();
   }
 
-  void Push(PushTask *task) {
+  void Push(PushTask *task, RunContext &ctx) {
     switch (task->phase_) {
       case PushTaskPhase::kSchedule: {
         task->ptr_ = LABSTOR_CLIENT->GetPrivatePointer<Task>(task->subtask_);

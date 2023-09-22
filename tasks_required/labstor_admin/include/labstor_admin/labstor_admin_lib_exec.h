@@ -2,42 +2,42 @@
 #define LABSTOR_LABSTOR_ADMIN_LIB_EXEC_H_
 
 /** Execute a task */
-void Run(u32 method, Task *task) override {
+void Run(u32 method, Task *task, RunContext &ctx) override {
   switch (method) {
     case Method::kCreateTaskState: {
-      CreateTaskState(reinterpret_cast<CreateTaskStateTask *>(task));
+      CreateTaskState(reinterpret_cast<CreateTaskStateTask *>(task), ctx);
       break;
     }
     case Method::kDestroyTaskState: {
-      DestroyTaskState(reinterpret_cast<DestroyTaskStateTask *>(task));
+      DestroyTaskState(reinterpret_cast<DestroyTaskStateTask *>(task), ctx);
       break;
     }
     case Method::kRegisterTaskLib: {
-      RegisterTaskLib(reinterpret_cast<RegisterTaskLibTask *>(task));
+      RegisterTaskLib(reinterpret_cast<RegisterTaskLibTask *>(task), ctx);
       break;
     }
     case Method::kDestroyTaskLib: {
-      DestroyTaskLib(reinterpret_cast<DestroyTaskLibTask *>(task));
+      DestroyTaskLib(reinterpret_cast<DestroyTaskLibTask *>(task), ctx);
       break;
     }
     case Method::kGetOrCreateTaskStateId: {
-      GetOrCreateTaskStateId(reinterpret_cast<GetOrCreateTaskStateIdTask *>(task));
+      GetOrCreateTaskStateId(reinterpret_cast<GetOrCreateTaskStateIdTask *>(task), ctx);
       break;
     }
     case Method::kGetTaskStateId: {
-      GetTaskStateId(reinterpret_cast<GetTaskStateIdTask *>(task));
+      GetTaskStateId(reinterpret_cast<GetTaskStateIdTask *>(task), ctx);
       break;
     }
     case Method::kStopRuntime: {
-      StopRuntime(reinterpret_cast<StopRuntimeTask *>(task));
+      StopRuntime(reinterpret_cast<StopRuntimeTask *>(task), ctx);
       break;
     }
     case Method::kSetWorkOrchQueuePolicy: {
-      SetWorkOrchQueuePolicy(reinterpret_cast<SetWorkOrchQueuePolicyTask *>(task));
+      SetWorkOrchQueuePolicy(reinterpret_cast<SetWorkOrchQueuePolicyTask *>(task), ctx);
       break;
     }
     case Method::kSetWorkOrchProcPolicy: {
-      SetWorkOrchProcPolicy(reinterpret_cast<SetWorkOrchProcPolicyTask *>(task));
+      SetWorkOrchProcPolicy(reinterpret_cast<SetWorkOrchProcPolicyTask *>(task), ctx);
       break;
     }
   }
