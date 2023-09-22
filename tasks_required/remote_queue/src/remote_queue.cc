@@ -57,6 +57,8 @@ class Server : public TaskLib {
 
   /** Construct remote queue */
   void Construct(ConstructTask *task) {
+    HILOG(kInfo, "(node {}) Constructing remote queue (task_node={}, task_state={}, method={})",
+          LABSTOR_CLIENT->node_id_, task->task_node_, task->task_state_, task->method_);
     LABSTOR_THALLIUM->RegisterRpc("RpcPushSmall", [this](const tl::request &req,
                                                          TaskStateId state_id,
                                                          u32 method,
