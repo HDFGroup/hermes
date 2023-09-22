@@ -142,14 +142,6 @@ class Server : public TaskLib {
         tl_task->done_ = true;
       }, tl_task);
       task->tl_future_.emplace_back(tl_task);
-
-
-//              tl::async_response future = LABSTOR_THALLIUM->AsyncCall(domain_id.id_,
-//                                                                      "RpcPushSmall",
-//                                                                      task->exec_->id_,
-//                                                                      task->exec_method_,
-//                                                                      params);
-//              task->tl_future_.emplace_back(std::move(future));
     }
   }
 
@@ -193,30 +185,12 @@ class Server : public TaskLib {
         tl_task->done_ = true;
       }, tl_task);
       task->tl_future_.emplace_back(tl_task);
-
-//              tl::async_response future = LABSTOR_THALLIUM->AsyncIoCall(domain_id.id_,
-//                                                                        "RpcPushBulk",
-//                                                                        io_type,
-//                                                                        (char *) xfer[0].data_,
-//                                                                        xfer[0].data_size_,
-//                                                                        task->exec_->id_,
-//                                                                        task->exec_method_,
-//                                                                        params,
-//                                                                        xfer[0].data_size_,
-//                                                                        io_type);
-//              task->tl_future_.emplace_back(std::move(future));
     }
   }
 
   /** Wait for client to finish message */
   void ClientWaitForMessage(PushTask *task) {
     for (; task->replica_ < task->tl_future_.size(); ++task->replica_) {
-//      tl::async_response &future = task->tl_future_[task->replica_];
-//      if (!LABSTOR_THALLIUM->IsDone(future)) {
-//        return;
-//      }
-//      std::string ret = LABSTOR_THALLIUM->Wait<std::string>(future);
-//      HandlePushReplicaOutput(task->replica_, ret, task);
       ThalliumTask *tl_task = (ThalliumTask *) task->tl_future_[task->replica_];
       if (!tl_task->IsDone()) {
         return;

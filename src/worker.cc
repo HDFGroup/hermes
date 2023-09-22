@@ -15,8 +15,7 @@ void Worker::Loop() {
     try {
       Run();
     } catch (hshm::Error &e) {
-      e.print();
-      exit(1);
+      HELOG(kFatal, "(node {}) Worker {} caught an error: {}", LABSTOR_CLIENT->node_id_, id_, e.what());
     }
     // Yield();
   }
