@@ -84,24 +84,16 @@ class Server : public TaskLib {
 
   /** Handle output from replica PUSH */
   static void HandlePushReplicaOutput(int replica, std::string &ret, PushTask *task) {
-    try {
-      std::vector<DataTransfer> xfer(1);
-      xfer[0].data_ = ret.data();
-      xfer[0].data_size_ = ret.size();
-      HILOG(kDebug, "Wait got {} bytes of data (task_node={}, task_state={}, method={})",
-            xfer[0].data_size_,
-            task->orig_task_->task_node_,
-            task->orig_task_->task_state_,
-            task->orig_task_->method_);
-      BinaryInputArchive<false> ar(xfer);
-      task->exec_->LoadEnd(replica, task->exec_method_, ar, task->orig_task_);
-    } catch (std::exception &e) {
-      HILOG(kFatal, "Error LoadEnd (task_node={}, task_state={}, method={}): {}",
-            task->orig_task_->task_node_,
-            task->orig_task_->task_state_,
-            task->orig_task_->method_,
-            e.what());
-    }
+    std::vector<DataTransfer> xfer(1);
+    xfer[0].data_ = ret.data();
+    xfer[0].data_size_ = ret.size();
+    HILOG(kDebug, "Wait got {} bytes of data (task_node={}, task_state={}, method={})",
+          xfer[0].data_size_,
+          task->orig_task_->task_node_,
+          task->orig_task_->task_state_,
+          task->orig_task_->method_);
+    BinaryInputArchive<false> ar(xfer);
+    task->exec_->LoadEnd(replica, task->exec_method_, ar, task->orig_task_);
   }
 
   /** Handle finalization of PUSH replicate */

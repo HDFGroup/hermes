@@ -139,8 +139,8 @@ class ThalliumRpc {
         return remote_proc.on(server).async(std::forward<Args>(args)...);
       }
     } catch (tl::margo_exception &err) {
-      HELOG(kFatal, "Thallium failed on function: {}\n{}",
-            func_name, err.what())
+      HELOG(kFatal, "(node {}) Thallium failed on function: {}: {}",
+            rpc_->node_id_, func_name, err.what())
       exit(1);
     }
   }
