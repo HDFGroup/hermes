@@ -130,6 +130,13 @@ class Server : public TaskLib {
                                                                   task->exec_->id_,
                                                                   task->exec_method_,
                                                                   task->params_);
+        HILOG(kDebug, "(SM) Finished {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={})",
+              task->params_.size(),
+              task->orig_task_->task_node_,
+              task->orig_task_->task_state_,
+              task->orig_task_->method_,
+              LABSTOR_CLIENT->node_id_,
+              domain_id.id_);
         HandlePushReplicaOutput(replica, ret, task);
         tl_task->done_ = true;
       }, tl_task);
@@ -173,6 +180,14 @@ class Server : public TaskLib {
                                                                     task->params_,
                                                                     tl_task->data_size_,
                                                                     io_type);
+        HILOG(kDebug, "(IO) Finished transferring {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={}, type={})",
+              tl_task->data_size_,
+              task->orig_task_->task_node_,
+              task->orig_task_->task_state_,
+              task->orig_task_->method_,
+              LABSTOR_CLIENT->node_id_,
+              domain_id.id_,
+              static_cast<int>(io_type));
         HandlePushReplicaOutput(replica, ret, task);
         tl_task->done_ = true;
       }, tl_task);
