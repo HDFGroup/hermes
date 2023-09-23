@@ -364,6 +364,7 @@ class Worker {
   }
 
   void PollGrouped(WorkEntry &entry);
+  static void RunBlocking(void *data);
 };
 
 }  // namespace labstor

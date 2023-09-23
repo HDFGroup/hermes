@@ -147,8 +147,6 @@ struct CreateTaskStateTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   IN hipc::ShmArchive<hipc::string> state_name_;
   IN hipc::ShmArchive<hipc::vector<PriorityInfo>> queue_info_;
   INOUT TaskStateId id_;
-  TEMP int phase_ = 0;
-  TEMP GetOrCreateTaskStateIdTask *get_id_task_;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -169,7 +167,7 @@ struct CreateTaskStateTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
     prio_ = TaskPrio::kAdmin;
     task_state_ = LABSTOR_QM_CLIENT->admin_task_state_;
     method_ = Method::kCreateTaskState;
-    task_flags_.SetBits(0);
+    task_flags_.SetBits(TASK_BLOCKING);
     domain_id_ = domain_id;
 
     // Initialize
@@ -198,7 +196,7 @@ struct CreateTaskStateTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   template<typename Ar>
   void SerializeStart(Ar &ar) {
     task_serialize<Ar>(ar);
-    ar(lib_name_, state_name_, id_, queue_info_, phase_);
+    ar(lib_name_, state_name_, id_, queue_info_);
   }
 
   /** (De)serialize message return */

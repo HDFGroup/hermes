@@ -43,6 +43,8 @@ namespace labstor {
 #define TASK_DATA_OWNER BIT_OPT(u32, 14)
 /** This task is marked */
 #define TASK_MARKED BIT_OPT(u32, 15)
+/** This task uses argobot wait */
+#define TASK_BLOCKING BIT_OPT(u32, 16)
 
 /** Used to define task methods */
 #define TASK_METHOD_T static inline const u32
@@ -338,6 +340,16 @@ struct Task : public hipc::ShmContainer {
   /** Set this task as started */
   HSHM_ALWAYS_INLINE void UnsetLongRunning() {
     task_flags_.UnsetBits(TASK_LONG_RUNNING);
+  }
+
+  /** Set this task as blocking */
+  HSHM_ALWAYS_INLINE void SetBlocking() {
+    task_flags_.SetBits(TASK_BLOCKING);
+  }
+
+  /** Set this task as blocking */
+  HSHM_ALWAYS_INLINE bool IsBlocking() {
+    return task_flags_.Any(TASK_BLOCKING);
   }
 
   /** Wait for task to complete */

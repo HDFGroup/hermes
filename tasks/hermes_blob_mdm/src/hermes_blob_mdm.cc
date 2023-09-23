@@ -53,48 +53,37 @@ class Server : public TaskLib {
   void Construct(ConstructTask *task, RunContext &ctx) {
     id_alloc_ = 0;
     node_id_ = LABSTOR_CLIENT->node_id_;
-    switch (task->phase_) {
-      case ConstructTaskPhase::kCreateTaskStates: {
-        blob_id_map_.resize(LABSTOR_QM_RUNTIME->max_lanes_);
-        blob_map_.resize(LABSTOR_QM_RUNTIME->max_lanes_);
-        target_tasks_.reserve(HERMES_SERVER_CONF.devices_.size());
-        for (DeviceInfo &dev : HERMES_SERVER_CONF.devices_) {
-          std::string dev_type;
-          if (dev.mount_dir_.empty()) {
-            dev_type = "ram_bdev";
-            dev.mount_point_ = hshm::Formatter::format("{}/{}", dev.mount_dir_, dev.dev_name_);
-          } else {
-            dev_type = "posix_bdev";
-          }
-          targets_.emplace_back();
-          bdev::Client &client = targets_.back();
-          bdev::ConstructTask *create_task = client.AsyncCreate(
-              task->task_node_ + 1,
-              DomainId::GetLocal(),
-              "hermes_" + dev.dev_name_,
-              dev_type,
-              dev).ptr_;
-          target_tasks_.emplace_back(create_task);
-        }
-        task->phase_ = ConstructTaskPhase::kWaitForTaskStates;
+    // Initialize blob maps
+    blob_id_map_.resize(LABSTOR_QM_RUNTIME->max_lanes_);
+    blob_map_.resize(LABSTOR_QM_RUNTIME->max_lanes_);
+    // Initialize target tasks
+    target_tasks_.reserve(HERMES_SERVER_CONF.devices_.size());
+    for (DeviceInfo &dev : HERMES_SERVER_CONF.devices_) {
+      std::string dev_type;
+      if (dev.mount_dir_.empty()) {
+        dev_type = "ram_bdev";
+        dev.mount_point_ = hshm::Formatter::format("{}/{}", dev.mount_dir_, dev.dev_name_);
+      } else {
+        dev_type = "posix_bdev";
       }
-
-      case ConstructTaskPhase::kWaitForTaskStates: {
-        for (int i = (int)target_tasks_.size() - 1; i >= 0; --i) {
-          bdev::ConstructTask *tgt_task = target_tasks_[i];
-          if (!tgt_task->IsComplete()) {
-            return;
-          }
-          bdev::Client &client = targets_[i];
-          client.AsyncCreateComplete(tgt_task);
-          target_map_.emplace(client.id_, &client);
-          target_tasks_.pop_back();
-        }
-        blob_mdm_.Init(id_);
-      }
+      targets_.emplace_back();
+      bdev::Client &client = targets_.back();
+      bdev::ConstructTask *create_task = client.AsyncCreate(
+          task->task_node_ + 1,
+          DomainId::GetLocal(),
+          "hermes_" + dev.dev_name_,
+          dev_type,
+          dev).ptr_;
+      target_tasks_.emplace_back(create_task);
     }
-
-    // Create targets
+    for (int i = 0; i < target_tasks_.size(); ++i) {
+      bdev::ConstructTask *tgt_task = target_tasks_[i];
+      tgt_task->Wait<1>();
+      bdev::Client &client = targets_[i];
+      client.AsyncCreateComplete(tgt_task);
+      target_map_.emplace(client.id_, &client);
+    }
+    blob_mdm_.Init(id_);
     HILOG(kInfo, "Created Blob MDM")
     task->SetModuleComplete();
   }

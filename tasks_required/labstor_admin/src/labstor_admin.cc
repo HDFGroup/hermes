@@ -35,84 +35,57 @@ class Server : public TaskLib {
   }
 
   void CreateTaskState(CreateTaskStateTask *task, RunContext &ctx) {
-    switch (task->phase_) {
-      case CreateTaskStatePhase::kIdAllocStart: {
-        std::string lib_name = task->lib_name_->str();
-        std::string state_name = task->state_name_->str();
-        // Check local registry for task state
-        TaskState *task_state = LABSTOR_TASK_REGISTRY->GetTaskState(state_name, task->id_);
-        if (task_state) {
-          task->id_ = task_state->id_;
-          task->SetModuleComplete();
-          return;
-        }
-        // Check global registry for task state
-        if (task->id_.IsNull()) {
-            DomainId domain = DomainId::GetNode(1);
-            task->get_id_task_ = LABSTOR_ADMIN->AsyncGetOrCreateTaskStateId(
-                task->task_node_ + 1, domain, state_name).ptr_;
-            task->phase_ = CreateTaskStatePhase::kIdAllocWait;
-        } else {
-          HILOG(kDebug, "Domain ID is given as {} for {} (task_node={})", task->id_, state_name, task->task_node_);
-          task->phase_ = CreateTaskStatePhase::kStateCreate;
-        }
-        return;
-      }
-      case CreateTaskStatePhase::kIdAllocWait: {
-        if (!task->get_id_task_->IsComplete()) {
-          return;
-        }
-        task->id_ = task->get_id_task_->id_;
-        task->phase_ = CreateTaskStatePhase::kStateCreate;
-        LABSTOR_CLIENT->DelTask(task->get_id_task_);
-      }
-      case CreateTaskStatePhase::kStateCreate: {
-        std::string lib_name = task->lib_name_->str();
-        std::string state_name = task->state_name_->str();
-        HILOG(kInfo, "(node {}) Creating task state {} with id {} (task_node={})",
-              LABSTOR_CLIENT->node_id_, state_name, task->id_, task->task_node_);
-
-        // Verify the state isn't NULL
-        if (task->id_.IsNull()) {
-          HELOG(kError, "(node {}) The task state {} with id {} is NULL.",
-                LABSTOR_CLIENT->node_id_, state_name, task->id_);
-          task->SetModuleComplete();
-          return;
-        }
-
-        // Verify the state doesn't exist
-        if (LABSTOR_TASK_REGISTRY->TaskStateExists(task->id_)) {
-          HILOG(kInfo, "(node {}) The task state {} with id {} exists",
-                LABSTOR_CLIENT->node_id_, state_name, task->id_);
-          task->SetModuleComplete();
-          return;
-        }
-
-        // The state is being created
-        // NOTE(llogan): this does NOT return since task creations can have phases
-        task->method_ = Method::kConstruct;
-
-        // Create the task queue for the state
-        QueueId qid(task->id_);
-        LABSTOR_QM_RUNTIME->CreateQueue(
-            qid, task->queue_info_->vec());
-
-        // Begin creating the task state
-        task->phase_ = 0;
-        task->task_state_ = task->id_;
-        bool ret = LABSTOR_TASK_REGISTRY->CreateTaskState(
-            lib_name.c_str(),
-            state_name.c_str(),
-            task->id_,
-            task);
-        if (!ret) {
-          task->SetModuleComplete();
-          return;
-        }
-        HILOG(kInfo, "(node {}) Allocated task state {} with id {}",
-              LABSTOR_CLIENT->node_id_, state_name, task->task_state_);
-      }
+    std::string lib_name = task->lib_name_->str();
+    std::string state_name = task->state_name_->str();
+    // Check local registry for task state
+    TaskState *task_state = LABSTOR_TASK_REGISTRY->GetTaskState(state_name, task->id_);
+    if (task_state) {
+      task->id_ = task_state->id_;
+      task->SetModuleComplete();
+      return;
     }
+    // Check global registry for task state
+    if (task->id_.IsNull()) {
+      DomainId domain = DomainId::GetNode(1);
+      LPointer<GetOrCreateTaskStateIdTask> get_id =
+          LABSTOR_ADMIN->AsyncGetOrCreateTaskStateId(task->task_node_ + 1, domain, state_name);
+      get_id->Wait<1>();
+      task->id_ = get_id->id_;
+      LABSTOR_CLIENT->DelTask(get_id);
+    }
+    // Create the task state
+    HILOG(kInfo, "(node {}) Creating task state {} with id {} (task_node={})",
+          LABSTOR_CLIENT->node_id_, state_name, task->id_, task->task_node_);
+    if (task->id_.IsNull()) {
+      HELOG(kError, "(node {}) The task state {} with id {} is NULL.",
+            LABSTOR_CLIENT->node_id_, state_name, task->id_);
+      task->SetModuleComplete();
+      return;
+    }
+    // Verify the state doesn't exist
+    if (LABSTOR_TASK_REGISTRY->TaskStateExists(task->id_)) {
+      HILOG(kInfo, "(node {}) The task state {} with id {} exists",
+            LABSTOR_CLIENT->node_id_, state_name, task->id_);
+      task->SetModuleComplete();
+      return;
+    }
+    // Create the task queue for the state
+    QueueId qid(task->id_);
+    LABSTOR_QM_RUNTIME->CreateQueue(
+        qid, task->queue_info_->vec());
+    // Run the task state's submethod
+    task->method_ = Method::kConstruct;
+    bool ret = LABSTOR_TASK_REGISTRY->CreateTaskState(
+        lib_name.c_str(),
+        state_name.c_str(),
+        task->id_,
+        task);
+    if (!ret) {
+      task->SetModuleComplete();
+      return;
+    }
+    HILOG(kInfo, "(node {}) Allocated task state {} with id {}",
+          LABSTOR_CLIENT->node_id_, state_name, task->task_state_);
   }
 
   void GetTaskStateId(GetTaskStateIdTask *task, RunContext &ctx) {

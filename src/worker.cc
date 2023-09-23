@@ -75,6 +75,9 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
         LABSTOR_REMOTE_QUEUE->Disperse(task, exec, ids);
         task->DisableRun();
         task->SetUnordered();
+      } else if (task->IsBlocking()) {
+        task->SetStarted();
+        entry->thread_ = LABSTOR_WORK_ORCHESTRATOR->SpawnAsyncThread(&Worker::RunBlocking, task);
       } else {
         task->SetStarted();
         exec->Run(task->method_, task, ctx);
@@ -85,12 +88,22 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
 //      HILOG(kDebug, "(node {}) Ending task: task_node={} task_state={} lane={} queue={} worker={}",
 //            LABSTOR_CLIENT->node_id_, task->task_node_, task->task_state_, lane_id, queue->id_, id_);
       entry->complete_ = true;
+      if (task->IsBlocking()) {
+        ABT_thread_join(entry->thread_);
+      }
       RemoveTaskGroup(task, exec, work_entry.lane_id_, is_remote);
       EndTask(lane, task, off);
     } else {
       off += 1;
     }
   }
+}
+
+void Worker::RunBlocking(void *data) {
+  Task *task = reinterpret_cast<Task *>(data);
+  TaskState *exec = LABSTOR_TASK_REGISTRY->GetTaskState(task->task_state_);
+  RunContext ctx(0);
+  exec->Run(task->method_, task, ctx);
 }
 
 }  // namespace labstor
