@@ -243,7 +243,7 @@ struct UniqueId {
   /** Emplace constructor */
   HSHM_ALWAYS_INLINE explicit
   UniqueId(u32 node_id, u64 unique)
-  : node_id_(node_id), unique_(unique) {}
+  : node_id_(node_id), hash_(0), unique_(unique) {}
 
   /** Emplace constructor (+hash) */
   HSHM_ALWAYS_INLINE explicit
@@ -254,6 +254,7 @@ struct UniqueId {
   HSHM_ALWAYS_INLINE
   UniqueId(const UniqueId &other) {
     node_id_ = other.node_id_;
+    hash_ = other.hash_;
     unique_ = other.unique_;
   }
 
@@ -262,6 +263,7 @@ struct UniqueId {
   HSHM_ALWAYS_INLINE
   UniqueId(const UniqueId<OTHER_TYPE> &other) {
     node_id_ = other.node_id_;
+    hash_ = other.hash_;
     unique_ = other.unique_;
   }
 
@@ -270,6 +272,7 @@ struct UniqueId {
   UniqueId& operator=(const UniqueId &other) {
     if (this != &other) {
       node_id_ = other.node_id_;
+      hash_ = other.hash_;
       unique_ = other.unique_;
     }
     return *this;
@@ -279,6 +282,7 @@ struct UniqueId {
   HSHM_ALWAYS_INLINE
   UniqueId(UniqueId &&other) noexcept {
     node_id_ = other.node_id_;
+    hash_ = other.hash_;
     unique_ = other.unique_;
   }
 
@@ -287,6 +291,7 @@ struct UniqueId {
   UniqueId& operator=(UniqueId &&other) noexcept {
     if (this != &other) {
       node_id_ = other.node_id_;
+      hash_ = other.hash_;
       unique_ = other.unique_;
     }
     return *this;
@@ -309,6 +314,7 @@ struct UniqueId {
   HSHM_ALWAYS_INLINE
   void SetNull() {
     node_id_ = 0;
+    hash_ = 0;
     unique_ = 0;
   }
 

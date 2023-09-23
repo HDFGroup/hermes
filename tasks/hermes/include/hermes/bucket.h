@@ -342,6 +342,7 @@ class Bucket {
     if (data_size == 0) {
       data_size = GetBlobSize(blob_id);
     }
+    HILOG(kInfo, "Data size: {}", data_size)
     LPointer data_p = LABSTOR_CLIENT->AllocateBuffer(data_size);
     data_size = blob_mdm_->GetBlobRoot(id_, blob_id, blob_off, data_size, data_p.shm_, ctx);
     char *data = data_p.ptr_;

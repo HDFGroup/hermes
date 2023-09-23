@@ -531,6 +531,7 @@ class Server : public TaskLib {
     BLOB_MAP_T &blob_map = blob_map_[ctx.lane_id_];
     auto it = blob_map.find(task->blob_id_);
     if (it == blob_map.end()) {
+      task->size_ = 0;
       task->SetModuleComplete();
       return;
     }
