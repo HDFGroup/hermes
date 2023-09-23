@@ -135,7 +135,10 @@ struct PushTask : public Task, TaskFlags<TF_LOCAL> {
   /** Create group */
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
-    return TASK_UNORDERED;
+    LocalSerialize srl(group);
+    srl << 0;
+    // return TASK_UNORDERED;
+    return 0;
   }
 };
 
