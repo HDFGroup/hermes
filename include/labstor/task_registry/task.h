@@ -335,6 +335,11 @@ struct Task : public hipc::ShmContainer {
     return task_flags_.Any(TASK_MARKED);
   }
 
+  /** Set this task as started */
+  HSHM_ALWAYS_INLINE void UnsetLongRunning() {
+    task_flags_.UnsetBits(TASK_LONG_RUNNING);
+  }
+
   /** Wait for task to complete */
   template<int THREAD_MODEL = 0>
   void Wait() {

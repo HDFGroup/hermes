@@ -323,6 +323,7 @@ class Server : public TaskLib {
     orig_task->UnsetStarted();
     orig_task->UnsetMarked();
     orig_task->UnsetDataOwner();
+    orig_task->UnsetLongRunning();
     queue->Emplace(orig_task->prio_, orig_task->lane_hash_, p);
     HILOG(kDebug,
           "(node {}) Executing task (task_node={}, task_state={}/{}, state_name={}, method={}, size={}, lane_hash={})",
@@ -342,7 +343,6 @@ class Server : public TaskLib {
                    TaskState *exec, TaskStateId state_id) {
     BinaryOutputArchive<false> ar(DomainId::GetNode(LABSTOR_CLIENT->node_id_));
     std::vector<DataTransfer> out_xfer = exec->SaveEnd(method, ar, orig_task);
-    LABSTOR_CLIENT->DelTask(orig_task);
     HILOG(kDebug, "(node {}) Returning {} bytes of data (task_node={}, task_state={}/{}, method={})",
           LABSTOR_CLIENT->node_id_,
           out_xfer[0].data_size_,
@@ -350,6 +350,7 @@ class Server : public TaskLib {
           orig_task->task_state_,
           state_id,
           method);
+    LABSTOR_CLIENT->DelTask(orig_task);
     req.respond(std::string((char *) out_xfer[0].data_, out_xfer[0].data_size_));
   }
 

@@ -48,17 +48,10 @@ class Server : public TaskLib {
         }
         // Check global registry for task state
         if (task->id_.IsNull()) {
-//          if (task->domain_id_ == DomainId::GetLocal()) {
-//            HILOG(kDebug, "Domain ID is local for {} (task_node={})", state_name, task->task_node_);
-//            task->id_ = LABSTOR_TASK_REGISTRY->GetOrCreateTaskStateId(state_name);
-//            task->phase_ = CreateTaskStatePhase::kStateCreate;
-//          } else {
-            HILOG(kDebug, "Domain ID is global for {} (task_node={})", state_name, task->task_node_);
             DomainId domain = DomainId::GetNode(1);
             task->get_id_task_ = LABSTOR_ADMIN->AsyncGetOrCreateTaskStateId(
                 task->task_node_ + 1, domain, state_name).ptr_;
             task->phase_ = CreateTaskStatePhase::kIdAllocWait;
-//          }
         } else {
           HILOG(kDebug, "Domain ID is given as {} for {} (task_node={})", task->id_, state_name, task->task_node_);
           task->phase_ = CreateTaskStatePhase::kStateCreate;
