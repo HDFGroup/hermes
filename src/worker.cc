@@ -75,7 +75,8 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
         LABSTOR_REMOTE_QUEUE->Disperse(task, exec, ids);
         task->DisableRun();
         task->SetUnordered();
-      } else if (task->IsBlocking() && !task->IsStarted()) {
+      } else if (task->IsBlocking()) {
+        task->DisableRun();
         task->SetStarted();
         entry->thread_ = LABSTOR_WORK_ORCHESTRATOR->SpawnAsyncThread(&Worker::RunBlocking, task);
       } else {
