@@ -39,12 +39,6 @@ struct ConstructTask : public CreateTaskStateTask {
       : CreateTaskStateTask(alloc, task_node, domain_id, state_name,
                             "worch_proc_round_robin", id, queue_info) {
   }
-
-  /** Create group */
-  HSHM_ALWAYS_INLINE
-  u32 GetGroup(hshm::charbuf &group) {
-    return TASK_UNORDERED;
-  }
 };
 
 /** A task to destroy worch_proc_round_robin */

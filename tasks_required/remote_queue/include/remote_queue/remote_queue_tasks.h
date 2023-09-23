@@ -45,12 +45,6 @@ struct ConstructTask : public CreateTaskStateTask {
                             "remote_queue", id, queue_info) {
     // Custom params
   }
-
-  /** Create group */
-  HSHM_ALWAYS_INLINE
-  u32 GetGroup(hshm::charbuf &group) {
-    return TASK_UNORDERED;
-  }
 };
 
 /** A task to destroy remote_queue */
