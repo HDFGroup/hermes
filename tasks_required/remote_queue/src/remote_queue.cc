@@ -146,7 +146,7 @@ class Server : public TaskLib {
   /** Push operation called on client */
   void Push(PushTask *task, RunContext &ctx) {
     std::vector<DataTransfer> &xfer = task->xfer_;
-    switch (task->xfer_.size()) {
+    switch (xfer.size()) {
       case 1: {
         ClientSmallPush(xfer, task);
         break;

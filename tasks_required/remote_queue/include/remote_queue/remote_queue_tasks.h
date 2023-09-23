@@ -88,9 +88,6 @@ struct PushTask : public Task, TaskFlags<TF_LOCAL> {
   IN TaskState *exec_;
   IN u32 exec_method_;
   IN std::vector<DataTransfer> xfer_;
-  TEMP std::vector<void*> tl_future_;
-  TEMP int phase_ = PushPhase::kStart;
-  TEMP int replica_;
   TEMP std::string params_;
 
   /** SHM default constructor */
@@ -123,7 +120,6 @@ struct PushTask : public Task, TaskFlags<TF_LOCAL> {
     exec_ = exec;
     exec_method_ = exec_method;
     xfer_ = std::move(xfer);
-    replica_ = 0;
   }
 
   /** Create group */
