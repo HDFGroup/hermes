@@ -52,6 +52,7 @@ void PutTest(int nprocs, int rank,
     }
   }
   t.Pause();
+  HILOG(kInfo, "Finished PUT")
   GatherTimes("Put", nprocs * blobs_per_rank * blob_size * repeat, t);
 }
 
