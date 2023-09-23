@@ -15,39 +15,6 @@ SERIALIZE_ENUM(labstor::IoType);
 
 namespace labstor::remote_queue {
 
-/** Parameters for spawning async thread for thallium */
-struct ThalliumTask {
-  int replica_;
-  PushTask *task_;
-  DomainId domain_id_;
-  IoType io_type_;
-  char *data_;
-  size_t data_size_;
-  ABT_thread thread_;
-  bool done_;
-
-  /** Default constructor */
-  ThalliumTask() : done_(false) {};
-
-  /** Emplace constructor Small */
-  ThalliumTask(int replica, PushTask *task, DomainId domain_id) :
-      replica_(replica), task_(task), domain_id_(domain_id), done_(false) {}
-
-  /** Emplace constructor I/O */
-  ThalliumTask(int replica, PushTask *task, DomainId domain_id,
-               IoType io_type, void *data, size_t data_size) :
-      replica_(replica), task_(task), domain_id_(domain_id),
-      io_type_(io_type), data_((char*)data), data_size_(data_size), done_(false) {}
-
-  /** Check if the thread is finished */
-  bool IsDone() {
-    if (done_) {
-      ABT_thread_join(thread_);
-    }
-    return done_;
-  }
-};
-
 class Server : public TaskLib {
  public:
   labstor::remote_queue::Client client_;
@@ -112,35 +79,26 @@ class Server : public TaskLib {
     task->params_ = std::string((char *) xfer[0].data_, xfer[0].data_size_);
     for (int replica = 0; replica < task->domain_ids_.size(); ++replica) {
       DomainId domain_id = task->domain_ids_[replica];
-      ThalliumTask *tl_task = new ThalliumTask(replica, task, domain_id);
-      tl_task->thread_ = LABSTOR_WORK_ORCHESTRATOR->SpawnAsyncThread([](void *data) {
-        ThalliumTask *tl_task = (ThalliumTask *) data;
-        DomainId &domain_id = tl_task->domain_id_;
-        PushTask *task = tl_task->task_;
-        int replica = tl_task->replica_;
-        HILOG(kDebug, "(SM) Transferring {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={})",
-              task->params_.size(),
-              task->orig_task_->task_node_,
-              task->orig_task_->task_state_,
-              task->orig_task_->method_,
-              LABSTOR_CLIENT->node_id_,
-              domain_id.id_);
-        std::string ret = LABSTOR_THALLIUM->SyncCall<std::string>(domain_id.id_,
-                                                                  "RpcPushSmall",
-                                                                  task->exec_->id_,
-                                                                  task->exec_method_,
-                                                                  task->params_);
-        HILOG(kDebug, "(SM) Finished {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={})",
-              task->params_.size(),
-              task->orig_task_->task_node_,
-              task->orig_task_->task_state_,
-              task->orig_task_->method_,
-              LABSTOR_CLIENT->node_id_,
-              domain_id.id_);
-        HandlePushReplicaOutput(replica, ret, task);
-        tl_task->done_ = true;
-      }, tl_task);
-      task->tl_future_.emplace_back(tl_task);
+      HILOG(kDebug, "(SM) Transferring {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={})",
+            task->params_.size(),
+            task->orig_task_->task_node_,
+            task->orig_task_->task_state_,
+            task->orig_task_->method_,
+            LABSTOR_CLIENT->node_id_,
+            domain_id.id_);
+      std::string ret = LABSTOR_THALLIUM->SyncCall<std::string>(domain_id.id_,
+                                                                "RpcPushSmall",
+                                                                task->exec_->id_,
+                                                                task->exec_method_,
+                                                                task->params_);
+      HILOG(kDebug, "(SM) Finished {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={})",
+            task->params_.size(),
+            task->orig_task_->task_node_,
+            task->orig_task_->task_state_,
+            task->orig_task_->method_,
+            LABSTOR_CLIENT->node_id_,
+            domain_id.id_);
+      HandlePushReplicaOutput(replica, ret, task);
     }
   }
 
@@ -153,85 +111,55 @@ class Server : public TaskLib {
     }
     for (int replica = 0; replica < task->domain_ids_.size(); ++replica) {
       DomainId domain_id = task->domain_ids_[replica];
-      ThalliumTask *tl_task = new ThalliumTask(
-          replica, task, domain_id, io_type,
-          xfer[0].data_, xfer[0].data_size_);
-      tl_task->thread_ = LABSTOR_WORK_ORCHESTRATOR->SpawnAsyncThread([](void *data) {
-        ThalliumTask *tl_task = (ThalliumTask *) data;
-        DomainId &domain_id = tl_task->domain_id_;
-        PushTask *task = tl_task->task_;
-        int replica = tl_task->replica_;
-        IoType &io_type = tl_task->io_type_;
-        HILOG(kDebug, "(IO) Transferring {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={}, type={})",
-              tl_task->data_size_,
-              task->orig_task_->task_node_,
-              task->orig_task_->task_state_,
-              task->orig_task_->method_,
-              LABSTOR_CLIENT->node_id_,
-              domain_id.id_,
-              static_cast<int>(io_type));
-        std::string ret = LABSTOR_THALLIUM->SyncIoCall<std::string>(domain_id.id_,
-                                                                    "RpcPushBulk",
-                                                                    io_type,
-                                                                    tl_task->data_,
-                                                                    tl_task->data_size_,
-                                                                    task->exec_->id_,
-                                                                    task->exec_method_,
-                                                                    task->params_,
-                                                                    tl_task->data_size_,
-                                                                    io_type);
-        HILOG(kDebug, "(IO) Finished transferring {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={}, type={})",
-              tl_task->data_size_,
-              task->orig_task_->task_node_,
-              task->orig_task_->task_state_,
-              task->orig_task_->method_,
-              LABSTOR_CLIENT->node_id_,
-              domain_id.id_,
-              static_cast<int>(io_type));
-        HandlePushReplicaOutput(replica, ret, task);
-        tl_task->done_ = true;
-      }, tl_task);
-      task->tl_future_.emplace_back(tl_task);
+      char *data = (char*)xfer[0].data_;
+      size_t data_size = xfer[0].data_size_;
+      HILOG(kDebug, "(IO) Transferring {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={}, type={})",
+            data_size,
+            task->orig_task_->task_node_,
+            task->orig_task_->task_state_,
+            task->orig_task_->method_,
+            LABSTOR_CLIENT->node_id_,
+            domain_id.id_,
+            static_cast<int>(io_type));
+      std::string ret = LABSTOR_THALLIUM->SyncIoCall<std::string>(domain_id.id_,
+                                                                  "RpcPushBulk",
+                                                                  io_type,
+                                                                  data,
+                                                                  data_size,
+                                                                  task->exec_->id_,
+                                                                  task->exec_method_,
+                                                                  task->params_,
+                                                                  data_size,
+                                                                  io_type);
+      HILOG(kDebug, "(IO) Finished transferring {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={}, type={})",
+            data_size,
+            task->orig_task_->task_node_,
+            task->orig_task_->task_state_,
+            task->orig_task_->method_,
+            LABSTOR_CLIENT->node_id_,
+            domain_id.id_,
+            static_cast<int>(io_type));
+      HandlePushReplicaOutput(replica, ret, task);
     }
-  }
-
-  /** Wait for client to finish message */
-  void ClientWaitForMessage(PushTask *task) {
-    for (; task->replica_ < task->tl_future_.size(); ++task->replica_) {
-      ThalliumTask *tl_task = (ThalliumTask *) task->tl_future_[task->replica_];
-      if (!tl_task->IsDone()) {
-        return;
-      }
-      delete tl_task;
-    }
-    HandlePushReplicaEnd(task);
   }
 
   /** Push operation called on client */
   void Push(PushTask *task, RunContext &ctx) {
-    switch (task->phase_) {
-      case PushPhase::kStart: {
-        std::vector<DataTransfer> &xfer = task->xfer_;
-        task->tl_future_.reserve(task->domain_ids_.size());
-        switch (task->xfer_.size()) {
-          case 1: {
-            ClientSmallPush(xfer, task);
-            break;
-          }
-          case 2: {
-            ClientIoPush(xfer, task);
-            break;
-          }
-          default: {
-            HELOG(kFatal, "The task {}/{} does not support remote calls", task->task_state_, task->method_);
-          }
-        }
-        task->phase_ = PushPhase::kWait;
+    std::vector<DataTransfer> &xfer = task->xfer_;
+    switch (task->xfer_.size()) {
+      case 1: {
+        ClientSmallPush(xfer, task);
+        break;
       }
-      case PushPhase::kWait: {
-        ClientWaitForMessage(task);
+      case 2: {
+        ClientIoPush(xfer, task);
+        break;
+      }
+      default: {
+        HELOG(kFatal, "The task {}/{} does not support remote calls", task->task_state_, task->method_);
       }
     }
+    HandlePushReplicaEnd(task);
   }
 
  private:
