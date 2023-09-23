@@ -17,7 +17,6 @@ namespace hermes::posix_bdev {
 class Server : public TaskLib {
  public:
   SlabAllocator alloc_;
-  char *mem_ptr_;
   int fd_;
   std::string path_;
 
@@ -41,7 +40,6 @@ class Server : public TaskLib {
   }
 
   void Destruct(DestructTask *task, RunContext &ctx) {
-    free(mem_ptr_);
     task->SetModuleComplete();
   }
 
@@ -66,7 +64,6 @@ class Server : public TaskLib {
   }
 
   void Read(ReadTask *task, RunContext &ctx) {
-    memcpy(task->buf_, mem_ptr_ + task->disk_off_, task->size_);
     ssize_t count = pread(fd_, task->buf_, task->size_, (off_t)task->disk_off_);
     if (count != task->size_) {
       HELOG(kError, "BORG: read {} bytes, but expected {}",
