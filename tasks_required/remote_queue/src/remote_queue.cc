@@ -187,7 +187,7 @@ class Server : public TaskLib {
       if (!tl_task->IsDone()) {
         return;
       }
-      free(tl_task);
+      delete tl_task;
     }
     HandlePushReplicaEnd(task);
   }

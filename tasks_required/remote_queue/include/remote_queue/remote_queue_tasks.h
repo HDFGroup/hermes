@@ -94,7 +94,6 @@ struct PushTask : public Task, TaskFlags<TF_LOCAL> {
   IN TaskState *exec_;
   IN u32 exec_method_;
   IN std::vector<DataTransfer> xfer_;
-  // TEMP std::vector<tl::async_response> tl_future_;
   TEMP std::vector<void*> tl_future_;
   TEMP int phase_ = PushPhase::kStart;
   TEMP int replica_;
