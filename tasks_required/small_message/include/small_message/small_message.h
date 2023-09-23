@@ -70,7 +70,7 @@ class Client : public TaskLibClient {
     LPointer<labpq::TypedPushTask<MdPushTask>> push_task =
         AsyncMdPushRoot(domain_id);
     push_task->Wait();
-    MdPushTask *task = push_task->subtask_ptr_;
+    MdPushTask *task = push_task->get();
     int ret = task->ret_[0];
     LABSTOR_CLIENT->DelTask(push_task);
     return ret;
@@ -85,8 +85,8 @@ class Client : public TaskLibClient {
   }
   int IoRoot(const DomainId &domain_id) {
     LPointer<labpq::TypedPushTask<IoTask>> push_task = AsyncIoRoot(domain_id);
-    push_task.ptr_->Wait();
-    IoTask *task = push_task.ptr_->subtask_ptr_;
+    push_task->Wait();
+    IoTask *task = push_task->get();
     int ret = task->ret_;
     LABSTOR_CLIENT->DelTask(push_task);
     return ret;

@@ -269,7 +269,7 @@ class Client : public ConfigurationManager {
     hipc::LPointer<labpq::TypedPushTask<CUSTOM##Task>> push_task =\
       LABSTOR_PROCESS_QUEUE->AsyncPush<CUSTOM##Task>(task_node,\
                                                      DomainId::GetLocal(),\
-                                                     task.shm_);\
+                                                     task);\
       return push_task;\
   }
 

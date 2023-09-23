@@ -261,7 +261,7 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     // Initialize task
     HILOG(kDebug, "Beginning PUT task constructor")
     task_node_ = task_node;
-    lane_hash_ = blob_id_.unique_;
+    lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kPutBlob;
@@ -365,7 +365,7 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
               const Context &ctx) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = blob_id.unique_;
+    lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kGetBlob;
@@ -380,6 +380,11 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     data_ = data;
     HSHM_MAKE_AR(filename_, alloc, ctx.filename_);
     page_size_ = ctx.page_size_;
+  }
+
+  /** Destructor */
+  ~GetBlobTask() {
+    HSHM_DESTROY_AR(filename_);
   }
 
   /** (De)serialize message call */
@@ -439,7 +444,7 @@ struct TagBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
               const TagId &tag) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = blob_id.unique_;
+    lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kTagBlob;
@@ -499,7 +504,7 @@ struct BlobHasTagTask : public Task, TaskFlags<TF_SRL_SYM> {
     // Initialize task
     task_node_ = task_node;
     task_node_ = task_node;
-    lane_hash_ = blob_id.unique_;
+    lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kBlobHasTag;
@@ -619,7 +624,7 @@ struct GetBlobNameTask : public Task, TaskFlags<TF_SRL_SYM> {
                   const BlobId &blob_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = blob_id.unique_;
+    lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kGetBlobName;
@@ -680,7 +685,7 @@ struct GetBlobSizeTask : public Task, TaskFlags<TF_SRL_SYM> {
                   const BlobId &blob_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = blob_id.unique_;
+    lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kGetBlobSize;
@@ -735,7 +740,7 @@ struct GetBlobScoreTask : public Task, TaskFlags<TF_SRL_SYM> {
                    const BlobId &blob_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = blob_id.unique_;
+    lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kGetBlobScore;
@@ -790,7 +795,7 @@ struct GetBlobBuffersTask : public Task, TaskFlags<TF_SRL_SYM> {
                      const BlobId &blob_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = blob_id.unique_;
+    lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kGetBlobBuffers;
@@ -855,7 +860,7 @@ struct RenameBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
                  const hshm::charbuf &new_blob_name) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = blob_id.unique_;
+    lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kRenameBlob;
@@ -917,7 +922,7 @@ struct TruncateBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
                    u64 size) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = blob_id.unique_;
+    lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kTruncateBlob;
@@ -979,7 +984,7 @@ struct DestroyBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
                   const BlobId &blob_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = blob_id.unique_;
+    lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kDestroyBlob;
@@ -1048,7 +1053,7 @@ struct ReorganizeBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
                      u32 node_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = blob_id.unique_;
+    lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kReorganizeBlob;
