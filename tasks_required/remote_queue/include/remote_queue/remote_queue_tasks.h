@@ -111,7 +111,7 @@ struct PushTask : public Task, TaskFlags<TF_LOCAL> {
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kPush;
-    task_flags_.SetBits(TASK_LOW_LATENCY | TASK_COROUTINE);
+    task_flags_.SetBits(TASK_LOW_LATENCY | TASK_PREEMPTIVE);
     domain_id_ = domain_id;
 
     // Custom params
@@ -125,10 +125,7 @@ struct PushTask : public Task, TaskFlags<TF_LOCAL> {
   /** Create group */
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
-    LocalSerialize srl(group);
-    srl << 16;
-    // return TASK_UNORDERED;
-    return 0;
+    return TASK_UNORDERED;
   }
 };
 
