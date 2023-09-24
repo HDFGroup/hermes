@@ -84,7 +84,7 @@ class Server : public TaskLib {
       target_map_.emplace(client.id_, &client);
     }
     blob_mdm_.Init(id_);
-    HILOG(kInfo, "Created Blob MDM")
+    HILOG(kInfo, "(node {}) Created Blob MDM")
     task->SetModuleComplete();
   }
 
