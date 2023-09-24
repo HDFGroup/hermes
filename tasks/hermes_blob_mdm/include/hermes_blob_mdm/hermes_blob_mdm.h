@@ -128,13 +128,11 @@ class Client : public TaskLibClient {
       bitfield32_t flags,
       Context ctx = Context(),
       bitfield32_t task_flags = bitfield32_t(TASK_FIRE_AND_FORGET | TASK_DATA_OWNER | TASK_LOW_LATENCY)) {
-    HILOG(kDebug, "Beginning PUT (task_node={})", task_node);
     LABSTOR_CLIENT->ConstructTask<PutBlobTask>(
         task, task_node, DomainId::GetNode(blob_id.node_id_), id_,
         tag_id, blob_name, blob_id,
         blob_off, blob_size,
         blob, score, flags, ctx, task_flags);
-    HILOG(kDebug, "Constructed PUT (task_node={})", task_node);
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(PutBlob);
 

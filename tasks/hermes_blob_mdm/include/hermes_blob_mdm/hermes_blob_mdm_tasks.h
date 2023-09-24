@@ -254,7 +254,6 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
               const Context &ctx,
               bitfield32_t task_flags) : Task(alloc) {
     // Initialize task
-    HILOG(kDebug, "Beginning PUT task constructor")
     task_node_ = task_node;
     if (!blob_id.IsNull()) {
       lane_hash_ = blob_id.hash_;
@@ -269,7 +268,6 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
 
     // Custom params
     tag_id_ = tag_id;
-    HILOG(kDebug, "Setting blob name {}", blob_name.str());
     HSHM_MAKE_AR(blob_name_, alloc, blob_name);
     blob_id_ = blob_id;
     blob_off_ = blob_off;
@@ -279,7 +277,8 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     flags_ = flags;
     HSHM_MAKE_AR(filename_, alloc, ctx.filename_);
     page_size_ = ctx.page_size_;
-    HILOG(kDebug, "Finished setting blob name {}", blob_name.str());
+    HILOG(kDebug, "Construct PUT task for {}, while getting BlobId is {}",
+          blob_name.str(), flags_.Any(HERMES_GET_BLOB_ID));
   }
 
   /** Destructor */
@@ -299,7 +298,7 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
                       data_size_, domain_id_);
     task_serialize<Ar>(ar);
     ar & xfer;
-    ar(tag_id_, blob_name_, blob_id_, blob_off_, data_size_, score_, flags_, filename_, page_size_, flags_);
+    ar(tag_id_, blob_name_, blob_id_, blob_off_, data_size_, score_, flags_, filename_, page_size_);
   }
 
   /** Deserialize message call */
@@ -309,7 +308,7 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     task_serialize<Ar>(ar);
     ar & xfer;
     data_ = HERMES_MEMORY_MANAGER->Convert<void, hipc::Pointer>(xfer.data_);
-    ar(tag_id_, blob_name_, blob_id_, blob_off_, data_size_, score_, flags_, filename_, page_size_, flags_);
+    ar(tag_id_, blob_name_, blob_id_, blob_off_, data_size_, score_, flags_, filename_, page_size_);
   }
 
   /** (De)serialize message return */
