@@ -207,7 +207,7 @@ class Bucket {
   /**
    * Put \a blob_name Blob into the bucket
    * */
-  template<bool PARTIAL>
+  template<bool PARTIAL, bool ASYNC>
   HSHM_ALWAYS_INLINE
   BlobId BasePut(const std::string &blob_name,
                  const Blob &blob,
@@ -222,9 +222,11 @@ class Bucket {
     memcpy(data, blob.data(), blob.size());
     // Put to shared memory
     hshm::charbuf blob_name_buf = hshm::to_charbuf(blob_name);
-    if (blob_id.IsNull()) {
-      flags.SetBits(HERMES_GET_BLOB_ID);
-      task_flags.UnsetBits(TASK_FIRE_AND_FORGET);
+    if constexpr (!ASYNC) {
+      if (blob_id.IsNull()) {
+        flags.SetBits(HERMES_GET_BLOB_ID);
+        task_flags.UnsetBits(TASK_FIRE_AND_FORGET);
+      }
     }
     LPointer<labpq::TypedPushTask<PutBlobTask>> push_task;
     if constexpr(!PARTIAL) {
@@ -249,7 +251,7 @@ class Bucket {
   /**
    * Put \a blob_name Blob into the bucket
    * */
-  template<typename T, bool PARTIAL>
+  template<typename T, bool PARTIAL, bool ASYNC>
   HSHM_ALWAYS_INLINE
   BlobId SrlBasePut(const std::string &blob_name,
                     const T &data,
@@ -259,7 +261,7 @@ class Bucket {
     cereal::BinaryOutputArchive ar(ss);
     ar << data;
     Blob blob(ss.str());
-    return BasePut<PARTIAL>(blob_name, blob, 0, orig_blob_id, ctx);
+    return BasePut<PARTIAL, ASYNC>(blob_name, blob, 0, orig_blob_id, ctx);
   }
 
   /**
@@ -270,9 +272,9 @@ class Bucket {
              const T &blob,
              Context &ctx) {
     if (std::is_same_v<T, Blob>) {
-      return BasePut<false>(blob_name, blob, 0, BlobId::GetNull(), ctx);
+      return BasePut<false, false>(blob_name, blob, 0, BlobId::GetNull(), ctx);
     } else {
-      return SrlBasePut<T, false>(blob_name, blob, BlobId::GetNull(), ctx);
+      return SrlBasePut<T, false, false>(blob_name, blob, BlobId::GetNull(), ctx);
     }
   }
 
@@ -284,9 +286,9 @@ class Bucket {
              const T &blob,
              Context &ctx) {
     if (std::is_same_v<T, Blob>) {
-      return BasePut<false>("", blob, 0, blob_id, ctx);
+      return BasePut<false, false>("", blob, 0, blob_id, ctx);
     } else {
-      return SrlBasePut<T, false>("", blob, blob_id, ctx);
+      return SrlBasePut<T, false, false>("", blob, blob_id, ctx);
     }
   }
 
@@ -298,7 +300,7 @@ class Bucket {
   void AsyncPut(const std::string &blob_name,
                 const T &blob,
                 Context &ctx) {
-    Put<T>(blob_name, blob, ctx);
+    Put<T, false, true>(blob_name, blob, ctx);
   }
 
   /**
@@ -309,7 +311,7 @@ class Bucket {
   void AsyncPut(const BlobId &blob_id,
                 const T &blob,
                 Context &ctx) {
-    Put<T>(blob_id, blob, ctx);
+    Put<T, false, true>(blob_id, blob, ctx);
   }
 
   /**
@@ -319,7 +321,7 @@ class Bucket {
                     const Blob &blob,
                     size_t blob_off,
                     Context &ctx) {
-    return BasePut<true>(blob_name, blob, blob_off, BlobId::GetNull(), ctx);
+    return BasePut<true, false>(blob_name, blob, blob_off, BlobId::GetNull(), ctx);
   }
 
   /**
@@ -329,7 +331,7 @@ class Bucket {
                     const Blob &blob,
                     size_t blob_off,
                     Context &ctx) {
-    return BasePut<true>("", blob, blob_off, blob_id, ctx);
+    return BasePut<true, false>("", blob, blob_off, blob_id, ctx);
   }
 
   /**
@@ -339,7 +341,7 @@ class Bucket {
                        const Blob &blob,
                        size_t blob_off,
                        Context &ctx) {
-    BasePut<true>(blob_name, blob, blob_off, BlobId::GetNull(), ctx);
+    BasePut<true, true>(blob_name, blob, blob_off, BlobId::GetNull(), ctx);
   }
 
   /**
@@ -349,7 +351,7 @@ class Bucket {
                        const Blob &blob,
                        size_t blob_off,
                        Context &ctx) {
-    BasePut<true>("", blob, blob_off, blob_id, ctx);
+    BasePut<true, true>("", blob, blob_off, blob_id, ctx);
   }
 
   /**
