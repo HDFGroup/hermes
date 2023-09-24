@@ -255,6 +255,10 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
               bitfield32_t task_flags) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
+    prio_ = TaskPrio::kLowLatency;
+    task_state_ = state_id;
+    method_ = Method::kPutBlob;
+    task_flags_ = task_flags;
     if (!blob_id.IsNull()) {
       lane_hash_ = blob_id.hash_;
       domain_id_ = domain_id;
@@ -262,10 +266,6 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
       lane_hash_ = std::hash<hshm::charbuf>{}(blob_name);
       domain_id_ = DomainId::GetNode(HASH_TO_NODE_ID(lane_hash_));
     }
-    prio_ = TaskPrio::kLowLatency;
-    task_state_ = state_id;
-    method_ = Method::kPutBlob;
-    task_flags_ = task_flags;
 
     // Custom params
     tag_id_ = tag_id;
@@ -686,6 +686,7 @@ struct GetBlobNameTask : public Task, TaskFlags<TF_SRL_SYM> {
 /** Get \a score from \a blob_id BLOB id */
 struct GetBlobSizeTask : public Task, TaskFlags<TF_SRL_SYM> {
   IN TagId tag_id_;
+  IN hipc::ShmArchive<hipc::charbuf> blob_name_;
   IN BlobId blob_id_;
   OUT size_t size_;
 
@@ -700,19 +701,31 @@ struct GetBlobSizeTask : public Task, TaskFlags<TF_SRL_SYM> {
                   const DomainId &domain_id,
                   const TaskStateId &state_id,
                   const TagId &tag_id,
+                  const hshm::charbuf &blob_name,
                   const BlobId &blob_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kGetBlobSize;
     task_flags_.SetBits(TASK_LOW_LATENCY);
-    domain_id_ = domain_id;
+    if (!blob_id.IsNull()) {
+      lane_hash_ = blob_id.hash_;
+      domain_id_ = domain_id;
+    } else {
+      lane_hash_ = std::hash<hshm::charbuf>{}(blob_name);
+      domain_id_ = DomainId::GetNode(HASH_TO_NODE_ID(lane_hash_));
+    }
 
     // Custom
     tag_id_ = tag_id;
+    HSHM_MAKE_AR(blob_name_, alloc, blob_name)
     blob_id_ = blob_id;
+  }
+
+  /** Destructor */
+  ~GetBlobSizeTask() {
+    HSHM_DESTROY_AR(blob_name_)
   }
 
   /** (De)serialize message call */

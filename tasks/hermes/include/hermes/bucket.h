@@ -374,7 +374,14 @@ class Bucket {
    * Get the current size of the blob in the bucket
    * */
   size_t GetBlobSize(const BlobId &blob_id) {
-    return blob_mdm_->GetBlobSizeRoot(id_, blob_id);
+    return blob_mdm_->GetBlobSizeRoot(id_, hshm::charbuf(""), blob_id);
+  }
+
+  /**
+   * Get the current size of the blob in the bucket
+   * */
+  size_t GetBlobSize(const std::string &name) {
+    return blob_mdm_->GetBlobSizeRoot(id_, hshm::charbuf(name), BlobId::GetNull());
   }
 
   /**
@@ -415,7 +422,7 @@ class Bucket {
     // TODO(llogan): make GetBlobSize work with blob_name
     size_t data_size = blob.size();
     if (blob.size() == 0) {
-      data_size = blob_mdm_->GetBlobSizeRoot(id_, orig_blob_id);
+      data_size = blob_mdm_->GetBlobSizeRoot(id_, hshm::charbuf(blob_name), orig_blob_id);
       blob.resize(data_size);
     }
     HILOG(kDebug, "Getting blob of size {}", data_size);

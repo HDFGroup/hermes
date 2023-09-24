@@ -525,6 +525,12 @@ class Server : public TaskLib {
    * Get \a score from \a blob_id BLOB id
    * */
   void GetBlobSize(GetBlobSizeTask *task, RunContext &ctx) {
+    if (task->blob_id_.IsNull()) {
+      bitfield32_t flags;
+      task->blob_id_ = GetOrCreateBlobId(task->tag_id_, task->lane_hash_,
+                                         hshm::to_charbuf(*task->blob_name_),
+                                         ctx, flags);
+    }
     BLOB_MAP_T &blob_map = blob_map_[ctx.lane_id_];
     auto it = blob_map.find(task->blob_id_);
     if (it == blob_map.end()) {

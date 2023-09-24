@@ -293,16 +293,18 @@ class Client : public TaskLibClient {
   void AsyncGetBlobSizeConstruct(GetBlobSizeTask *task,
                                  const TaskNode &task_node,
                                  const TagId &tag_id,
+                                 const hshm::charbuf &blob_name,
                                  const BlobId &blob_id) {
     HILOG(kDebug, "Getting blob size {}", task_node);
     LABSTOR_CLIENT->ConstructTask<GetBlobSizeTask>(
         task, task_node, DomainId::GetNode(blob_id.node_id_), id_,
-        tag_id, blob_id);
+        tag_id, blob_name, blob_id);
   }
   size_t GetBlobSizeRoot(const TagId &tag_id,
+                         const hshm::charbuf &blob_name,
                          const BlobId &blob_id) {
     LPointer<labpq::TypedPushTask<GetBlobSizeTask>> push_task =
-        AsyncGetBlobSizeRoot(tag_id, blob_id);
+        AsyncGetBlobSizeRoot(tag_id, blob_name, blob_id);
     push_task->Wait();
     GetBlobSizeTask *task = push_task->get();
     size_t size = task->size_;
