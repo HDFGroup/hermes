@@ -49,7 +49,7 @@ class Server : public TaskLib {
       DomainId domain = DomainId::GetNode(1);
       LPointer<GetOrCreateTaskStateIdTask> get_id =
           LABSTOR_ADMIN->AsyncGetOrCreateTaskStateId(task->task_node_ + 1, domain, state_name);
-      get_id->Wait<1>();
+      get_id->Wait<TASK_YIELD_CO>(task);
       task->id_ = get_id->id_;
       LABSTOR_CLIENT->DelTask(get_id);
     }

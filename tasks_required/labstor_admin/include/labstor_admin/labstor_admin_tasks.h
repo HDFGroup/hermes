@@ -167,7 +167,7 @@ struct CreateTaskStateTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
     prio_ = TaskPrio::kAdmin;
     task_state_ = LABSTOR_QM_CLIENT->admin_task_state_;
     method_ = Method::kCreateTaskState;
-    task_flags_.SetBits(TASK_BLOCKING);
+    task_flags_.SetBits(TASK_COROUTINE);
     domain_id_ = domain_id;
 
     // Initialize

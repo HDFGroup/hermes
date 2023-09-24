@@ -6,6 +6,8 @@
 #include <boost/context/fiber_fcontext.hpp>
 #include "hermes_shm/util/timer.h"
 #include "hermes_shm/util/logging.h"
+#include <boost/coroutine2/all.hpp>
+
 
 void function() {
 }
@@ -68,13 +70,13 @@ typedef simple_stack_allocator<
     32> stack_allocator;
 
 int value1;
-namespace ctx = boost::context::detail;
+namespace bctx = boost::context::detail;
 
-void f3( ctx::transfer_t t_) {
+void f3( bctx::transfer_t t_) {
   ++value1;
-  ctx::transfer_t t = ctx::jump_fcontext( t_.fctx, 0);
+  bctx::transfer_t t = bctx::jump_fcontext( t_.fctx, 0);
   ++value1;
-  ctx::jump_fcontext( t.fctx, t.data);
+  bctx::jump_fcontext( t.fctx, t.data);
 }
 
 
@@ -89,11 +91,33 @@ TEST_CASE("TestBoostFcontext") {
 
   void *sp = alloc.allocate(size);
   for (size_t i = 0; i < ops; ++i) {
-    ctx::fcontext_t ctx = ctx::make_fcontext(sp, size, f3);
-    ctx::transfer_t t = ctx::jump_fcontext(ctx, 0);
-    ctx::jump_fcontext(t.fctx, 0);
+    bctx::fcontext_t ctx = bctx::make_fcontext(sp, size, f3);
+    bctx::transfer_t t = bctx::jump_fcontext(ctx, 0);
+    bctx::jump_fcontext(t.fctx, 0);
   }
   alloc.deallocate(sp, size);
+
+  t.Pause();
+  HILOG(kInfo, "Latency: {} MOps", ops / t.GetUsec());
+}
+
+using namespace boost::coroutines2;
+
+void myCoroutine(coroutine<void>::push_type& yield) {
+  for (int i = 1; i <= 5; ++i) {
+    yield();
+  }
+}
+
+TEST_CASE("TestBoostCoroutine") {
+  hshm::Timer t;
+  t.Resume();
+  size_t ops = (1 << 20);
+
+  for (size_t i = 0; i < ops; ++i) {
+    coroutine<void>::pull_type myCoroutineInstance(myCoroutine);
+    myCoroutineInstance();
+  }
 
   t.Pause();
   HILOG(kInfo, "Latency: {} MOps", ops / t.GetUsec());

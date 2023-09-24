@@ -78,7 +78,7 @@ class Server : public TaskLib {
     }
     for (int i = 0; i < target_tasks_.size(); ++i) {
       bdev::ConstructTask *tgt_task = target_tasks_[i];
-      tgt_task->Wait<1>();
+      tgt_task->Wait<TASK_YIELD_CO>(task);
       bdev::Client &client = targets_[i];
       client.AsyncCreateComplete(tgt_task);
       target_map_.emplace(client.id_, &client);

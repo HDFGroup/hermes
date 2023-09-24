@@ -263,7 +263,7 @@ class Server : public TaskLib {
           method,
           data_size,
           orig_task->lane_hash_);
-    orig_task->Wait<1>();
+    orig_task->Wait<TASK_YIELD_ABT>();
   }
 
   void RpcComplete(const tl::request &req,

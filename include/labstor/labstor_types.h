@@ -28,6 +28,10 @@
 #include "hermes_shm/util/singleton.h"
 #include "hermes_shm/constants/macros.h"
 
+#include <boost/context/fiber_fcontext.hpp>
+
+namespace bctx = boost::context::detail;
+
 typedef uint8_t u8;   /**< 8-bit unsigned integer */
 typedef uint16_t u16; /**< 16-bit unsigned integer */
 typedef uint32_t u32; /**< 32-bit unsigned integer */

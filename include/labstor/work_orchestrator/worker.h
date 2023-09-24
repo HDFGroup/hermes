@@ -29,6 +29,10 @@ struct WorkEntry {
   LaneGroup *group_;
   MultiQueue *queue_;
 
+  TaskState *exec_;
+  Task *task_;
+  RunContext ctx_;
+
   /** Default constructor */
   HSHM_ALWAYS_INLINE
   WorkEntry() = default;
@@ -364,7 +368,8 @@ class Worker {
   }
 
   void PollGrouped(WorkEntry &entry);
-  static void RunBlocking(void *data);
+  static void RunBlocking(bctx::transfer_t t);
+  static void RunPreemptive(void *data);
 };
 
 }  // namespace labstor

@@ -43,11 +43,18 @@ namespace labstor {
 #define TASK_DATA_OWNER BIT_OPT(u32, 14)
 /** This task is marked */
 #define TASK_MARKED BIT_OPT(u32, 15)
+/** This task uses co-routine wait */
+#define TASK_COROUTINE BIT_OPT(u32, 16)
 /** This task uses argobot wait */
-#define TASK_BLOCKING BIT_OPT(u32, 16)
+#define TASK_PREEMPTIVE BIT_OPT(u32, 17)
 
 /** Used to define task methods */
 #define TASK_METHOD_T static inline const u32
+
+/** Used to indicate Yield to use */
+#define TASK_YIELD_STD 0
+#define TASK_YIELD_CO 1
+#define TASK_YIELD_ABT 2
 
 /** The baseline set of tasks */
 struct TaskMethod {
@@ -232,6 +239,9 @@ struct Task : public hipc::ShmContainer {
   u32 lane_hash_;              /**< Determine the lane a task is keyed to */
   u32 method_;                 /**< The method to call in the state */
   bitfield32_t task_flags_;    /**< Properties of the task */
+  bctx::transfer_t jmp_;       /**< Current execution state of the task (runtime) */
+  size_t stack_size_ = KILOBYTES(256);     /**< The size of the stack for the task (runtime) */
+  void *stack_ptr_;              /**< The pointer to the stack (runtime) */
 
   /**====================================
    * Task Helpers
@@ -343,29 +353,51 @@ struct Task : public hipc::ShmContainer {
   }
 
   /** Set this task as blocking */
-  HSHM_ALWAYS_INLINE void SetBlocking() {
-    task_flags_.SetBits(TASK_BLOCKING);
+  HSHM_ALWAYS_INLINE bool IsCoroutine() {
+    return task_flags_.Any(TASK_COROUTINE);
   }
 
   /** Set this task as blocking */
-  HSHM_ALWAYS_INLINE bool IsBlocking() {
-    return task_flags_.Any(TASK_BLOCKING);
+  HSHM_ALWAYS_INLINE bool IsPreemptive() {
+    return task_flags_.Any(TASK_PREEMPTIVE);
+  }
+
+  /** Yield the task */
+  template<int THREAD_MODEL = 0>
+  HSHM_ALWAYS_INLINE
+  void Yield() {
+    if constexpr (THREAD_MODEL == TASK_YIELD_STD) {
+      HERMES_THREAD_MODEL->Yield();
+    } else if constexpr (THREAD_MODEL == TASK_YIELD_CO) {
+      jmp_ = bctx::jump_fcontext(jmp_.fctx, nullptr);
+    } else if constexpr (THREAD_MODEL == TASK_YIELD_ABT) {
+      ABT_thread_yield();
+    }
   }
 
   /** Wait for task to complete */
   template<int THREAD_MODEL = 0>
   void Wait() {
     while (!IsComplete()) {
-      for (int i = 0; i < 100000; ++i) {
-        if (IsComplete()) {
-          return;
-        }
-      }
-      if constexpr(THREAD_MODEL == 0) {
-        HERMES_THREAD_MODEL->Yield();
-      } else {
-        ABT_thread_yield();
-      }
+//      for (int i = 0; i < 100000; ++i) {
+//        if (IsComplete()) {
+//          return;
+//        }
+//      }
+      Yield<THREAD_MODEL>();
+    }
+  }
+
+  /** Wait for task to complete */
+  template<int THREAD_MODEL = 0>
+  void Wait(Task *yield_task) {
+    while (!IsComplete()) {
+//      for (int i = 0; i < 100000; ++i) {
+//        if (IsComplete()) {
+//          return;
+//        }
+//      }
+      yield_task->Yield<THREAD_MODEL>();
     }
   }
 
