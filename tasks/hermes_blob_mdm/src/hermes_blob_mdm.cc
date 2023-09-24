@@ -142,16 +142,14 @@ class Server : public TaskLib {
   /** Create blob / update metadata for the PUT  */
   void PutBlobCreatePhase(PutBlobTask *task, RunContext &ctx) {
     HILOG(kDebug, "PutBlobPhase::kCreate {}", task->blob_id_);
+
     // Get the blob info data structure
     hshm::charbuf blob_name = hshm::to_charbuf(*task->blob_name_);
+    if (task->flags_.Any(HERMES_GET_BLOB_ID)) {
+      task->blob_id_ = GetOrCreateBlobId(task->tag_id_, task->lane_hash_,
+                                         blob_name, ctx, task->flags_);
+    }
     BLOB_MAP_T &blob_map = blob_map_[ctx.lane_id_];
-    auto it = blob_map.find(task->blob_id_);
-    if (it == blob_map.end()) {
-      task->flags_.SetBits(HERMES_BLOB_DID_CREATE);
-    }
-    if (task->flags_.Any(HERMES_BLOB_DID_CREATE)) {
-      blob_map.emplace(task->blob_id_, BlobInfo());
-    }
     BlobInfo &blob_info = blob_map[task->blob_id_];
 
     // Update the blob info
@@ -333,13 +331,13 @@ class Server : public TaskLib {
   /** Wait for the update to complete */
   void PutBlobWaitModifyPhase(PutBlobTask *task, RunContext &ctx) {
     std::vector<bdev::WriteTask*> &write_tasks = *task->bdev_writes_;
-    for (int i = (int)write_tasks.size() - 1; i >= 0; --i) {
-      bdev::WriteTask *write_task = write_tasks[i];
+    for (bdev::WriteTask *&write_task : write_tasks) {
       if (!write_task->IsComplete()) {
         return;
       }
+    }
+    for (bdev::WriteTask *&write_task : write_tasks) {
       LABSTOR_CLIENT->DelTask(write_task);
-      write_tasks.pop_back();
     }
     HILOG(kDebug, "PutBlobTask complete");
     HSHM_DESTROY_AR(task->schema_);
@@ -377,14 +375,16 @@ class Server : public TaskLib {
   }
 
   void GetBlobGetPhase(GetBlobTask *task, RunContext &ctx) {
+    if (task->flags_.Any(HERMES_GET_BLOB_ID)) {
+      hshm::charbuf blob_name = hshm::to_charbuf(*task->blob_name_);
+      task->blob_id_ = GetOrCreateBlobId(task->tag_id_, task->lane_hash_,
+                                         blob_name, ctx, task->flags_);
+    }
     BLOB_MAP_T &blob_map = blob_map_[ctx.lane_id_];
     BlobInfo &blob_info = blob_map[task->blob_id_];
     HSHM_MAKE_AR0(task->bdev_reads_, nullptr);
     std::vector<bdev::ReadTask*> &read_tasks = *task->bdev_reads_;
     read_tasks.reserve(blob_info.buffers_.size());
-    if (task->data_size_ < 0) {
-      task->data_size_ = (ssize_t)(blob_info.blob_size_ - task->blob_off_);
-    }
     HILOG(kDebug, "Getting blob {} of size {} starting at offset {} (total_blob_size={}, buffers={})",
           task->blob_id_, task->data_size_, task->blob_off_, blob_info.blob_size_, blob_info.buffers_.size());
     size_t blob_off = 0, buf_off = 0;
@@ -415,13 +415,13 @@ class Server : public TaskLib {
 
   void GetBlobWaitPhase(GetBlobTask *task, RunContext &ctx) {
     std::vector<bdev::ReadTask*> &read_tasks = *task->bdev_reads_;
-    for (auto it = read_tasks.rbegin(); it != read_tasks.rend(); ++it) {
-      bdev::ReadTask *read_task = *it;
+    for (bdev::ReadTask *&read_task : read_tasks) {
       if (!read_task->IsComplete()) {
         return;
       }
+    }
+    for (bdev::ReadTask *&read_task : read_tasks) {
       LABSTOR_CLIENT->DelTask(read_task);
-      read_tasks.pop_back();
     }
     HSHM_DESTROY_AR(task->bdev_reads_);
     HILOG(kDebug, "GetBlobTask complete");
@@ -463,18 +463,26 @@ class Server : public TaskLib {
   /**
    * Create \a blob_id BLOB ID
    * */
-  void GetOrCreateBlobId(GetOrCreateBlobIdTask *task, RunContext &ctx) {
-    hshm::charbuf blob_name = hshm::to_charbuf(*task->blob_name_);
-    hshm::charbuf blob_name_unique = GetBlobNameWithBucket(task->tag_id_, blob_name);
+  BlobId GetOrCreateBlobId(TagId &tag_id, u32 lane_hash,
+                           const hshm::charbuf &blob_name, RunContext &ctx,
+                           bitfield32_t &flags) {
+    hshm::charbuf blob_name_unique = GetBlobNameWithBucket(tag_id, blob_name);
     BLOB_ID_MAP_T &blob_id_map = blob_id_map_[ctx.lane_id_];
     auto it = blob_id_map.find(blob_name_unique);
     if (it == blob_id_map.end()) {
-      task->blob_id_ = BlobId(node_id_, task->lane_hash_, id_alloc_.fetch_add(1));
-      blob_id_map.emplace(blob_name_unique, task->blob_id_);
-      task->SetModuleComplete();
-      return;
+      BlobId blob_id = BlobId(node_id_, lane_hash, id_alloc_.fetch_add(1));
+      blob_id_map.emplace(blob_name_unique, blob_id);
+      flags.SetBits(HERMES_BLOB_DID_CREATE);
+      BLOB_MAP_T &blob_map = blob_map_[ctx.lane_id_];
+      blob_map.emplace(blob_id, BlobInfo());
+      return blob_id;
     }
-    task->blob_id_ = it->second;
+    return it->second;
+  }
+  void GetOrCreateBlobId(GetOrCreateBlobIdTask *task, RunContext &ctx) {
+    hshm::charbuf blob_name = hshm::to_charbuf(*task->blob_name_);
+    bitfield32_t flags;
+    task->blob_id_ = GetOrCreateBlobId(task->tag_id_, task->lane_hash_, blob_name, ctx, flags);
     task->SetModuleComplete();
   }
 
@@ -622,13 +630,13 @@ class Server : public TaskLib {
       }
       case DestroyBlobPhase::kWaitFreeBuffers: {
         std::vector<bdev::FreeTask *> &free_tasks = *task->free_tasks_;
-        for (auto it = free_tasks.rbegin(); it != free_tasks.rend(); ++it) {
-          bdev::FreeTask *free_task = *it;
+        for (bdev::FreeTask *&free_task : free_tasks) {
           if (!free_task->IsComplete()) {
             return;
           }
+        }
+        for (bdev::FreeTask *&free_task : free_tasks) {
           LABSTOR_CLIENT->DelTask(free_task);
-          free_tasks.pop_back();
         }
         BLOB_MAP_T &blob_map = blob_map_[ctx.lane_id_];
         BlobInfo &blob_info = blob_map[task->blob_id_];
@@ -660,6 +668,7 @@ class Server : public TaskLib {
         task->data_size_ = blob_info.blob_size_;
         task->get_task_ = blob_mdm_.AsyncGetBlob(task->task_node_ + 1,
                                                  task->tag_id_,
+                                                 "",
                                                  task->blob_id_,
                                                  0,
                                                  task->data_size_,

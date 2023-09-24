@@ -288,16 +288,16 @@ class Server : public TaskLib {
       }
       case DestroyTagPhase::kWaitDestroyBlobs: {
         std::vector<blob_mdm::DestroyBlobTask*> blob_tasks = *task->destroy_blob_tasks_;
-        for (auto it = blob_tasks.rbegin(); it != blob_tasks.rend(); ++it) {
-          blob_mdm::DestroyBlobTask *blob_task = *it;
+        for (blob_mdm::DestroyBlobTask *&blob_task : blob_tasks) {
           if (!blob_task->IsComplete()) {
             return;
           }
-          LABSTOR_CLIENT->DelTask(blob_task);
-          blob_tasks.pop_back();
         }
-        TAG_MAP_T &tag_map = tag_map_[ctx.lane_id_];
+        for (blob_mdm::DestroyBlobTask *&blob_task : blob_tasks) {
+          LABSTOR_CLIENT->DelTask(blob_task);
+        }
         HSHM_DESTROY_AR(task->destroy_blob_tasks_);
+        TAG_MAP_T &tag_map = tag_map_[ctx.lane_id_];
         tag_map.erase(task->tag_id_);
         task->SetModuleComplete();
       }

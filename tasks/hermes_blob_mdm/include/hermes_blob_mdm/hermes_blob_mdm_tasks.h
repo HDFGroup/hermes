@@ -209,7 +209,7 @@ class PutBlobPhase {
 #define HERMES_DID_STAGE_IN BIT_OPT(u32, 2)
 #define HERMES_IS_FILE BIT_OPT(u32, 3)
 #define HERMES_BLOB_DID_CREATE BIT_OPT(u32, 4)
-
+#define HERMES_GET_BLOB_ID BIT_OPT(u32, 5)
 
 /** A task to put data in a blob */
 struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> {
@@ -251,15 +251,20 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
               const hipc::Pointer &data,
               float score,
               bitfield32_t flags,
-              const Context &ctx) : Task(alloc) {
+              const Context &ctx,
+              bitfield32_t task_flags) : Task(alloc) {
     // Initialize task
     HILOG(kDebug, "Beginning PUT task constructor")
     task_node_ = task_node;
-    lane_hash_ = blob_id.hash_;
+    if (!blob_id.IsNull()) {
+      lane_hash_ = blob_id.hash_;
+    } else {
+      lane_hash_ = std::hash<hshm::charbuf>{}(blob_name);
+    }
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kPutBlob;
-    task_flags_.SetBits(TASK_LOW_LATENCY);
+    task_flags_ = task_flags;
     domain_id_ = domain_id;
 
     // Custom params
@@ -309,7 +314,11 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
 
   /** (De)serialize message return */
   template<typename Ar>
-  void SerializeEnd(u32 replica, Ar &ar) {}
+  void SerializeEnd(u32 replica, Ar &ar) {
+    if (flags_.Any(HERMES_GET_BLOB_ID)) {
+      ar(blob_id_);
+    }
+  }
 
    /** Create group */
   HSHM_ALWAYS_INLINE
@@ -331,12 +340,14 @@ class GetBlobPhase {
 /** A task to get data from a blob */
 struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> {
   IN TagId tag_id_;
-  IN BlobId blob_id_;
+  IN hipc::ShmArchive<hipc::charbuf> blob_name_;
+  INOUT BlobId blob_id_;
   IN size_t blob_off_;
   IN hipc::Pointer data_;
   IN hipc::ShmArchive<hipc::charbuf> filename_;
   IN size_t page_size_;
   INOUT ssize_t data_size_;
+  IN bitfield32_t flags_;
   TEMP int phase_ = GetBlobPhase::kStart;
   TEMP hipc::ShmArchive<std::vector<bdev::ReadTask*>> bdev_reads_;
   TEMP PutBlobTask *stage_task_ = nullptr;
@@ -352,11 +363,13 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
               const DomainId &domain_id,
               const TaskStateId &state_id,
               const TagId &tag_id,
+              const std::string &blob_name,
               const BlobId &blob_id,
               size_t off,
               ssize_t data_size,
               hipc::Pointer &data,
-              const Context &ctx) : Task(alloc) {
+              const Context &ctx,
+              bitfield32_t flags) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = blob_id.hash_;
@@ -372,25 +385,27 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     blob_off_ = off;
     data_size_ = data_size;
     data_ = data;
+    flags_ = flags;
+    HSHM_MAKE_AR(blob_name_, alloc, blob_name);
     HSHM_MAKE_AR(filename_, alloc, ctx.filename_);
     page_size_ = ctx.page_size_;
   }
 
   /** Destructor */
   ~GetBlobTask() {
+    HSHM_DESTROY_AR(blob_name_);
     HSHM_DESTROY_AR(filename_);
   }
 
   /** (De)serialize message call */
   template<typename Ar>
   void SaveStart(Ar &ar) {
-    // TODO(llogan): Make it so Get takes as input a buffer, instead of returning one
     DataTransfer xfer(DT_RECEIVER_WRITE,
                       HERMES_MEMORY_MANAGER->Convert<char>(data_),
                       data_size_, domain_id_);
     task_serialize<Ar>(ar);
     ar & xfer;
-    ar(tag_id_, blob_id_, blob_off_, data_size_, filename_, page_size_);
+    ar(tag_id_, blob_id_, blob_off_, data_size_, filename_, page_size_, flags_);
   }
 
   /** Deserialize message call */
@@ -400,12 +415,16 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     task_serialize<Ar>(ar);
     ar & xfer;
     data_ = HERMES_MEMORY_MANAGER->Convert<void, hipc::Pointer>(xfer.data_);
-    ar(tag_id_, blob_id_, blob_off_, data_size_, filename_, page_size_);
+    ar(tag_id_, blob_id_, blob_off_, data_size_, filename_, page_size_, flags_);
   }
 
   /** (De)serialize message return */
   template<typename Ar>
-  void SerializeEnd(u32 replica, Ar &ar) {}
+  void SerializeEnd(u32 replica, Ar &ar) {
+    if (flags_.Any(HERMES_GET_BLOB_ID)) {
+      ar(blob_id_);
+    }
+  }
 
    /** Create group */
   HSHM_ALWAYS_INLINE

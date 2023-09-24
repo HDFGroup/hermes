@@ -55,6 +55,7 @@ class Server : public TaskLib {
   }
 
   void Write(WriteTask *task, RunContext &ctx) {
+    HILOG(kDebug, "Writing {} bytes to {}", task->size_, path_);
     ssize_t count = pwrite(fd_, task->buf_, task->size_, (off_t)task->disk_off_);
     if (count != task->size_) {
       HELOG(kError, "BORG: wrote {} bytes, but expected {}: {}",
@@ -64,6 +65,7 @@ class Server : public TaskLib {
   }
 
   void Read(ReadTask *task, RunContext &ctx) {
+    HILOG(kDebug, "Reading {} bytes from {}", task->size_, path_);
     ssize_t count = pread(fd_, task->buf_, task->size_, (off_t)task->disk_off_);
     if (count != task->size_) {
       HELOG(kError, "BORG: read {} bytes, but expected {}",

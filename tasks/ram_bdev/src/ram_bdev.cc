@@ -42,11 +42,13 @@ class Server : public TaskLib {
   }
 
   void Write(WriteTask *task, RunContext &ctx) {
+    HILOG(kDebug, "Writing {} bytes to RAM", task->size_);
     memcpy(mem_ptr_ + task->disk_off_, task->buf_, task->size_);
     task->SetModuleComplete();
   }
 
   void Read(ReadTask *task, RunContext &ctx) {
+    HILOG(kDebug, "Reading {} bytes from RAM", task->size_);
     memcpy(task->buf_, mem_ptr_ + task->disk_off_, task->size_);
     task->SetModuleComplete();
   }
