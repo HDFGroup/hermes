@@ -208,7 +208,9 @@ struct CreateTaskStateTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   /** Create group */
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
-    return TASK_UNORDERED;
+    LocalSerialize srl(group);
+    srl << 16;
+    return 0;
   }
 };
 

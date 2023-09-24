@@ -5,11 +5,12 @@ class HermesShm(CMakePackage):
     git = "https://github.com/lukemartinlogan/hermes_shm.git"
     version('master', branch='master')
     depends_on('mochi-thallium~cereal@0.10.1')
-    # depends_on('catch2@3.0.1')
-    depends_on('catch2')
-    depends_on('mpi')
-    depends_on('boost@1.7:')
+    depends_on('catch2@3.0.1')
+    # depends_on('mpi')
+    depends_on('mpich@3.3.2')
+    depends_on('boost@1.7: +context +fiber')
     depends_on('cereal')
+    depends_on('yaml-cpp')
     depends_on('doxygen@1.9.3')
 
     variant('debug', default=False, description='Build shared libraries')
