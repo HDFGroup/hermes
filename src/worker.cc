@@ -89,7 +89,7 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
           task->SetStarted();
         }
         ctx.jmp_ = bctx::jump_fcontext(ctx.jmp_.fctx, task);
-        HILOG(kInfo, "Jumping into function")
+        HILOG(kDebug, "Jumping into function")
       } else if (task->IsPreemptive()) {
         task->DisableRun();
         entry->thread_ = LABSTOR_WORK_ORCHESTRATOR->SpawnAsyncThread(&Worker::RunPreemptive, task);
