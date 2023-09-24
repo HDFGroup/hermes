@@ -84,7 +84,8 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
               task->stack_size_, &RunBlocking);
           task->SetStarted();
         }
-        task->jmp_ = bctx::jump_fcontext(task->jmp_.fctx, task);
+        task->jmp_.data = &work_entry;
+        task->jmp_ = bctx::jump_fcontext(task->jmp_.fctx, &work_entry);
         HILOG(kInfo, "Jumping into function")
       } else if (task->IsPreemptive()) {
         task->DisableRun();
@@ -113,10 +114,11 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
 }
 
 void Worker::RunBlocking(bctx::transfer_t t) {
-  Task *task = reinterpret_cast<Task *>(t.data);
+  WorkEntry *work_entry = reinterpret_cast<WorkEntry*>(t.data);
+  Task *&task = work_entry->task_;
+  TaskState *&exec = work_entry->exec_;
+  RunContext &ctx = work_entry->ctx_;
   task->jmp_ = t;
-  TaskState *exec = LABSTOR_TASK_REGISTRY->GetTaskState(task->task_state_);
-  RunContext ctx(0);
   exec->Run(task->method_, task, ctx);
   task->Yield<TASK_YIELD_CO>();
 }
