@@ -240,7 +240,7 @@ struct Task : public hipc::ShmContainer {
   u32 method_;                 /**< The method to call in the state */
   bitfield32_t task_flags_;    /**< Properties of the task */
   bctx::transfer_t jmp_;       /**< Current execution state of the task (runtime) */
-  size_t stack_size_ = KILOBYTES(16);     /**< The size of the stack for the task (runtime) */
+  size_t stack_size_ = KILOBYTES(64);     /**< The size of the stack for the task (runtime) */
   void *stack_ptr_;              /**< The pointer to the stack (runtime) */
 
   /**====================================
