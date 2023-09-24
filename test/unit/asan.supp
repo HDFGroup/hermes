@@ -1,0 +1,10 @@
+# Ignore leaks from external libraries
+leak:libfabric.so
+leak:libabt.so
+leak:libmargo.so
+leak:libmpi.so
+leak:librdmacm.so
+leak:libhwloc.so
+leak:libmpich.so
+leak:aiori-HDF5.c
+leak:ior.c

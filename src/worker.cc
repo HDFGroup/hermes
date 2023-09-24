@@ -43,10 +43,7 @@ void Worker::Run() {
 void Worker::PollGrouped(WorkEntry &work_entry) {
   int off = 0;
   Lane *&lane = work_entry.lane_;
-  Task *&task = work_entry.task_;
-  TaskState *&exec = work_entry.exec_;
-  RunContext &ctx = work_entry.ctx_;
-  ctx.lane_id_ = work_entry.lane_id_;
+  Task *task;
   LaneData *entry;
   for (int i = 0; i < 1024; ++i) {
     // Get the task message
@@ -58,7 +55,10 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
       continue;
     }
     task = LABSTOR_CLIENT->GetPrivatePointer<Task>(entry->p_);
+    RunContext &ctx = task->ctx_;
+    ctx.lane_id_ = work_entry.lane_id_;
     // Get the task state
+    TaskState *&exec = ctx.exec_;
     exec = LABSTOR_TASK_REGISTRY->GetTaskState(task->task_state_);
     if (!exec) {
       HELOG(kFatal, "(node {}) Could not find the task state: {}",
@@ -78,13 +78,17 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
         task->SetUnordered();
       } else if (task->IsCoroutine()) {
         if (!task->IsStarted()) {
-          task->stack_ptr_ = malloc(task->stack_size_);
-          task->jmp_.fctx = bctx::make_fcontext(
-              (char*)task->stack_ptr_ + task->stack_size_,
-              task->stack_size_, &RunBlocking);
+          ctx.stack_ptr_ = malloc(ctx.stack_size_);
+          if (ctx.stack_ptr_ == nullptr) {
+            HILOG(kFatal, "The stack pointer of size {} is NULL",
+                  ctx.stack_size_, ctx.stack_ptr_);
+          }
+          ctx.jmp_.fctx = bctx::make_fcontext(
+              (char*)ctx.stack_ptr_ + ctx.stack_size_,
+              ctx.stack_size_, &RunBlocking);
           task->SetStarted();
         }
-        task->jmp_ = bctx::jump_fcontext(task->jmp_.fctx, &work_entry);
+        ctx.jmp_ = bctx::jump_fcontext(ctx.jmp_.fctx, task);
         HILOG(kInfo, "Jumping into function")
       } else if (task->IsPreemptive()) {
         task->DisableRun();
@@ -100,7 +104,7 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
 //            LABSTOR_CLIENT->node_id_, task->task_node_, task->task_state_, lane_id, queue->id_, id_);
       entry->complete_ = true;
       if (task->IsCoroutine()) {
-        free(task->stack_ptr_);
+        free(ctx.stack_ptr_);
       } else if (task->IsPreemptive()) {
         ABT_thread_join(entry->thread_);
       }
@@ -113,11 +117,10 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
 }
 
 void Worker::RunBlocking(bctx::transfer_t t) {
-  WorkEntry *work_entry = reinterpret_cast<WorkEntry*>(t.data);
-  Task *&task = work_entry->task_;
-  TaskState *&exec = work_entry->exec_;
-  RunContext &ctx = work_entry->ctx_;
-  task->jmp_ = t;
+  Task *task = reinterpret_cast<Task*>(t.data);
+  RunContext &ctx = task->ctx_;
+  TaskState *&exec = ctx.exec_;
+  ctx.jmp_ = t;
   exec->Run(task->method_, task, ctx);
   task->Yield<TASK_YIELD_CO>();
 }

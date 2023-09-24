@@ -72,30 +72,34 @@ typedef simple_stack_allocator<
 int value1;
 namespace bctx = boost::context::detail;
 
-void f3( bctx::transfer_t t_) {
+bctx::transfer_t shared_xfer;
+
+void f3( bctx::transfer_t t) {
   ++value1;
-  bctx::transfer_t t = bctx::jump_fcontext( t_.fctx, 0);
+  shared_xfer = t;
+  HILOG(kInfo, "Aasfasfak;asdf {}", value1)
+  shared_xfer = bctx::jump_fcontext(shared_xfer.fctx, 0);
   ++value1;
-  bctx::jump_fcontext( t.fctx, t.data);
+  shared_xfer = bctx::jump_fcontext( shared_xfer.fctx, shared_xfer.data);
 }
 
 
 TEST_CASE("TestBoostFcontext") {
   value1 = 0;
   stack_allocator alloc;
-  int size = 128;
+  int size = KILOBYTES(64);
 
   hshm::Timer t;
   t.Resume();
   size_t ops = (1 << 20);
 
-  void *sp = alloc.allocate(size);
   for (size_t i = 0; i < ops; ++i) {
-    bctx::fcontext_t ctx = bctx::make_fcontext(sp, size, f3);
-    bctx::transfer_t t = bctx::jump_fcontext(ctx, 0);
-    bctx::jump_fcontext(t.fctx, 0);
+    void *sp = alloc.allocate(size);
+    shared_xfer.fctx = bctx::make_fcontext(sp, size, f3);
+    shared_xfer = bctx::jump_fcontext(shared_xfer.fctx, 0);
+    shared_xfer = bctx::jump_fcontext(shared_xfer.fctx, 0);
+    alloc.deallocate(sp, size);
   }
-  alloc.deallocate(sp, size);
 
   t.Pause();
   HILOG(kInfo, "Latency: {} MOps", ops / t.GetUsec());

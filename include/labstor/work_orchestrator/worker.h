@@ -29,10 +29,6 @@ struct WorkEntry {
   LaneGroup *group_;
   MultiQueue *queue_;
 
-  TaskState *exec_;
-  Task *task_;
-  RunContext ctx_;
-
   /** Default constructor */
   HSHM_ALWAYS_INLINE
   WorkEntry() = default;

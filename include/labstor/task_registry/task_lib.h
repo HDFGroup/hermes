@@ -53,17 +53,6 @@ struct TaskPointer {
   }
 };
 
-/** Context passed to the Run method of a task */
-struct RunContext {
-  u32 lane_id_;  /**< The lane id of the task */
-
-  /** Default constructor */
-  RunContext() {}
-
-  /** Emplace constructor */
-  RunContext(u32 lane_id) : lane_id_(lane_id) {}
-};
-
 /**
  * Represents a custom operation to perform.
  * Tasks are independent of Hermes.

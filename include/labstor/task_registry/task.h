@@ -11,6 +11,8 @@
 
 namespace labstor {
 
+class TaskLib;
+
 /** This task reads a state */
 #define TASK_READ BIT_OPT(u32, 0)
 /** This task writes to a state */
@@ -228,6 +230,21 @@ class TaskPrio {
   TASK_PRIO_T kLowLatency = 2;
 };
 
+/** Context passed to the Run method of a task */
+struct RunContext {
+  u32 lane_id_;  /**< The lane id of the task */
+  bctx::transfer_t jmp_;  /**< Current execution state of the task (runtime) */
+  size_t stack_size_ = KILOBYTES(64);  /**< The size of the stack for the task (runtime) */
+  void *stack_ptr_;                    /**< The pointer to the stack (runtime) */
+  TaskLib *exec_;
+
+  /** Default constructor */
+  RunContext() {}
+
+  /** Emplace constructor */
+  RunContext(u32 lane_id) : lane_id_(lane_id) {}
+};
+
 /** A generic task base class */
 struct Task : public hipc::ShmContainer {
  SHM_CONTAINER_TEMPLATE((Task), (Task))
@@ -239,9 +256,7 @@ struct Task : public hipc::ShmContainer {
   u32 lane_hash_;              /**< Determine the lane a task is keyed to */
   u32 method_;                 /**< The method to call in the state */
   bitfield32_t task_flags_;    /**< Properties of the task */
-  bctx::transfer_t jmp_;       /**< Current execution state of the task (runtime) */
-  size_t stack_size_ = KILOBYTES(256);     /**< The size of the stack for the task (runtime) */
-  void *stack_ptr_;              /**< The pointer to the stack (runtime) */
+  RunContext ctx_;
 
   /**====================================
    * Task Helpers
@@ -369,7 +384,7 @@ struct Task : public hipc::ShmContainer {
     if constexpr (THREAD_MODEL == TASK_YIELD_STD) {
       HERMES_THREAD_MODEL->Yield();
     } else if constexpr (THREAD_MODEL == TASK_YIELD_CO) {
-      jmp_ = bctx::jump_fcontext(jmp_.fctx, nullptr);
+      ctx_.jmp_ = bctx::jump_fcontext(ctx_.jmp_.fctx, nullptr);
     } else if constexpr (THREAD_MODEL == TASK_YIELD_ABT) {
       ABT_thread_yield();
     }
