@@ -396,7 +396,8 @@ class Bucket {
     size_t data_size = blob.size();
     LPointer data_p = LABSTOR_CLIENT->AllocateBuffer(data_size);
     LPointer<labpq::TypedPushTask<GetBlobTask>> push_task;
-    push_task = blob_mdm_->AsyncGetBlobRoot(id_, blob_name, blob_id, blob_off,
+    push_task = blob_mdm_->AsyncGetBlobRoot(id_, hshm::to_charbuf(blob_name),
+                                            blob_id, blob_off,
                                             data_size, data_p.shm_,
                                             ctx, flags);
     return push_task;
@@ -417,6 +418,7 @@ class Bucket {
       data_size = blob_mdm_->GetBlobSizeRoot(id_, orig_blob_id);
       blob.resize(data_size);
     }
+    HILOG(kInfo, "Getting blob of size {}", data_size);
     BlobId blob_id;
     LPointer<labpq::TypedPushTask<GetBlobTask>> push_task;
     push_task = AsyncBaseGet(blob_name, orig_blob_id, blob, blob_off, ctx);

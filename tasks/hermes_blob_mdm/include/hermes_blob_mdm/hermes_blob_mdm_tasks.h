@@ -257,14 +257,15 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     task_node_ = task_node;
     if (!blob_id.IsNull()) {
       lane_hash_ = blob_id.hash_;
+      domain_id_ = domain_id;
     } else {
       lane_hash_ = std::hash<hshm::charbuf>{}(blob_name);
+      domain_id_ = DomainId::GetNode(HASH_TO_NODE_ID(lane_hash_));
     }
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kPutBlob;
     task_flags_ = task_flags;
-    domain_id_ = domain_id;
 
     // Custom params
     tag_id_ = tag_id;
@@ -362,7 +363,7 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
               const DomainId &domain_id,
               const TaskStateId &state_id,
               const TagId &tag_id,
-              const std::string &blob_name,
+              const hshm::charbuf &blob_name,
               const BlobId &blob_id,
               size_t off,
               ssize_t data_size,
@@ -371,12 +372,17 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
               bitfield32_t flags) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kGetBlob;
     task_flags_.SetBits(TASK_LOW_LATENCY);
-    domain_id_ = domain_id;
+    if (!blob_id.IsNull()) {
+      lane_hash_ = blob_id.hash_;
+      domain_id_ = domain_id;
+    } else {
+      lane_hash_ = std::hash<hshm::charbuf>{}(blob_name);
+      domain_id_ = DomainId::GetNode(HASH_TO_NODE_ID(lane_hash_));
+    }
 
     // Custom params
     tag_id_ = tag_id;

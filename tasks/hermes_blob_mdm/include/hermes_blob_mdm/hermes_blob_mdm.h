@@ -140,7 +140,7 @@ class Client : public TaskLibClient {
   void AsyncGetBlobConstruct(GetBlobTask *task,
                              const TaskNode &task_node,
                              const TagId &tag_id,
-                             const std::string &blob_name,
+                             const hshm::charbuf &blob_name,
                              const BlobId &blob_id,
                              size_t off,
                              ssize_t data_size,
@@ -160,7 +160,7 @@ class Client : public TaskLibClient {
                      Context ctx = Context(),
                      bitfield32_t flags = bitfield32_t(0)) {
     LPointer<labpq::TypedPushTask<GetBlobTask>> push_task =
-        AsyncGetBlobRoot(tag_id, "", blob_id, off, data_size, data, ctx, flags);
+        AsyncGetBlobRoot(tag_id, hshm::charbuf(""), blob_id, off, data_size, data, ctx, flags);
     push_task->Wait();
     GetBlobTask *task = push_task->get();
     data = task->data_;

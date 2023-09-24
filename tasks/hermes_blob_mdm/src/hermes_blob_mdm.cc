@@ -668,7 +668,7 @@ class Server : public TaskLib {
         task->data_size_ = blob_info.blob_size_;
         task->get_task_ = blob_mdm_.AsyncGetBlob(task->task_node_ + 1,
                                                  task->tag_id_,
-                                                 "",
+                                                 hshm::charbuf(""),
                                                  task->blob_id_,
                                                  0,
                                                  task->data_size_,
