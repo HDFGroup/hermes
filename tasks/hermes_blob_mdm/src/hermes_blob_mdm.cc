@@ -145,7 +145,7 @@ class Server : public TaskLib {
 
     // Get the blob info data structure
     hshm::charbuf blob_name = hshm::to_charbuf(*task->blob_name_);
-    if (task->flags_.Any(HERMES_GET_BLOB_ID)) {
+    if (task->blob_id_.IsNull()) {
       task->blob_id_ = GetOrCreateBlobId(task->tag_id_, task->lane_hash_,
                                          blob_name, ctx, task->flags_);
     }
@@ -375,7 +375,7 @@ class Server : public TaskLib {
   }
 
   void GetBlobGetPhase(GetBlobTask *task, RunContext &ctx) {
-    if (task->flags_.Any(HERMES_GET_BLOB_ID)) {
+    if (task->blob_id_.IsNull()) {
       hshm::charbuf blob_name = hshm::to_charbuf(*task->blob_name_);
       task->blob_id_ = GetOrCreateBlobId(task->tag_id_, task->lane_hash_,
                                          blob_name, ctx, task->flags_);
