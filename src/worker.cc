@@ -104,7 +104,8 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
 //            LABSTOR_CLIENT->node_id_, task->task_node_, task->task_state_, lane_id, queue->id_, id_);
       entry->complete_ = true;
       if (task->IsCoroutine()) {
-        free(ctx.stack_ptr_);
+        // TODO(llogan): verify leak
+        // free(ctx.stack_ptr_);
       } else if (task->IsPreemptive()) {
         ABT_thread_join(entry->thread_);
       }

@@ -139,7 +139,8 @@ class Client : public ConfigurationManager {
   template<typename TaskT>
   HSHM_ALWAYS_INLINE
   void DelTask(TaskT *task) {
-    main_alloc_->DelObj<TaskT>(task);
+    // TODO(llogan): verify leak
+    // main_alloc_->DelObj<TaskT>(task);
   }
 
   /** Destroy a task */
@@ -187,12 +188,14 @@ class Client : public ConfigurationManager {
   /** Free a buffer */
   HSHM_ALWAYS_INLINE
   void FreeBuffer(hipc::Pointer &p) {
-    main_alloc_->Free(p);
+    // TODO(llogan): verify leak
+    // main_alloc_->Free(p);
   }
 
   /** Free a buffer */
   HSHM_ALWAYS_INLINE
   void FreeBuffer(LPointer<char> &p) {
+    // TODO(llogan): verify leak
     main_alloc_->FreeLocalPtr(p);
   }
 };
