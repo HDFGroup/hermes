@@ -410,7 +410,7 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
                       data_size_, domain_id_);
     task_serialize<Ar>(ar);
     ar & xfer;
-    ar(tag_id_, blob_id_, blob_off_, data_size_, filename_, page_size_, flags_);
+    ar(tag_id_, blob_name_, blob_id_, blob_off_, data_size_, filename_, page_size_, flags_);
   }
 
   /** Deserialize message call */
@@ -420,7 +420,7 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     task_serialize<Ar>(ar);
     ar & xfer;
     data_ = HERMES_MEMORY_MANAGER->Convert<void, hipc::Pointer>(xfer.data_);
-    ar(tag_id_, blob_id_, blob_off_, data_size_, filename_, page_size_, flags_);
+    ar(tag_id_, blob_name_, blob_id_, blob_off_, data_size_, filename_, page_size_, flags_);
   }
 
   /** (De)serialize message return */
@@ -732,7 +732,7 @@ struct GetBlobSizeTask : public Task, TaskFlags<TF_SRL_SYM> {
   template<typename Ar>
   void SerializeStart(Ar &ar) {
     task_serialize<Ar>(ar);
-    ar(tag_id_, blob_id_);
+    ar(tag_id_, blob_name_, blob_id_);
   }
 
   /** (De)serialize message return */
