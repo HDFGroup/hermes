@@ -112,6 +112,8 @@ TEST_CASE("TestHermesPutGet") {
       // Get a blob
       hermes::Blob blob2;
       bkt.Get(blob_id, blob2, ctx);
+      REQUIRE(blob.size() == blob2.size());
+      REQUIRE(blob == blob2);
     }
   }
 }
