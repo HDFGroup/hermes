@@ -228,17 +228,13 @@ class Bucket {
         task_flags.UnsetBits(TASK_FIRE_AND_FORGET);
       }
     }
-    LPointer<labpq::TypedPushTask<PutBlobTask>> push_task;
     if constexpr(!PARTIAL) {
       flags.SetBits(HERMES_BLOB_REPLACE);
-      push_task = blob_mdm_->AsyncPutBlobRoot(id_, blob_name_buf,
-                                              blob_id, 0, blob.size(), p.shm_, ctx.blob_score_,
-                                              flags, ctx, task_flags);
-    } else {
-      push_task = blob_mdm_->AsyncPutBlobRoot(id_, blob_name_buf,
-                                              blob_id, blob_off, blob.size(), p.shm_, ctx.blob_score_,
-                                              flags, ctx, task_flags);
     }
+    LPointer<labpq::TypedPushTask<PutBlobTask>> push_task;
+    push_task = blob_mdm_->AsyncPutBlobRoot(id_, blob_name_buf,
+                                            blob_id, blob_off, blob.size(), p.shm_, ctx.blob_score_,
+                                            flags, ctx, task_flags);
     if (flags.Any(HERMES_GET_BLOB_ID)) {
       push_task->Wait();
       PutBlobTask *task = push_task->get();
