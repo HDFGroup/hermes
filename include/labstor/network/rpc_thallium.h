@@ -235,7 +235,7 @@ class ThalliumRpc {
         // The "local_bulk" object will only be read from
         flag = tl::bulk_mode::read_only;
         // flag = tl::bulk_mode::read_write;
-        HILOG(kInfo, "(node {}) Reading {} bytes from the server",
+        HILOG(kDebug, "(node {}) Reading {} bytes from the server",
               rpc_->node_id_, size)
         break;
       }
@@ -243,7 +243,7 @@ class ThalliumRpc {
         // The "local_bulk" object will only be written to
         flag = tl::bulk_mode::write_only;
         // flag = tl::bulk_mode::read_write;
-        HILOG(kInfo, "(node {}) Writing {} bytes to the server",
+        HILOG(kDebug, "(node {}) Writing {} bytes to the server",
               rpc_->node_id_, size)
         break;
       }

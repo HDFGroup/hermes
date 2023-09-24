@@ -77,7 +77,6 @@ bctx::transfer_t shared_xfer;
 void f3( bctx::transfer_t t) {
   ++value1;
   shared_xfer = t;
-  HILOG(kInfo, "Aasfasfak;asdf {}", value1)
   shared_xfer = bctx::jump_fcontext(shared_xfer.fctx, 0);
   ++value1;
   shared_xfer = bctx::jump_fcontext( shared_xfer.fctx, shared_xfer.data);

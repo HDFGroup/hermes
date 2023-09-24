@@ -418,7 +418,7 @@ class Bucket {
       data_size = blob_mdm_->GetBlobSizeRoot(id_, orig_blob_id);
       blob.resize(data_size);
     }
-    HILOG(kInfo, "Getting blob of size {}", data_size);
+    HILOG(kDebug, "Getting blob of size {}", data_size);
     BlobId blob_id;
     LPointer<labpq::TypedPushTask<GetBlobTask>> push_task;
     push_task = AsyncBaseGet(blob_name, orig_blob_id, blob, blob_off, ctx);
