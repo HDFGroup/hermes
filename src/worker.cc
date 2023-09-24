@@ -84,7 +84,6 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
               task->stack_size_, &RunBlocking);
           task->SetStarted();
         }
-        task->jmp_.data = &work_entry;
         task->jmp_ = bctx::jump_fcontext(task->jmp_.fctx, &work_entry);
         HILOG(kInfo, "Jumping into function")
       } else if (task->IsPreemptive()) {
