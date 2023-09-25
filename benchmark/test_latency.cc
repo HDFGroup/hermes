@@ -243,6 +243,7 @@ void TestWorkerIterationLatency(u32 num_queues, u32 num_lanes) {
 
 /** Time for worker to process a request */
 TEST_CASE("TestWorkerLatency") {
+  TRANSPARENT_LABSTOR();
   TestWorkerIterationLatency(1, 16);
   TestWorkerIterationLatency(5, 16);
   TestWorkerIterationLatency(10, 16);
@@ -251,6 +252,7 @@ TEST_CASE("TestWorkerLatency") {
 
 /** Time to process a request */
 TEST_CASE("TestRoundTripLatency") {
+  TRANSPARENT_LABSTOR();
   HERMES->ClientInit();
   labstor::small_message::Client client;
   LABSTOR_ADMIN->RegisterTaskLibRoot(labstor::DomainId::GetLocal(), "small_message");
@@ -270,6 +272,20 @@ TEST_CASE("TestRoundTripLatency") {
   // size_t ops = 1024;
   for (size_t i = 0; i < ops; ++i) {
     client.MdPushRoot(labstor::DomainId::GetLocal());
+  }
+  t.Pause();
+
+  HILOG(kInfo, "Latency: {} MOps", ops / t.GetUsec());
+}
+
+TEST_CASE("TestTimespecLatency") {
+  size_t ops = (1 << 20);
+  hshm::Timer t;
+
+  t.Resume();
+  for (size_t i = 0; i < ops; ++i) {
+    struct timespec ts;
+    timespec_get(&ts, TIME_UTC);
   }
   t.Pause();
 
