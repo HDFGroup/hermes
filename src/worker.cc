@@ -15,8 +15,7 @@ void Worker::Loop() {
     try {
       Run();
     } catch (hshm::Error &e) {
-      e.print();
-      exit(1);
+      HELOG(kFatal, "(node {}) Worker {} caught an error: {}", LABSTOR_CLIENT->node_id_, id_, e.what());
     }
     // Yield();
   }
@@ -42,10 +41,10 @@ void Worker::Run() {
 }
 
 void Worker::PollGrouped(WorkEntry &work_entry) {
-  Lane *lane = work_entry.lane_;
+  int off = 0;
+  Lane *&lane = work_entry.lane_;
   Task *task;
   LaneData *entry;
-  int off = 0;
   for (int i = 0; i < 1024; ++i) {
     // Get the task message
     if (lane->peek(entry, off).IsNull()) {
@@ -56,8 +55,11 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
       continue;
     }
     task = LABSTOR_CLIENT->GetPrivatePointer<Task>(entry->p_);
+    RunContext &ctx = task->ctx_;
+    ctx.lane_id_ = work_entry.lane_id_;
     // Get the task state
-    TaskState *exec = LABSTOR_TASK_REGISTRY->GetTaskState(task->task_state_);
+    TaskState *&exec = ctx.exec_;
+    exec = LABSTOR_TASK_REGISTRY->GetTaskState(task->task_state_);
     if (!exec) {
       HELOG(kFatal, "(node {}) Could not find the task state: {}",
             LABSTOR_CLIENT->node_id_, task->task_state_);
@@ -74,9 +76,26 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
         LABSTOR_REMOTE_QUEUE->Disperse(task, exec, ids);
         task->DisableRun();
         task->SetUnordered();
+      } else if (task->IsCoroutine()) {
+        if (!task->IsStarted()) {
+          ctx.stack_ptr_ = malloc(ctx.stack_size_);
+          if (ctx.stack_ptr_ == nullptr) {
+            HILOG(kFatal, "The stack pointer of size {} is NULL",
+                  ctx.stack_size_, ctx.stack_ptr_);
+          }
+          ctx.jmp_.fctx = bctx::make_fcontext(
+              (char*)ctx.stack_ptr_ + ctx.stack_size_,
+              ctx.stack_size_, &RunBlocking);
+          task->SetStarted();
+        }
+        ctx.jmp_ = bctx::jump_fcontext(ctx.jmp_.fctx, task);
+        HILOG(kDebug, "Jumping into function")
+      } else if (task->IsPreemptive()) {
+        task->DisableRun();
+        entry->thread_ = LABSTOR_WORK_ORCHESTRATOR->SpawnAsyncThread(&Worker::RunPreemptive, task);
       } else {
         task->SetStarted();
-        exec->Run(task->method_, task);
+        exec->Run(task->method_, task, ctx);
       }
     }
     // Cleanup on task completion
@@ -84,12 +103,34 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
 //      HILOG(kDebug, "(node {}) Ending task: task_node={} task_state={} lane={} queue={} worker={}",
 //            LABSTOR_CLIENT->node_id_, task->task_node_, task->task_state_, lane_id, queue->id_, id_);
       entry->complete_ = true;
+      if (task->IsCoroutine()) {
+        // TODO(llogan): verify leak
+        // free(ctx.stack_ptr_);
+      } else if (task->IsPreemptive()) {
+        ABT_thread_join(entry->thread_);
+      }
       RemoveTaskGroup(task, exec, work_entry.lane_id_, is_remote);
       EndTask(lane, task, off);
     } else {
       off += 1;
     }
   }
+}
+
+void Worker::RunBlocking(bctx::transfer_t t) {
+  Task *task = reinterpret_cast<Task*>(t.data);
+  RunContext &ctx = task->ctx_;
+  TaskState *&exec = ctx.exec_;
+  ctx.jmp_ = t;
+  exec->Run(task->method_, task, ctx);
+  task->Yield<TASK_YIELD_CO>();
+}
+
+void Worker::RunPreemptive(void *data) {
+  Task *task = reinterpret_cast<Task *>(data);
+  TaskState *exec = LABSTOR_TASK_REGISTRY->GetTaskState(task->task_state_);
+  RunContext ctx(0);
+  exec->Run(task->method_, task, ctx);
 }
 
 }  // namespace labstor

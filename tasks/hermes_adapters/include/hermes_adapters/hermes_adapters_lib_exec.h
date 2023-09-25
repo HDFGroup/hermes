@@ -1,19 +1,19 @@
-#ifndef LABSTOR_hermes_adapters_LIB_EXEC_H_
-#define LABSTOR_hermes_adapters_LIB_EXEC_H_
+#ifndef LABSTOR_HERMES_ADAPTERS_LIB_EXEC_H_
+#define LABSTOR_HERMES_ADAPTERS_LIB_EXEC_H_
 
 /** Execute a task */
-void Run(u32 method, Task *task) override {
+void Run(u32 method, Task *task, RunContext &ctx) override {
   switch (method) {
     case Method::kConstruct: {
-      Construct(reinterpret_cast<ConstructTask *>(task));
+      Construct(reinterpret_cast<ConstructTask *>(task), ctx);
       break;
     }
     case Method::kDestruct: {
-      Destruct(reinterpret_cast<DestructTask *>(task));
+      Destruct(reinterpret_cast<DestructTask *>(task), ctx);
       break;
     }
     case Method::kCustom: {
-      Custom(reinterpret_cast<CustomTask *>(task));
+      Custom(reinterpret_cast<CustomTask *>(task), ctx);
       break;
     }
   }
@@ -143,4 +143,4 @@ u32 GetGroup(u32 method, Task *task, hshm::charbuf &group) override {
   return -1;
 }
 
-#endif  // LABSTOR_hermes_adapters_METHODS_H_
+#endif  // LABSTOR_HERMES_ADAPTERS_METHODS_H_

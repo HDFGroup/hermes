@@ -77,7 +77,7 @@ class TaskLib {
   virtual ~TaskLib() = default;
 
   /** Run a method of the task */
-  virtual void Run(u32 method, Task *task) = 0;
+  virtual void Run(u32 method, Task *task, RunContext &ctx) = 0;
 
   /** Allow task to store replicas of completion */
   virtual void ReplicateStart(u32 method, u32 count, Task *task) = 0;
@@ -132,7 +132,8 @@ typedef const char* (*get_task_lib_name_t)(void);
           labstor::TaskState *exec = reinterpret_cast<labstor::TaskState*>( \
             new TYPE_UNWRAP(TRAIT_CLASS)()); \
           exec->Init(task->id_, state_name); \
-          exec->Run(labstor::TaskMethod::kConstruct, task); \
+          RunContext ctx(0); \
+          exec->Run(labstor::TaskMethod::kConstruct, task, ctx); \
           return exec; \
         } \
         const char* get_task_lib_name(void) { return TASK_NAME; } \

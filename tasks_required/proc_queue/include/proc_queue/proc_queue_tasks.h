@@ -42,12 +42,6 @@ struct ConstructTask : public CreateTaskStateTask {
   ~ConstructTask() {
     // Custom params
   }
-
-  /** Create group */
-  HSHM_ALWAYS_INLINE
-  u32 GetGroup(hshm::charbuf &group) {
-    return TASK_UNORDERED;
-  }
 };
 
 /** A task to destroy proc_queue */
@@ -84,9 +78,8 @@ class PushTaskPhase {
  * */
 template<typename TaskT>
 struct TypedPushTask : public Task, TaskFlags<TF_LOCAL> {
-  IN hipc::Pointer subtask_;  //< SHM pointer to the subtask
-  TEMP TaskT *subtask_ptr_;  //< Pointer to the subtask (client)
-  TEMP TaskT *ptr_;  //< Pointer to the subtask (server)
+  IN LPointer<TaskT> sub_cli_;  /**< Pointer to the subtask (client + SHM) */
+  TEMP LPointer<TaskT> sub_run_;  /**< Pointer to the subtask (runtime) */
   TEMP int phase_ = PushTaskPhase::kSchedule;
 
   /** SHM default constructor */
@@ -99,7 +92,7 @@ struct TypedPushTask : public Task, TaskFlags<TF_LOCAL> {
                 const TaskNode &task_node,
                 const DomainId &domain_id,
                 const TaskStateId &state_id,
-                const hipc::Pointer &subtask) : Task(alloc) {
+                const hipc::LPointer<TaskT> &subtask) : Task(alloc) {
     // Initialize task
     hshm::NodeThreadId tid;
     task_node_ = task_node;
@@ -111,8 +104,16 @@ struct TypedPushTask : public Task, TaskFlags<TF_LOCAL> {
     domain_id_ = domain_id;
 
     // Custom params
-    subtask_ = subtask;
-    subtask_ptr_ = (TaskT*)LABSTOR_CLIENT->GetPrivatePointer(subtask_);
+    sub_cli_ = subtask;
+  }
+
+  /** Destructor */
+  ~TypedPushTask() {
+    if (!IsFireAndForget()) {
+      LABSTOR_CLIENT->DelTask(sub_cli_);
+    } else {
+      LABSTOR_CLIENT->DelTask(sub_run_);
+    }
   }
 
   /** Create group */
@@ -126,7 +127,7 @@ struct TypedPushTask : public Task, TaskFlags<TF_LOCAL> {
   /** Get the task address */
   HSHM_ALWAYS_INLINE
   TaskT* get() {
-    return subtask_ptr_;
+    return sub_cli_.ptr_;
   }
 };
 

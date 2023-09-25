@@ -1,6 +1,6 @@
 kWrite: 0
 kRead: 1
-kAlloc: 2
+kAllocate: 2
 kFree: 3
 kMonitor: 4
 kUpdateCapacity: 5

@@ -48,10 +48,11 @@ void PutTest(int nprocs, int rank,
     for (size_t i = 0; i < blobs_per_rank; ++i) {
       size_t blob_name_int = rank * blobs_per_rank + i;
       std::string name = std::to_string(blob_name_int);
-      bkt.Put(name, blob, ctx);
+      bkt.AsyncPut(name, blob, ctx);
     }
   }
   t.Pause();
+  HILOG(kInfo, "Finished PUT")
   GatherTimes("Put", nprocs * blobs_per_rank * blob_size * repeat, t);
 }
 
@@ -67,11 +68,10 @@ void GetTest(int nprocs, int rank,
   t.Resume();
   for (int j = 0; j < repeat; ++j) {
     for (size_t i = 0; i < blobs_per_rank; ++i) {
+      hermes::Blob ret(blob_size);
       size_t blob_name_int = rank * blobs_per_rank + i;
       std::string name = std::to_string(blob_name_int);
-      hermes::Blob ret;
-      hermes::BlobId blob_id = bkt.GetBlobId(name);
-      bkt.Get(blob_id, ret, ctx);
+      bkt.Get(name, ret, ctx);
     }
   }
   t.Pause();
@@ -84,6 +84,62 @@ void PutGetTest(int nprocs, int rank, int repeat,
   PutTest(nprocs, rank, repeat, blobs_per_rank, blob_size);
   MPI_Barrier(MPI_COMM_WORLD);
   GetTest(nprocs, rank, repeat, blobs_per_rank, blob_size);
+}
+
+/** Each process PUTS into the same bucket, but with different blob names */
+void PartialPutTest(int nprocs, int rank,
+                    int repeat, size_t blobs_per_rank,
+                    size_t blob_size, size_t part_size) {
+  Timer t;
+  hermes::Context ctx;
+  hermes::Bucket bkt("hello", ctx);
+  hermes::Blob blob(blob_size);
+  t.Resume();
+  for (int j = 0; j < repeat; ++j) {
+    for (size_t i = 0; i < blobs_per_rank; ++i) {
+      size_t blob_name_int = rank * blobs_per_rank + i;
+      std::string name = std::to_string(blob_name_int);
+      for (size_t cur_size = 0; cur_size < blob_size; cur_size += part_size) {
+        bkt.PartialPut(name, blob, cur_size, ctx);
+      }
+    }
+  }
+  t.Pause();
+  GatherTimes("PartialPut", nprocs * blobs_per_rank * blob_size * repeat, t);
+}
+
+/**
+ * Each process GETS from the same bucket, but with different blob names
+ * MUST run PutTest first.
+ * */
+void PartialGetTest(int nprocs, int rank,
+                    int repeat, size_t blobs_per_rank,
+                    size_t blob_size, size_t part_size) {
+  Timer t;
+  hermes::Context ctx;
+  hermes::Bucket bkt("hello", ctx);
+  t.Resume();
+  for (int j = 0; j < repeat; ++j) {
+    for (size_t i = 0; i < blobs_per_rank; ++i) {
+      size_t blob_name_int = rank * blobs_per_rank + i;
+      std::string name = std::to_string(blob_name_int);
+      hermes::Blob ret(blob_size);
+      for (size_t cur_size = 0; cur_size < blob_size; cur_size += part_size) {
+        bkt.PartialGet(name, ret, cur_size, ctx);
+      }
+    }
+  }
+  t.Pause();
+  GatherTimes("PartialGet", nprocs * blobs_per_rank * blob_size * repeat, t);
+}
+
+/** Each process PUTs then GETs */
+void PartialPutGetTest(int nprocs, int rank, int repeat,
+                       size_t blobs_per_rank, size_t blob_size,
+                       size_t part_size) {
+  PartialPutTest(nprocs, rank, repeat, blobs_per_rank, blob_size, part_size);
+  MPI_Barrier(MPI_COMM_WORLD);
+  PartialGetTest(nprocs, rank, repeat, blobs_per_rank, blob_size, part_size);
 }
 
 /** Each process creates a set of buckets */
@@ -120,7 +176,7 @@ void GetBucketTest(int nprocs, int rank,
     hapi::Bucket bkt(std::to_string(bkt_name), ctx);
   }
   t.Pause();
-  GatherTimes("CreateBucket", bkts_per_rank * nprocs, t);
+  GatherTimes("GetBucket", bkts_per_rank * nprocs, t);
 }
 
 /** Each process deletes a number of buckets */
@@ -172,6 +228,7 @@ void help() {
   printf("USAGE: ./api_bench [mode] ...\n");
   printf("USAGE: ./api_bench put [blob_size (K/M/G)] [blobs_per_rank]\n");
   printf("USAGE: ./api_bench putget [blob_size (K/M/G)] [blobs_per_rank]\n");
+  printf("USAGE: ./api_bench pputget [blob_size (K/M/G)] [part_size (K/M/G)] [blobs_per_rank]\n");
   printf("USAGE: ./api_bench create_bkt [bkts_per_rank]\n");
   printf("USAGE: ./api_bench get_bkt [bkts_per_rank]\n");
   printf("USAGE: ./api_bench create_blob_1bkt [blobs_per_rank]\n");
@@ -202,33 +259,43 @@ int main(int argc, char **argv) {
   HIPRINT("Beginning {}\n", mode)
 
   // Run tests
-  if (mode == "put") {
-    REQUIRE_ARGC(4)
-    size_t blob_size = hshm::ConfigParse::ParseSize(argv[2]);
-    size_t blobs_per_rank = atoi(argv[3]);
-    PutTest(nprocs, rank, 1, blobs_per_rank, blob_size);
-  } else if (mode == "putget") {
-    REQUIRE_ARGC(4)
-    size_t blob_size = hshm::ConfigParse::ParseSize(argv[2]);
-    size_t blobs_per_rank = atoi(argv[3]);
-    PutGetTest(nprocs, rank, 1, blobs_per_rank, blob_size);
-  } else if (mode == "create_bkt") {
-    REQUIRE_ARGC(3)
-    size_t bkts_per_rank = atoi(argv[2]);
-    CreateBucketTest(nprocs, rank, bkts_per_rank);
-  } else if (mode == "get_bkt") {
-    REQUIRE_ARGC(3)
-    size_t bkts_per_rank = atoi(argv[2]);
-    GetBucketTest(nprocs, rank, bkts_per_rank);
-  } else if (mode == "del_bkt") {
-    REQUIRE_ARGC(4)
-    size_t bkt_per_rank = atoi(argv[2]);
-    size_t blobs_per_bkt = atoi(argv[3]);
-    DeleteBucketTest(nprocs, rank, bkt_per_rank, blobs_per_bkt);
-  } else if (mode == "del_blobs") {
-    REQUIRE_ARGC(4)
-    size_t blobs_per_rank = atoi(argv[2]);
-    DeleteBlobOneBucket(nprocs, rank, blobs_per_rank);
+  try {
+    if (mode == "put") {
+      REQUIRE_ARGC(4)
+      size_t blob_size = hshm::ConfigParse::ParseSize(argv[2]);
+      size_t blobs_per_rank = atoi(argv[3]);
+      PutTest(nprocs, rank, 1, blobs_per_rank, blob_size);
+    } else if (mode == "putget") {
+      REQUIRE_ARGC(4)
+      size_t blob_size = hshm::ConfigParse::ParseSize(argv[2]);
+      size_t blobs_per_rank = atoi(argv[3]);
+      PutGetTest(nprocs, rank, 1, blobs_per_rank, blob_size);
+    } else if (mode == "pputget") {
+      REQUIRE_ARGC(5)
+      size_t blob_size = hshm::ConfigParse::ParseSize(argv[2]);
+      size_t part_size = hshm::ConfigParse::ParseSize(argv[3]);
+      size_t blobs_per_rank = atoi(argv[4]);
+      PartialPutGetTest(nprocs, rank, 1, blobs_per_rank, blob_size, part_size);
+    } else if (mode == "create_bkt") {
+      REQUIRE_ARGC(3)
+      size_t bkts_per_rank = atoi(argv[2]);
+      CreateBucketTest(nprocs, rank, bkts_per_rank);
+    } else if (mode == "get_bkt") {
+      REQUIRE_ARGC(3)
+      size_t bkts_per_rank = atoi(argv[2]);
+      GetBucketTest(nprocs, rank, bkts_per_rank);
+    } else if (mode == "del_bkt") {
+      REQUIRE_ARGC(4)
+      size_t bkt_per_rank = atoi(argv[2]);
+      size_t blobs_per_bkt = atoi(argv[3]);
+      DeleteBucketTest(nprocs, rank, bkt_per_rank, blobs_per_bkt);
+    } else if (mode == "del_blobs") {
+      REQUIRE_ARGC(4)
+      size_t blobs_per_rank = atoi(argv[2]);
+      DeleteBlobOneBucket(nprocs, rank, blobs_per_rank);
+    }
+  } catch (hshm::Error &err) {
+    HELOG(kFatal, "Error: {}", err.what());
   }
   MPI_Finalize();
 }

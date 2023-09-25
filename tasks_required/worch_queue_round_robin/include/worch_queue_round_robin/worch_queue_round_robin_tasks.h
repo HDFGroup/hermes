@@ -43,12 +43,6 @@ struct ConstructTask : public CreateTaskStateTask {
   /** Destructor */
   HSHM_ALWAYS_INLINE
   ~ConstructTask() {}
-
-  /** Create group */
-  HSHM_ALWAYS_INLINE
-  u32 GetGroup(hshm::charbuf &group) {
-    return TASK_UNORDERED;
-  }
 };
 
 /** A task to destroy worch_queue_round_robin */

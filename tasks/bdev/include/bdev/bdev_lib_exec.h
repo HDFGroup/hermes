@@ -2,38 +2,38 @@
 #define LABSTOR_BDEV_LIB_EXEC_H_
 
 /** Execute a task */
-void Run(u32 method, Task *task) override {
+void Run(u32 method, Task *task, RunContext &ctx) override {
   switch (method) {
     case Method::kConstruct: {
-      Construct(reinterpret_cast<ConstructTask *>(task));
+      Construct(reinterpret_cast<ConstructTask *>(task), ctx);
       break;
     }
     case Method::kDestruct: {
-      Destruct(reinterpret_cast<DestructTask *>(task));
+      Destruct(reinterpret_cast<DestructTask *>(task), ctx);
       break;
     }
     case Method::kWrite: {
-      Write(reinterpret_cast<WriteTask *>(task));
+      Write(reinterpret_cast<WriteTask *>(task), ctx);
       break;
     }
     case Method::kRead: {
-      Read(reinterpret_cast<ReadTask *>(task));
+      Read(reinterpret_cast<ReadTask *>(task), ctx);
       break;
     }
-    case Method::kAlloc: {
-      Alloc(reinterpret_cast<AllocateTask *>(task));
+    case Method::kAllocate: {
+      Allocate(reinterpret_cast<AllocateTask *>(task), ctx);
       break;
     }
     case Method::kFree: {
-      Free(reinterpret_cast<FreeTask *>(task));
+      Free(reinterpret_cast<FreeTask *>(task), ctx);
       break;
     }
     case Method::kMonitor: {
-      Monitor(reinterpret_cast<MonitorTask *>(task));
+      Monitor(reinterpret_cast<MonitorTask *>(task), ctx);
       break;
     }
     case Method::kUpdateCapacity: {
-      UpdateCapacity(reinterpret_cast<UpdateCapacityTask *>(task));
+      UpdateCapacity(reinterpret_cast<UpdateCapacityTask *>(task), ctx);
       break;
     }
   }
@@ -57,7 +57,7 @@ void ReplicateStart(u32 method, u32 count, Task *task) override {
       labstor::CALL_REPLICA_START(count, reinterpret_cast<ReadTask*>(task));
       break;
     }
-    case Method::kAlloc: {
+    case Method::kAllocate: {
       labstor::CALL_REPLICA_START(count, reinterpret_cast<AllocateTask*>(task));
       break;
     }
@@ -94,7 +94,7 @@ void ReplicateEnd(u32 method, Task *task) override {
       labstor::CALL_REPLICA_END(reinterpret_cast<ReadTask*>(task));
       break;
     }
-    case Method::kAlloc: {
+    case Method::kAllocate: {
       labstor::CALL_REPLICA_END(reinterpret_cast<AllocateTask*>(task));
       break;
     }
@@ -131,7 +131,7 @@ std::vector<DataTransfer> SaveStart(u32 method, BinaryOutputArchive<true> &ar, T
       ar << *reinterpret_cast<ReadTask*>(task);
       break;
     }
-    case Method::kAlloc: {
+    case Method::kAllocate: {
       ar << *reinterpret_cast<AllocateTask*>(task);
       break;
     }
@@ -174,7 +174,7 @@ TaskPointer LoadStart(u32 method, BinaryInputArchive<true> &ar) override {
       ar >> *reinterpret_cast<ReadTask*>(task_ptr.task_);
       break;
     }
-    case Method::kAlloc: {
+    case Method::kAllocate: {
       task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<AllocateTask>(task_ptr.p_);
       ar >> *reinterpret_cast<AllocateTask*>(task_ptr.task_);
       break;
@@ -216,7 +216,7 @@ std::vector<DataTransfer> SaveEnd(u32 method, BinaryOutputArchive<false> &ar, Ta
       ar << *reinterpret_cast<ReadTask*>(task);
       break;
     }
-    case Method::kAlloc: {
+    case Method::kAllocate: {
       ar << *reinterpret_cast<AllocateTask*>(task);
       break;
     }
@@ -254,7 +254,7 @@ void LoadEnd(u32 replica, u32 method, BinaryInputArchive<false> &ar, Task *task)
       ar.Deserialize(replica, *reinterpret_cast<ReadTask*>(task));
       break;
     }
-    case Method::kAlloc: {
+    case Method::kAllocate: {
       ar.Deserialize(replica, *reinterpret_cast<AllocateTask*>(task));
       break;
     }
@@ -287,7 +287,7 @@ u32 GetGroup(u32 method, Task *task, hshm::charbuf &group) override {
     case Method::kRead: {
       return reinterpret_cast<ReadTask*>(task)->GetGroup(group);
     }
-    case Method::kAlloc: {
+    case Method::kAllocate: {
       return reinterpret_cast<AllocateTask*>(task)->GetGroup(group);
     }
     case Method::kFree: {

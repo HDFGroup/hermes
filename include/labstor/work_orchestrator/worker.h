@@ -314,7 +314,7 @@ class Worker {
       return;
     }
     int ret = exec->GetGroup(task->method_, task, group_);
-    if (ret == TASK_UNORDERED || task->IsUnordered() || task->method_ < 2) {
+    if (ret == TASK_UNORDERED || task->IsUnordered()) {
       HILOG(kDebug, "(node {}) Decreasing depth of group remains 0 (task_node={} worker={})",
             LABSTOR_CLIENT->node_id_, task->task_node_, id_);
       return;
@@ -364,6 +364,8 @@ class Worker {
   }
 
   void PollGrouped(WorkEntry &entry);
+  static void RunBlocking(bctx::transfer_t t);
+  static void RunPreemptive(void *data);
 };
 
 }  // namespace labstor

@@ -41,12 +41,6 @@ struct ConstructTask : public CreateTaskStateTask {
       : CreateTaskStateTask(alloc, task_node, domain_id, state_name,
                             "hermes_bucket_mdm", id, queue_info) {
   }
-
-  /** Create group */
-  HSHM_ALWAYS_INLINE
-  u32 GetGroup(hshm::charbuf &group) {
-    return TASK_UNORDERED;
-  }
 };
 
 /** A task to destroy hermes_bucket_mdm */
@@ -129,7 +123,7 @@ struct SetBlobMdmTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
 class UpdateSizeMode {
  public:
   TASK_METHOD_T kAdd = 0;
-  TASK_METHOD_T kCap = 0;
+  TASK_METHOD_T kCap = 1;
 };
 
 /** Update bucket size */
@@ -153,7 +147,7 @@ struct UpdateSizeTask : public Task, TaskFlags<TF_SRL_SYM> {
               int mode) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = tag_id.unique_;
+    lane_hash_ = tag_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kUpdateSize;
@@ -236,7 +230,7 @@ struct AppendBlobSchemaTask : public Task, TaskFlags<TF_SRL_SYM> {
                        size_t page_size) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = tag_id.unique_;
+    lane_hash_ = tag_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kAppendBlobSchema;
@@ -305,7 +299,7 @@ struct AppendBlobTask : public Task, TaskFlags<TF_LOCAL> {
                  const Context &ctx) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = tag_id.unique_;
+    lane_hash_ = tag_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kAppendBlob;
@@ -481,7 +475,7 @@ struct GetTagNameTask : public Task, TaskFlags<TF_SRL_SYM> {
                  const TagId &tag_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = tag_id.unique_;
+    lane_hash_ = tag_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kGetTagName;
@@ -539,7 +533,7 @@ struct RenameTagTask : public Task, TaskFlags<TF_SRL_SYM> {
                 const hshm::charbuf &tag_name) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = tag_id.unique_;
+    lane_hash_ = tag_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kRenameTag;
@@ -604,7 +598,7 @@ struct DestroyTagTask : public Task, TaskFlags<TF_SRL_SYM> {
                  TagId tag_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = tag_id.unique_;
+    lane_hash_ = tag_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kDestroyTag;
@@ -655,7 +649,7 @@ struct TagAddBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
                  const BlobId &blob_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = tag_id.unique_;
+    lane_hash_ = tag_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kTagAddBlob;
@@ -707,7 +701,7 @@ struct TagRemoveBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
                     const BlobId &blob_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = tag_id.unique_;
+    lane_hash_ = tag_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kTagRemoveBlob;
@@ -766,7 +760,7 @@ struct TagClearBlobsTask : public Task, TaskFlags<TF_SRL_SYM> {
                     TagId tag_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = tag_id.unique_;
+    lane_hash_ = tag_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kTagClearBlobs;
@@ -816,7 +810,7 @@ struct GetSizeTask : public Task, TaskFlags<TF_SRL_SYM> {
                     TagId tag_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = tag_id.unique_;
+    lane_hash_ = tag_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kGetSize;

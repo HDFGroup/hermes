@@ -11,6 +11,10 @@
 
 namespace hermes {
 
+#include "labstor/labstor_namespace.h"
+using hermes::blob_mdm::PutBlobTask;
+using hermes::blob_mdm::GetBlobTask;
+
 #define HERMES_BUCKET_IS_FILE BIT_OPT(u32, 1)
 
 class Bucket {
@@ -203,34 +207,41 @@ class Bucket {
   /**
    * Put \a blob_name Blob into the bucket
    * */
-  template<bool PARTIAL>
+  template<bool PARTIAL, bool ASYNC>
   HSHM_ALWAYS_INLINE
   BlobId BasePut(const std::string &blob_name,
+                 const BlobId &orig_blob_id,
                  const Blob &blob,
                  size_t blob_off,
-                 const BlobId &orig_blob_id,
                  Context &ctx) {
     BlobId blob_id = orig_blob_id;
+    bitfield32_t flags, task_flags(TASK_FIRE_AND_FORGET | TASK_DATA_OWNER | TASK_LOW_LATENCY);
     // Copy data to shared memory
     LPointer<char> p = LABSTOR_CLIENT->AllocateBuffer(blob.size());
     char *data = p.ptr_;
     memcpy(data, blob.data(), blob.size());
     // Put to shared memory
     hshm::charbuf blob_name_buf = hshm::to_charbuf(blob_name);
-    if (blob_id.IsNull()) {
-      blob_id = blob_mdm_->GetOrCreateBlobIdRoot(id_, blob_name_buf);
+    if constexpr (!ASYNC) {
+      if (blob_id.IsNull()) {
+        flags.SetBits(HERMES_GET_BLOB_ID);
+        task_flags.UnsetBits(TASK_FIRE_AND_FORGET);
+      }
     }
-    HILOG(kDebug, "The bucket's ID is: {}", blob_id);
     if constexpr(!PARTIAL) {
-      blob_mdm_->AsyncPutBlobRoot(id_, blob_name_buf,
-                                  blob_id, 0, blob.size(), p.shm_, ctx.blob_score_,
-                                  bitfield32_t(HERMES_BLOB_REPLACE),
-                                  ctx);
-    } else {
-      blob_mdm_->AsyncPutBlobRoot(id_, blob_name_buf,
-                                  blob_id, blob_off, blob.size(), p.shm_, ctx.blob_score_,
-                                  bitfield32_t(0),
-                                  ctx);
+      flags.SetBits(HERMES_BLOB_REPLACE);
+    }
+    LPointer<labpq::TypedPushTask<PutBlobTask>> push_task;
+    push_task = blob_mdm_->AsyncPutBlobRoot(id_, blob_name_buf,
+                                            blob_id, blob_off, blob.size(), p.shm_, ctx.blob_score_,
+                                            flags, ctx, task_flags);
+    if constexpr (!ASYNC) {
+      if (flags.Any(HERMES_GET_BLOB_ID)) {
+        push_task->Wait();
+        PutBlobTask *task = push_task->get();
+        blob_id = task->blob_id_;
+        LABSTOR_CLIENT->DelTask(push_task);
+      }
     }
     return blob_id;
   }
@@ -238,64 +249,115 @@ class Bucket {
   /**
    * Put \a blob_name Blob into the bucket
    * */
-  BlobId Put(const std::string &blob_name,
-             const Blob &blob,
-             Context &ctx) {
-    return BasePut<false>(blob_name, blob, 0, BlobId::GetNull(), ctx);
-  }
-
-  /**
-   * Put \a blob_id Blob into the bucket
-   * */
-  BlobId Put(const BlobId &blob_id,
-             const Blob &blob,
-             Context &ctx) {
-    return BasePut<false>("", blob, 0, blob_id, ctx);
+  template<typename T, bool PARTIAL, bool ASYNC>
+  HSHM_ALWAYS_INLINE
+  BlobId SrlBasePut(const std::string &blob_name,
+                    const BlobId &orig_blob_id,
+                    const T &data,
+                    Context &ctx) {
+    std::stringstream ss;
+    cereal::BinaryOutputArchive ar(ss);
+    ar << data;
+    Blob blob(ss.str());
+    return BasePut<PARTIAL, ASYNC>(blob_name, orig_blob_id, blob, 0, ctx);
   }
 
   /**
    * Put \a blob_name Blob into the bucket
    * */
-  BlobId PartialPut(const std::string &blob_name,
-                    const Blob &blob,
-                    size_t blob_off,
-                    Context &ctx) {
-    return BasePut<true>(blob_name, blob, blob_off, BlobId::GetNull(), ctx);
+  template<typename T = Blob>
+  BlobId Put(const std::string &blob_name,
+             const T &blob,
+             Context &ctx) {
+    if (std::is_same_v<T, Blob>) {
+      return BasePut<false, false>(blob_name, BlobId::GetNull(), blob, 0, ctx);
+    } else {
+      return SrlBasePut<T, false, false>(blob_name, BlobId::GetNull(), blob, ctx);
+    }
   }
 
   /**
    * Put \a blob_id Blob into the bucket
    * */
+  template<typename T = Blob>
+  BlobId Put(const BlobId &blob_id,
+             const T &blob,
+             Context &ctx) {
+    if (std::is_same_v<T, Blob>) {
+      return BasePut<false, false>("", blob_id, blob, 0, ctx);
+    } else {
+      return SrlBasePut<T, false, false>("", blob_id, blob, ctx);
+    }
+  }
+
+  /**
+   * Put \a blob_name Blob into the bucket
+   * */
+  HSHM_ALWAYS_INLINE
+  void AsyncPut(const std::string &blob_name,
+                const Blob &blob,
+                Context &ctx) {
+    BasePut<false, true>(blob_name, BlobId::GetNull(), blob, 0, ctx);
+  }
+
+  /**
+   * Put \a blob_id Blob into the bucket
+   * */
+  HSHM_ALWAYS_INLINE
+  void AsyncPut(const BlobId &blob_id,
+                const Blob &blob,
+                Context &ctx) {
+    BasePut<false, true>("", BlobId::GetNull(), blob, 0, ctx);
+  }
+
+  /**
+   * PartialPut \a blob_name Blob into the bucket
+   * */
+  BlobId PartialPut(const std::string &blob_name,
+                    const Blob &blob,
+                    size_t blob_off,
+                    Context &ctx) {
+    return BasePut<true, false>(blob_name, BlobId::GetNull(), blob, blob_off, ctx);
+  }
+
+  /**
+   * PartialPut \a blob_id Blob into the bucket
+   * */
   BlobId PartialPut(const BlobId &blob_id,
                     const Blob &blob,
                     size_t blob_off,
                     Context &ctx) {
-    return BasePut<true>("", blob, blob_off, blob_id, ctx);
+    return BasePut<true, false>("", blob_id, blob, blob_off, ctx);
   }
 
   /**
-   * Serialized PUT
+   * AsyncPartialPut \a blob_name Blob into the bucket
    * */
-  template<typename T>
-  BlobId Put(const std::string &blob_name,
-             const T &data,
-             Context &ctx) {
-    std::stringstream ss;
-    cereal::BinaryOutputArchive ar(ss);
-    ar << data;
-    Blob blob(ss.str());
-    return Put(blob_name, blob, ctx);
+  void AsyncPartialPut(const std::string &blob_name,
+                       const Blob &blob,
+                       size_t blob_off,
+                       Context &ctx) {
+    BasePut<true, true>(blob_name, BlobId::GetNull(), blob, blob_off, ctx);
   }
 
   /**
-   * Append \a blob_name Blob into the bucket
+   * AsyncPartialPut \a blob_id Blob into the bucket
    * */
-  Status Append(const Blob &blob, size_t page_size, Context &ctx) {
+  void AsyncPartialPut(const BlobId &blob_id,
+                       const Blob &blob,
+                       size_t blob_off,
+                       Context &ctx) {
+    BasePut<true, true>("", blob_id, blob, blob_off, ctx);
+  }
+
+  /**
+   * Append \a blob_name Blob into the bucket (fully asynchronous)
+   * */
+  void Append(const Blob &blob, size_t page_size, Context &ctx) {
     LPointer<char> p = LABSTOR_CLIENT->AllocateBuffer(blob.size());
     char *data = p.ptr_;
     memcpy(data, blob.data(), blob.size());
     bkt_mdm_->AppendBlobRoot(id_, blob.size(), p.shm_, page_size, ctx.blob_score_, ctx.node_id_, ctx);
-    return Status();
   }
 
   /**
@@ -312,54 +374,132 @@ class Bucket {
    * Get the current size of the blob in the bucket
    * */
   size_t GetBlobSize(const BlobId &blob_id) {
-    return blob_mdm_->GetBlobSizeRoot(id_, blob_id);
+    return blob_mdm_->GetBlobSizeRoot(id_, hshm::charbuf(""), blob_id);
   }
 
   /**
-   * Get \a blob_id Blob from the bucket
+   * Get the current size of the blob in the bucket
+   * */
+  size_t GetBlobSize(const std::string &name) {
+    return blob_mdm_->GetBlobSizeRoot(id_, hshm::charbuf(name), BlobId::GetNull());
+  }
+
+  /**
+   * Get \a blob_id Blob from the bucket (async)
+   * */
+  LPointer<labpq::TypedPushTask<GetBlobTask>>
+  HSHM_ALWAYS_INLINE
+  AsyncBaseGet(const std::string &blob_name,
+               const BlobId &blob_id,
+               Blob &blob,
+               size_t blob_off,
+               Context &ctx) {
+    bitfield32_t flags;
+    // Get the blob ID
+    if (blob_id.IsNull()) {
+      flags.SetBits(HERMES_GET_BLOB_ID);
+    }
+    // Get from shared memory
+    size_t data_size = blob.size();
+    LPointer data_p = LABSTOR_CLIENT->AllocateBuffer(data_size);
+    LPointer<labpq::TypedPushTask<GetBlobTask>> push_task;
+    push_task = blob_mdm_->AsyncGetBlobRoot(id_, hshm::to_charbuf(blob_name),
+                                            blob_id, blob_off,
+                                            data_size, data_p.shm_,
+                                            ctx, flags);
+    return push_task;
+  }
+
+  /**
+   * Get \a blob_id Blob from the bucket (sync)
    * */
   BlobId BaseGet(const std::string &blob_name,
                  const BlobId &orig_blob_id,
                  Blob &blob,
                  size_t blob_off,
                  Context &ctx) {
-    BlobId blob_id = orig_blob_id;
-    // Get the blob ID
-    if (blob_id.IsNull()) {
-      blob_id = blob_mdm_->GetBlobIdRoot(id_, hshm::to_charbuf(blob_name));
-    }
-    if (blob_id.IsNull()) {
-      if (ctx.filename_.size() == 0) {
-        return blob_id;
-      } else {
-        // StageIn using PUT of an empty blob
-        hermes::Blob emtpy_blob;
-        blob_id = PartialPut(blob_name, emtpy_blob, 0, ctx);
-      }
-    }
-    // Get from shared memory
-    size_t data_size = blob.size();
-    if (data_size == 0) {
-      data_size = GetBlobSize(blob_id);
-    }
-    LPointer data_p = LABSTOR_CLIENT->AllocateBuffer(data_size);
-    data_size = blob_mdm_->GetBlobRoot(id_, blob_id, blob_off, data_size, data_p.shm_, ctx);
-    char *data = data_p.ptr_;
-    // Copy data to blob
     // TODO(llogan): intercept mmap to avoid copy
-    blob.resize(data_size);
+    // TODO(llogan): make GetBlobSize work with blob_name
+    size_t data_size = blob.size();
+    if (blob.size() == 0) {
+      data_size = blob_mdm_->GetBlobSizeRoot(id_, hshm::charbuf(blob_name), orig_blob_id);
+      blob.resize(data_size);
+    }
+    HILOG(kDebug, "Getting blob of size {}", data_size);
+    BlobId blob_id;
+    LPointer<labpq::TypedPushTask<GetBlobTask>> push_task;
+    push_task = AsyncBaseGet(blob_name, orig_blob_id, blob, blob_off, ctx);
+    push_task->Wait();
+    GetBlobTask *task = push_task->get();
+    blob_id = task->blob_id_;
+    char *data = LABSTOR_CLIENT->GetPrivatePointer(task->data_);
     memcpy(blob.data(), data, data_size);
-    LABSTOR_CLIENT->FreeBuffer(data_p);
+    LABSTOR_CLIENT->FreeBuffer(task->data_);
+    LABSTOR_CLIENT->DelTask(task);
     return blob_id;
+  }
+
+  /**
+   * Get \a blob_id Blob from the bucket (sync)
+   * */
+  template<typename T>
+  BlobId SrlBaseGet(const std::string &blob_name,
+                    const BlobId &orig_blob_id,
+                    T &data,
+                    Context &ctx) {
+    std::stringstream ss;
+    cereal::BinaryInputArchive ar(ss);
+    ar >> data;
+    Blob blob(ss.str());
+    return BaseGet(blob_name, orig_blob_id, blob, 0, ctx);
   }
 
   /**
    * Get \a blob_id Blob from the bucket
    * */
+  template<typename T>
   BlobId Get(const std::string &blob_name,
-             Blob &blob,
+             T &blob,
              Context &ctx) {
-    return BaseGet(blob_name, BlobId::GetNull(), blob, 0, ctx);
+    if (std::is_same_v<T, Blob>) {
+      return BaseGet(blob_name, BlobId::GetNull(), blob, 0, ctx);
+    } else {
+      return SrlBaseGet<T>(blob_name, BlobId::GetNull(), blob, ctx);
+    }
+  }
+
+  /**
+   * Get \a blob_id Blob from the bucket
+   * */
+  template<typename T>
+  BlobId Get(const BlobId &blob_id,
+             T &blob,
+             Context &ctx) {
+    if (std::is_same_v<T, Blob>) {
+      return BaseGet("", blob_id, blob, 0, ctx);
+    } else {
+      return SrlBaseGet<T>("", blob_id, blob, ctx);
+    }
+  }
+
+  /**
+   * AsyncGet \a blob_name Blob from the bucket
+   * */
+  LPointer<labpq::TypedPushTask<GetBlobTask>>
+  AsyncGet(const std::string &blob_name,
+           Blob &blob,
+           Context &ctx) {
+    return AsyncBaseGet(blob_name, BlobId::GetNull(), blob, 0, ctx);
+  }
+
+  /**
+   * AsyncGet \a blob_id Blob from the bucket
+   * */
+  LPointer<labpq::TypedPushTask<GetBlobTask>>
+  AsyncGet(const BlobId &blob_id,
+           Blob &blob,
+           Context &ctx) {
+    return AsyncBaseGet("", blob_id, blob, 0, ctx);
   }
 
   /**
@@ -373,15 +513,6 @@ class Bucket {
   }
 
   /**
-   * Get \a blob_id Blob from the bucket
-   * */
-  BlobId Get(const BlobId &blob_id,
-             Blob &blob,
-             Context &ctx) {
-    return BaseGet("", blob_id, blob, 0, ctx);
-  }
-
-  /**
    * Put \a blob_name Blob into the bucket
    * */
   BlobId PartialGet(const BlobId &blob_id,
@@ -389,6 +520,28 @@ class Bucket {
                     size_t blob_off,
                     Context &ctx) {
     return BaseGet("", blob_id, blob, blob_off, ctx);
+  }
+
+  /**
+   * AsyncGet \a blob_name Blob from the bucket
+   * */
+  LPointer<labpq::TypedPushTask<GetBlobTask>>
+  AsyncPartialGet(const std::string &blob_name,
+                  Blob &blob,
+                  size_t blob_off,
+                  Context &ctx) {
+    return AsyncBaseGet(blob_name, BlobId::GetNull(), blob, blob_off, ctx);
+  }
+
+  /**
+   * AsyncGet \a blob_id Blob from the bucket
+   * */
+  LPointer<labpq::TypedPushTask<GetBlobTask>>
+  AsyncPartialGet(const BlobId &blob_id,
+                  Blob &blob,
+                  size_t blob_off,
+                  Context &ctx) {
+    return AsyncBaseGet("", blob_id, blob, blob_off, ctx);
   }
 
   /**

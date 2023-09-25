@@ -18,6 +18,7 @@ class QueueManagerRuntime : public QueueManager {
  public:
   ServerConfig *config_;
   size_t max_queues_;
+  size_t max_lanes_;
   hipc::split_ticket_queue<u64> *tickets_;
   u32 node_id_;
 
@@ -35,6 +36,7 @@ class QueueManagerRuntime : public QueueManager {
     QueueManagerInfo &qm = config_->queue_manager_;
     // Initialize ticket queue (ticket 0 is for admin queue)
     max_queues_ = qm.max_queues_;
+    max_lanes_ = qm.max_lanes_;
     HSHM_MAKE_AR(shm.tickets_, alloc, max_queues_)
     for (u64 i = 1; i <= max_queues_; ++i) {
       shm.tickets_->emplace(i);

@@ -12,32 +12,35 @@ class Server : public TaskLib {
  public:
   Server() = default;
 
-  void Construct(ConstructTask *task) {
+  void Construct(ConstructTask *task, RunContext &ctx) {
     task->SetModuleComplete();
   }
 
-  void Destruct(DestructTask *task) {
+  void Destruct(DestructTask *task, RunContext &ctx) {
     task->SetModuleComplete();
   }
 
-  void Push(PushTask *task) {
+  void Push(PushTask *task, RunContext &ctx) {
     switch (task->phase_) {
       case PushTaskPhase::kSchedule: {
-        task->ptr_ = LABSTOR_CLIENT->GetPrivatePointer<Task>(task->subtask_);
+        task->sub_run_.shm_ = task->sub_cli_.shm_;
+        task->sub_run_.ptr_ = LABSTOR_CLIENT->GetPrivatePointer<Task>(task->sub_cli_.shm_);
+        Task *&ptr = task->sub_run_.ptr_;
         HILOG(kDebug, "Scheduling task {} on state {} tid {}",
-              task->ptr_->task_node_, task->ptr_->task_state_, GetLinuxTid());
-        if (task->ptr_->IsFireAndForget()) {
-          task->ptr_->UnsetFireAndForget();
+              ptr->task_node_, ptr->task_state_, GetLinuxTid());
+        if (ptr->IsFireAndForget()) {
+          ptr->UnsetFireAndForget();
         }
-        MultiQueue *real_queue = LABSTOR_CLIENT->GetQueue(QueueId(task->ptr_->task_state_));
-        real_queue->Emplace(task->ptr_->prio_, task->ptr_->lane_hash_, task->subtask_);
+        MultiQueue *real_queue = LABSTOR_CLIENT->GetQueue(QueueId(ptr->task_state_));
+        real_queue->Emplace(ptr->prio_, ptr->lane_hash_, task->sub_run_.shm_);
         task->phase_ = PushTaskPhase::kWaitSchedule;
       }
       case PushTaskPhase::kWaitSchedule: {
-        if (!task->ptr_->IsComplete()) {
+        Task *&ptr = task->sub_run_.ptr_;
+        if (!ptr->IsComplete()) {
           return;
         }
-        LABSTOR_CLIENT->DelTask(task->ptr_);
+        // TODO(llogan): handle fire & forget tasks gracefully
         task->SetModuleComplete();
       }
     }

@@ -51,12 +51,6 @@ struct ConstructTask : public CreateTaskStateTask {
       : CreateTaskStateTask(alloc, task_node, domain_id, state_name,
                             "hermes_blob_mdm", id, queue_info) {
   }
-
-  /** Create group */
-  HSHM_ALWAYS_INLINE
-  u32 GetGroup(hshm::charbuf &group) {
-    return TASK_UNORDERED;
-  }
 };
 
 /** A task to destroy hermes_mdm */
@@ -213,8 +207,9 @@ class PutBlobPhase {
 #define HERMES_BLOB_REPLACE BIT_OPT(u32, 0)
 #define HERMES_BLOB_APPEND BIT_OPT(u32, 1)
 #define HERMES_DID_STAGE_IN BIT_OPT(u32, 2)
-#define HERMES_BLOB_DID_CREATE BIT_OPT(u32, 3)
-
+#define HERMES_IS_FILE BIT_OPT(u32, 3)
+#define HERMES_BLOB_DID_CREATE BIT_OPT(u32, 4)
+#define HERMES_GET_BLOB_ID BIT_OPT(u32, 5)
 
 /** A task to put data in a blob */
 struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> {
@@ -256,20 +251,24 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
               const hipc::Pointer &data,
               float score,
               bitfield32_t flags,
-              const Context &ctx) : Task(alloc) {
+              const Context &ctx,
+              bitfield32_t task_flags) : Task(alloc) {
     // Initialize task
-    HILOG(kDebug, "Beginning PUT task constructor")
     task_node_ = task_node;
-    lane_hash_ = blob_id_.unique_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kPutBlob;
-    task_flags_.SetBits(TASK_LOW_LATENCY);
-    domain_id_ = domain_id;
+    task_flags_ = task_flags;
+    if (!blob_id.IsNull()) {
+      lane_hash_ = blob_id.hash_;
+      domain_id_ = domain_id;
+    } else {
+      lane_hash_ = std::hash<hshm::charbuf>{}(blob_name);
+      domain_id_ = DomainId::GetNode(HASH_TO_NODE_ID(lane_hash_));
+    }
 
     // Custom params
     tag_id_ = tag_id;
-    HILOG(kDebug, "Setting blob name {}", blob_name.str());
     HSHM_MAKE_AR(blob_name_, alloc, blob_name);
     blob_id_ = blob_id;
     blob_off_ = blob_off;
@@ -279,7 +278,8 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     flags_ = flags;
     HSHM_MAKE_AR(filename_, alloc, ctx.filename_);
     page_size_ = ctx.page_size_;
-    HILOG(kDebug, "Finished setting blob name {}", blob_name.str());
+    HILOG(kDebug, "Construct PUT task for {}, while getting BlobId is {}",
+          blob_name.str(), flags_.Any(HERMES_GET_BLOB_ID));
   }
 
   /** Destructor */
@@ -314,7 +314,11 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
 
   /** (De)serialize message return */
   template<typename Ar>
-  void SerializeEnd(u32 replica, Ar &ar) {}
+  void SerializeEnd(u32 replica, Ar &ar) {
+    if (flags_.Any(HERMES_GET_BLOB_ID)) {
+      ar(blob_id_);
+    }
+  }
 
    /** Create group */
   HSHM_ALWAYS_INLINE
@@ -336,12 +340,14 @@ class GetBlobPhase {
 /** A task to get data from a blob */
 struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> {
   IN TagId tag_id_;
-  IN BlobId blob_id_;
+  IN hipc::ShmArchive<hipc::charbuf> blob_name_;
+  INOUT BlobId blob_id_;
   IN size_t blob_off_;
   IN hipc::Pointer data_;
   IN hipc::ShmArchive<hipc::charbuf> filename_;
   IN size_t page_size_;
   INOUT ssize_t data_size_;
+  IN bitfield32_t flags_;
   TEMP int phase_ = GetBlobPhase::kStart;
   TEMP hipc::ShmArchive<std::vector<bdev::ReadTask*>> bdev_reads_;
   TEMP PutBlobTask *stage_task_ = nullptr;
@@ -357,19 +363,26 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
               const DomainId &domain_id,
               const TaskStateId &state_id,
               const TagId &tag_id,
+              const hshm::charbuf &blob_name,
               const BlobId &blob_id,
               size_t off,
               ssize_t data_size,
               hipc::Pointer &data,
-              const Context &ctx) : Task(alloc) {
+              const Context &ctx,
+              bitfield32_t flags) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = blob_id.unique_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kGetBlob;
     task_flags_.SetBits(TASK_LOW_LATENCY);
-    domain_id_ = domain_id;
+    if (!blob_id.IsNull()) {
+      lane_hash_ = blob_id.hash_;
+      domain_id_ = domain_id;
+    } else {
+      lane_hash_ = std::hash<hshm::charbuf>{}(blob_name);
+      domain_id_ = DomainId::GetNode(HASH_TO_NODE_ID(lane_hash_));
+    }
 
     // Custom params
     tag_id_ = tag_id;
@@ -377,20 +390,27 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     blob_off_ = off;
     data_size_ = data_size;
     data_ = data;
+    flags_ = flags;
+    HSHM_MAKE_AR(blob_name_, alloc, blob_name);
     HSHM_MAKE_AR(filename_, alloc, ctx.filename_);
     page_size_ = ctx.page_size_;
+  }
+
+  /** Destructor */
+  ~GetBlobTask() {
+    HSHM_DESTROY_AR(blob_name_);
+    HSHM_DESTROY_AR(filename_);
   }
 
   /** (De)serialize message call */
   template<typename Ar>
   void SaveStart(Ar &ar) {
-    // TODO(llogan): Make it so Get takes as input a buffer, instead of returning one
     DataTransfer xfer(DT_RECEIVER_WRITE,
                       HERMES_MEMORY_MANAGER->Convert<char>(data_),
                       data_size_, domain_id_);
     task_serialize<Ar>(ar);
     ar & xfer;
-    ar(tag_id_, blob_id_, blob_off_, data_size_, filename_, page_size_);
+    ar(tag_id_, blob_name_, blob_id_, blob_off_, data_size_, filename_, page_size_, flags_);
   }
 
   /** Deserialize message call */
@@ -400,12 +420,16 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     task_serialize<Ar>(ar);
     ar & xfer;
     data_ = HERMES_MEMORY_MANAGER->Convert<void, hipc::Pointer>(xfer.data_);
-    ar(tag_id_, blob_id_, blob_off_, data_size_, filename_, page_size_);
+    ar(tag_id_, blob_name_, blob_id_, blob_off_, data_size_, filename_, page_size_, flags_);
   }
 
   /** (De)serialize message return */
   template<typename Ar>
-  void SerializeEnd(u32 replica, Ar &ar) {}
+  void SerializeEnd(u32 replica, Ar &ar) {
+    if (flags_.Any(HERMES_GET_BLOB_ID)) {
+      ar(blob_id_);
+    }
+  }
 
    /** Create group */
   HSHM_ALWAYS_INLINE
@@ -438,7 +462,7 @@ struct TagBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
               const TagId &tag) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = blob_id.unique_;
+    lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kTagBlob;
@@ -498,7 +522,7 @@ struct BlobHasTagTask : public Task, TaskFlags<TF_SRL_SYM> {
     // Initialize task
     task_node_ = task_node;
     task_node_ = task_node;
-    lane_hash_ = blob_id.unique_;
+    lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kBlobHasTag;
@@ -618,7 +642,7 @@ struct GetBlobNameTask : public Task, TaskFlags<TF_SRL_SYM> {
                   const BlobId &blob_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = blob_id.unique_;
+    lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kGetBlobName;
@@ -662,6 +686,7 @@ struct GetBlobNameTask : public Task, TaskFlags<TF_SRL_SYM> {
 /** Get \a score from \a blob_id BLOB id */
 struct GetBlobSizeTask : public Task, TaskFlags<TF_SRL_SYM> {
   IN TagId tag_id_;
+  IN hipc::ShmArchive<hipc::charbuf> blob_name_;
   IN BlobId blob_id_;
   OUT size_t size_;
 
@@ -676,26 +701,38 @@ struct GetBlobSizeTask : public Task, TaskFlags<TF_SRL_SYM> {
                   const DomainId &domain_id,
                   const TaskStateId &state_id,
                   const TagId &tag_id,
+                  const hshm::charbuf &blob_name,
                   const BlobId &blob_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = blob_id.unique_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kGetBlobSize;
     task_flags_.SetBits(TASK_LOW_LATENCY);
-    domain_id_ = domain_id;
+    if (!blob_id.IsNull()) {
+      lane_hash_ = blob_id.hash_;
+      domain_id_ = domain_id;
+    } else {
+      lane_hash_ = std::hash<hshm::charbuf>{}(blob_name);
+      domain_id_ = DomainId::GetNode(HASH_TO_NODE_ID(lane_hash_));
+    }
 
     // Custom
     tag_id_ = tag_id;
+    HSHM_MAKE_AR(blob_name_, alloc, blob_name)
     blob_id_ = blob_id;
+  }
+
+  /** Destructor */
+  ~GetBlobSizeTask() {
+    HSHM_DESTROY_AR(blob_name_)
   }
 
   /** (De)serialize message call */
   template<typename Ar>
   void SerializeStart(Ar &ar) {
     task_serialize<Ar>(ar);
-    ar(tag_id_, blob_id_);
+    ar(tag_id_, blob_name_, blob_id_);
   }
 
   /** (De)serialize message return */
@@ -734,7 +771,7 @@ struct GetBlobScoreTask : public Task, TaskFlags<TF_SRL_SYM> {
                    const BlobId &blob_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = blob_id.unique_;
+    lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kGetBlobScore;
@@ -789,7 +826,7 @@ struct GetBlobBuffersTask : public Task, TaskFlags<TF_SRL_SYM> {
                      const BlobId &blob_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = blob_id.unique_;
+    lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kGetBlobBuffers;
@@ -854,7 +891,7 @@ struct RenameBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
                  const hshm::charbuf &new_blob_name) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = blob_id.unique_;
+    lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kRenameBlob;
@@ -916,7 +953,7 @@ struct TruncateBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
                    u64 size) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = blob_id.unique_;
+    lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kTruncateBlob;
@@ -978,7 +1015,7 @@ struct DestroyBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
                   const BlobId &blob_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = blob_id.unique_;
+    lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kDestroyBlob;
@@ -1047,7 +1084,7 @@ struct ReorganizeBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
                      u32 node_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = blob_id.unique_;
+    lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kReorganizeBlob;

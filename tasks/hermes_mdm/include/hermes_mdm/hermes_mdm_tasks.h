@@ -60,12 +60,6 @@ struct ConstructTask : public CreateTaskStateTask {
   /** (De)serialize message return */
   template<typename Ar>
   void SerializeEnd(u32 replica, Ar &ar) {}
-
-  /** Create group */
-  HSHM_ALWAYS_INLINE
-  u32 GetGroup(hshm::charbuf &group) {
-    return TASK_UNORDERED;
-  }
 };
 
 /** A task to destroy hermes_mdm */

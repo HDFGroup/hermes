@@ -45,12 +45,6 @@ struct ConstructTask : public CreateTaskStateTask {
                             "remote_queue", id, queue_info) {
     // Custom params
   }
-
-  /** Create group */
-  HSHM_ALWAYS_INLINE
-  u32 GetGroup(hshm::charbuf &group) {
-    return TASK_UNORDERED;
-  }
 };
 
 /** A task to destroy remote_queue */
@@ -94,10 +88,6 @@ struct PushTask : public Task, TaskFlags<TF_LOCAL> {
   IN TaskState *exec_;
   IN u32 exec_method_;
   IN std::vector<DataTransfer> xfer_;
-  // TEMP std::vector<tl::async_response> tl_future_;
-  TEMP std::vector<void*> tl_future_;
-  TEMP int phase_ = PushPhase::kStart;
-  TEMP int replica_;
   TEMP std::string params_;
 
   /** SHM default constructor */
@@ -121,7 +111,7 @@ struct PushTask : public Task, TaskFlags<TF_LOCAL> {
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kPush;
-    task_flags_.SetBits(TASK_LOW_LATENCY);
+    task_flags_.SetBits(TASK_LOW_LATENCY | TASK_PREEMPTIVE);
     domain_id_ = domain_id;
 
     // Custom params
@@ -130,7 +120,6 @@ struct PushTask : public Task, TaskFlags<TF_LOCAL> {
     exec_ = exec;
     exec_method_ = exec_method;
     xfer_ = std::move(xfer);
-    replica_ = 0;
   }
 
   /** Create group */

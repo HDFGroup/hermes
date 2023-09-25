@@ -59,7 +59,7 @@ class Client : public TaskLibClient {
   void AsyncPushConstruct(labpq::TypedPushTask<TaskT> *task,
                           const TaskNode &task_node,
                           const DomainId &domain_id,
-                          const hipc::Pointer &subtask) {
+                          const hipc::LPointer<TaskT> &subtask) {
     LABSTOR_CLIENT->ConstructTask(
         task, task_node, domain_id, id_, subtask);
   }
@@ -68,7 +68,7 @@ class Client : public TaskLibClient {
   LPointer<labpq::TypedPushTask<TaskT>>
   AsyncPush(const TaskNode &task_node,
             const DomainId &domain_id,
-            const hipc::Pointer &subtask) {
+            const hipc::LPointer<TaskT> &subtask) {
     LPointer<labpq::TypedPushTask<TaskT>> push_task =
         LABSTOR_CLIENT->AllocateTask<labpq::TypedPushTask<TaskT>>();
     AsyncPushConstruct(push_task.ptr_, task_node, domain_id, subtask);

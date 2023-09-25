@@ -44,12 +44,6 @@ struct ConstructTask : public CreateTaskStateTask {
     // Custom params
     info_ = info;
   }
-
-  /** Create group */
-  HSHM_ALWAYS_INLINE
-  u32 GetGroup(hshm::charbuf &group) {
-    return TASK_UNORDERED;
-  }
 };
 
 /** A task to destroy hermes_mdm */
@@ -99,7 +93,7 @@ struct AllocateTask : public Task, TaskFlags<TF_LOCAL> {
     lane_hash_ = 0;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
-    method_ = Method::kAlloc;
+    method_ = Method::kAllocate;
     task_flags_.SetBits(TASK_UNORDERED);
     domain_id_ = domain_id;
 

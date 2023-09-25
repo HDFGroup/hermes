@@ -45,12 +45,6 @@ struct ConstructTask : public CreateTaskStateTask {
   ~ConstructTask() {
     // Custom params
   }
-
-  /** Create group */
-  HSHM_ALWAYS_INLINE
-  u32 GetGroup(hshm::charbuf &group) {
-    return TASK_UNORDERED;
-  }
 };
 
 /** A task to destroy hermes_adapters */

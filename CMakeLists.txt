@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(labstor)
+project(hermes)
 
 #-----------------------------------------------------------------------------
 # Define Options
@@ -93,6 +93,14 @@ if(thallium_FOUND)
     message(STATUS "found thallium at ${thallium_DIR}")
 endif()
 
+# Boost
+find_package(Boost REQUIRED COMPONENTS regex system filesystem fiber REQUIRED)
+if (Boost_FOUND)
+    message(STATUS "found boost at ${Boost_INCLUDE_DIRS}")
+endif()
+include_directories(${Boost_INCLUDE_DIRS})
+message("Boost: ${Boost_LIBRARIES}")
+
 #------------------------------------------------------------------------------
 # Setup CMake Environment
 #------------------------------------------------------------------------------
@@ -158,7 +166,8 @@ set(Labstor_CLIENT_DEPS
         labstor_client)
 set(Labstor_RUNTIME_LIBRARIES
         ${Labstor_CLIENT_LIBRARIES}
-        labstor_runtime)
+        labstor_runtime
+        ${Boost_LIBRARIES})
 set(Labstor_RUNTIME_DEPS
         labstor_client labstor_runtime)
 

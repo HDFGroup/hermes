@@ -93,7 +93,7 @@ class ThalliumRpc {
       tl::endpoint server = client_engine_->lookup(server_name.c_str());
       client_engine_->shutdown_remote_engine(server);
     } catch (std::exception &e) {
-      HELOG(kFatal, e.what());
+      HELOG(kFatal, "Stop daemon failed: {}", e.what());
     }
   }
 
@@ -120,7 +120,7 @@ class ThalliumRpc {
 
   /** RPC call */
   template <typename RetT, bool ASYNC, typename... Args>
-  RetT Call(u32 node_id, const char *func_name, Args&&... args) {
+  RetT Call(u32 node_id, const std::string &func_name, Args&&... args) {
     HILOG(kDebug, "Calling {} {} -> {}", func_name, rpc_->node_id_, node_id)
     try {
       std::string server_name = GetServerName(node_id);
@@ -139,73 +139,79 @@ class ThalliumRpc {
         return remote_proc.on(server).async(std::forward<Args>(args)...);
       }
     } catch (tl::margo_exception &err) {
-      HELOG(kFatal, "Thallium failed on function: {}\n{}",
-            func_name, err.what())
+      HELOG(kFatal, "(node {} -> {}) Thallium failed on function: {}: {}",
+            rpc_->node_id_, node_id, func_name, err.what())
       exit(1);
     }
   }
 
   /** RPC call */
   template <typename RetT, typename... Args>
-  RetT SyncCall(u32 node_id, const char *func_name, Args&&... args) {
+  RetT SyncCall(u32 node_id, const std::string &func_name, Args&&... args) {
     return Call<RetT, false>(
         node_id, func_name, std::forward<Args>(args)...);
   }
 
   /** Async RPC call */
   template <typename... Args>
-  thallium::async_response AsyncCall(u32 node_id, const char *func_name, Args&&... args) {
+  thallium::async_response AsyncCall(u32 node_id, const std::string &func_name, Args&&... args) {
     return Call<thallium::async_response, true>(
         node_id, func_name, std::forward<Args>(args)...);
   }
 
   /** I/O transfers */
   template<typename RetT, bool ASYNC, typename ...Args>
-  RetT IoCall(i32 node_id, const char *func_name,
+  RetT IoCall(i32 node_id, const std::string &func_name,
               IoType type, char *data, size_t size, Args&& ...args) {
     HILOG(kDebug, "Calling {} {} -> {}", func_name, rpc_->node_id_, node_id)
-    std::string server_name = GetServerName(node_id);
-    tl::bulk_mode flag;
-    switch (type) {
-      case IoType::kRead: {
-        // The "bulk" object will be modified
-        flag = tl::bulk_mode::write_only;
-        break;
+    try {
+      std::string server_name = GetServerName(node_id);
+      tl::bulk_mode flag;
+      switch (type) {
+        case IoType::kRead: {
+          // The "bulk" object will be modified
+          flag = tl::bulk_mode::write_only;
+          break;
+        }
+        case IoType::kWrite: {
+          // The "bulk" object will only be read from
+          flag = tl::bulk_mode::read_only;
+          break;
+        }
+        case IoType::kNone: {
+          // TODO(llogan)
+          HELOG(kFatal, "Cannot have none I/O type")
+          exit(1);
+        }
       }
-      case IoType::kWrite: {
-        // The "bulk" object will only be read from
-        flag = tl::bulk_mode::read_only;
-        break;
-      }
-      case IoType::kNone: {
-        // TODO(llogan)
-        HELOG(kFatal, "Cannot have none I/O type")
-        exit(1);
-      }
-    }
 
-    tl::remote_procedure remote_proc = client_engine_->define(func_name);
-    tl::endpoint server = client_engine_->lookup(server_name);
+      tl::remote_procedure remote_proc = client_engine_->define(func_name);
+      tl::endpoint server = client_engine_->lookup(server_name);
 
-    std::vector<std::pair<void*, size_t>> segments(1);
-    segments[0].first  = data;
-    segments[0].second = size;
+      std::vector<std::pair<void *, size_t>> segments(1);
+      segments[0].first = data;
+      segments[0].second = size;
 
-    tl::bulk bulk = client_engine_->expose(segments, flag);
-    if constexpr (!ASYNC) {
-      if constexpr (std::is_same_v<RetT, void>) {
-        remote_proc.on(server)(bulk, std::forward<Args>(args)...);
+      tl::bulk bulk = client_engine_->expose(segments, flag);
+      if constexpr (!ASYNC) {
+        if constexpr (std::is_same_v<RetT, void>) {
+          remote_proc.on(server)(bulk, std::forward<Args>(args)...);
+        } else {
+          return remote_proc.on(server)(bulk, std::forward<Args>(args)...);
+        }
       } else {
-        return remote_proc.on(server)(bulk, std::forward<Args>(args)...);
+        return remote_proc.on(server).async(bulk, std::forward<Args>(args)...);
       }
-    } else {
-      return remote_proc.on(server).async(bulk, std::forward<Args>(args)...);
+    } catch (tl::margo_exception &err) {
+      HELOG(kFatal, "(node {} -> {}) Thallium failed on function: {}: {}",
+            rpc_->node_id_, node_id, func_name, err.what())
+      exit(1);
     }
   }
 
   /** Synchronous I/O transfer */
   template<typename RetT, typename ...Args>
-  RetT SyncIoCall(i32 node_id, const char *func_name,
+  RetT SyncIoCall(i32 node_id, const std::string &func_name,
                   IoType type, char *data, size_t size, Args&& ...args) {
     return IoCall<RetT, false>(
         node_id, func_name, type, data, size, std::forward<Args>(args)...);
@@ -229,7 +235,7 @@ class ThalliumRpc {
         // The "local_bulk" object will only be read from
         flag = tl::bulk_mode::read_only;
         // flag = tl::bulk_mode::read_write;
-        HILOG(kInfo, "(node {}) Reading {} bytes from the server",
+        HILOG(kDebug, "(node {}) Reading {} bytes from the server",
               rpc_->node_id_, size)
         break;
       }
@@ -237,7 +243,7 @@ class ThalliumRpc {
         // The "local_bulk" object will only be written to
         flag = tl::bulk_mode::write_only;
         // flag = tl::bulk_mode::read_write;
-        HILOG(kInfo, "(node {}) Writing {} bytes to the server",
+        HILOG(kDebug, "(node {}) Writing {} bytes to the server",
               rpc_->node_id_, size)
         break;
       }

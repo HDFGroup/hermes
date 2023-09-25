@@ -13,6 +13,7 @@ namespace labstor {
 struct LaneData {
   hipc::Pointer p_;
   bool complete_;
+  ABT_thread thread_;
 
   LaneData() = default;
 

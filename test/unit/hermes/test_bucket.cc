@@ -9,6 +9,15 @@
 #include "hermes/bucket.h"
 #include <mpi.h>
 
+TEST_CASE("TestHermesConnect") {
+  int rank, nprocs;
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+  HERMES->ClientInit();
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
 TEST_CASE("TestHermesPut1n") {
   int rank, nprocs;
   MPI_Barrier(MPI_COMM_WORLD);
@@ -100,7 +109,6 @@ TEST_CASE("TestHermesPutGet") {
       memset(blob.data(), i % 256, blob.size());
       hermes::BlobId blob_id = bkt.Put(std::to_string(i), blob, ctx);
       HILOG(kInfo, "(iteration {}) Using BlobID: {}", i, blob_id);
-
       // Get a blob
       hermes::Blob blob2;
       bkt.Get(blob_id, blob2, ctx);

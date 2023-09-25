@@ -130,7 +130,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
     const Blob page((const char*)ptr + data_offset, p.blob_size_);
     if (!is_append) {
       std::string blob_name(p.CreateBlobName().str());
-      bkt.PartialPut(blob_name, page, p.blob_off_, ctx);
+      bkt.AsyncPartialPut(blob_name, page, p.blob_off_, ctx);
     } else {
       bkt.Append(page, stat.page_size_, ctx);
     }

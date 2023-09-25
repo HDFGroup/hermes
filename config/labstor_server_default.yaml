@@ -15,8 +15,9 @@ queue_manager:
   shm_allocator: kScalablePageAllocator
   # The name of the shared memory region to create
   shm_name: "labstor_shm"
-  # The size of the shared memory region to allocate
+  # The size of the shared memory region to allocate for general data structures
   shm_size: 0g
+  # The size of the shared memory to allocate for data buffers
 
 ### Define properties of RPCs
 rpc:
