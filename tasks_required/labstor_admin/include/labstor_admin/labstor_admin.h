@@ -35,7 +35,7 @@ class Client : public TaskLibClient {
                            const std::string &lib_name) {
     LPointer<RegisterTaskLibTask> task = AsyncRegisterTaskLibRoot(domain_id, lib_name);
     task->Wait();
-    // LABSTOR_CLIENT->DelTask(task);
+    LABSTOR_CLIENT->DelTask(task);
   }
   LABSTOR_TASK_NODE_ADMIN_ROOT(RegisterTaskLib)
 
@@ -55,7 +55,7 @@ class Client : public TaskLibClient {
     LPointer<DestroyTaskLibTask> task =
         AsyncDestroyTaskLibRoot(domain_id, lib_name);
     task->Wait();
-    // LABSTOR_CLIENT->DelTask(task);
+    LABSTOR_CLIENT->DelTask(task);
   }
   LABSTOR_TASK_NODE_ADMIN_ROOT(DestroyTaskLib)
 
@@ -77,7 +77,7 @@ class Client : public TaskLibClient {
         domain_id, std::forward<Args>(args)...);
     task->Wait();
     TaskStateId new_id = task->id_;
-    // LABSTOR_CLIENT->DelTask(task);
+    LABSTOR_CLIENT->DelTask(task);
     if (new_id.IsNull()) {
       HELOG(kWarning, "Failed to create task state");
     }
@@ -130,7 +130,7 @@ class Client : public TaskLibClient {
         AsyncGetOrCreateTaskStateIdRoot(domain_id, state_name);
     task->Wait();
     TaskStateId new_id = task->id_;
-    // LABSTOR_CLIENT->DelTask(task);
+    LABSTOR_CLIENT->DelTask(task);
     return new_id;
   }
   LABSTOR_TASK_NODE_ADMIN_ROOT(GetOrCreateTaskStateId)
@@ -149,7 +149,7 @@ class Client : public TaskLibClient {
         AsyncGetTaskStateIdRoot(domain_id, state_name);
     task->Wait();
     TaskStateId new_id = task->id_;
-    // LABSTOR_CLIENT->DelTask(task);
+    LABSTOR_CLIENT->DelTask(task);
     return new_id;
   }
   LABSTOR_TASK_NODE_ADMIN_ROOT(GetTaskStateId)
@@ -169,7 +169,7 @@ class Client : public TaskLibClient {
     LPointer<DestroyTaskStateTask> task =
         AsyncDestroyTaskStateRoot(domain_id, id);
     task->Wait();
-    // LABSTOR_CLIENT->DelTask(task);
+    LABSTOR_CLIENT->DelTask(task);
   }
   LABSTOR_TASK_NODE_ADMIN_ROOT(DestroyTaskState)
 
@@ -195,7 +195,7 @@ class Client : public TaskLibClient {
     LPointer<SetWorkOrchQueuePolicyTask> task =
         AsyncSetWorkOrchQueuePolicyRoot(domain_id, policy);
     task->Wait();
-    // LABSTOR_CLIENT->DelTask(task);
+    LABSTOR_CLIENT->DelTask(task);
   }
   LABSTOR_TASK_NODE_ADMIN_ROOT(SetWorkOrchQueuePolicy);
 
@@ -212,7 +212,7 @@ class Client : public TaskLibClient {
     LPointer<SetWorkOrchProcPolicyTask> task =
         AsyncSetWorkOrchProcPolicyRoot(domain_id, policy);
     task->Wait();
-    // LABSTOR_CLIENT->DelTask(task);
+    LABSTOR_CLIENT->DelTask(task);
   }
   LABSTOR_TASK_NODE_ADMIN_ROOT(SetWorkOrchProcPolicy);
 };

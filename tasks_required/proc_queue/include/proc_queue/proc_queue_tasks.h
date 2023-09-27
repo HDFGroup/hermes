@@ -109,11 +109,11 @@ struct TypedPushTask : public Task, TaskFlags<TF_LOCAL> {
 
   /** Destructor */
   ~TypedPushTask() {
-//    if (!IsFireAndForget()) {
-//      LABSTOR_CLIENT->DelTask(sub_cli_);
-//    } else {
-//      LABSTOR_CLIENT->DelTask(sub_run_);
-//    }
+    if (!IsFireAndForget()) {
+      LABSTOR_CLIENT->DelTask(sub_cli_);
+    } else {
+      LABSTOR_CLIENT->DelTask(sub_run_);
+    }
   }
 
   /** Create group */
