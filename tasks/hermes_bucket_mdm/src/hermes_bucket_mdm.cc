@@ -115,7 +115,7 @@ class Server : public TaskLib {
               LABSTOR_CLIENT->node_id_, task->tag_id_, task->task_node_)
         for (AppendInfo &append : append_info) {
           append.blob_id_ = append.blob_id_task_->blob_id_;
-          LABSTOR_CLIENT->DelTask(append.blob_id_task_);
+//          LABSTOR_CLIENT->DelTask(append.blob_id_task_);
         }
         task->SetModuleComplete();
       }
@@ -178,10 +178,10 @@ class Server : public TaskLib {
         HILOG(kDebug, "(node {}) PUT blobs for tag {} (task_node={})",
               LABSTOR_CLIENT->node_id_, task->tag_id_, task->task_node_)
         for (AppendInfo &append : append_info) {
-          LABSTOR_CLIENT->DelTask(append.put_task_);
+//          LABSTOR_CLIENT->DelTask(append.put_task_);
         }
         HSHM_DESTROY_AR(task->schema_->append_info_);
-        LABSTOR_CLIENT->DelTask(task->schema_);
+//        LABSTOR_CLIENT->DelTask(task->schema_);
         task->SetModuleComplete();
       }
     }
@@ -294,7 +294,7 @@ class Server : public TaskLib {
           }
         }
         for (blob_mdm::DestroyBlobTask *&blob_task : blob_tasks) {
-          LABSTOR_CLIENT->DelTask(blob_task);
+//          LABSTOR_CLIENT->DelTask(blob_task);
         }
         HSHM_DESTROY_AR(task->destroy_blob_tasks_);
         TAG_MAP_T &tag_map = tag_map_[ctx.lane_id_];
