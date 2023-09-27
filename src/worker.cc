@@ -105,7 +105,7 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
       entry->complete_ = true;
       if (task->IsCoroutine()) {
         // TODO(llogan): verify leak
-        // free(ctx.stack_ptr_);
+        free(ctx.stack_ptr_);
       } else if (task->IsPreemptive()) {
         ABT_thread_join(entry->thread_);
       }
