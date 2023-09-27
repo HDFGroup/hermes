@@ -50,7 +50,7 @@ class Client : public TaskLibClient {
     task->Wait();
     id_ = task->id_;
     queue_id_ = QueueId(id_);
-    LABSTOR_CLIENT->DelTask(task);
+    // LABSTOR_CLIENT->DelTask(task);
   }
 
   /** Destroy task state + queue */
