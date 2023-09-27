@@ -57,7 +57,7 @@ class Client : public TaskLibClient {
     LPointer<labpq::TypedPushTask<SetBlobMdmTask>> push_task =
         AsyncSetBlobMdmRoot(domain_id, blob_mdm_id);
     push_task->Wait();
-    LABSTOR_CLIENT->DelTask(push_task);
+    // LABSTOR_CLIENT->DelTask(push_task);
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(SetBlobMdm);
 
@@ -141,7 +141,7 @@ class Client : public TaskLibClient {
     push_task->Wait();
     GetOrCreateTagTask *task = push_task->get();
     TagId tag_id = task->tag_id_;
-    LABSTOR_CLIENT->DelTask(push_task);
+    // LABSTOR_CLIENT->DelTask(push_task);
     return tag_id;
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(GetOrCreateTag);
@@ -161,7 +161,7 @@ class Client : public TaskLibClient {
     push_task->Wait();
     GetTagIdTask *task = push_task->get();
     TagId tag_id = task->tag_id_;
-    LABSTOR_CLIENT->DelTask(push_task);
+    // LABSTOR_CLIENT->DelTask(push_task);
     return tag_id;
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(GetTagId);
@@ -181,7 +181,7 @@ class Client : public TaskLibClient {
     push_task->Wait();
     GetTagNameTask *task = push_task->get();
     hshm::string tag_name = hshm::to_charbuf<hipc::string>(*task->tag_name_.get());
-    LABSTOR_CLIENT->DelTask(push_task);
+    // LABSTOR_CLIENT->DelTask(push_task);
     return tag_name;
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(GetTagName);
@@ -200,7 +200,7 @@ class Client : public TaskLibClient {
     LPointer<labpq::TypedPushTask<RenameTagTask>> push_task = 
         AsyncRenameTagRoot(tag_id, new_tag_name);
     push_task->Wait();
-    LABSTOR_CLIENT->DelTask(push_task);
+    // LABSTOR_CLIENT->DelTask(push_task);
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(RenameTag);
 
@@ -217,7 +217,7 @@ class Client : public TaskLibClient {
     LPointer<labpq::TypedPushTask<DestroyTagTask>> push_task = 
         AsyncDestroyTagRoot(tag_id);
     push_task->Wait();
-    LABSTOR_CLIENT->DelTask(push_task);
+    // LABSTOR_CLIENT->DelTask(push_task);
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(DestroyTag);
 
@@ -235,7 +235,7 @@ class Client : public TaskLibClient {
     LPointer<labpq::TypedPushTask<TagAddBlobTask>> push_task = 
         AsyncTagAddBlobRoot(tag_id, blob_id);
     push_task->Wait();
-    LABSTOR_CLIENT->DelTask(push_task);
+    // LABSTOR_CLIENT->DelTask(push_task);
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(TagAddBlob);
 
@@ -252,7 +252,7 @@ class Client : public TaskLibClient {
     LPointer<labpq::TypedPushTask<TagRemoveBlobTask>> push_task = 
         AsyncTagRemoveBlobRoot(tag_id, blob_id);
     push_task->Wait();
-    LABSTOR_CLIENT->DelTask(push_task);
+    // LABSTOR_CLIENT->DelTask(push_task);
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(TagRemoveBlob);
 
@@ -269,7 +269,7 @@ class Client : public TaskLibClient {
     LPointer<labpq::TypedPushTask<TagClearBlobsTask>> push_task = 
         AsyncTagClearBlobsRoot(tag_id);
     push_task->Wait();
-    LABSTOR_CLIENT->DelTask(push_task);
+    // LABSTOR_CLIENT->DelTask(push_task);
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(TagClearBlobs);
 
@@ -288,7 +288,7 @@ class Client : public TaskLibClient {
     push_task->Wait();
     GetSizeTask *task = push_task->get();
     size_t size = task->size_;
-    LABSTOR_CLIENT->DelTask(push_task);
+    // LABSTOR_CLIENT->DelTask(push_task);
     return size;
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(GetSize);

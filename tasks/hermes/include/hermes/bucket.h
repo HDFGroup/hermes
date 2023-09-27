@@ -240,7 +240,7 @@ class Bucket {
         push_task->Wait();
         PutBlobTask *task = push_task->get();
         blob_id = task->blob_id_;
-        LABSTOR_CLIENT->DelTask(push_task);
+        // LABSTOR_CLIENT->DelTask(push_task);
       }
     }
     return blob_id;
@@ -435,7 +435,7 @@ class Bucket {
     char *data = LABSTOR_CLIENT->GetPrivatePointer(task->data_);
     memcpy(blob.data(), data, data_size);
     LABSTOR_CLIENT->FreeBuffer(task->data_);
-    LABSTOR_CLIENT->DelTask(push_task);
+    // LABSTOR_CLIENT->DelTask(push_task);
     return blob_id;
   }
 

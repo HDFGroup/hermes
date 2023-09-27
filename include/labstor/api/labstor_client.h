@@ -140,14 +140,14 @@ class Client : public ConfigurationManager {
   HSHM_ALWAYS_INLINE
   void DelTask(TaskT *task) {
     // TODO(llogan): verify leak
-    // main_alloc_->DelObj<TaskT>(task);
+    main_alloc_->DelObj<TaskT>(task);
   }
 
   /** Destroy a task */
   template<typename TaskT>
   HSHM_ALWAYS_INLINE
   void DelTask(LPointer<TaskT> &task) {
-    // main_alloc_->DelObjLocal<TaskT>(task);
+    main_alloc_->DelObjLocal<TaskT>(task);
   }
 
   /** Get a queue by its ID */
