@@ -51,7 +51,7 @@ class Server : public TaskLib {
           LABSTOR_ADMIN->AsyncGetOrCreateTaskStateId(task->task_node_ + 1, domain, state_name);
       get_id->Wait<TASK_YIELD_CO>(task);
       task->id_ = get_id->id_;
-      LABSTOR_CLIENT->DelTask(get_id);
+      // LABSTOR_CLIENT->DelTask(get_id);
     }
     // Create the task state
     HILOG(kInfo, "(node {}) Creating task state {} with id {} (task_node={})",
