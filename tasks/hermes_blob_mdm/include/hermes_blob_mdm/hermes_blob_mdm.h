@@ -44,7 +44,7 @@ class Client : public TaskLibClient {
     if (task->IsComplete()) {
       id_ = task->id_;
       queue_id_ = QueueId(id_);
-      // LABSTOR_CLIENT->DelTask(task);
+      LABSTOR_CLIENT->DelTask(task);
     }
   }
   LABSTOR_TASK_NODE_ROOT(AsyncCreate);
@@ -79,7 +79,7 @@ class Client : public TaskLibClient {
     LPointer<labpq::TypedPushTask<SetBucketMdmTask>> push_task =
         AsyncSetBucketMdmRoot(domain_id, blob_mdm_id);
     push_task->Wait();
-    // LABSTOR_CLIENT->DelTask(push_task);
+    LABSTOR_CLIENT->DelTask(push_task);
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(SetBucketMdm);
 
@@ -101,7 +101,7 @@ class Client : public TaskLibClient {
     push_task->Wait();
     GetOrCreateBlobIdTask *task = push_task->get();
     BlobId blob_id = task->blob_id_;
-    // LABSTOR_CLIENT->DelTask(push_task);
+    LABSTOR_CLIENT->DelTask(push_task);
     return blob_id;
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(GetOrCreateBlobId);
@@ -165,7 +165,7 @@ class Client : public TaskLibClient {
     GetBlobTask *task = push_task->get();
     data = task->data_;
     size_t true_size = task->data_size_;
-    // LABSTOR_CLIENT->DelTask(push_task);
+    LABSTOR_CLIENT->DelTask(push_task);
     return true_size;
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(GetBlob);
@@ -211,7 +211,7 @@ class Client : public TaskLibClient {
     LPointer<labpq::TypedPushTask<TagBlobTask>> push_task =
        AsyncTagBlobRoot(tag_id, blob_id, tag);
     push_task->Wait();
-    // LABSTOR_CLIENT->DelTask(push_task);
+    LABSTOR_CLIENT->DelTask(push_task);
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(TagBlob);
 
@@ -235,7 +235,7 @@ class Client : public TaskLibClient {
     push_task->Wait();
     BlobHasTagTask *task = push_task->get();
     bool has_tag = task->has_tag_;
-    // LABSTOR_CLIENT->DelTask(push_task);
+    LABSTOR_CLIENT->DelTask(push_task);
     return has_tag;
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(BlobHasTag);
@@ -259,7 +259,7 @@ class Client : public TaskLibClient {
     push_task->Wait();
     GetBlobIdTask *task = push_task->get();
     BlobId blob_id = task->blob_id_;
-    // LABSTOR_CLIENT->DelTask(push_task);
+    LABSTOR_CLIENT->DelTask(push_task);
     return blob_id;
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(GetBlobId);
@@ -282,7 +282,7 @@ class Client : public TaskLibClient {
     push_task->Wait();
     GetBlobNameTask *task = push_task->get();
     std::string blob_name = task->blob_name_->str();
-    // LABSTOR_CLIENT->DelTask(push_task);
+    LABSTOR_CLIENT->DelTask(push_task);
     return blob_name;
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(GetBlobName);
@@ -308,7 +308,7 @@ class Client : public TaskLibClient {
     push_task->Wait();
     GetBlobSizeTask *task = push_task->get();
     size_t size = task->size_;
-    // LABSTOR_CLIENT->DelTask(push_task);
+    LABSTOR_CLIENT->DelTask(push_task);
     return size;
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(GetBlobSize);
@@ -331,7 +331,7 @@ class Client : public TaskLibClient {
     push_task->Wait();
     GetBlobScoreTask *task = push_task->get();
     float score = task->score_;
-    // LABSTOR_CLIENT->DelTask(push_task);
+    LABSTOR_CLIENT->DelTask(push_task);
     return score;
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(GetBlobScore);
@@ -354,7 +354,7 @@ class Client : public TaskLibClient {
     GetBlobBuffersTask *task = push_task->get();
     std::vector<BufferInfo> buffers =
         hshm::to_stl_vector<BufferInfo>(*task->buffers_);
-    // LABSTOR_CLIENT->DelTask(push_task);
+    LABSTOR_CLIENT->DelTask(push_task);
     return buffers;
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(GetBlobBuffers)
@@ -378,7 +378,7 @@ class Client : public TaskLibClient {
     LPointer<labpq::TypedPushTask<RenameBlobTask>> push_task =
         AsyncRenameBlobRoot(tag_id, blob_id, new_blob_name);
     push_task->Wait();
-    // LABSTOR_CLIENT->DelTask(push_task);
+    LABSTOR_CLIENT->DelTask(push_task);
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(RenameBlob);
 
@@ -400,7 +400,7 @@ class Client : public TaskLibClient {
     LPointer<labpq::TypedPushTask<TruncateBlobTask>> push_task =
         AsyncTruncateBlobRoot(tag_id, blob_id, new_size);
     push_task->Wait();
-    // LABSTOR_CLIENT->DelTask(push_task);
+    LABSTOR_CLIENT->DelTask(push_task);
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(TruncateBlob);
 
@@ -420,7 +420,7 @@ class Client : public TaskLibClient {
     LPointer<labpq::TypedPushTask<DestroyBlobTask>> push_task =
         AsyncDestroyBlobRoot(tag_id, blob_id);
     push_task->Wait();
-    // LABSTOR_CLIENT->DelTask(push_task);
+    LABSTOR_CLIENT->DelTask(push_task);
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(DestroyBlob);
 };

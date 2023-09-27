@@ -282,7 +282,7 @@ class Server : public TaskLib {
       sub_plcmnt.size_ += diff;
       HILOG(kDebug, "Passing {} bytes to target {}", diff, sub_plcmnt.tid_);
     }
-//    LABSTOR_CLIENT->DelTask(task->cur_bdev_alloc_);
+    LABSTOR_CLIENT->DelTask(task->cur_bdev_alloc_);
     if (task->plcmnt_idx_ < (*task->schema_).size()) {
       task->phase_ = PutBlobPhase::kAllocate;
       return;
@@ -337,14 +337,14 @@ class Server : public TaskLib {
       }
     }
     for (bdev::WriteTask *&write_task : write_tasks) {
-//      LABSTOR_CLIENT->DelTask(write_task);
+      LABSTOR_CLIENT->DelTask(write_task);
     }
     HILOG(kDebug, "PutBlobTask complete");
-//    HSHM_DESTROY_AR(task->schema_);
-//    HSHM_DESTROY_AR(task->bdev_writes_);
-//    if (task->flags_.Any(HERMES_DID_STAGE_IN)) {
-//      LABSTOR_CLIENT->FreeBuffer(task->data_ptr_);
-//    }
+    HSHM_DESTROY_AR(task->schema_);
+    HSHM_DESTROY_AR(task->bdev_writes_);
+    if (task->flags_.Any(HERMES_DID_STAGE_IN)) {
+      LABSTOR_CLIENT->FreeBuffer(task->data_ptr_);
+    }
     // Update the bucket statistics
     int update_mode = bucket_mdm::UpdateSizeMode::kAdd;
     if (task->flags_.Any(HERMES_IS_FILE)) {
@@ -421,7 +421,7 @@ class Server : public TaskLib {
       }
     }
     for (bdev::ReadTask *&read_task : read_tasks) {
-//      LABSTOR_CLIENT->DelTask(read_task);
+      LABSTOR_CLIENT->DelTask(read_task);
     }
     HSHM_DESTROY_AR(task->bdev_reads_);
     HILOG(kDebug, "GetBlobTask complete");
@@ -642,7 +642,7 @@ class Server : public TaskLib {
           }
         }
         for (bdev::FreeTask *&free_task : free_tasks) {
-//          LABSTOR_CLIENT->DelTask(free_task);
+          LABSTOR_CLIENT->DelTask(free_task);
         }
         BLOB_MAP_T &blob_map = blob_map_[ctx.lane_id_];
         BlobInfo &blob_info = blob_map[task->blob_id_];
@@ -686,7 +686,7 @@ class Server : public TaskLib {
         if (!task->get_task_->IsComplete()) {
           return;
         }
-//        LABSTOR_CLIENT->DelTask(task->get_task_);
+        LABSTOR_CLIENT->DelTask(task->get_task_);
         task->phase_ = ReorganizeBlobPhase::kPut;
       }
       case ReorganizeBlobPhase::kPut: {
