@@ -340,11 +340,11 @@ class Server : public TaskLib {
       LABSTOR_CLIENT->DelTask(write_task);
     }
     HILOG(kDebug, "PutBlobTask complete");
-    HSHM_DESTROY_AR(task->schema_);
-    HSHM_DESTROY_AR(task->bdev_writes_);
-    if (task->flags_.Any(HERMES_DID_STAGE_IN)) {
-      LABSTOR_CLIENT->FreeBuffer(task->data_ptr_);
-    }
+//    HSHM_DESTROY_AR(task->schema_);
+//    HSHM_DESTROY_AR(task->bdev_writes_);
+//    if (task->flags_.Any(HERMES_DID_STAGE_IN)) {
+//      LABSTOR_CLIENT->FreeBuffer(task->data_ptr_);
+//    }
     // Update the bucket statistics
     int update_mode = bucket_mdm::UpdateSizeMode::kAdd;
     if (task->flags_.Any(HERMES_IS_FILE)) {
