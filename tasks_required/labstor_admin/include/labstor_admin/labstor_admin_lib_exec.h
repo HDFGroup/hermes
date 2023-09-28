@@ -212,48 +212,48 @@ TaskPointer LoadStart(u32 method, BinaryInputArchive<true> &ar) override {
   TaskPointer task_ptr;
   switch (method) {
     case Method::kCreateTaskState: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<CreateTaskStateTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<CreateTaskStateTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<CreateTaskStateTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<CreateTaskStateTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kDestroyTaskState: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<DestroyTaskStateTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<DestroyTaskStateTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<DestroyTaskStateTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<DestroyTaskStateTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kRegisterTaskLib: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<RegisterTaskLibTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<RegisterTaskLibTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<RegisterTaskLibTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<RegisterTaskLibTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kDestroyTaskLib: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<DestroyTaskLibTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<DestroyTaskLibTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<DestroyTaskLibTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<DestroyTaskLibTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kGetOrCreateTaskStateId: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<GetOrCreateTaskStateIdTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<GetOrCreateTaskStateIdTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<GetOrCreateTaskStateIdTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<GetOrCreateTaskStateIdTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kGetTaskStateId: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<GetTaskStateIdTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<GetTaskStateIdTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<GetTaskStateIdTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<GetTaskStateIdTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kStopRuntime: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<StopRuntimeTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<StopRuntimeTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<StopRuntimeTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<StopRuntimeTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kSetWorkOrchQueuePolicy: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<SetWorkOrchQueuePolicyTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<SetWorkOrchQueuePolicyTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<SetWorkOrchQueuePolicyTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<SetWorkOrchQueuePolicyTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kSetWorkOrchProcPolicy: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<SetWorkOrchProcPolicyTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<SetWorkOrchProcPolicyTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<SetWorkOrchProcPolicyTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<SetWorkOrchProcPolicyTask*>(task_ptr.ptr_);
       break;
     }
   }

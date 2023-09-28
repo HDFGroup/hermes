@@ -13,45 +13,7 @@
 
 namespace labstor {
 
-struct TaskPointer {
-  Task *task_;
-  hipc::Pointer p_;
-
-  /** Default constructor */
-  TaskPointer() : task_(nullptr) {}
-
-  /** Task-only constructor */
-  TaskPointer(Task *task) : task_(task) {}
-
-  /** Emplace constructor */
-  TaskPointer(Task *task, hipc::Pointer p) : task_(task), p_(p) {}
-
-  /** Copy constructor */
-  TaskPointer(const TaskPointer &other) : task_(other.task_), p_(other.p_) {}
-
-  /** Copy operator */
-  TaskPointer &operator=(const TaskPointer &other) {
-    task_ = other.task_;
-    p_ = other.p_;
-    return *this;
-  }
-
-  /** Move constructor */
-  TaskPointer(TaskPointer &&other) noexcept
-      : task_(other.task_), p_(other.p_) {
-    other.task_ = nullptr;
-    other.p_ = hipc::Pointer();
-  }
-
-  /** Move operator */
-  TaskPointer &operator=(TaskPointer &&other) noexcept {
-    task_ = other.task_;
-    p_ = other.p_;
-    other.task_ = nullptr;
-    other.p_ = hipc::Pointer();
-    return *this;
-  }
-};
+typedef LPointer<Task> TaskPointer;
 
 /**
  * Represents a custom operation to perform.

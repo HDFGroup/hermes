@@ -132,28 +132,28 @@ TaskPointer LoadStart(u32 method, BinaryInputArchive<true> &ar) override {
   TaskPointer task_ptr;
   switch (method) {
     case Method::kConstruct: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<ConstructTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<ConstructTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<ConstructTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<ConstructTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kDestruct: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<DestructTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<DestructTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<DestructTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<DestructTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kMd: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<MdTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<MdTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<MdTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<MdTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kIo: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<IoTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<IoTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<IoTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<IoTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kMdPush: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<MdPushTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<MdPushTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<MdPushTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<MdPushTask*>(task_ptr.ptr_);
       break;
     }
   }

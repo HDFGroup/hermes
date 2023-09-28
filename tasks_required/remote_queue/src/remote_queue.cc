@@ -241,8 +241,8 @@ class Server : public TaskLib {
             state_id);
     }
     TaskPointer task_ptr = exec->LoadStart(method, ar);
-    orig_task = task_ptr.task_;
-    hipc::Pointer &p = task_ptr.p_;
+    orig_task = task_ptr.ptr_;
+    hipc::Pointer &p = task_ptr.shm_;
     orig_task->domain_id_ = DomainId::GetNode(LABSTOR_CLIENT->node_id_);
 
     // Execute task
