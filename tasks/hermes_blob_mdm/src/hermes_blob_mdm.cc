@@ -266,15 +266,15 @@ class Server : public TaskLib {
     if (task->flags_.Any(HERMES_IS_FILE)) {
       update_mode = bucket_mdm::UpdateSizeMode::kCap;
     }
-    bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
-                             task->tag_id_,
-                             data_off,
-                             update_mode);
-    if (task->flags_.Any(HERMES_BLOB_DID_CREATE)) {
-      bkt_mdm_.AsyncTagAddBlob(task->task_node_ + 1,
-                               task->tag_id_,
-                               task->blob_id_);
-    }
+//    bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
+//                             task->tag_id_,
+//                             data_off,
+//                             update_mode);
+//    if (task->flags_.Any(HERMES_BLOB_DID_CREATE)) {
+//      bkt_mdm_.AsyncTagAddBlob(task->task_node_ + 1,
+//                               task->tag_id_,
+//                               task->blob_id_);
+//    }
 
     // Free data
     if (task->flags_.Any(HERMES_DID_STAGE_IN)) {
