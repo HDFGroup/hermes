@@ -50,7 +50,7 @@ struct RegisterTaskLibTaskTempl : public Task, TaskFlags<TF_SRL_SYM> {
 
   /** Destructor */
   ~RegisterTaskLibTaskTempl() {
-    HSHM_DESTROY_AR(lib_name_);
+    // HSHM_DESTROY_AR(lib_name_);
   }
 
   /** (De)serialize message call */
@@ -118,7 +118,7 @@ struct GetOrCreateTaskStateIdTask : public Task, TaskFlags<TF_SRL_SYM> {
   }
 
   ~GetOrCreateTaskStateIdTask() {
-    HSHM_DESTROY_AR(state_name_);
+    // HSHM_DESTROY_AR(state_name_);
   }
 
   /** (De)serialize message call */
@@ -179,9 +179,9 @@ struct CreateTaskStateTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
 
   /** Destructor */
   ~CreateTaskStateTask() {
-    HSHM_DESTROY_AR(state_name_);
-    HSHM_DESTROY_AR(lib_name_);
-    HSHM_DESTROY_AR(queue_info_);
+    // HSHM_DESTROY_AR(state_name_);
+    // HSHM_DESTROY_AR(lib_name_);
+    // HSHM_DESTROY_AR(queue_info_);
   }
 
   /** Replication (does nothing) */
@@ -245,7 +245,7 @@ struct GetTaskStateIdTask : public Task, TaskFlags<TF_SRL_SYM> {
   }
 
   ~GetTaskStateIdTask() {
-    HSHM_DESTROY_AR(state_name_);
+    // HSHM_DESTROY_AR(state_name_);
   }
 
   /** (De)serialize message call */

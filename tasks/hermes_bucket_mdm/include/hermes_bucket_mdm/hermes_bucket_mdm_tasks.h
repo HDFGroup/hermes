@@ -375,8 +375,8 @@ struct GetOrCreateTagTask : public Task, TaskFlags<TF_SRL_SYM> {
 
   /** Destructor */
   ~GetOrCreateTagTask() {
-    HSHM_DESTROY_AR(tag_name_)
-    HSHM_DESTROY_AR(traits_)
+    // HSHM_DESTROY_AR(tag_name_)
+    // HSHM_DESTROY_AR(traits_)
   }
 
   /** (De)serialize message call */
@@ -432,7 +432,7 @@ struct GetTagIdTask : public Task, TaskFlags<TF_SRL_SYM> {
 
   /** Destructor */
   ~GetTagIdTask() {
-    HSHM_DESTROY_AR(tag_name_)
+    // HSHM_DESTROY_AR(tag_name_)
   }
 
   /** (De)serialize message call */
@@ -488,7 +488,7 @@ struct GetTagNameTask : public Task, TaskFlags<TF_SRL_SYM> {
 
   /** Destructor */
   ~GetTagNameTask() {
-    HSHM_DESTROY_AR(tag_name_)
+    // HSHM_DESTROY_AR(tag_name_)
   }
 
   /** (De)serialize message call */
@@ -547,7 +547,7 @@ struct RenameTagTask : public Task, TaskFlags<TF_SRL_SYM> {
 
   /** Destructor */
   ~RenameTagTask() {
-    HSHM_DESTROY_AR(tag_name_)
+    // HSHM_DESTROY_AR(tag_name_)
   }
 
   /** (De)serialize message call */

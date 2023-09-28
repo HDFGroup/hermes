@@ -171,7 +171,7 @@ struct GetOrCreateBlobIdTask : public Task, TaskFlags<TF_SRL_SYM> {
 
   /** Destructor */
   ~GetOrCreateBlobIdTask() {
-    HSHM_DESTROY_AR(blob_name_)
+    // HSHM_DESTROY_AR(blob_name_)
   }
 
   /** (De)serialize message call */
@@ -276,11 +276,11 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
 
   /** Destructor */
   ~PutBlobTask() {
-//    HSHM_DESTROY_AR(blob_name_);
-//    HSHM_DESTROY_AR(filename_);
-//    if (IsDataOwner()) {
-//      LABSTOR_CLIENT->FreeBuffer(data_);
-//    }
+    // HSHM_DESTROY_AR(blob_name_);
+    // HSHM_DESTROY_AR(filename_);
+    if (IsDataOwner()) {
+      LABSTOR_CLIENT->FreeBuffer(data_);
+    }
   }
 
   /** (De)serialize message call */
@@ -390,8 +390,8 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
 
   /** Destructor */
   ~GetBlobTask() {
-    HSHM_DESTROY_AR(blob_name_);
-    HSHM_DESTROY_AR(filename_);
+    // HSHM_DESTROY_AR(blob_name_);
+    // HSHM_DESTROY_AR(filename_);
   }
 
   /** (De)serialize message call */
@@ -586,7 +586,7 @@ struct GetBlobIdTask : public Task, TaskFlags<TF_SRL_SYM> {
 
   /** Destructor */
   ~GetBlobIdTask() {
-    HSHM_DESTROY_AR(blob_name_)
+    // HSHM_DESTROY_AR(blob_name_)
   }
 
   /** (De)serialize message call */
@@ -649,7 +649,7 @@ struct GetBlobNameTask : public Task, TaskFlags<TF_SRL_SYM> {
 
   /** Destructor */
   ~GetBlobNameTask() {
-    HSHM_DESTROY_AR(blob_name_)
+    // HSHM_DESTROY_AR(blob_name_)
   };
 
   /** (De)serialize message call */
@@ -717,7 +717,7 @@ struct GetBlobSizeTask : public Task, TaskFlags<TF_SRL_SYM> {
 
   /** Destructor */
   ~GetBlobSizeTask() {
-    HSHM_DESTROY_AR(blob_name_)
+    // HSHM_DESTROY_AR(blob_name_)
   }
 
   /** (De)serialize message call */
@@ -833,7 +833,7 @@ struct GetBlobBuffersTask : public Task, TaskFlags<TF_SRL_SYM> {
 
   /** Destructor */
   ~GetBlobBuffersTask() {
-    HSHM_DESTROY_AR(buffers_)
+    // HSHM_DESTROY_AR(buffers_)
   }
 
   /** (De)serialize message call */
@@ -898,7 +898,7 @@ struct RenameBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
 
   /** Destructor */
   ~RenameBlobTask() {
-    HSHM_DESTROY_AR(new_blob_name_)
+    // HSHM_DESTROY_AR(new_blob_name_)
   }
 
   /** (De)serialize message call */
