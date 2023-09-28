@@ -240,7 +240,7 @@ class Bucket {
         push_task->Wait();
         PutBlobTask *task = push_task->get();
         blob_id = task->blob_id_;
-        // LABSTOR_CLIENT->DelTask(push_task);
+        LABSTOR_CLIENT->DelTask(push_task);
       }
     }
     return blob_id;
