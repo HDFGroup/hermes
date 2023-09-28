@@ -276,11 +276,11 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
 
   /** Destructor */
   ~PutBlobTask() {
-//    HSHM_DESTROY_AR(blob_name_);
-//    HSHM_DESTROY_AR(filename_);
-//    if (IsDataOwner()) {
-//      LABSTOR_CLIENT->FreeBuffer(data_);
-//    }
+    HSHM_DESTROY_AR(blob_name_);
+    HSHM_DESTROY_AR(filename_);
+    if (IsDataOwner()) {
+      LABSTOR_CLIENT->FreeBuffer(data_);
+    }
   }
 
   /** (De)serialize message call */
