@@ -256,6 +256,7 @@ struct Task : public hipc::ShmContainer {
   u32 lane_hash_;              /**< Determine the lane a task is keyed to */
   u32 method_;                 /**< The method to call in the state */
   bitfield32_t task_flags_;    /**< Properties of the task */
+  std::atomic<int> delcnt_ = 0;    /**< # of times deltask called */
   RunContext ctx_;
 
   /**====================================

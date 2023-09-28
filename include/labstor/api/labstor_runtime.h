@@ -135,9 +135,8 @@ class Runtime : public ConfigurationManager {
     mem_mngr->CreateBackend<hipc::PosixShmMmap>(
         server_config_.queue_manager_.shm_size_,
         server_config_.queue_manager_.shm_name_);
-    // hipc::ScalablePageAllocator
     main_alloc_ =
-        mem_mngr->CreateAllocator<hipc::StackAllocator>(
+        mem_mngr->CreateAllocator<hipc::ScalablePageAllocator>(
             server_config_.queue_manager_.shm_name_,
             main_alloc_id_,
             sizeof(LabstorShm));
