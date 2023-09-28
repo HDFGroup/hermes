@@ -160,6 +160,20 @@ class Client : public ConfigurationManager {
     // main_alloc_->DelObjLocal<TaskT>(task);
   }
 
+  /** Destroy a task */
+  template<typename TaskStateT, typename TaskT>
+  HSHM_ALWAYS_INLINE
+  void DelTask(TaskStateT *exec, TaskT *task) {
+    exec->Del(task->method_, task);
+  }
+
+  /** Destroy a task */
+  template<typename TaskStateT, typename TaskT>
+  HSHM_ALWAYS_INLINE
+  void DelTask(TaskStateT *exec, LPointer<TaskT> &task) {
+    exec->Del(task->method_, task);
+  }
+
   /** Get a queue by its ID */
   HSHM_ALWAYS_INLINE
   MultiQueue* GetQueue(const QueueId &queue_id) {

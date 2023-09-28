@@ -67,6 +67,20 @@ def refresh_methods(TASK_ROOT):
     lines += ['  }']
     lines += ['}']
 
+    ## Create the Del method
+    lines += ['/** Delete a task */',
+              'void Del(u32 method, Task *task) override {',
+              '  switch (method) {']
+    for method_enum_name, method_off in methods:
+        method_name = method_enum_name.replace('k', '', 1)
+        task_name = method_name + "Task"
+        lines += [f'    case Method::{method_enum_name}: {{',
+                  f'      LABSTOR_CLIENT->DelTask(reinterpret_cast<{task_name} *>(task));',
+                  f'      break;',
+                  f'    }}']
+    lines += ['  }']
+    lines += ['}']
+
     ## Create the ReplicateStart method
     lines += ['/** Ensure there is space to store replicated outputs */',
               'void ReplicateStart(u32 method, u32 count, Task *task) override {',

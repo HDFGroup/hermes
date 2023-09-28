@@ -38,6 +38,43 @@ void Run(u32 method, Task *task, RunContext &ctx) override {
     }
   }
 }
+/** Delete a task */
+void Del(u32 method, Task *task) override {
+  switch (method) {
+    case Method::kConstruct: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<ConstructTask *>(task));
+      break;
+    }
+    case Method::kDestruct: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<DestructTask *>(task));
+      break;
+    }
+    case Method::kWrite: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<WriteTask *>(task));
+      break;
+    }
+    case Method::kRead: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<ReadTask *>(task));
+      break;
+    }
+    case Method::kAllocate: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<AllocateTask *>(task));
+      break;
+    }
+    case Method::kFree: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<FreeTask *>(task));
+      break;
+    }
+    case Method::kMonitor: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<MonitorTask *>(task));
+      break;
+    }
+    case Method::kUpdateCapacity: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<UpdateCapacityTask *>(task));
+      break;
+    }
+  }
+}
 /** Ensure there is space to store replicated outputs */
 void ReplicateStart(u32 method, u32 count, Task *task) override {
   switch (method) {

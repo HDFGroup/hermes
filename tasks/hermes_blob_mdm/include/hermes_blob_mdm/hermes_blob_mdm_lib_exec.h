@@ -74,6 +74,79 @@ void Run(u32 method, Task *task, RunContext &ctx) override {
     }
   }
 }
+/** Delete a task */
+void Del(u32 method, Task *task) override {
+  switch (method) {
+    case Method::kConstruct: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<ConstructTask *>(task));
+      break;
+    }
+    case Method::kDestruct: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<DestructTask *>(task));
+      break;
+    }
+    case Method::kPutBlob: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<PutBlobTask *>(task));
+      break;
+    }
+    case Method::kGetBlob: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<GetBlobTask *>(task));
+      break;
+    }
+    case Method::kTruncateBlob: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<TruncateBlobTask *>(task));
+      break;
+    }
+    case Method::kDestroyBlob: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<DestroyBlobTask *>(task));
+      break;
+    }
+    case Method::kTagBlob: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<TagBlobTask *>(task));
+      break;
+    }
+    case Method::kBlobHasTag: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<BlobHasTagTask *>(task));
+      break;
+    }
+    case Method::kGetBlobId: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<GetBlobIdTask *>(task));
+      break;
+    }
+    case Method::kGetOrCreateBlobId: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<GetOrCreateBlobIdTask *>(task));
+      break;
+    }
+    case Method::kGetBlobName: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<GetBlobNameTask *>(task));
+      break;
+    }
+    case Method::kGetBlobSize: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<GetBlobSizeTask *>(task));
+      break;
+    }
+    case Method::kGetBlobScore: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<GetBlobScoreTask *>(task));
+      break;
+    }
+    case Method::kGetBlobBuffers: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<GetBlobBuffersTask *>(task));
+      break;
+    }
+    case Method::kRenameBlob: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<RenameBlobTask *>(task));
+      break;
+    }
+    case Method::kReorganizeBlob: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<ReorganizeBlobTask *>(task));
+      break;
+    }
+    case Method::kSetBucketMdm: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<SetBucketMdmTask *>(task));
+      break;
+    }
+  }
+}
 /** Ensure there is space to store replicated outputs */
 void ReplicateStart(u32 method, u32 count, Task *task) override {
   switch (method) {

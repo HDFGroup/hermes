@@ -79,6 +79,9 @@ class TaskLib {
   /** Run a method of the task */
   virtual void Run(u32 method, Task *task, RunContext &ctx) = 0;
 
+  /** Delete a task */
+  virtual void Del(u32 method, Task *task) = 0;
+
   /** Allow task to store replicas of completion */
   virtual void ReplicateStart(u32 method, u32 count, Task *task) = 0;
 

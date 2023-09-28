@@ -26,6 +26,31 @@ void Run(u32 method, Task *task, RunContext &ctx) override {
     }
   }
 }
+/** Delete a task */
+void Del(u32 method, Task *task) override {
+  switch (method) {
+    case Method::kConstruct: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<ConstructTask *>(task));
+      break;
+    }
+    case Method::kDestruct: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<DestructTask *>(task));
+      break;
+    }
+    case Method::kMd: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<MdTask *>(task));
+      break;
+    }
+    case Method::kIo: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<IoTask *>(task));
+      break;
+    }
+    case Method::kMdPush: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<MdPushTask *>(task));
+      break;
+    }
+  }
+}
 /** Ensure there is space to store replicated outputs */
 void ReplicateStart(u32 method, u32 count, Task *task) override {
   switch (method) {

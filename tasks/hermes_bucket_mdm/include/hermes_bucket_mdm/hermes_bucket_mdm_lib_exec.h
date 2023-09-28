@@ -66,6 +66,71 @@ void Run(u32 method, Task *task, RunContext &ctx) override {
     }
   }
 }
+/** Delete a task */
+void Del(u32 method, Task *task) override {
+  switch (method) {
+    case Method::kConstruct: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<ConstructTask *>(task));
+      break;
+    }
+    case Method::kDestruct: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<DestructTask *>(task));
+      break;
+    }
+    case Method::kGetOrCreateTag: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<GetOrCreateTagTask *>(task));
+      break;
+    }
+    case Method::kGetTagId: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<GetTagIdTask *>(task));
+      break;
+    }
+    case Method::kGetTagName: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<GetTagNameTask *>(task));
+      break;
+    }
+    case Method::kRenameTag: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<RenameTagTask *>(task));
+      break;
+    }
+    case Method::kDestroyTag: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<DestroyTagTask *>(task));
+      break;
+    }
+    case Method::kTagAddBlob: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<TagAddBlobTask *>(task));
+      break;
+    }
+    case Method::kTagRemoveBlob: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<TagRemoveBlobTask *>(task));
+      break;
+    }
+    case Method::kTagClearBlobs: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<TagClearBlobsTask *>(task));
+      break;
+    }
+    case Method::kUpdateSize: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<UpdateSizeTask *>(task));
+      break;
+    }
+    case Method::kAppendBlobSchema: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<AppendBlobSchemaTask *>(task));
+      break;
+    }
+    case Method::kAppendBlob: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<AppendBlobTask *>(task));
+      break;
+    }
+    case Method::kGetSize: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<GetSizeTask *>(task));
+      break;
+    }
+    case Method::kSetBlobMdm: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<SetBlobMdmTask *>(task));
+      break;
+    }
+  }
+}
 /** Ensure there is space to store replicated outputs */
 void ReplicateStart(u32 method, u32 count, Task *task) override {
   switch (method) {

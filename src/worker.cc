@@ -64,7 +64,7 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
       HELOG(kFatal, "(node {}) Could not find the task state: {}",
             LABSTOR_CLIENT->node_id_, task->task_state_);
       entry->complete_ = true;
-      EndTask(lane, task, off);
+      EndTask(lane, exec, task, off);
       continue;
     }
     // Attempt to run the task if it's ready and runnable
@@ -110,7 +110,7 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
         ABT_thread_join(entry->thread_);
       }
       RemoveTaskGroup(task, exec, work_entry.lane_id_, is_remote);
-      EndTask(lane, task, off);
+      EndTask(lane, exec, task, off);
     } else {
       off += 1;
     }

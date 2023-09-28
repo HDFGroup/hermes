@@ -42,6 +42,47 @@ void Run(u32 method, Task *task, RunContext &ctx) override {
     }
   }
 }
+/** Delete a task */
+void Del(u32 method, Task *task) override {
+  switch (method) {
+    case Method::kCreateTaskState: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<CreateTaskStateTask *>(task));
+      break;
+    }
+    case Method::kDestroyTaskState: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<DestroyTaskStateTask *>(task));
+      break;
+    }
+    case Method::kRegisterTaskLib: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<RegisterTaskLibTask *>(task));
+      break;
+    }
+    case Method::kDestroyTaskLib: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<DestroyTaskLibTask *>(task));
+      break;
+    }
+    case Method::kGetOrCreateTaskStateId: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<GetOrCreateTaskStateIdTask *>(task));
+      break;
+    }
+    case Method::kGetTaskStateId: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<GetTaskStateIdTask *>(task));
+      break;
+    }
+    case Method::kStopRuntime: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<StopRuntimeTask *>(task));
+      break;
+    }
+    case Method::kSetWorkOrchQueuePolicy: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<SetWorkOrchQueuePolicyTask *>(task));
+      break;
+    }
+    case Method::kSetWorkOrchProcPolicy: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<SetWorkOrchProcPolicyTask *>(task));
+      break;
+    }
+  }
+}
 /** Ensure there is space to store replicated outputs */
 void ReplicateStart(u32 method, u32 count, Task *task) override {
   switch (method) {

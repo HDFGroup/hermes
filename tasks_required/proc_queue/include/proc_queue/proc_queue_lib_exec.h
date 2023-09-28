@@ -18,6 +18,23 @@ void Run(u32 method, Task *task, RunContext &ctx) override {
     }
   }
 }
+/** Delete a task */
+void Del(u32 method, Task *task) override {
+  switch (method) {
+    case Method::kConstruct: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<ConstructTask *>(task));
+      break;
+    }
+    case Method::kDestruct: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<DestructTask *>(task));
+      break;
+    }
+    case Method::kPush: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<PushTask *>(task));
+      break;
+    }
+  }
+}
 /** Ensure there is space to store replicated outputs */
 void ReplicateStart(u32 method, u32 count, Task *task) override {
   switch (method) {
