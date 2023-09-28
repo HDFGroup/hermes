@@ -222,7 +222,7 @@ class Server : public TaskLib {
           // next_placement.size_ += diff;
           HILOG(kFatal, "Ran outta space in this tier -- will fix soon")
         }
-        // LABSTOR_CLIENT->DelTask(alloc_task);
+        LABSTOR_CLIENT->DelTask(alloc_task);
       }
     }
 
@@ -258,7 +258,7 @@ class Server : public TaskLib {
     // Wait for the placements to complete
     for (LPointer<bdev::WriteTask> &write_task : write_tasks) {
       write_task->Wait<TASK_YIELD_CO>(task);
-      // LABSTOR_CLIENT->DelTask(write_task);
+      LABSTOR_CLIENT->DelTask(write_task);
     }
 
     // Update information
@@ -266,19 +266,19 @@ class Server : public TaskLib {
     if (task->flags_.Any(HERMES_IS_FILE)) {
       update_mode = bucket_mdm::UpdateSizeMode::kCap;
     }
-//    bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
-//                             task->tag_id_,
-//                             data_off,
-//                             update_mode);
-//    if (task->flags_.Any(HERMES_BLOB_DID_CREATE)) {
-//      bkt_mdm_.AsyncTagAddBlob(task->task_node_ + 1,
-//                               task->tag_id_,
-//                               task->blob_id_);
-//    }
+    bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
+                             task->tag_id_,
+                             data_off,
+                             update_mode);
+    if (task->flags_.Any(HERMES_BLOB_DID_CREATE)) {
+      bkt_mdm_.AsyncTagAddBlob(task->task_node_ + 1,
+                               task->tag_id_,
+                               task->blob_id_);
+    }
 
     // Free data
     if (task->flags_.Any(HERMES_DID_STAGE_IN)) {
-      // LABSTOR_CLIENT->FreeBuffer(data_ptr);
+      LABSTOR_CLIENT->FreeBuffer(data_ptr);
     }
     task->SetModuleComplete();
   }
