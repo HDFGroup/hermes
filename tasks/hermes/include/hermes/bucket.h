@@ -236,12 +236,12 @@ class Bucket {
                                             blob_id, blob_off, blob.size(), p.shm_, ctx.blob_score_,
                                             flags, ctx, task_flags);
     if constexpr (!ASYNC) {
-//      if (flags.Any(HERMES_GET_BLOB_ID)) {
-//        push_task->Wait();
-//        PutBlobTask *task = push_task->get();
-//        blob_id = task->blob_id_;
-//        LABSTOR_CLIENT->DelTask(push_task);
-//      }
+      if (flags.Any(HERMES_GET_BLOB_ID)) {
+        push_task->Wait();
+        PutBlobTask *task = push_task->get();
+        blob_id = task->blob_id_;
+        // LABSTOR_CLIENT->DelTask(push_task);
+      }
     }
     return blob_id;
   }
