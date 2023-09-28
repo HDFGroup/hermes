@@ -348,7 +348,7 @@ class Worker {
   void EndTask(Lane *lane, TaskState *exec, Task *task, int &off) {
     PopTask(lane, off);
     if (exec && task->IsFireAndForget()) {
-      LABSTOR_CLIENT->DelTask<TaskState>(exec, task);
+      // LABSTOR_CLIENT->DelTask<TaskState>(exec, task);
     } else {
       task->SetComplete();
     }
