@@ -92,14 +92,22 @@ class Client : public ConfigurationManager {
   template<typename TaskT, typename ...Args>
   HSHM_ALWAYS_INLINE
   TaskT* NewEmptyTask(hipc::Pointer &p) {
-    return main_alloc_->NewObj<TaskT>(p, main_alloc_);
+    TaskT *task = main_alloc_->NewObj<TaskT>(p, main_alloc_);
+    if (task == nullptr) {
+      throw std::runtime_error("Could not allocate buffer");
+    }
+    return task;
   }
 
   /** Allocate task */
   template<typename TaskT, typename ...Args>
   HSHM_ALWAYS_INLINE
   hipc::LPointer<TaskT> AllocateTask() {
-    return main_alloc_->AllocateLocalPtr<TaskT>(sizeof(TaskT));
+    hipc::LPointer<TaskT> task = main_alloc_->AllocateLocalPtr<TaskT>(sizeof(TaskT));
+    if (task.ptr_ == nullptr) {
+      throw std::runtime_error("Could not allocate buffer");
+    }
+    return task;
   }
 
   /** Construct task */
