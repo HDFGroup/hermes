@@ -50,7 +50,7 @@ class Server : public TaskLib {
   }
 
   /** Handle output from replica PUSH */
-  static void HandlePushReplicaOutput(int replica, std::string &ret, PushTask *task) {
+  static void ClientHandlePushReplicaOutput(int replica, std::string &ret, PushTask *task) {
     std::vector<DataTransfer> xfer(1);
     xfer[0].data_ = ret.data();
     xfer[0].data_size_ = ret.size();
@@ -64,13 +64,13 @@ class Server : public TaskLib {
   }
 
   /** Handle finalization of PUSH replicate */
-  static void HandlePushReplicaEnd(PushTask *task) {
+  static void ClientHandlePushReplicaEnd(PushTask *task) {
     task->exec_->ReplicateEnd(task->orig_task_->method_, task->orig_task_);
-    task->orig_task_->SetModuleComplete();
     HILOG(kDebug, "Completing task (task_node={}, task_state={}, method={})",
           task->orig_task_->task_node_,
           task->orig_task_->task_state_,
           task->orig_task_->method_);
+    task->orig_task_->SetModuleComplete();
     task->SetModuleComplete();
   }
 
@@ -98,7 +98,7 @@ class Server : public TaskLib {
             task->orig_task_->method_,
             LABSTOR_CLIENT->node_id_,
             domain_id.id_);
-      HandlePushReplicaOutput(replica, ret, task);
+      ClientHandlePushReplicaOutput(replica, ret, task);
     }
   }
 
@@ -139,7 +139,7 @@ class Server : public TaskLib {
             LABSTOR_CLIENT->node_id_,
             domain_id.id_,
             static_cast<int>(io_type));
-      HandlePushReplicaOutput(replica, ret, task);
+      ClientHandlePushReplicaOutput(replica, ret, task);
     }
   }
 
@@ -159,7 +159,7 @@ class Server : public TaskLib {
         HELOG(kFatal, "The task {}/{} does not support remote calls", task->task_state_, task->method_);
       }
     }
-    HandlePushReplicaEnd(task);
+    ClientHandlePushReplicaEnd(task);
   }
 
  private:
