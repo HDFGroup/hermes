@@ -145,8 +145,6 @@ class Client : public ConfigurationManager {
       HELOG(kFatal, "Freed task {} times: node={}, state={}. method={}",
             task->delcnt_.load(), task->task_node_, task->task_state_, task->method_)
     }
-    HILOG(kInfo, "Freeing task_node={} task_state={} task_method={}",
-          task->task_node_, task->task_state_, task->method_)
     main_alloc_->DelObj<TaskT>(task);
   }
 
@@ -159,7 +157,7 @@ class Client : public ConfigurationManager {
       HELOG(kFatal, "Freed task {} times: node={}, state={}. method={}",
             task->delcnt_.load(), task->task_node_, task->task_state_, task->method_)
     }
-    // main_alloc_->DelObjLocal<TaskT>(task);
+    main_alloc_->DelObjLocal<TaskT>(task);
   }
 
   /** Destroy a task */
