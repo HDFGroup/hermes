@@ -145,7 +145,7 @@ class Client : public ConfigurationManager {
       HELOG(kFatal, "Freed task {} times: node={}, state={}. method={}",
             task->delcnt_.load(), task->task_node_, task->task_state_, task->method_)
     }
-    // main_alloc_->DelObj<TaskT>(task);
+    main_alloc_->DelObj<TaskT>(task);
   }
 
   /** Destroy a task */
