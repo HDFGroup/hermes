@@ -222,7 +222,7 @@ class Server : public TaskLib {
           // next_placement.size_ += diff;
           HILOG(kFatal, "Ran outta space in this tier -- will fix soon")
         }
-        LABSTOR_CLIENT->DelTask(alloc_task);
+        // LABSTOR_CLIENT->DelTask(alloc_task);
       }
     }
 
