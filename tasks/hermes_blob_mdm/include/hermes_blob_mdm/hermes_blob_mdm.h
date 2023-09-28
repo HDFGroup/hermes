@@ -44,7 +44,7 @@ class Client : public TaskLibClient {
     if (task->IsComplete()) {
       id_ = task->id_;
       queue_id_ = QueueId(id_);
-      // LABSTOR_CLIENT->DelTask(task);
+      LABSTOR_CLIENT->DelTask(task);
     }
   }
   LABSTOR_TASK_NODE_ROOT(AsyncCreate);
