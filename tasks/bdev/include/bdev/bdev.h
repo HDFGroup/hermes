@@ -55,7 +55,7 @@ class Client : public TaskLibClient {
       id_ = task->id_;
       queue_id_ = QueueId(id_);
       monitor_task_ = AsyncMonitor(task->task_node_, 100).ptr_;
-      // LABSTOR_CLIENT->DelTask(task);
+      LABSTOR_CLIENT->DelTask(task);
     }
   }
   LABSTOR_TASK_NODE_ROOT(AsyncCreateTaskState);

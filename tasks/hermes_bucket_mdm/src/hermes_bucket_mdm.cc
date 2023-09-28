@@ -181,7 +181,7 @@ class Server : public TaskLib {
           LABSTOR_CLIENT->DelTask(append.put_task_);
         }
         HSHM_DESTROY_AR(task->schema_->append_info_);
-        // LABSTOR_CLIENT->DelTask(task->schema_);
+        LABSTOR_CLIENT->DelTask(task->schema_);
         task->SetModuleComplete();
       }
     }

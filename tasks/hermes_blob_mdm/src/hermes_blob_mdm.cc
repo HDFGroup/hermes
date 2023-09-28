@@ -282,7 +282,7 @@ class Server : public TaskLib {
       sub_plcmnt.size_ += diff;
       HILOG(kDebug, "Passing {} bytes to target {}", diff, sub_plcmnt.tid_);
     }
-    // LABSTOR_CLIENT->DelTask(task->cur_bdev_alloc_);
+    LABSTOR_CLIENT->DelTask(task->cur_bdev_alloc_);
     if (task->plcmnt_idx_ < (*task->schema_).size()) {
       task->phase_ = PutBlobPhase::kAllocate;
       return;
@@ -686,7 +686,7 @@ class Server : public TaskLib {
         if (!task->get_task_->IsComplete()) {
           return;
         }
-        // LABSTOR_CLIENT->DelTask(task->get_task_);
+        LABSTOR_CLIENT->DelTask(task->get_task_);
         task->phase_ = ReorganizeBlobPhase::kPut;
       }
       case ReorganizeBlobPhase::kPut: {
