@@ -258,7 +258,7 @@ class Server : public TaskLib {
     // Wait for the placements to complete
     for (LPointer<bdev::WriteTask> &write_task : write_tasks) {
       write_task->Wait<TASK_YIELD_CO>(task);
-      LABSTOR_CLIENT->DelTask(write_task);
+      // LABSTOR_CLIENT->DelTask(write_task);
     }
 
     // Update information
@@ -278,7 +278,7 @@ class Server : public TaskLib {
 
     // Free data
     if (task->flags_.Any(HERMES_DID_STAGE_IN)) {
-      LABSTOR_CLIENT->FreeBuffer(data_ptr);
+      // LABSTOR_CLIENT->FreeBuffer(data_ptr);
     }
     task->SetModuleComplete();
   }
@@ -288,7 +288,7 @@ class Server : public TaskLib {
     for (BufferInfo &buf : blob_info.buffers_) {
       TargetInfo &target = *target_map_[buf.tid_];
       std::vector<BufferInfo> buf_vec = {buf};
-      target.AsyncFree(task->task_node_ + 1, std::move(buf_vec), true);
+      // target.AsyncFree(task->task_node_ + 1, std::move(buf_vec), true);
     }
     blob_info.buffers_.clear();
     blob_info.max_blob_size_ = 0;
