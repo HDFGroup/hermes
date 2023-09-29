@@ -23,16 +23,16 @@ install(
         TARGETS
         hermes_fs_base
         EXPORT
-        ${LABSTOR_EXPORTED_TARGETS}
-        LIBRARY DESTINATION ${LABSTOR_INSTALL_LIB_DIR}
-        ARCHIVE DESTINATION ${LABSTOR_INSTALL_LIB_DIR}
-        RUNTIME DESTINATION ${LABSTOR_INSTALL_BIN_DIR}
+        ${HERMES_EXPORTED_TARGETS}
+        LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
+        ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
+        RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR}
 )
 install(
         FILES
         filesystem_io_client.h
         DESTINATION
-        ${LABSTOR_INSTALL_INCLUDE_DIR}
+        ${HERMES_INSTALL_INCLUDE_DIR}
         COMPONENT
         headers
 )
@@ -40,21 +40,21 @@ install(
 #-----------------------------------------------------------------------------
 # Export all exported targets to the build tree for use by parent project
 #-----------------------------------------------------------------------------
-set(LABSTOR_EXPORTED_LIBS
+set(HERMES_EXPORTED_LIBS
         hermes_fs_base
-        ${LABSTOR_EXPORTED_LIBS})
-if(NOT LABSTOR_EXTERNALLY_CONFIGURED)
+        ${HERMES_EXPORTED_LIBS})
+if(NOT HERMES_EXTERNALLY_CONFIGURED)
 EXPORT (
         TARGETS
-        ${LABSTOR_EXPORTED_LIBS}
+        ${HERMES_EXPORTED_LIBS}
         FILE
-        ${LABSTOR_EXPORTED_TARGETS}.cmake
+        ${HERMES_EXPORTED_TARGETS}.cmake
 )
 endif()
 
 #-----------------------------------------------------------------------------
 # Add Target(s) to Coverage
 #-----------------------------------------------------------------------------
-if(LABSTOR_ENABLE_COVERAGE)
+if(HERMES_ENABLE_COVERAGE)
     set_coverage_flags(hermes_fs_base)
 endif()

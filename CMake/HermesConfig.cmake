@@ -1,26 +1,26 @@
-# Find labstor header and library.
+# Find Hermes header and library.
 #
 
 # This module defines the following uncached variables:
-#  Labstor_FOUND, if false, do not try to use labstor.
-#  Labstor_INCLUDE_DIRS, where to find labstor.h.
-#  Labstor_LIBRARIES, the libraries to link against to use the labstor library
-#  Labstor_LIBRARY_DIRS, the directory where the labstor library is found.
+#  Hermes_FOUND, if false, do not try to use Hermes.
+#  Hermes_INCLUDE_DIRS, where to find Hermes.h.
+#  Hermes_LIBRARIES, the libraries to link against to use the Hermes library
+#  Hermes_LIBRARY_DIRS, the directory where the Hermes library is found.
 
 find_path(
-  Labstor_INCLUDE_DIR
-        labstor/labstor_types.h
+  Hermes_INCLUDE_DIR
+        Hermes/Hermes_types.h
 )
 
-if( Labstor_INCLUDE_DIR )
-  get_filename_component(Labstor_DIR ${Labstor_INCLUDE_DIR} PATH)
+if( Hermes_INCLUDE_DIR )
+  get_filename_component(Hermes_DIR ${Hermes_INCLUDE_DIR} PATH)
 
   #-----------------------------------------------------------------------------
-  # Find all packages needed by labstor
+  # Find all packages needed by Hermes
   #-----------------------------------------------------------------------------
   find_library(
-    Labstor_LIBRARY
-    NAMES labstor_client labstor_runtime
+    Hermes_LIBRARY
+    NAMES Hermes_client Hermes_runtime
   )
 
   # HermesShm
@@ -56,29 +56,30 @@ if( Labstor_INCLUDE_DIR )
   #-----------------------------------------------------------------------------
   # Mark hermes as found and set all needed packages
   #-----------------------------------------------------------------------------
-  if( Labstor_LIBRARY )
-    set(Labstor_LIBRARY_DIR "")
-    get_filename_component(Labstor_LIBRARY_DIRS ${Labstor_LIBRARY} PATH)
+  if( Hermes_LIBRARY )
+    set(Hermes_LIBRARY_DIR "")
+    get_filename_component(Hermes_LIBRARY_DIRS ${Hermes_LIBRARY} PATH)
     # Set uncached variables as per standard.
-    set(Labstor_FOUND ON)
-    set(Labstor_INCLUDE_DIRS ${Labstor_INCLUDE_DIR})
-    set(Labstor_LIBRARIES
+    set(Hermes_FOUND ON)
+    set(Hermes_INCLUDE_DIRS ${Hermes_INCLUDE_DIR})
+    set(Hermes_LIBRARIES
             ${HermesShm_LIBRARIES}
             yaml-cpp
             cereal::cereal
-            -ldl -lrt -lc -pthread ${Labstor_LIBRARY})
-  endif(Labstor_LIBRARY)
+            -ldl -lrt -lc -pthread ${Hermes_LIBRARY})
+    set(Hermes_CLIENT_LIBRARIES ${Hermes_LIBRARIES})
+  endif(Hermes_LIBRARY)
 
-else(Labstor_INCLUDE_DIR)
-  message(STATUS "FindLabstor: Could not find labstor.h")
-endif(Labstor_INCLUDE_DIR)
+else(Hermes_INCLUDE_DIR)
+  message(STATUS "FindHermes: Could not find Hermes.h")
+endif(Hermes_INCLUDE_DIR)
 	    
-if(Labstor_FOUND)
-  if(NOT Labstor_FIND_QUIETLY)
-    message(STATUS "FindLabstor: Found both labstor.h and liblabstor_client.so")
-  endif(NOT Labstor_FIND_QUIETLY)
-else(Labstor_FOUND)
-  if(Labstor_FIND_REQUIRED)
-    message(STATUS "FindLabstor: Could not find labstor.h and/or liblabstor_client.so")
-  endif(Labstor_FIND_REQUIRED)
-endif(Labstor_FOUND)
+if(Hermes_FOUND)
+  if(NOT Hermes_FIND_QUIETLY)
+    message(STATUS "FindHermes: Found both Hermes.h and libHermes_client.so")
+  endif(NOT Hermes_FIND_QUIETLY)
+else(Hermes_FOUND)
+  if(Hermes_FIND_REQUIRED)
+    message(STATUS "FindHermes: Could not find Hermes.h and/or libHermes_client.so")
+  endif(Hermes_FIND_REQUIRED)
+endif(Hermes_FOUND)

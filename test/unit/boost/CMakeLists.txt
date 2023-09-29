@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(labstor)
+project(hermes)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -13,9 +13,9 @@ add_executable(test_boost_exec
         test_boost.cc
 )
 add_dependencies(test_boost_exec
-        ${Labstor_RUNTIME_DEPS} hermes)
+        ${Hermes_RUNTIME_DEPS} hermes)
 target_link_libraries(test_boost_exec
-        ${Labstor_RUNTIME_LIBRARIES} Catch2::Catch2 MPI::MPI_CXX)
+        ${Hermes_RUNTIME_LIBRARIES} Catch2::Catch2 MPI::MPI_CXX)
 
 #------------------------------------------------------------------------------
 # Test Cases
@@ -30,14 +30,14 @@ add_test(NAME test_boost COMMAND
 install(TARGETS
         test_boost_exec
         EXPORT
-        ${LABSTOR_EXPORTED_TARGETS}
-        LIBRARY DESTINATION ${LABSTOR_INSTALL_LIB_DIR}
-        ARCHIVE DESTINATION ${LABSTOR_INSTALL_LIB_DIR}
-        RUNTIME DESTINATION ${LABSTOR_INSTALL_BIN_DIR})
+        ${HERMES_EXPORTED_TARGETS}
+        LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
+        ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
+        RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR})
 
 #-----------------------------------------------------------------------------
 # Coverage
 #-----------------------------------------------------------------------------
-if(LABSTOR_ENABLE_COVERAGE)
+if(HERMES_ENABLE_COVERAGE)
     set_coverage_flags(test_boost_exec)
 endif()
