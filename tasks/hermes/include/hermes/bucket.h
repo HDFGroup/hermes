@@ -269,7 +269,7 @@ class Bucket {
   BlobId Put(const std::string &blob_name,
              const T &blob,
              Context &ctx) {
-    if (std::is_same_v<T, Blob>) {
+    if constexpr(std::is_same_v<T, Blob>) {
       return BasePut<false, false>(blob_name, BlobId::GetNull(), blob, 0, ctx);
     } else {
       return SrlBasePut<T, false, false>(blob_name, BlobId::GetNull(), blob, ctx);
@@ -283,7 +283,7 @@ class Bucket {
   BlobId Put(const BlobId &blob_id,
              const T &blob,
              Context &ctx) {
-    if (std::is_same_v<T, Blob>) {
+    if constexpr(std::is_same_v<T, Blob>) {
       return BasePut<false, false>("", blob_id, blob, 0, ctx);
     } else {
       return SrlBasePut<T, false, false>("", blob_id, blob, ctx);
@@ -447,11 +447,12 @@ class Bucket {
                     const BlobId &orig_blob_id,
                     T &data,
                     Context &ctx) {
-    std::stringstream ss;
+    Blob blob;
+    BlobId blob_id = BaseGet(blob_name, orig_blob_id, blob, 0, ctx);
+    std::stringstream ss(std::string(blob.data(), blob.size()));
     cereal::BinaryInputArchive ar(ss);
     ar >> data;
-    Blob blob(ss.str());
-    return BaseGet(blob_name, orig_blob_id, blob, 0, ctx);
+    return blob_id;
   }
 
   /**
@@ -461,7 +462,7 @@ class Bucket {
   BlobId Get(const std::string &blob_name,
              T &blob,
              Context &ctx) {
-    if (std::is_same_v<T, Blob>) {
+    if constexpr(std::is_same_v<T, Blob>) {
       return BaseGet(blob_name, BlobId::GetNull(), blob, 0, ctx);
     } else {
       return SrlBaseGet<T>(blob_name, BlobId::GetNull(), blob, ctx);
@@ -475,7 +476,7 @@ class Bucket {
   BlobId Get(const BlobId &blob_id,
              T &blob,
              Context &ctx) {
-    if (std::is_same_v<T, Blob>) {
+    if constexpr(std::is_same_v<T, Blob>) {
       return BaseGet("", blob_id, blob, 0, ctx);
     } else {
       return SrlBaseGet<T>("", blob_id, blob, ctx);

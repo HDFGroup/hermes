@@ -163,6 +163,37 @@ TEST_CASE("TestHermesPartialPutGet") {
   }
 }
 
+TEST_CASE("TestHermesSerializedPutGet") {
+  int rank, nprocs;
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+
+  // Initialize Hermes on all nodes
+  HERMES->ClientInit();
+
+  // Create a bucket
+  hermes::Context ctx;
+  hermes::Bucket bkt("hello");
+
+  size_t count_per_proc = 4;
+  size_t off = rank * count_per_proc;
+  size_t proc_count = off + count_per_proc;
+  for (int rep = 0; rep < 4; ++rep) {
+    for (size_t i = off; i < proc_count; ++i) {
+      HILOG(kInfo, "Iteration: {} with blob name {}", i, std::to_string(i));
+      // Put a blob
+      std::vector<int> data(1024, i);
+      hermes::BlobId blob_id = bkt.Put(std::to_string(i), data, ctx);
+      HILOG(kInfo, "(iteration {}) Using BlobID: {}", i, blob_id);
+      // Get a blob
+      std::vector<int> data2(1024, i);
+      bkt.Get(blob_id, data2, ctx);
+      REQUIRE(data == data2);
+    }
+  }
+}
+
 TEST_CASE("TestHermesBlobDestroy") {
   int rank, nprocs;
   MPI_Barrier(MPI_COMM_WORLD);
