@@ -20,7 +20,7 @@ if( Hermes_INCLUDE_DIR )
   #-----------------------------------------------------------------------------
   find_library(
     Hermes_LIBRARY
-    NAMES Hermes_client Hermes_runtime
+    NAMES labstor_client labstor_runtime
   )
 
   # HermesShm
