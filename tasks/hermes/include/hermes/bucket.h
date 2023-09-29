@@ -434,7 +434,7 @@ class Bucket {
     blob_id = task->blob_id_;
     char *data = LABSTOR_CLIENT->GetPrivatePointer(task->data_);
     memcpy(blob.data(), data, data_size);
-    // LABSTOR_CLIENT->FreeBuffer(task->data_);
+    LABSTOR_CLIENT->FreeBuffer(task->data_);
     LABSTOR_CLIENT->DelTask(push_task);
     return blob_id;
   }

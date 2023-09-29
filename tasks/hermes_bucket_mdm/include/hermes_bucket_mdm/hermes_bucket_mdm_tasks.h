@@ -317,9 +317,9 @@ struct AppendBlobTask : public Task, TaskFlags<TF_LOCAL> {
 
   /** Destructor */
   ~AppendBlobTask() {
-//    if (IsDataOwner()) {
-//      LABSTOR_CLIENT->FreeBuffer(data_);
-//    }
+    if (IsDataOwner()) {
+      LABSTOR_CLIENT->FreeBuffer(data_);
+    }
   }
 
    /** Create group */
