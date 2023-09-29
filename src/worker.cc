@@ -70,6 +70,12 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
     // Attempt to run the task if it's ready and runnable
     bool is_remote = task->domain_id_.IsRemote(LABSTOR_RPC->GetNumHosts(), LABSTOR_CLIENT->node_id_);
     if (!task->IsRunDisabled() && CheckTaskGroup(task, exec, work_entry.lane_id_, task->task_node_, is_remote)) {
+      // TODO(llogan): Make a remote debug macro
+      if (task->task_state_ != LABSTOR_QM_CLIENT->admin_task_state_ &&
+          !task->task_flags_.Any(TASK_REMOTE_DEBUG_MARK)) {
+        is_remote = true;
+        task->task_flags_.SetBits(TASK_REMOTE_DEBUG_MARK);
+      }
       // Execute or schedule task
       if (is_remote) {
         auto ids = LABSTOR_RUNTIME->ResolveDomainId(task->domain_id_);

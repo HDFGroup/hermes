@@ -49,6 +49,8 @@ class TaskLib;
 #define TASK_COROUTINE BIT_OPT(u32, 16)
 /** This task uses argobot wait */
 #define TASK_PREEMPTIVE BIT_OPT(u32, 17)
+/** This task is apart of remote debugging */
+#define TASK_REMOTE_DEBUG_MARK BIT_OPT(u32, 18)
 
 /** Used to define task methods */
 #define TASK_METHOD_T static inline const u32
