@@ -215,6 +215,7 @@ constexpr inline void CALL_REPLICA_END(T *task) {
 template<u32 FLAGS>
 struct TaskFlags : public IsTask {
  public:
+  TASK_FLAG_T IS_LOCAL = FLAGS & TF_LOCAL;
   TASK_FLAG_T SUPPORTS_SRL = FLAGS & (TF_SRL_SYM | TF_SRL_ASYM);
   TASK_FLAG_T SRL_SYM_START = FLAGS & TF_SRL_SYM_START;
   TASK_FLAG_T SRL_SYM_END = FLAGS & TF_SRL_SYM_END;
@@ -373,6 +374,11 @@ struct Task : public hipc::ShmContainer {
   /** Set this task as blocking */
   HSHM_ALWAYS_INLINE bool IsCoroutine() {
     return task_flags_.Any(TASK_COROUTINE);
+  }
+
+  /** Set this task as blocking */
+  HSHM_ALWAYS_INLINE void UnsetCoroutine() {
+    task_flags_.UnsetBits(TASK_COROUTINE);
   }
 
   /** Set this task as blocking */

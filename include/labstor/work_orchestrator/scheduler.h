@@ -34,7 +34,7 @@ struct ScheduleTask : public Task, TaskFlags<TF_LOCAL> {
     prio_ = TaskPrio::kLongRunning;
     task_state_ = state_id;
     method_ = SchedulerMethod::kSchedule;
-    task_flags_.SetBits(TASK_LONG_RUNNING);
+    task_flags_.SetBits(TASK_LONG_RUNNING | TASK_REMOTE_DEBUG_MARK);
     domain_id_ = domain_id;
 
     // Custom params

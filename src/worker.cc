@@ -72,16 +72,19 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
     if (!task->IsRunDisabled() && CheckTaskGroup(task, exec, work_entry.lane_id_, task->task_node_, is_remote)) {
       // TODO(llogan): Make a remote debug macro
       if (task->task_state_ != LABSTOR_QM_CLIENT->admin_task_state_ &&
-          !task->task_flags_.Any(TASK_REMOTE_DEBUG_MARK)) {
+          !task->task_flags_.Any(TASK_REMOTE_DEBUG_MARK) &&
+          task->method_ != TaskMethod::kConstruct &&
+          LABSTOR_RUNTIME->remote_created_) {
         is_remote = true;
-        task->task_flags_.SetBits(TASK_REMOTE_DEBUG_MARK);
       }
+      task->task_flags_.SetBits(TASK_REMOTE_DEBUG_MARK);
       // Execute or schedule task
       if (is_remote) {
         auto ids = LABSTOR_RUNTIME->ResolveDomainId(task->domain_id_);
         LABSTOR_REMOTE_QUEUE->Disperse(task, exec, ids);
         task->DisableRun();
         task->SetUnordered();
+        task->UnsetCoroutine();
       } else if (task->IsCoroutine()) {
         if (!task->IsStarted()) {
           ctx.stack_ptr_ = malloc(ctx.stack_size_);
@@ -89,6 +92,7 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
             HILOG(kFatal, "The stack pointer of size {} is NULL",
                   ctx.stack_size_, ctx.stack_ptr_);
           }
+          HILOG(kInfo, "Allocated {}", (size_t)ctx.stack_ptr_)
           ctx.jmp_.fctx = bctx::make_fcontext(
               (char*)ctx.stack_ptr_ + ctx.stack_size_,
               ctx.stack_size_, &RunBlocking);
@@ -111,7 +115,8 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
       entry->complete_ = true;
       if (task->IsCoroutine()) {
         // TODO(llogan): verify leak
-        free(ctx.stack_ptr_);
+        HILOG(kInfo, "Freeing {}", (size_t)ctx.stack_ptr_)
+        // free(ctx.stack_ptr_);
       } else if (task->IsPreemptive()) {
         ABT_thread_join(entry->thread_);
       }

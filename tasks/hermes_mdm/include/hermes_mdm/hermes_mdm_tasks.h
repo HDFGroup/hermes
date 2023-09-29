@@ -47,7 +47,7 @@ struct ConstructTask : public CreateTaskStateTask {
   /** Destructor */
   HSHM_ALWAYS_INLINE
   ~ConstructTask() {
-    // HSHM_DESTROY_AR(server_config_path_);
+    HSHM_DESTROY_AR(server_config_path_);
   }
 
   /** (De)serialize message call */

@@ -356,7 +356,7 @@ class Server : public TaskLib {
     for (bdev::ReadTask *&read_task : read_tasks) {
       LABSTOR_CLIENT->DelTask(read_task);
     }
-    // HSHM_DESTROY_AR(task->bdev_reads_);
+    HSHM_DESTROY_AR(task->bdev_reads_);
     HILOG(kDebug, "GetBlobTask complete");
     task->SetModuleComplete();
   }
@@ -583,7 +583,7 @@ class Server : public TaskLib {
                                  task->tag_id_,
                                  -(ssize_t)blob_info.blob_size_,
                                  bucket_mdm::UpdateSizeMode::kAdd);
-        // HSHM_DESTROY_AR(task->free_tasks_);
+        HSHM_DESTROY_AR(task->free_tasks_);
         blob_map.erase(task->blob_id_);
         task->SetModuleComplete();
       }

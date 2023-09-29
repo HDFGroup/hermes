@@ -303,7 +303,7 @@ struct AppendBlobTask : public Task, TaskFlags<TF_LOCAL> {
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kAppendBlob;
-    task_flags_.SetBits(TASK_LOW_LATENCY | TASK_FIRE_AND_FORGET | TASK_DATA_OWNER | TASK_UNORDERED);
+    task_flags_.SetBits(TASK_LOW_LATENCY | TASK_FIRE_AND_FORGET | TASK_DATA_OWNER | TASK_UNORDERED | TASK_REMOTE_DEBUG_MARK);
     domain_id_ = domain_id;
 
     // Custom params
@@ -375,8 +375,8 @@ struct GetOrCreateTagTask : public Task, TaskFlags<TF_SRL_SYM> {
 
   /** Destructor */
   ~GetOrCreateTagTask() {
-    // HSHM_DESTROY_AR(tag_name_)
-    // HSHM_DESTROY_AR(traits_)
+    HSHM_DESTROY_AR(tag_name_)
+    HSHM_DESTROY_AR(traits_)
   }
 
   /** (De)serialize message call */
@@ -432,7 +432,7 @@ struct GetTagIdTask : public Task, TaskFlags<TF_SRL_SYM> {
 
   /** Destructor */
   ~GetTagIdTask() {
-    // HSHM_DESTROY_AR(tag_name_)
+    HSHM_DESTROY_AR(tag_name_)
   }
 
   /** (De)serialize message call */
@@ -488,7 +488,7 @@ struct GetTagNameTask : public Task, TaskFlags<TF_SRL_SYM> {
 
   /** Destructor */
   ~GetTagNameTask() {
-    // HSHM_DESTROY_AR(tag_name_)
+    HSHM_DESTROY_AR(tag_name_)
   }
 
   /** (De)serialize message call */
@@ -547,7 +547,7 @@ struct RenameTagTask : public Task, TaskFlags<TF_SRL_SYM> {
 
   /** Destructor */
   ~RenameTagTask() {
-    // HSHM_DESTROY_AR(tag_name_)
+    HSHM_DESTROY_AR(tag_name_)
   }
 
   /** (De)serialize message call */
