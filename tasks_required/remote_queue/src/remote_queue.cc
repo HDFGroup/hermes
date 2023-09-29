@@ -278,7 +278,7 @@ class Server : public TaskLib {
           orig_task->task_state_,
           state_id,
           method);
-    // LABSTOR_CLIENT->DelTask(exec, orig_task);
+    LABSTOR_CLIENT->DelTask(exec, orig_task);
     if (out_xfer.size() > 0 && out_xfer[0].data_size_ > 0) {
       req.respond(std::string((char *) out_xfer[0].data_, out_xfer[0].data_size_));
     } else {
