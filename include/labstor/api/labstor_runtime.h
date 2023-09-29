@@ -33,6 +33,7 @@ class Runtime : public ConfigurationManager {
   remote_queue::Client remote_queue_;
   RpcContext rpc_;
   ThalliumRpc thallium_;
+  bool remote_created_ = false;
 
  public:
   /** Default constructor */
@@ -121,6 +122,7 @@ class Runtime : public ConfigurationManager {
     task_registry_.RegisterTaskLib("remote_queue");
     remote_queue_.CreateRoot(DomainId::GetLocal(), "remote_queue",
                              LABSTOR_CLIENT->MakeTaskStateId());
+    remote_created_ = true;
   }
 
  public:

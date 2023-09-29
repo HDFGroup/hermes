@@ -64,18 +64,29 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
       HELOG(kFatal, "(node {}) Could not find the task state: {}",
             LABSTOR_CLIENT->node_id_, task->task_state_);
       entry->complete_ = true;
-      EndTask(lane, task, off);
+      EndTask(lane, exec, task, off);
       continue;
     }
     // Attempt to run the task if it's ready and runnable
     bool is_remote = task->domain_id_.IsRemote(LABSTOR_RPC->GetNumHosts(), LABSTOR_CLIENT->node_id_);
     if (!task->IsRunDisabled() && CheckTaskGroup(task, exec, work_entry.lane_id_, task->task_node_, is_remote)) {
+      // TODO(llogan): Make a remote debug macro
+#ifdef REMOTE_DEBUG
+      if (task->task_state_ != LABSTOR_QM_CLIENT->admin_task_state_ &&
+          !task->task_flags_.Any(TASK_REMOTE_DEBUG_MARK) &&
+          task->method_ != TaskMethod::kConstruct &&
+          LABSTOR_RUNTIME->remote_created_) {
+        is_remote = true;
+      }
+      task->task_flags_.SetBits(TASK_REMOTE_DEBUG_MARK);
+#endif
       // Execute or schedule task
       if (is_remote) {
         auto ids = LABSTOR_RUNTIME->ResolveDomainId(task->domain_id_);
         LABSTOR_REMOTE_QUEUE->Disperse(task, exec, ids);
         task->DisableRun();
         task->SetUnordered();
+        task->UnsetCoroutine();
       } else if (task->IsCoroutine()) {
         if (!task->IsStarted()) {
           ctx.stack_ptr_ = malloc(ctx.stack_size_);
@@ -105,12 +116,12 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
       entry->complete_ = true;
       if (task->IsCoroutine()) {
         // TODO(llogan): verify leak
-        // free(ctx.stack_ptr_);
+        free(ctx.stack_ptr_);
       } else if (task->IsPreemptive()) {
         ABT_thread_join(entry->thread_);
       }
       RemoveTaskGroup(task, exec, work_entry.lane_id_, is_remote);
-      EndTask(lane, task, off);
+      EndTask(lane, exec, task, off);
     } else {
       off += 1;
     }

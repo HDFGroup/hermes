@@ -224,15 +224,6 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
   IN hipc::ShmArchive<hipc::charbuf> filename_;
   IN size_t page_size_;
 
-  TEMP int phase_ = PutBlobPhase::kCreate;
-  TEMP int plcmnt_idx_ = 0;
-  TEMP int sub_plcmnt_idx_ = 0;
-  TEMP LPointer<char> data_ptr_;
-  TEMP size_t data_off_;
-  TEMP hermes::bdev::AllocateTask *cur_bdev_alloc_;
-  TEMP hipc::ShmArchive<std::vector<PlacementSchema>> schema_;
-  TEMP hipc::ShmArchive<std::vector<hermes::bdev::WriteTask*>> bdev_writes_;
-
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
   PutBlobTask(hipc::Allocator *alloc) : Task(alloc) {}
@@ -259,6 +250,7 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     task_state_ = state_id;
     method_ = Method::kPutBlob;
     task_flags_ = task_flags;
+    task_flags_.SetBits(TASK_COROUTINE);
     if (!blob_id.IsNull()) {
       lane_hash_ = blob_id.hash_;
       domain_id_ = domain_id;

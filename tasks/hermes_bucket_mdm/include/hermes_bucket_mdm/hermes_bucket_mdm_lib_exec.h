@@ -66,6 +66,71 @@ void Run(u32 method, Task *task, RunContext &ctx) override {
     }
   }
 }
+/** Delete a task */
+void Del(u32 method, Task *task) override {
+  switch (method) {
+    case Method::kConstruct: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<ConstructTask *>(task));
+      break;
+    }
+    case Method::kDestruct: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<DestructTask *>(task));
+      break;
+    }
+    case Method::kGetOrCreateTag: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<GetOrCreateTagTask *>(task));
+      break;
+    }
+    case Method::kGetTagId: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<GetTagIdTask *>(task));
+      break;
+    }
+    case Method::kGetTagName: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<GetTagNameTask *>(task));
+      break;
+    }
+    case Method::kRenameTag: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<RenameTagTask *>(task));
+      break;
+    }
+    case Method::kDestroyTag: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<DestroyTagTask *>(task));
+      break;
+    }
+    case Method::kTagAddBlob: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<TagAddBlobTask *>(task));
+      break;
+    }
+    case Method::kTagRemoveBlob: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<TagRemoveBlobTask *>(task));
+      break;
+    }
+    case Method::kTagClearBlobs: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<TagClearBlobsTask *>(task));
+      break;
+    }
+    case Method::kUpdateSize: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<UpdateSizeTask *>(task));
+      break;
+    }
+    case Method::kAppendBlobSchema: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<AppendBlobSchemaTask *>(task));
+      break;
+    }
+    case Method::kAppendBlob: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<AppendBlobTask *>(task));
+      break;
+    }
+    case Method::kGetSize: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<GetSizeTask *>(task));
+      break;
+    }
+    case Method::kSetBlobMdm: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<SetBlobMdmTask *>(task));
+      break;
+    }
+  }
+}
 /** Ensure there is space to store replicated outputs */
 void ReplicateStart(u32 method, u32 count, Task *task) override {
   switch (method) {
@@ -267,78 +332,78 @@ TaskPointer LoadStart(u32 method, BinaryInputArchive<true> &ar) override {
   TaskPointer task_ptr;
   switch (method) {
     case Method::kConstruct: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<ConstructTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<ConstructTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<ConstructTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<ConstructTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kDestruct: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<DestructTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<DestructTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<DestructTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<DestructTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kGetOrCreateTag: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<GetOrCreateTagTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<GetOrCreateTagTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<GetOrCreateTagTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<GetOrCreateTagTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kGetTagId: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<GetTagIdTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<GetTagIdTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<GetTagIdTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<GetTagIdTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kGetTagName: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<GetTagNameTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<GetTagNameTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<GetTagNameTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<GetTagNameTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kRenameTag: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<RenameTagTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<RenameTagTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<RenameTagTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<RenameTagTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kDestroyTag: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<DestroyTagTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<DestroyTagTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<DestroyTagTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<DestroyTagTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kTagAddBlob: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<TagAddBlobTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<TagAddBlobTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<TagAddBlobTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<TagAddBlobTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kTagRemoveBlob: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<TagRemoveBlobTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<TagRemoveBlobTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<TagRemoveBlobTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<TagRemoveBlobTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kTagClearBlobs: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<TagClearBlobsTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<TagClearBlobsTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<TagClearBlobsTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<TagClearBlobsTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kUpdateSize: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<UpdateSizeTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<UpdateSizeTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<UpdateSizeTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<UpdateSizeTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kAppendBlobSchema: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<AppendBlobSchemaTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<AppendBlobSchemaTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<AppendBlobSchemaTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<AppendBlobSchemaTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kAppendBlob: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<AppendBlobTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<AppendBlobTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<AppendBlobTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<AppendBlobTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kGetSize: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<GetSizeTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<GetSizeTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<GetSizeTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<GetSizeTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kSetBlobMdm: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<SetBlobMdmTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<SetBlobMdmTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<SetBlobMdmTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<SetBlobMdmTask*>(task_ptr.ptr_);
       break;
     }
   }

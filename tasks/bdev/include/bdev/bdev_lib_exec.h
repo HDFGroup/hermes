@@ -38,6 +38,43 @@ void Run(u32 method, Task *task, RunContext &ctx) override {
     }
   }
 }
+/** Delete a task */
+void Del(u32 method, Task *task) override {
+  switch (method) {
+    case Method::kConstruct: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<ConstructTask *>(task));
+      break;
+    }
+    case Method::kDestruct: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<DestructTask *>(task));
+      break;
+    }
+    case Method::kWrite: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<WriteTask *>(task));
+      break;
+    }
+    case Method::kRead: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<ReadTask *>(task));
+      break;
+    }
+    case Method::kAllocate: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<AllocateTask *>(task));
+      break;
+    }
+    case Method::kFree: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<FreeTask *>(task));
+      break;
+    }
+    case Method::kMonitor: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<MonitorTask *>(task));
+      break;
+    }
+    case Method::kUpdateCapacity: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<UpdateCapacityTask *>(task));
+      break;
+    }
+  }
+}
 /** Ensure there is space to store replicated outputs */
 void ReplicateStart(u32 method, u32 count, Task *task) override {
   switch (method) {
@@ -155,43 +192,43 @@ TaskPointer LoadStart(u32 method, BinaryInputArchive<true> &ar) override {
   TaskPointer task_ptr;
   switch (method) {
     case Method::kConstruct: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<ConstructTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<ConstructTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<ConstructTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<ConstructTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kDestruct: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<DestructTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<DestructTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<DestructTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<DestructTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kWrite: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<WriteTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<WriteTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<WriteTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<WriteTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kRead: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<ReadTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<ReadTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<ReadTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<ReadTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kAllocate: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<AllocateTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<AllocateTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<AllocateTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<AllocateTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kFree: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<FreeTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<FreeTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<FreeTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<FreeTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kMonitor: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<MonitorTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<MonitorTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<MonitorTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<MonitorTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kUpdateCapacity: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<UpdateCapacityTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<UpdateCapacityTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<UpdateCapacityTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<UpdateCapacityTask*>(task_ptr.ptr_);
       break;
     }
   }

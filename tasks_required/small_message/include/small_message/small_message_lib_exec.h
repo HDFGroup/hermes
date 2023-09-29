@@ -26,6 +26,31 @@ void Run(u32 method, Task *task, RunContext &ctx) override {
     }
   }
 }
+/** Delete a task */
+void Del(u32 method, Task *task) override {
+  switch (method) {
+    case Method::kConstruct: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<ConstructTask *>(task));
+      break;
+    }
+    case Method::kDestruct: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<DestructTask *>(task));
+      break;
+    }
+    case Method::kMd: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<MdTask *>(task));
+      break;
+    }
+    case Method::kIo: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<IoTask *>(task));
+      break;
+    }
+    case Method::kMdPush: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<MdPushTask *>(task));
+      break;
+    }
+  }
+}
 /** Ensure there is space to store replicated outputs */
 void ReplicateStart(u32 method, u32 count, Task *task) override {
   switch (method) {
@@ -107,28 +132,28 @@ TaskPointer LoadStart(u32 method, BinaryInputArchive<true> &ar) override {
   TaskPointer task_ptr;
   switch (method) {
     case Method::kConstruct: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<ConstructTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<ConstructTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<ConstructTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<ConstructTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kDestruct: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<DestructTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<DestructTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<DestructTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<DestructTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kMd: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<MdTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<MdTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<MdTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<MdTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kIo: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<IoTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<IoTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<IoTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<IoTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kMdPush: {
-      task_ptr.task_ = LABSTOR_CLIENT->NewEmptyTask<MdPushTask>(task_ptr.p_);
-      ar >> *reinterpret_cast<MdPushTask*>(task_ptr.task_);
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<MdPushTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<MdPushTask*>(task_ptr.ptr_);
       break;
     }
   }

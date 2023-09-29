@@ -49,6 +49,8 @@ class TaskLib;
 #define TASK_COROUTINE BIT_OPT(u32, 16)
 /** This task uses argobot wait */
 #define TASK_PREEMPTIVE BIT_OPT(u32, 17)
+/** This task is apart of remote debugging */
+#define TASK_REMOTE_DEBUG_MARK BIT_OPT(u32, 18)
 
 /** Used to define task methods */
 #define TASK_METHOD_T static inline const u32
@@ -213,6 +215,7 @@ constexpr inline void CALL_REPLICA_END(T *task) {
 template<u32 FLAGS>
 struct TaskFlags : public IsTask {
  public:
+  TASK_FLAG_T IS_LOCAL = FLAGS & TF_LOCAL;
   TASK_FLAG_T SUPPORTS_SRL = FLAGS & (TF_SRL_SYM | TF_SRL_ASYM);
   TASK_FLAG_T SRL_SYM_START = FLAGS & TF_SRL_SYM_START;
   TASK_FLAG_T SRL_SYM_END = FLAGS & TF_SRL_SYM_END;
@@ -234,7 +237,7 @@ class TaskPrio {
 struct RunContext {
   u32 lane_id_;  /**< The lane id of the task */
   bctx::transfer_t jmp_;  /**< Current execution state of the task (runtime) */
-  size_t stack_size_ = KILOBYTES(64);  /**< The size of the stack for the task (runtime) */
+  size_t stack_size_ = KILOBYTES(256);  /**< The size of the stack for the task (runtime) */
   void *stack_ptr_;                    /**< The pointer to the stack (runtime) */
   TaskLib *exec_;
 
@@ -256,6 +259,7 @@ struct Task : public hipc::ShmContainer {
   u32 lane_hash_;              /**< Determine the lane a task is keyed to */
   u32 method_;                 /**< The method to call in the state */
   bitfield32_t task_flags_;    /**< Properties of the task */
+  std::atomic<int> delcnt_ = 0;    /**< # of times deltask called */
   RunContext ctx_;
 
   /**====================================
@@ -370,6 +374,11 @@ struct Task : public hipc::ShmContainer {
   /** Set this task as blocking */
   HSHM_ALWAYS_INLINE bool IsCoroutine() {
     return task_flags_.Any(TASK_COROUTINE);
+  }
+
+  /** Set this task as blocking */
+  HSHM_ALWAYS_INLINE void UnsetCoroutine() {
+    task_flags_.UnsetBits(TASK_COROUTINE);
   }
 
   /** Set this task as blocking */

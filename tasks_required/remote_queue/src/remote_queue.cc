@@ -50,7 +50,7 @@ class Server : public TaskLib {
   }
 
   /** Handle output from replica PUSH */
-  static void HandlePushReplicaOutput(int replica, std::string &ret, PushTask *task) {
+  static void ClientHandlePushReplicaOutput(int replica, std::string &ret, PushTask *task) {
     std::vector<DataTransfer> xfer(1);
     xfer[0].data_ = ret.data();
     xfer[0].data_size_ = ret.size();
@@ -64,13 +64,13 @@ class Server : public TaskLib {
   }
 
   /** Handle finalization of PUSH replicate */
-  static void HandlePushReplicaEnd(PushTask *task) {
+  static void ClientHandlePushReplicaEnd(PushTask *task) {
     task->exec_->ReplicateEnd(task->orig_task_->method_, task->orig_task_);
-    task->orig_task_->SetModuleComplete();
     HILOG(kDebug, "Completing task (task_node={}, task_state={}, method={})",
           task->orig_task_->task_node_,
           task->orig_task_->task_state_,
           task->orig_task_->method_);
+    task->orig_task_->SetModuleComplete();
     task->SetModuleComplete();
   }
 
@@ -98,7 +98,7 @@ class Server : public TaskLib {
             task->orig_task_->method_,
             LABSTOR_CLIENT->node_id_,
             domain_id.id_);
-      HandlePushReplicaOutput(replica, ret, task);
+      ClientHandlePushReplicaOutput(replica, ret, task);
     }
   }
 
@@ -139,7 +139,7 @@ class Server : public TaskLib {
             LABSTOR_CLIENT->node_id_,
             domain_id.id_,
             static_cast<int>(io_type));
-      HandlePushReplicaOutput(replica, ret, task);
+      ClientHandlePushReplicaOutput(replica, ret, task);
     }
   }
 
@@ -159,7 +159,7 @@ class Server : public TaskLib {
         HELOG(kFatal, "The task {}/{} does not support remote calls", task->task_state_, task->method_);
       }
     }
-    HandlePushReplicaEnd(task);
+    ClientHandlePushReplicaEnd(task);
   }
 
  private:
@@ -241,8 +241,8 @@ class Server : public TaskLib {
             state_id);
     }
     TaskPointer task_ptr = exec->LoadStart(method, ar);
-    orig_task = task_ptr.task_;
-    hipc::Pointer &p = task_ptr.p_;
+    orig_task = task_ptr.ptr_;
+    hipc::Pointer &p = task_ptr.shm_;
     orig_task->domain_id_ = DomainId::GetNode(LABSTOR_CLIENT->node_id_);
 
     // Execute task
@@ -278,8 +278,12 @@ class Server : public TaskLib {
           orig_task->task_state_,
           state_id,
           method);
-    LABSTOR_CLIENT->DelTask(orig_task);
-    req.respond(std::string((char *) out_xfer[0].data_, out_xfer[0].data_size_));
+    LABSTOR_CLIENT->DelTask(exec, orig_task);
+    if (out_xfer.size() > 0 && out_xfer[0].data_size_ > 0) {
+      req.respond(std::string((char *) out_xfer[0].data_, out_xfer[0].data_size_));
+    } else {
+      req.respond(std::string());
+    }
   }
 
  public:

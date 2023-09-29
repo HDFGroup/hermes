@@ -72,7 +72,7 @@ class Client : public TaskLibClient {
 
     // Create subtasks
     exec->ReplicateStart(orig_task->method_, domain_ids.size(), orig_task);
-    auto push_task = LABSTOR_CLIENT->NewTask<PushTask>(
+    LPointer<PushTask> push_task = LABSTOR_CLIENT->NewTask<PushTask>(
         orig_task->task_node_ + 1, DomainId::GetLocal(), id_,
         domain_ids, orig_task, exec, orig_task->method_, xfer);
     MultiQueue *queue = LABSTOR_CLIENT->GetQueue(queue_id_);

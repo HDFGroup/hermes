@@ -303,7 +303,7 @@ struct AppendBlobTask : public Task, TaskFlags<TF_LOCAL> {
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kAppendBlob;
-    task_flags_.SetBits(TASK_LOW_LATENCY | TASK_FIRE_AND_FORGET | TASK_DATA_OWNER | TASK_UNORDERED);
+    task_flags_.SetBits(TASK_LOW_LATENCY | TASK_FIRE_AND_FORGET | TASK_DATA_OWNER | TASK_UNORDERED | TASK_REMOTE_DEBUG_MARK);
     domain_id_ = domain_id;
 
     // Custom params
@@ -317,9 +317,9 @@ struct AppendBlobTask : public Task, TaskFlags<TF_LOCAL> {
 
   /** Destructor */
   ~AppendBlobTask() {
-    if (IsDataOwner()) {
-      LABSTOR_CLIENT->FreeBuffer(data_);
-    }
+//    if (IsDataOwner()) {
+//      LABSTOR_CLIENT->FreeBuffer(data_);
+//    }
   }
 
    /** Create group */

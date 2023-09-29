@@ -92,14 +92,22 @@ class Client : public ConfigurationManager {
   template<typename TaskT, typename ...Args>
   HSHM_ALWAYS_INLINE
   TaskT* NewEmptyTask(hipc::Pointer &p) {
-    return main_alloc_->NewObj<TaskT>(p, main_alloc_);
+    TaskT *task = main_alloc_->NewObj<TaskT>(p, main_alloc_);
+    if (task == nullptr) {
+      throw std::runtime_error("Could not allocate buffer");
+    }
+    return task;
   }
 
   /** Allocate task */
   template<typename TaskT, typename ...Args>
   HSHM_ALWAYS_INLINE
   hipc::LPointer<TaskT> AllocateTask() {
-    return main_alloc_->AllocateLocalPtr<TaskT>(sizeof(TaskT));
+    hipc::LPointer<TaskT> task = main_alloc_->AllocateLocalPtr<TaskT>(sizeof(TaskT));
+    if (task.ptr_ == nullptr) {
+      throw std::runtime_error("Could not allocate buffer");
+    }
+    return task;
   }
 
   /** Construct task */
@@ -140,14 +148,38 @@ class Client : public ConfigurationManager {
   HSHM_ALWAYS_INLINE
   void DelTask(TaskT *task) {
     // TODO(llogan): verify leak
-    // main_alloc_->DelObj<TaskT>(task);
+    task->delcnt_++;
+    if (task->delcnt_ != 1) {
+      HELOG(kFatal, "Freed task {} times: node={}, state={}. method={}",
+            task->delcnt_.load(), task->task_node_, task->task_state_, task->method_)
+    }
+    main_alloc_->DelObj<TaskT>(task);
   }
 
   /** Destroy a task */
   template<typename TaskT>
   HSHM_ALWAYS_INLINE
   void DelTask(LPointer<TaskT> &task) {
+    task->delcnt_++;
+    if (task->delcnt_ != 1) {
+      HELOG(kFatal, "Freed task {} times: node={}, state={}. method={}",
+            task->delcnt_.load(), task->task_node_, task->task_state_, task->method_)
+    }
     main_alloc_->DelObjLocal<TaskT>(task);
+  }
+
+  /** Destroy a task */
+  template<typename TaskStateT, typename TaskT>
+  HSHM_ALWAYS_INLINE
+  void DelTask(TaskStateT *exec, TaskT *task) {
+    exec->Del(task->method_, task);
+  }
+
+  /** Destroy a task */
+  template<typename TaskStateT, typename TaskT>
+  HSHM_ALWAYS_INLINE
+  void DelTask(TaskStateT *exec, LPointer<TaskT> &task) {
+    exec->Del(task->method_, task);
   }
 
   /** Get a queue by its ID */
@@ -189,14 +221,14 @@ class Client : public ConfigurationManager {
   HSHM_ALWAYS_INLINE
   void FreeBuffer(hipc::Pointer &p) {
     // TODO(llogan): verify leak
-    // main_alloc_->Free(p);
+     main_alloc_->Free(p);
   }
 
   /** Free a buffer */
   HSHM_ALWAYS_INLINE
   void FreeBuffer(LPointer<char> &p) {
     // TODO(llogan): verify leak
-    main_alloc_->FreeLocalPtr(p);
+     main_alloc_->FreeLocalPtr(p);
   }
 };
 

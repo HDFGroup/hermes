@@ -345,10 +345,10 @@ class Worker {
   }
 
   HSHM_ALWAYS_INLINE
-  void EndTask(Lane *lane, Task *task, int &off) {
+  void EndTask(Lane *lane, TaskState *exec, Task *task, int &off) {
     PopTask(lane, off);
-    if (task->IsFireAndForget()) {
-      LABSTOR_CLIENT->DelTask(task);
+    if (exec && task->IsFireAndForget()) {
+      LABSTOR_CLIENT->DelTask<TaskState>(exec, task);
     } else {
       task->SetComplete();
     }

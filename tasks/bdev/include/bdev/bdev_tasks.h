@@ -94,7 +94,7 @@ struct AllocateTask : public Task, TaskFlags<TF_LOCAL> {
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kAllocate;
-    task_flags_.SetBits(TASK_UNORDERED);
+    task_flags_.SetBits(TASK_UNORDERED | TASK_REMOTE_DEBUG_MARK);
     domain_id_ = domain_id;
 
     // Free params
@@ -135,7 +135,7 @@ struct FreeTask : public Task, TaskFlags<TF_LOCAL> {
     method_ = Method::kFree;
     task_flags_.SetBits(0);
     if (fire_and_forget) {
-      task_flags_.SetBits(TASK_FIRE_AND_FORGET | TASK_UNORDERED);
+      task_flags_.SetBits(TASK_FIRE_AND_FORGET | TASK_UNORDERED | TASK_REMOTE_DEBUG_MARK);
     }
     domain_id_ = domain_id;
 
@@ -177,7 +177,7 @@ struct WriteTask : public Task, TaskFlags<TF_LOCAL> {
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kWrite;
-    task_flags_.SetBits(TASK_UNORDERED);
+    task_flags_.SetBits(TASK_UNORDERED | TASK_REMOTE_DEBUG_MARK);
     domain_id_ = domain_id;
 
     // Free params
@@ -220,7 +220,7 @@ struct ReadTask : public Task, TaskFlags<TF_LOCAL> {
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kRead;
-    task_flags_.SetBits(TASK_UNORDERED);
+    task_flags_.SetBits(TASK_UNORDERED | TASK_REMOTE_DEBUG_MARK);
     domain_id_ = domain_id;
 
     // Free params
@@ -259,7 +259,7 @@ struct MonitorTask : public Task, TaskFlags<TF_LOCAL> {
     prio_ = TaskPrio::kLongRunning;
     task_state_ = state_id;
     method_ = Method::kMonitor;
-    task_flags_.SetBits(TASK_LONG_RUNNING);
+    task_flags_.SetBits(TASK_LONG_RUNNING | TASK_REMOTE_DEBUG_MARK);
     domain_id_ = domain_id;
 
     // Custom
@@ -294,7 +294,7 @@ struct UpdateCapacityTask : public Task, TaskFlags<TF_LOCAL> {
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kUpdateCapacity;
-    task_flags_.SetBits(TASK_FIRE_AND_FORGET | TASK_UNORDERED);
+    task_flags_.SetBits(TASK_FIRE_AND_FORGET | TASK_UNORDERED | TASK_REMOTE_DEBUG_MARK);
     domain_id_ = domain_id;
 
     // Custom

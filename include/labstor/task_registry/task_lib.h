@@ -13,45 +13,7 @@
 
 namespace labstor {
 
-struct TaskPointer {
-  Task *task_;
-  hipc::Pointer p_;
-
-  /** Default constructor */
-  TaskPointer() : task_(nullptr) {}
-
-  /** Task-only constructor */
-  TaskPointer(Task *task) : task_(task) {}
-
-  /** Emplace constructor */
-  TaskPointer(Task *task, hipc::Pointer p) : task_(task), p_(p) {}
-
-  /** Copy constructor */
-  TaskPointer(const TaskPointer &other) : task_(other.task_), p_(other.p_) {}
-
-  /** Copy operator */
-  TaskPointer &operator=(const TaskPointer &other) {
-    task_ = other.task_;
-    p_ = other.p_;
-    return *this;
-  }
-
-  /** Move constructor */
-  TaskPointer(TaskPointer &&other) noexcept
-      : task_(other.task_), p_(other.p_) {
-    other.task_ = nullptr;
-    other.p_ = hipc::Pointer();
-  }
-
-  /** Move operator */
-  TaskPointer &operator=(TaskPointer &&other) noexcept {
-    task_ = other.task_;
-    p_ = other.p_;
-    other.task_ = nullptr;
-    other.p_ = hipc::Pointer();
-    return *this;
-  }
-};
+typedef LPointer<Task> TaskPointer;
 
 /**
  * Represents a custom operation to perform.
@@ -78,6 +40,9 @@ class TaskLib {
 
   /** Run a method of the task */
   virtual void Run(u32 method, Task *task, RunContext &ctx) = 0;
+
+  /** Delete a task */
+  virtual void Del(u32 method, Task *task) = 0;
 
   /** Allow task to store replicas of completion */
   virtual void ReplicateStart(u32 method, u32 count, Task *task) = 0;
