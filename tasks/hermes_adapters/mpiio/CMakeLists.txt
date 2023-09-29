@@ -29,15 +29,15 @@ install(
         hermes_mpiio_io_client
         hermes_mpiio
         EXPORT
-        ${LABSTOR_EXPORTED_TARGETS}
-        LIBRARY DESTINATION ${LABSTOR_INSTALL_LIB_DIR}
-        ARCHIVE DESTINATION ${LABSTOR_INSTALL_LIB_DIR}
-        RUNTIME DESTINATION ${LABSTOR_INSTALL_BIN_DIR}
+        ${HERMES_EXPORTED_TARGETS}
+        LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
+        ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
+        RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR}
 )
 #-----------------------------------------------------------------------------
 # Add Target(s) to Coverage
 #-----------------------------------------------------------------------------
-if(LABSTOR_ENABLE_COVERAGE)
+if(HERMES_ENABLE_COVERAGE)
     set_coverage_flags(hermes_mpiio_io_client)
     #set_coverage_flags(hermes_mpiio)
 endif()

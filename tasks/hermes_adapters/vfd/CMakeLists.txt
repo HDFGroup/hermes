@@ -52,7 +52,7 @@ install(
         FILES
         ${HDF5_HERMES_VFD_HEADERS}
         DESTINATION
-        ${LABSTOR_INSTALL_INCLUDE_DIR}
+        ${HERMES_INSTALL_INCLUDE_DIR}
         COMPONENT
         headers
 )
@@ -64,10 +64,10 @@ install(
         TARGETS
         hdf5_hermes_vfd
         EXPORT
-        ${LABSTOR_EXPORTED_TARGETS}
-        LIBRARY DESTINATION ${LABSTOR_INSTALL_LIB_DIR}/${HERMES_VFD_DIR_NAME}
-        ARCHIVE DESTINATION ${LABSTOR_INSTALL_LIB_DIR}/${HERMES_VFD_DIR_NAME}
-        RUNTIME DESTINATION ${LABSTOR_INSTALL_BIN_DIR}
+        ${HERMES_EXPORTED_TARGETS}
+        LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}/${HERMES_VFD_DIR_NAME}
+        ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}/${HERMES_VFD_DIR_NAME}
+        RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR}
 )
 
 #-----------------------------------------------------------------------------
@@ -75,11 +75,11 @@ install(
 #-----------------------------------------------------------------------------
 install(
         EXPORT
-        ${LABSTOR_EXPORTED_TARGETS}
+        ${HERMES_EXPORTED_TARGETS}
         DESTINATION
-        ${LABSTOR_INSTALL_DATA_DIR}/cmake/hdf5_hermes_vfd
+        ${HERMES_INSTALL_DATA_DIR}/cmake/hdf5_hermes_vfd
         FILE
-        ${LABSTOR_EXPORTED_TARGETS}.cmake
+        ${HERMES_EXPORTED_TARGETS}.cmake
 )
 
 #-----------------------------------------------------------------------------
@@ -90,7 +90,7 @@ if(NOT HDF5_HERMES_VFD_EXTERNALLY_CONFIGURED)
           TARGETS
           ${HDF5_HERMES_VFD_EXPORTED_LIBS}
           FILE
-          ${LABSTOR_EXPORTED_TARGETS}.cmake
+          ${HERMES_EXPORTED_TARGETS}.cmake
   )
 endif()
 

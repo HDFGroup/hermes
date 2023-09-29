@@ -17,8 +17,8 @@ cmake                                                      \
     -DCMAKE_INSTALL_RPATH=${INSTALL_PREFIX}/lib            \
     -DCMAKE_BUILD_TYPE=${BUILD_TYPE}                       \
     -DBUILD_SHARED_LIBS=ON                                 \
-    -DLABSTOR_ENABLE_DOXYGEN=ON                             \
-    -DLABSTOR_ENABLE_COVERAGE=ON                            \
+    -DHERMES_ENABLE_DOXYGEN=ON                             \
+    -DHERMES_ENABLE_COVERAGE=ON                            \
     ..
 make dox >& out.txt
 # cat out.txt | grep warning | grep -v "ignoring unsupported tag"

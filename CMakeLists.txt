@@ -7,8 +7,8 @@ project(hermes)
 option(BUILD_SHARED_LIBS "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" ON)
 option(BUILD_MPI_TESTS "Build tests which depend on MPI" ON)
 option(BUILD_OpenMP_TESTS "Build tests which depend on OpenMP" ON)
-option(LABSTOR_ENABLE_COVERAGE "Check how well tests cover code" OFF)
-option(LABSTOR_ENABLE_DOXYGEN "Check how well the code is documented" OFF)
+option(HERMES_ENABLE_COVERAGE "Check how well tests cover code" OFF)
+option(HERMES_ENABLE_DOXYGEN "Check how well the code is documented" OFF)
 
 option(HERMES_ENABLE_POSIX_ADAPTER "Build the Hermes POSIX adapter." ON)
 option(HERMES_ENABLE_STDIO_ADAPTER "Build the Hermes stdio adapter." ON)
@@ -38,8 +38,8 @@ add_compile_options(-march=native -fomit-frame-pointer)
 # Targets built within this project are exported at Install time for use
 # by other projects.
 #-----------------------------------------------------------------------------
-if(NOT LABSTOR_EXPORTED_TARGETS)
-    set(LABSTOR_EXPORTED_TARGETS "labstor-targets")
+if(NOT HERMES_EXPORTED_TARGETS)
+    set(HERMES_EXPORTED_TARGETS "labstor-targets")
 endif()
 
 #-----------------------------------------------------------------------------
@@ -115,21 +115,21 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
 #------------------------------------------------------------------------------
 # Setup install and output Directories
 #------------------------------------------------------------------------------
-if(NOT LABSTOR_INSTALL_BIN_DIR)
-    set(LABSTOR_INSTALL_BIN_DIR ${CMAKE_INSTALL_PREFIX}/bin)
+if(NOT HERMES_INSTALL_BIN_DIR)
+    set(HERMES_INSTALL_BIN_DIR ${CMAKE_INSTALL_PREFIX}/bin)
 endif()
-if(NOT LABSTOR_INSTALL_LIB_DIR)
-    set(LABSTOR_INSTALL_LIB_DIR ${CMAKE_INSTALL_PREFIX}/lib)
+if(NOT HERMES_INSTALL_LIB_DIR)
+    set(HERMES_INSTALL_LIB_DIR ${CMAKE_INSTALL_PREFIX}/lib)
 endif()
-if(NOT LABSTOR_INSTALL_INCLUDE_DIR)
-    set(LABSTOR_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_PREFIX}/include)
+if(NOT HERMES_INSTALL_INCLUDE_DIR)
+    set(HERMES_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_PREFIX}/include)
 endif()
-if(NOT LABSTOR_INSTALL_DATA_DIR)
-    set(LABSTOR_INSTALL_DATA_DIR ${CMAKE_INSTALL_PREFIX}/share)
+if(NOT HERMES_INSTALL_DATA_DIR)
+    set(HERMES_INSTALL_DATA_DIR ${CMAKE_INSTALL_PREFIX}/share)
 endif()
 
 #-----------------------------------------------------------------------------
-# Build Labstor Main Packages
+# Build Hermes Main Packages
 #-----------------------------------------------------------------------------
 # Main includes
 include_directories(${HermesShm_INCLUDE_DIRS})
@@ -157,18 +157,18 @@ include_directories(${CMAKE_SOURCE_DIR}/tasks/hermes_adapters/include)
 # Test includes
 include_directories(${CMAKE_SOURCE_DIR}/test/unit)
 
-set(Labstor_CLIENT_LIBRARIES
+set(Hermes_CLIENT_LIBRARIES
         ${HermesShm_LIBRARIES}
         yaml-cpp
         cereal::cereal
         -ldl -lrt -lc -pthread labstor_client)
-set(Labstor_CLIENT_DEPS
+set(Hermes_CLIENT_DEPS
         labstor_client)
-set(Labstor_RUNTIME_LIBRARIES
-        ${Labstor_CLIENT_LIBRARIES}
+set(Hermes_RUNTIME_LIBRARIES
+        ${Hermes_CLIENT_LIBRARIES}
         labstor_runtime
         ${Boost_LIBRARIES})
-set(Labstor_RUNTIME_DEPS
+set(Hermes_RUNTIME_DEPS
         labstor_client labstor_runtime)
 
 set(TEST_MAIN ${CMAKE_SOURCE_DIR}/test/unit)
@@ -197,13 +197,13 @@ add_subdirectory(test)
 install(DIRECTORY include DESTINATION ${CMAKE_INSTALL_PREFIX})
 
 configure_file(
-        ${CMAKE_CURRENT_SOURCE_DIR}/CMake/LabstorConfig.cmake
-        ${PROJECT_BINARY_DIR}/CMakeFiles/LabstorConfig.cmake @ONLY
+        ${CMAKE_CURRENT_SOURCE_DIR}/CMake/HermesConfig.cmake
+        ${PROJECT_BINARY_DIR}/CMakeFiles/HermesConfig.cmake @ONLY
 )
 
 install(
         FILES
-        ${PROJECT_BINARY_DIR}/CMakeFiles/LabstorConfig.cmake
+        ${PROJECT_BINARY_DIR}/CMakeFiles/HermesConfig.cmake
         DESTINATION
         ${CMAKE_INSTALL_PREFIX}/cmake
 )

@@ -3,8 +3,8 @@
 #------------------------------------------------------------------------------
 add_library(hermes_mdm SHARED
         hermes_mdm.cc)
-add_dependencies(hermes_mdm ${Labstor_RUNTIME_DEPS} hermes)
-target_link_libraries(hermes_mdm ${Labstor_RUNTIME_LIBRARIES} hermes)
+add_dependencies(hermes_mdm ${Hermes_RUNTIME_DEPS} hermes)
+target_link_libraries(hermes_mdm ${Hermes_RUNTIME_LIBRARIES} hermes)
 
 #------------------------------------------------------------------------------
 # Install Small Message Task Library
@@ -13,10 +13,10 @@ install(
         TARGETS
         hermes_mdm
         EXPORT
-        ${LABSTOR_EXPORTED_TARGETS}
-        LIBRARY DESTINATION ${LABSTOR_INSTALL_LIB_DIR}
-        ARCHIVE DESTINATION ${LABSTOR_INSTALL_LIB_DIR}
-        RUNTIME DESTINATION ${LABSTOR_INSTALL_BIN_DIR}
+        ${HERMES_EXPORTED_TARGETS}
+        LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
+        ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
+        RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR}
 )
 
 #-----------------------------------------------------------------------------
@@ -24,31 +24,31 @@ install(
 #-----------------------------------------------------------------------------
 install(
         EXPORT
-        ${LABSTOR_EXPORTED_TARGETS}
+        ${HERMES_EXPORTED_TARGETS}
         DESTINATION
-        ${LABSTOR_INSTALL_DATA_DIR}/cmake/hermes
+        ${HERMES_INSTALL_DATA_DIR}/cmake/hermes
         FILE
-        ${LABSTOR_EXPORTED_TARGETS}.cmake
+        ${HERMES_EXPORTED_TARGETS}.cmake
 )
 
 #-----------------------------------------------------------------------------
 # Export all exported targets to the build tree for use by parent project
 #-----------------------------------------------------------------------------
-set(LABSTOR_EXPORTED_LIBS
+set(HERMES_EXPORTED_LIBS
         hermes_mdm
-        ${LABSTOR_EXPORTED_LIBS})
-if(NOT LABSTOR_EXTERNALLY_CONFIGURED)
+        ${HERMES_EXPORTED_LIBS})
+if(NOT HERMES_EXTERNALLY_CONFIGURED)
     EXPORT (
             TARGETS
-            ${LABSTOR_EXPORTED_LIBS}
+            ${HERMES_EXPORTED_LIBS}
             FILE
-            ${LABSTOR_EXPORTED_TARGETS}.cmake
+            ${HERMES_EXPORTED_TARGETS}.cmake
     )
 endif()
 
 #------------------------------------------------------------------------------
 # Coverage
 #------------------------------------------------------------------------------
-if(LABSTOR_ENABLE_COVERAGE)
+if(HERMES_ENABLE_COVERAGE)
     set_coverage_flags(hermes_mdm)
 endif()
