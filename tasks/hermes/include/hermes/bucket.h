@@ -293,21 +293,31 @@ class Bucket {
   /**
    * Put \a blob_name Blob into the bucket
    * */
+  template<typename T = Blob>
   HSHM_ALWAYS_INLINE
   void AsyncPut(const std::string &blob_name,
                 const Blob &blob,
                 Context &ctx) {
-    BasePut<false, true>(blob_name, BlobId::GetNull(), blob, 0, ctx);
+    if constexpr(std::is_same_v<T, Blob>) {
+      BasePut<false, true>(blob_name, BlobId::GetNull(), blob, 0, ctx);
+    } else {
+      SrlBasePut<T, false, true>(blob_name, BlobId::GetNull(), blob, ctx);
+    }
   }
 
   /**
    * Put \a blob_id Blob into the bucket
    * */
+  template<typename T>
   HSHM_ALWAYS_INLINE
   void AsyncPut(const BlobId &blob_id,
                 const Blob &blob,
                 Context &ctx) {
-    BasePut<false, true>("", BlobId::GetNull(), blob, 0, ctx);
+    if constexpr(std::is_same_v<T, Blob>) {
+      BasePut<false, true>("", blob_id, blob, 0, ctx);
+    } else {
+      SrlBasePut<T, false, true>("", blob_id, blob, ctx);
+    }
   }
 
   /**
