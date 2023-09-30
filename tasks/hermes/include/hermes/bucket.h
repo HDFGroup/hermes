@@ -293,21 +293,31 @@ class Bucket {
   /**
    * Put \a blob_name Blob into the bucket
    * */
+  template<typename T = Blob>
   HSHM_ALWAYS_INLINE
   void AsyncPut(const std::string &blob_name,
                 const Blob &blob,
                 Context &ctx) {
-    BasePut<false, true>(blob_name, BlobId::GetNull(), blob, 0, ctx);
+    if constexpr(std::is_same_v<T, Blob>) {
+      BasePut<false, true>(blob_name, BlobId::GetNull(), blob, 0, ctx);
+    } else {
+      SrlBasePut<T, false, true>(blob_name, BlobId::GetNull(), blob, ctx);
+    }
   }
 
   /**
    * Put \a blob_id Blob into the bucket
    * */
+  template<typename T>
   HSHM_ALWAYS_INLINE
   void AsyncPut(const BlobId &blob_id,
                 const Blob &blob,
                 Context &ctx) {
-    BasePut<false, true>("", BlobId::GetNull(), blob, 0, ctx);
+    if constexpr(std::is_same_v<T, Blob>) {
+      BasePut<false, true>("", blob_id, blob, 0, ctx);
+    } else {
+      SrlBasePut<T, false, true>("", blob_id, blob, ctx);
+    }
   }
 
   /**
@@ -358,6 +368,23 @@ class Bucket {
     char *data = p.ptr_;
     memcpy(data, blob.data(), blob.size());
     bkt_mdm_->AppendBlobRoot(id_, blob.size(), p.shm_, page_size, ctx.blob_score_, ctx.node_id_, ctx);
+  }
+
+  /**
+   * Reorganize a blob to a new score or node
+   * */
+  void ReorganizeBlob(const BlobId &blob_id,
+                      float score) {
+    blob_mdm_->AsyncReorganizeBlobRoot(id_, blob_id, score, 0);
+  }
+
+  /**
+   * Reorganize a blob to a new score or node
+   * */
+  void ReorganizeBlob(const BlobId &blob_id,
+                      float score,
+                      Context &ctx) {
+    blob_mdm_->AsyncReorganizeBlobRoot(id_, blob_id, score, 0);
   }
 
   /**

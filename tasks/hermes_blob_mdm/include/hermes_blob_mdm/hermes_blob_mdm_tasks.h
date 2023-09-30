@@ -388,6 +388,24 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     page_size_ = ctx.page_size_;
   }
 
+  /** Convert data to a data structure */
+  template<typename T>
+  HSHM_ALWAYS_INLINE
+  void Get(T &obj) {
+    char *data = LABSTOR_CLIENT->GetPrivatePointer(data_);
+    std::stringstream ss(std::string(data, data_size_));
+    cereal::BinaryInputArchive ar(ss);
+    ar >> obj;
+  }
+
+  /** Convert data to a data structure */
+  template<typename T>
+  HSHM_ALWAYS_INLINE
+  T Get() {
+    T obj;
+    return Get(obj);
+  }
+
   /** Destructor */
   ~GetBlobTask() {
     HSHM_DESTROY_AR(blob_name_);
