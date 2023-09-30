@@ -43,7 +43,7 @@ install(
         FILES
         ${HERMES_HEADERS}
         DESTINATION
-        ${CMAKE_INSTALL_PREFIX}/hermes_adapters/stdio
+        ${CMAKE_INSTALL_PREFIX}/include/hermes_adapters/stdio
         COMPONENT
         headers
 )

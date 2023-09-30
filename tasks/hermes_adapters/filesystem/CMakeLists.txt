@@ -60,7 +60,7 @@ install(
         FILES
         ${HERMES_HEADERS}
         DESTINATION
-        ${CMAKE_INSTALL_PREFIX}/hermes_adapters/filesystem
+        ${CMAKE_INSTALL_PREFIX}/include/hermes_adapters/filesystem
         COMPONENT
         headers
 )

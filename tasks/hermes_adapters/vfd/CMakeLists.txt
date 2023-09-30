@@ -182,7 +182,7 @@ install(
         FILES
         ${HERMES_HEADERS}
         DESTINATION
-        ${CMAKE_INSTALL_PREFIX}/hermes_adapters/vfd
+        ${CMAKE_INSTALL_PREFIX}/include/hermes_adapters/vfd
         COMPONENT
         headers
 )

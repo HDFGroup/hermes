@@ -60,7 +60,7 @@ install(
         FILES
         ${HERMES_HEADERS}
         DESTINATION
-        ${CMAKE_INSTALL_PREFIX}/hermes_adapters/posix
+        ${CMAKE_INSTALL_PREFIX}/include/hermes_adapters/posix
         COMPONENT
         headers
 )
