@@ -59,6 +59,12 @@ if( Hermes_INCLUDE_DIR )
     message(STATUS "found boost at ${Boost_INCLUDE_DIRS}")
   endif()
 
+  # Thallium
+  find_package(thallium CONFIG REQUIRED)
+  if(thallium_FOUND)
+    message(STATUS "found thallium at ${thallium_DIR}")
+  endif()
+
   #-----------------------------------------------------------------------------
   # Mark hermes as found and set all needed packages
   #-----------------------------------------------------------------------------
