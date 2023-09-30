@@ -2,38 +2,38 @@
 #define LABSTOR_BDEV_LIB_EXEC_H_
 
 /** Execute a task */
-void Run(u32 method, Task *task, RunContext &ctx) override {
+void Run(u32 method, Task *task, RunContext &rctx) override {
   switch (method) {
     case Method::kConstruct: {
-      Construct(reinterpret_cast<ConstructTask *>(task), ctx);
+      Construct(reinterpret_cast<ConstructTask *>(task), rctx);
       break;
     }
     case Method::kDestruct: {
-      Destruct(reinterpret_cast<DestructTask *>(task), ctx);
+      Destruct(reinterpret_cast<DestructTask *>(task), rctx);
       break;
     }
     case Method::kWrite: {
-      Write(reinterpret_cast<WriteTask *>(task), ctx);
+      Write(reinterpret_cast<WriteTask *>(task), rctx);
       break;
     }
     case Method::kRead: {
-      Read(reinterpret_cast<ReadTask *>(task), ctx);
+      Read(reinterpret_cast<ReadTask *>(task), rctx);
       break;
     }
     case Method::kAllocate: {
-      Allocate(reinterpret_cast<AllocateTask *>(task), ctx);
+      Allocate(reinterpret_cast<AllocateTask *>(task), rctx);
       break;
     }
     case Method::kFree: {
-      Free(reinterpret_cast<FreeTask *>(task), ctx);
+      Free(reinterpret_cast<FreeTask *>(task), rctx);
       break;
     }
     case Method::kMonitor: {
-      Monitor(reinterpret_cast<MonitorTask *>(task), ctx);
+      Monitor(reinterpret_cast<MonitorTask *>(task), rctx);
       break;
     }
     case Method::kUpdateCapacity: {
-      UpdateCapacity(reinterpret_cast<UpdateCapacityTask *>(task), ctx);
+      UpdateCapacity(reinterpret_cast<UpdateCapacityTask *>(task), rctx);
       break;
     }
   }

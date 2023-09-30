@@ -2,66 +2,66 @@
 #define LABSTOR_HERMES_BUCKET_MDM_LIB_EXEC_H_
 
 /** Execute a task */
-void Run(u32 method, Task *task, RunContext &ctx) override {
+void Run(u32 method, Task *task, RunContext &rctx) override {
   switch (method) {
     case Method::kConstruct: {
-      Construct(reinterpret_cast<ConstructTask *>(task), ctx);
+      Construct(reinterpret_cast<ConstructTask *>(task), rctx);
       break;
     }
     case Method::kDestruct: {
-      Destruct(reinterpret_cast<DestructTask *>(task), ctx);
+      Destruct(reinterpret_cast<DestructTask *>(task), rctx);
       break;
     }
     case Method::kGetOrCreateTag: {
-      GetOrCreateTag(reinterpret_cast<GetOrCreateTagTask *>(task), ctx);
+      GetOrCreateTag(reinterpret_cast<GetOrCreateTagTask *>(task), rctx);
       break;
     }
     case Method::kGetTagId: {
-      GetTagId(reinterpret_cast<GetTagIdTask *>(task), ctx);
+      GetTagId(reinterpret_cast<GetTagIdTask *>(task), rctx);
       break;
     }
     case Method::kGetTagName: {
-      GetTagName(reinterpret_cast<GetTagNameTask *>(task), ctx);
+      GetTagName(reinterpret_cast<GetTagNameTask *>(task), rctx);
       break;
     }
     case Method::kRenameTag: {
-      RenameTag(reinterpret_cast<RenameTagTask *>(task), ctx);
+      RenameTag(reinterpret_cast<RenameTagTask *>(task), rctx);
       break;
     }
     case Method::kDestroyTag: {
-      DestroyTag(reinterpret_cast<DestroyTagTask *>(task), ctx);
+      DestroyTag(reinterpret_cast<DestroyTagTask *>(task), rctx);
       break;
     }
     case Method::kTagAddBlob: {
-      TagAddBlob(reinterpret_cast<TagAddBlobTask *>(task), ctx);
+      TagAddBlob(reinterpret_cast<TagAddBlobTask *>(task), rctx);
       break;
     }
     case Method::kTagRemoveBlob: {
-      TagRemoveBlob(reinterpret_cast<TagRemoveBlobTask *>(task), ctx);
+      TagRemoveBlob(reinterpret_cast<TagRemoveBlobTask *>(task), rctx);
       break;
     }
     case Method::kTagClearBlobs: {
-      TagClearBlobs(reinterpret_cast<TagClearBlobsTask *>(task), ctx);
+      TagClearBlobs(reinterpret_cast<TagClearBlobsTask *>(task), rctx);
       break;
     }
     case Method::kUpdateSize: {
-      UpdateSize(reinterpret_cast<UpdateSizeTask *>(task), ctx);
+      UpdateSize(reinterpret_cast<UpdateSizeTask *>(task), rctx);
       break;
     }
     case Method::kAppendBlobSchema: {
-      AppendBlobSchema(reinterpret_cast<AppendBlobSchemaTask *>(task), ctx);
+      AppendBlobSchema(reinterpret_cast<AppendBlobSchemaTask *>(task), rctx);
       break;
     }
     case Method::kAppendBlob: {
-      AppendBlob(reinterpret_cast<AppendBlobTask *>(task), ctx);
+      AppendBlob(reinterpret_cast<AppendBlobTask *>(task), rctx);
       break;
     }
     case Method::kGetSize: {
-      GetSize(reinterpret_cast<GetSizeTask *>(task), ctx);
+      GetSize(reinterpret_cast<GetSizeTask *>(task), rctx);
       break;
     }
     case Method::kSetBlobMdm: {
-      SetBlobMdm(reinterpret_cast<SetBlobMdmTask *>(task), ctx);
+      SetBlobMdm(reinterpret_cast<SetBlobMdmTask *>(task), rctx);
       break;
     }
   }

@@ -231,7 +231,7 @@ class PosixApi : public RealApi {
 #include "hermes_shm/util/singleton.h"
 
 #define HERMES_POSIX_API \
-  hshm::EasySingleton<hermes::adapter::fs::PosixApi>::GetInstance()
+  hshm::EasySingleton<::hermes::adapter::fs::PosixApi>::GetInstance()
 #define HERMES_POSIX_API_T hermes::adapter::fs::PosixApi*
 
 namespace hermes::adapter::fs {

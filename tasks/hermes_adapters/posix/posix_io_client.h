@@ -95,7 +95,7 @@ class PosixIoClient : public hermes::adapter::fs::FilesystemIoClient {
 
 /** Simplify access to the stateless PosixIoClient Singleton */
 #define HERMES_POSIX_IO_CLIENT \
-  hshm::EasySingleton<hermes::adapter::fs::PosixIoClient>::GetInstance()
+  hshm::EasySingleton<::hermes::adapter::fs::PosixIoClient>::GetInstance()
 #define HERMES_POSIX_IO_CLIENT_T hermes::adapter::fs::PosixIoClient*
 
 #endif  // HERMES_ADAPTER_POSIX_POSIX_IO_CLIENT_H_

@@ -12,15 +12,15 @@ class Server : public TaskLib {
  public:
   Server() = default;
 
-  void Construct(ConstructTask *task, RunContext &ctx) {
+  void Construct(ConstructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
 
-  void Destruct(DestructTask *task, RunContext &ctx) {
+  void Destruct(DestructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
 
-  void Custom(CustomTask *task, RunContext &ctx) {
+  void Custom(CustomTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
 

@@ -16,25 +16,25 @@ class Server : public TaskLib {
  public:
   Server() : queue_sched_(nullptr), proc_sched_(nullptr) {}
 
-  void RegisterTaskLib(RegisterTaskLibTask *task, RunContext &ctx) {
+  void RegisterTaskLib(RegisterTaskLibTask *task, RunContext &rctx) {
     std::string lib_name = task->lib_name_->str();
     LABSTOR_TASK_REGISTRY->RegisterTaskLib(lib_name);
     task->SetModuleComplete();
   }
 
-  void DestroyTaskLib(DestroyTaskLibTask *task, RunContext &ctx) {
+  void DestroyTaskLib(DestroyTaskLibTask *task, RunContext &rctx) {
     std::string lib_name = task->lib_name_->str();
     LABSTOR_TASK_REGISTRY->DestroyTaskLib(lib_name);
     task->SetModuleComplete();
   }
 
-  void GetOrCreateTaskStateId(GetOrCreateTaskStateIdTask *task, RunContext &ctx) {
+  void GetOrCreateTaskStateId(GetOrCreateTaskStateIdTask *task, RunContext &rctx) {
     std::string state_name = task->state_name_->str();
     task->id_ = LABSTOR_TASK_REGISTRY->GetOrCreateTaskStateId(state_name);
     task->SetModuleComplete();
   }
 
-  void CreateTaskState(CreateTaskStateTask *task, RunContext &ctx) {
+  void CreateTaskState(CreateTaskStateTask *task, RunContext &rctx) {
     std::string lib_name = task->lib_name_->str();
     std::string state_name = task->state_name_->str();
     // Check local registry for task state
@@ -88,25 +88,25 @@ class Server : public TaskLib {
           LABSTOR_CLIENT->node_id_, state_name, task->task_state_);
   }
 
-  void GetTaskStateId(GetTaskStateIdTask *task, RunContext &ctx) {
+  void GetTaskStateId(GetTaskStateIdTask *task, RunContext &rctx) {
     std::string state_name = task->state_name_->str();
     task->id_ = LABSTOR_TASK_REGISTRY->GetTaskStateId(state_name);
     task->SetModuleComplete();
   }
 
-  void DestroyTaskState(DestroyTaskStateTask *task, RunContext &ctx) {
+  void DestroyTaskState(DestroyTaskStateTask *task, RunContext &rctx) {
     LABSTOR_TASK_REGISTRY->DestroyTaskState(task->id_);
     task->SetModuleComplete();
   }
 
-  void StopRuntime(StopRuntimeTask *task, RunContext &ctx) {
+  void StopRuntime(StopRuntimeTask *task, RunContext &rctx) {
     HILOG(kInfo, "Stopping (server mode)");
     LABSTOR_WORK_ORCHESTRATOR->FinalizeRuntime();
     LABSTOR_THALLIUM->StopThisDaemon();
     task->SetModuleComplete();
   }
 
-  void SetWorkOrchQueuePolicy(SetWorkOrchQueuePolicyTask *task, RunContext &ctx) {
+  void SetWorkOrchQueuePolicy(SetWorkOrchQueuePolicyTask *task, RunContext &rctx) {
     if (queue_sched_) {
       queue_sched_->SetModuleComplete();
     }
@@ -121,7 +121,7 @@ class Server : public TaskLib {
     task->SetModuleComplete();
   }
 
-  void SetWorkOrchProcPolicy(SetWorkOrchProcPolicyTask *task, RunContext &ctx) {
+  void SetWorkOrchProcPolicy(SetWorkOrchProcPolicyTask *task, RunContext &rctx) {
     if (proc_sched_) {
       proc_sched_->SetModuleComplete();
     }

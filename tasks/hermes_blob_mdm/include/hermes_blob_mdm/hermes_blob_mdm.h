@@ -123,7 +123,7 @@ class Client : public TaskLibClient {
       PutBlobTask *task,
       const TaskNode &task_node,
       TagId tag_id, const hshm::charbuf &blob_name,
-      BlobId &blob_id, size_t blob_off, size_t blob_size,
+      const BlobId &blob_id, size_t blob_off, size_t blob_size,
       const hipc::Pointer &blob, float score,
       bitfield32_t flags,
       Context ctx = Context(),

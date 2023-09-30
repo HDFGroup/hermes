@@ -7,7 +7,7 @@
 
 #include "data_stager_tasks.h"
 
-namespace labstor::data_stager {
+namespace hermes::data_stager {
 
 /** Create data_stager requests */
 class Client : public TaskLibClient {
@@ -23,7 +23,8 @@ class Client : public TaskLibClient {
   HSHM_ALWAYS_INLINE
   LPointer<ConstructTask> AsyncCreate(const TaskNode &task_node,
                                       const DomainId &domain_id,
-                                      const std::string &state_name) {
+                                      const std::string &state_name,
+                                      const TaskStateId &blob_mdm) {
     id_ = TaskStateId::GetNull();
     QueueManagerInfo &qm = LABSTOR_CLIENT->server_config_.queue_manager_;
     std::vector<PriorityInfo> queue_info = {
@@ -32,7 +33,7 @@ class Client : public TaskLibClient {
         {qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY}
     };
     return LABSTOR_ADMIN->AsyncCreateTaskState<ConstructTask>(
-        task_node, domain_id, state_name, id_, queue_info);
+        task_node, domain_id, state_name, id_, queue_info, blob_mdm);
   }
   LABSTOR_TASK_NODE_ROOT(AsyncCreate)
   template<typename ...Args>
@@ -51,20 +52,35 @@ class Client : public TaskLibClient {
     LABSTOR_ADMIN->DestroyTaskStateRoot(domain_id, id_);
   }
 
-  /** Call a custom method */
+  /** Stage in data from a remote source */
   HSHM_ALWAYS_INLINE
-  void AsyncCustomConstruct(CustomTask *task,
+  void AsyncStageInConstruct(StageInTask *task,
                             const TaskNode &task_node,
                             const DomainId &domain_id) {
-    LABSTOR_CLIENT->ConstructTask<CustomTask>(
+    LABSTOR_CLIENT->ConstructTask<StageInTask>(
         task, task_node, domain_id, id_);
   }
   HSHM_ALWAYS_INLINE
-  void CustomRoot(const DomainId &domain_id) {
-    LPointer<labpq::TypedPushTask<CustomTask>> task = AsyncCustomRoot(domain_id);
+  void StageIn(const DomainId &domain_id) {
+    LPointer<labpq::TypedPushTask<StageInTask>> task = AsyncStageInRoot(domain_id);
     task.ptr_->Wait();
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(Custom);
+  LABSTOR_TASK_NODE_PUSH_ROOT(StageIn);
+
+  /** Stage out data to a remote source */
+  HSHM_ALWAYS_INLINE
+  void AsyncStageOutConstruct(StageInTask *task,
+                             const TaskNode &task_node,
+                             const DomainId &domain_id) {
+    LABSTOR_CLIENT->ConstructTask<StageInTask>(
+        task, task_node, domain_id, id_);
+  }
+  HSHM_ALWAYS_INLINE
+  void StageOut(const DomainId &domain_id) {
+    LPointer<labpq::TypedPushTask<StageInTask>> task = AsyncStageInRoot(domain_id);
+    task.ptr_->Wait();
+  }
+  LABSTOR_TASK_NODE_PUSH_ROOT(StageOut);
 };
 
 }  // namespace labstor

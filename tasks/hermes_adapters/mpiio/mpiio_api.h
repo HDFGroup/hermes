@@ -182,7 +182,7 @@ class MpiioApi : public RealApi {
 
 /** Simplify access to the stateless MpiioFs Singleton */
 #define HERMES_MPIIO_API \
-  hshm::EasySingleton<hermes::adapter::fs::MpiioApi>::GetInstance()
+  hshm::EasySingleton<::hermes::adapter::fs::MpiioApi>::GetInstance()
 #define HERMES_MPIIO_API_T hermes::adapter::fs::MpiioApi*
 
 #endif  // HERMES_ADAPTER_MPIIO_H

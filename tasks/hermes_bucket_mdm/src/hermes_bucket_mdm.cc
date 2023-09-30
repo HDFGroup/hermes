@@ -27,7 +27,7 @@ class Server : public TaskLib {
  public:
   Server() = default;
 
-  void Construct(ConstructTask *task, RunContext &ctx) {
+  void Construct(ConstructTask *task, RunContext &rctx) {
     id_alloc_ = 0;
     node_id_ = LABSTOR_CLIENT->node_id_;
     bkt_mdm_.Init(id_);
@@ -36,21 +36,21 @@ class Server : public TaskLib {
     task->SetModuleComplete();
   }
 
-  void Destruct(DestructTask *task, RunContext &ctx) {
+  void Destruct(DestructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
 
   /**
    * Set the Blob MDM
    * */
-  void SetBlobMdm(SetBlobMdmTask *task, RunContext &ctx) {
+  void SetBlobMdm(SetBlobMdmTask *task, RunContext &rctx) {
     blob_mdm_.Init(task->blob_mdm_);
     task->SetModuleComplete();
   }
 
   /** Update the size of the bucket */
-  void UpdateSize(UpdateSizeTask *task, RunContext &ctx) {
-    TAG_MAP_T &tag_map = tag_map_[ctx.lane_id_];
+  void UpdateSize(UpdateSizeTask *task, RunContext &rctx) {
+    TAG_MAP_T &tag_map = tag_map_[rctx.lane_id_];
     TagInfo &tag_info = tag_map[task->tag_id_];
     ssize_t internal_size = (ssize_t) tag_info.internal_size_;
     if (task->mode_ == UpdateSizeMode::kAdd) {
@@ -67,12 +67,12 @@ class Server : public TaskLib {
   /**
    * Create the PartialPuts for append operations.
    * */
-  void AppendBlobSchema(AppendBlobSchemaTask *task, RunContext &ctx) {
+  void AppendBlobSchema(AppendBlobSchemaTask *task, RunContext &rctx) {
     switch (task->phase_) {
       case AppendBlobPhase::kGetBlobIds: {
         HILOG(kDebug, "(node {}) Getting blob IDs for tag {} (task_node={})",
               LABSTOR_CLIENT->node_id_, task->tag_id_, task->task_node_)
-        TAG_MAP_T &tag_map = tag_map_[ctx.lane_id_];
+        TAG_MAP_T &tag_map = tag_map_[rctx.lane_id_];
         TagInfo &tag_info = tag_map[task->tag_id_];
         size_t bucket_size = tag_info.internal_size_;
         size_t cur_page = bucket_size / task->page_size_;
@@ -127,7 +127,7 @@ class Server : public TaskLib {
    * are named 0 ... N. Each blob is assumed to have a certain
    * fixed page size.
    * */
-  void AppendBlob(AppendBlobTask *task, RunContext &ctx) {
+  void AppendBlob(AppendBlobTask *task, RunContext &rctx) {
     switch (task->phase_) {
       case AppendBlobPhase::kGetBlobIds: {
         HILOG(kDebug, "(node {}) Appending {} bytes to bucket {} (task_node={})",
@@ -188,12 +188,12 @@ class Server : public TaskLib {
   }
 
   /** Get or create a tag */
-  void GetOrCreateTag(GetOrCreateTagTask *task, RunContext &ctx) {
+  void GetOrCreateTag(GetOrCreateTagTask *task, RunContext &rctx) {
     TagId tag_id;
-    HILOG(kDebug, "Creating a tag on lane {}", ctx.lane_id_);
+    HILOG(kDebug, "Creating a tag on lane {}", rctx.lane_id_);
 
     // Check if the tag exists
-    TAG_ID_MAP_T &tag_id_map = tag_id_map_[ctx.lane_id_];
+    TAG_ID_MAP_T &tag_id_map = tag_id_map_[rctx.lane_id_];
     hshm::charbuf tag_name = hshm::to_charbuf(*task->tag_name_);
     bool did_create = false;
     if (tag_name.size() > 0) {
@@ -202,7 +202,7 @@ class Server : public TaskLib {
 
     // Emplace bucket if it does not already exist
     if (did_create) {
-      TAG_MAP_T &tag_map = tag_map_[ctx.lane_id_];
+      TAG_MAP_T &tag_map = tag_map_[rctx.lane_id_];
       tag_id.unique_ = id_alloc_.fetch_add(1);
       tag_id.hash_ = task->lane_hash_;
       tag_id.node_id_ = LABSTOR_RUNTIME->rpc_.node_id_;
@@ -230,8 +230,8 @@ class Server : public TaskLib {
   }
 
   /** Get tag ID */
-  void GetTagId(GetTagIdTask *task, RunContext &ctx) {
-    TAG_ID_MAP_T &tag_id_map = tag_id_map_[ctx.lane_id_];
+  void GetTagId(GetTagIdTask *task, RunContext &rctx) {
+    TAG_ID_MAP_T &tag_id_map = tag_id_map_[rctx.lane_id_];
     hshm::charbuf tag_name = hshm::to_charbuf(*task->tag_name_);
     auto it = tag_id_map.find(tag_name);
     if (it == tag_id_map.end()) {
@@ -244,8 +244,8 @@ class Server : public TaskLib {
   }
 
   /** Get tag name */
-  void GetTagName(GetTagNameTask *task, RunContext &ctx) {
-    TAG_MAP_T &tag_map = tag_map_[ctx.lane_id_];
+  void GetTagName(GetTagNameTask *task, RunContext &rctx) {
+    TAG_MAP_T &tag_map = tag_map_[rctx.lane_id_];
     auto it = tag_map.find(task->tag_id_);
     if (it == tag_map.end()) {
       task->SetModuleComplete();
@@ -256,8 +256,8 @@ class Server : public TaskLib {
   }
 
   /** Rename tag */
-  void RenameTag(RenameTagTask *task, RunContext &ctx) {
-    TAG_MAP_T &tag_map = tag_map_[ctx.lane_id_];
+  void RenameTag(RenameTagTask *task, RunContext &rctx) {
+    TAG_MAP_T &tag_map = tag_map_[rctx.lane_id_];
     auto it = tag_map.find(task->tag_id_);
     if (it == tag_map.end()) {
       task->SetModuleComplete();
@@ -268,11 +268,11 @@ class Server : public TaskLib {
   }
 
   /** Destroy tag */
-  void DestroyTag(DestroyTagTask *task, RunContext &ctx) {
+  void DestroyTag(DestroyTagTask *task, RunContext &rctx) {
     switch (task->phase_) {
       case DestroyTagPhase::kDestroyBlobs: {
-        TAG_ID_MAP_T &tag_id_map = tag_id_map_[ctx.lane_id_];
-        TAG_MAP_T &tag_map = tag_map_[ctx.lane_id_];
+        TAG_ID_MAP_T &tag_id_map = tag_id_map_[rctx.lane_id_];
+        TAG_MAP_T &tag_map = tag_map_[rctx.lane_id_];
         TagInfo &tag = tag_map[task->tag_id_];
         tag_id_map.erase(tag.name_);
         HSHM_MAKE_AR0(task->destroy_blob_tasks_, nullptr);
@@ -297,7 +297,7 @@ class Server : public TaskLib {
           LABSTOR_CLIENT->DelTask(blob_task);
         }
         HSHM_DESTROY_AR(task->destroy_blob_tasks_);
-        TAG_MAP_T &tag_map = tag_map_[ctx.lane_id_];
+        TAG_MAP_T &tag_map = tag_map_[rctx.lane_id_];
         tag_map.erase(task->tag_id_);
         task->SetModuleComplete();
       }
@@ -305,8 +305,8 @@ class Server : public TaskLib {
   }
 
   /** Add a blob to a tag */
-  void TagAddBlob(TagAddBlobTask *task, RunContext &ctx) {
-    TAG_MAP_T &tag_map = tag_map_[ctx.lane_id_];
+  void TagAddBlob(TagAddBlobTask *task, RunContext &rctx) {
+    TAG_MAP_T &tag_map = tag_map_[rctx.lane_id_];
     auto it = tag_map.find(task->tag_id_);
     if (it == tag_map.end()) {
       task->SetModuleComplete();
@@ -318,8 +318,8 @@ class Server : public TaskLib {
   }
 
   /** Remove a blob from a tag */
-  void TagRemoveBlob(TagRemoveBlobTask *task, RunContext &ctx) {
-    TAG_MAP_T &tag_map = tag_map_[ctx.lane_id_];
+  void TagRemoveBlob(TagRemoveBlobTask *task, RunContext &rctx) {
+    TAG_MAP_T &tag_map = tag_map_[rctx.lane_id_];
     auto it = tag_map.find(task->tag_id_);
     if (it == tag_map.end()) {
       task->SetModuleComplete();
@@ -332,8 +332,8 @@ class Server : public TaskLib {
   }
 
   /** Clear blobs from a tag */
-  void TagClearBlobs(TagClearBlobsTask *task, RunContext &ctx) {
-    TAG_MAP_T &tag_map = tag_map_[ctx.lane_id_];
+  void TagClearBlobs(TagClearBlobsTask *task, RunContext &rctx) {
+    TAG_MAP_T &tag_map = tag_map_[rctx.lane_id_];
     auto it = tag_map.find(task->tag_id_);
     if (it == tag_map.end()) {
       task->SetModuleComplete();
@@ -346,8 +346,8 @@ class Server : public TaskLib {
   }
 
   /** Get size of the bucket */
-  void GetSize(GetSizeTask *task, RunContext &ctx) {
-    TAG_MAP_T &tag_map = tag_map_[ctx.lane_id_];
+  void GetSize(GetSizeTask *task, RunContext &rctx) {
+    TAG_MAP_T &tag_map = tag_map_[rctx.lane_id_];
     auto it = tag_map.find(task->tag_id_);
     if (it == tag_map.end()) {
       task->size_ = 0;

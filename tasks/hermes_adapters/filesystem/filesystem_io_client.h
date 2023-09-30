@@ -364,7 +364,7 @@ class FilesystemIoClient {
 namespace std {
 /** A structure to represent hash */
 template <>
-struct hash<hermes::adapter::fs::File> {
+struct hash<::hermes::adapter::fs::File> {
   /** hash creator functor */
   std::size_t operator()(const hermes::adapter::fs::File &key) const {
     return key.hash();

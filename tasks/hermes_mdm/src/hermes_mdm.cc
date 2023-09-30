@@ -25,7 +25,7 @@ class Server : public TaskLib {
  public:
   Server() = default;
 
-  void Construct(ConstructTask *task, RunContext &ctx) {
+  void Construct(ConstructTask *task, RunContext &rctx) {
     HILOG(kDebug, "ConstructTaskPhase::kLoadConfig")
     std::string config_path = task->server_config_path_->str();
     HERMES_CONF->LoadServerConfig(config_path);
@@ -33,7 +33,7 @@ class Server : public TaskLib {
     task->SetModuleComplete();
   }
 
-  void Destruct(DestructTask *task, RunContext &ctx) {
+  void Destruct(DestructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
 

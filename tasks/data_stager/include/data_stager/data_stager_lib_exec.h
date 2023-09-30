@@ -1,19 +1,27 @@
-#ifndef LABSTOR_data_stager_LIB_EXEC_H_
-#define LABSTOR_data_stager_LIB_EXEC_H_
+#ifndef LABSTOR_DATA_STAGER_LIB_EXEC_H_
+#define LABSTOR_DATA_STAGER_LIB_EXEC_H_
 
 /** Execute a task */
-void Run(u32 method, Task *task, RunContext &ctx) override {
+void Run(u32 method, Task *task, RunContext &rctx) override {
   switch (method) {
     case Method::kConstruct: {
-      Construct(reinterpret_cast<ConstructTask *>(task), ctx);
+      Construct(reinterpret_cast<ConstructTask *>(task), rctx);
       break;
     }
     case Method::kDestruct: {
-      Destruct(reinterpret_cast<DestructTask *>(task), ctx);
+      Destruct(reinterpret_cast<DestructTask *>(task), rctx);
       break;
     }
-    case Method::kCustom: {
-      Custom(reinterpret_cast<CustomTask *>(task), ctx);
+    case Method::kRegisterStager: {
+      RegisterStager(reinterpret_cast<RegisterStagerTask *>(task), rctx);
+      break;
+    }
+    case Method::kStageIn: {
+      StageIn(reinterpret_cast<StageInTask *>(task), rctx);
+      break;
+    }
+    case Method::kStageOut: {
+      StageOut(reinterpret_cast<StageOutTask *>(task), rctx);
       break;
     }
   }
@@ -29,8 +37,16 @@ void Del(u32 method, Task *task) override {
       LABSTOR_CLIENT->DelTask(reinterpret_cast<DestructTask *>(task));
       break;
     }
-    case Method::kCustom: {
-      LABSTOR_CLIENT->DelTask(reinterpret_cast<CustomTask *>(task));
+    case Method::kRegisterStager: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<RegisterStagerTask *>(task));
+      break;
+    }
+    case Method::kStageIn: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<StageInTask *>(task));
+      break;
+    }
+    case Method::kStageOut: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<StageOutTask *>(task));
       break;
     }
   }
@@ -46,8 +62,16 @@ void ReplicateStart(u32 method, u32 count, Task *task) override {
       labstor::CALL_REPLICA_START(count, reinterpret_cast<DestructTask*>(task));
       break;
     }
-    case Method::kCustom: {
-      labstor::CALL_REPLICA_START(count, reinterpret_cast<CustomTask*>(task));
+    case Method::kRegisterStager: {
+      labstor::CALL_REPLICA_START(count, reinterpret_cast<RegisterStagerTask*>(task));
+      break;
+    }
+    case Method::kStageIn: {
+      labstor::CALL_REPLICA_START(count, reinterpret_cast<StageInTask*>(task));
+      break;
+    }
+    case Method::kStageOut: {
+      labstor::CALL_REPLICA_START(count, reinterpret_cast<StageOutTask*>(task));
       break;
     }
   }
@@ -63,8 +87,16 @@ void ReplicateEnd(u32 method, Task *task) override {
       labstor::CALL_REPLICA_END(reinterpret_cast<DestructTask*>(task));
       break;
     }
-    case Method::kCustom: {
-      labstor::CALL_REPLICA_END(reinterpret_cast<CustomTask*>(task));
+    case Method::kRegisterStager: {
+      labstor::CALL_REPLICA_END(reinterpret_cast<RegisterStagerTask*>(task));
+      break;
+    }
+    case Method::kStageIn: {
+      labstor::CALL_REPLICA_END(reinterpret_cast<StageInTask*>(task));
+      break;
+    }
+    case Method::kStageOut: {
+      labstor::CALL_REPLICA_END(reinterpret_cast<StageOutTask*>(task));
       break;
     }
   }
@@ -80,8 +112,16 @@ std::vector<DataTransfer> SaveStart(u32 method, BinaryOutputArchive<true> &ar, T
       ar << *reinterpret_cast<DestructTask*>(task);
       break;
     }
-    case Method::kCustom: {
-      ar << *reinterpret_cast<CustomTask*>(task);
+    case Method::kRegisterStager: {
+      ar << *reinterpret_cast<RegisterStagerTask*>(task);
+      break;
+    }
+    case Method::kStageIn: {
+      ar << *reinterpret_cast<StageInTask*>(task);
+      break;
+    }
+    case Method::kStageOut: {
+      ar << *reinterpret_cast<StageOutTask*>(task);
       break;
     }
   }
@@ -101,9 +141,19 @@ TaskPointer LoadStart(u32 method, BinaryInputArchive<true> &ar) override {
       ar >> *reinterpret_cast<DestructTask*>(task_ptr.ptr_);
       break;
     }
-    case Method::kCustom: {
-      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<CustomTask>(task_ptr.shm_);
-      ar >> *reinterpret_cast<CustomTask*>(task_ptr.ptr_);
+    case Method::kRegisterStager: {
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<RegisterStagerTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<RegisterStagerTask*>(task_ptr.ptr_);
+      break;
+    }
+    case Method::kStageIn: {
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<StageInTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<StageInTask*>(task_ptr.ptr_);
+      break;
+    }
+    case Method::kStageOut: {
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<StageOutTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<StageOutTask*>(task_ptr.ptr_);
       break;
     }
   }
@@ -120,8 +170,16 @@ std::vector<DataTransfer> SaveEnd(u32 method, BinaryOutputArchive<false> &ar, Ta
       ar << *reinterpret_cast<DestructTask*>(task);
       break;
     }
-    case Method::kCustom: {
-      ar << *reinterpret_cast<CustomTask*>(task);
+    case Method::kRegisterStager: {
+      ar << *reinterpret_cast<RegisterStagerTask*>(task);
+      break;
+    }
+    case Method::kStageIn: {
+      ar << *reinterpret_cast<StageInTask*>(task);
+      break;
+    }
+    case Method::kStageOut: {
+      ar << *reinterpret_cast<StageOutTask*>(task);
       break;
     }
   }
@@ -138,8 +196,16 @@ void LoadEnd(u32 replica, u32 method, BinaryInputArchive<false> &ar, Task *task)
       ar.Deserialize(replica, *reinterpret_cast<DestructTask*>(task));
       break;
     }
-    case Method::kCustom: {
-      ar.Deserialize(replica, *reinterpret_cast<CustomTask*>(task));
+    case Method::kRegisterStager: {
+      ar.Deserialize(replica, *reinterpret_cast<RegisterStagerTask*>(task));
+      break;
+    }
+    case Method::kStageIn: {
+      ar.Deserialize(replica, *reinterpret_cast<StageInTask*>(task));
+      break;
+    }
+    case Method::kStageOut: {
+      ar.Deserialize(replica, *reinterpret_cast<StageOutTask*>(task));
       break;
     }
   }
@@ -153,11 +219,17 @@ u32 GetGroup(u32 method, Task *task, hshm::charbuf &group) override {
     case Method::kDestruct: {
       return reinterpret_cast<DestructTask*>(task)->GetGroup(group);
     }
-    case Method::kCustom: {
-      return reinterpret_cast<CustomTask*>(task)->GetGroup(group);
+    case Method::kRegisterStager: {
+      return reinterpret_cast<RegisterStagerTask*>(task)->GetGroup(group);
+    }
+    case Method::kStageIn: {
+      return reinterpret_cast<StageInTask*>(task)->GetGroup(group);
+    }
+    case Method::kStageOut: {
+      return reinterpret_cast<StageOutTask*>(task)->GetGroup(group);
     }
   }
   return -1;
 }
 
-#endif  // LABSTOR_data_stager_METHODS_H_
+#endif  // LABSTOR_DATA_STAGER_METHODS_H_

@@ -13,16 +13,16 @@ class Server : public TaskLib {
   u32 count_;
 
  public:
-  void Construct(ConstructTask *task, RunContext &ctx) {
+  void Construct(ConstructTask *task, RunContext &rctx) {
     count_ = 0;
     task->SetModuleComplete();
   }
 
-  void Destruct(DestructTask *task, RunContext &ctx) {
+  void Destruct(DestructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
 
-  void Schedule(ScheduleTask *task, RunContext &ctx) {
+  void Schedule(ScheduleTask *task, RunContext &rctx) {
     // Check if any new queues need to be scheduled
     for (MultiQueue &queue : *LABSTOR_QM_RUNTIME->queue_map_) {
       if (queue.id_.IsNull()) {

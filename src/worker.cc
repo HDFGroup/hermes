@@ -55,10 +55,10 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
       continue;
     }
     task = LABSTOR_CLIENT->GetPrivatePointer<Task>(entry->p_);
-    RunContext &ctx = task->ctx_;
-    ctx.lane_id_ = work_entry.lane_id_;
+    RunContext &rctx = task->ctx_;
+    rctx.lane_id_ = work_entry.lane_id_;
     // Get the task state
-    TaskState *&exec = ctx.exec_;
+    TaskState *&exec = rctx.exec_;
     exec = LABSTOR_TASK_REGISTRY->GetTaskState(task->task_state_);
     if (!exec) {
       HELOG(kFatal, "(node {}) Could not find the task state: {}",
@@ -89,24 +89,24 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
         task->UnsetCoroutine();
       } else if (task->IsCoroutine()) {
         if (!task->IsStarted()) {
-          ctx.stack_ptr_ = malloc(ctx.stack_size_);
-          if (ctx.stack_ptr_ == nullptr) {
+          rctx.stack_ptr_ = malloc(rctx.stack_size_);
+          if (rctx.stack_ptr_ == nullptr) {
             HILOG(kFatal, "The stack pointer of size {} is NULL",
-                  ctx.stack_size_, ctx.stack_ptr_);
+                  rctx.stack_size_, rctx.stack_ptr_);
           }
-          ctx.jmp_.fctx = bctx::make_fcontext(
-              (char*)ctx.stack_ptr_ + ctx.stack_size_,
-              ctx.stack_size_, &RunBlocking);
+          rctx.jmp_.fctx = bctx::make_fcontext(
+              (char*)rctx.stack_ptr_ + rctx.stack_size_,
+              rctx.stack_size_, &RunBlocking);
           task->SetStarted();
         }
-        ctx.jmp_ = bctx::jump_fcontext(ctx.jmp_.fctx, task);
+        rctx.jmp_ = bctx::jump_fcontext(rctx.jmp_.fctx, task);
         HILOG(kDebug, "Jumping into function")
       } else if (task->IsPreemptive()) {
         task->DisableRun();
         entry->thread_ = LABSTOR_WORK_ORCHESTRATOR->SpawnAsyncThread(&Worker::RunPreemptive, task);
       } else {
         task->SetStarted();
-        exec->Run(task->method_, task, ctx);
+        exec->Run(task->method_, task, rctx);
       }
     }
     // Cleanup on task completion
@@ -116,7 +116,7 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
       entry->complete_ = true;
       if (task->IsCoroutine()) {
         // TODO(llogan): verify leak
-        free(ctx.stack_ptr_);
+        free(rctx.stack_ptr_);
       } else if (task->IsPreemptive()) {
         ABT_thread_join(entry->thread_);
       }
@@ -130,18 +130,18 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
 
 void Worker::RunBlocking(bctx::transfer_t t) {
   Task *task = reinterpret_cast<Task*>(t.data);
-  RunContext &ctx = task->ctx_;
-  TaskState *&exec = ctx.exec_;
-  ctx.jmp_ = t;
-  exec->Run(task->method_, task, ctx);
+  RunContext &rctx = task->ctx_;
+  TaskState *&exec = rctx.exec_;
+  rctx.jmp_ = t;
+  exec->Run(task->method_, task, rctx);
   task->Yield<TASK_YIELD_CO>();
 }
 
 void Worker::RunPreemptive(void *data) {
   Task *task = reinterpret_cast<Task *>(data);
   TaskState *exec = LABSTOR_TASK_REGISTRY->GetTaskState(task->task_state_);
-  RunContext ctx(0);
-  exec->Run(task->method_, task, ctx);
+  RunContext rctx(0);
+  exec->Run(task->method_, task, rctx);
 }
 
 }  // namespace labstor

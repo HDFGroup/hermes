@@ -55,13 +55,13 @@ def refresh_methods(TASK_ROOT):
               '']
     ## Create the Run method
     lines += ['/** Execute a task */',
-              'void Run(u32 method, Task *task, RunContext &ctx) override {',
+              'void Run(u32 method, Task *task, RunContext &rctx) override {',
               '  switch (method) {']
     for method_enum_name, method_off in methods:
         method_name = method_enum_name.replace('k', '', 1)
         task_name = method_name + "Task"
         lines += [f'    case Method::{method_enum_name}: {{',
-                  f'      {method_name}(reinterpret_cast<{task_name} *>(task), ctx);',
+                  f'      {method_name}(reinterpret_cast<{task_name} *>(task), rctx);',
                   f'      break;',
                   f'    }}']
     lines += ['  }']

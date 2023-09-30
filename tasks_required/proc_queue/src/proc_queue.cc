@@ -12,15 +12,15 @@ class Server : public TaskLib {
  public:
   Server() = default;
 
-  void Construct(ConstructTask *task, RunContext &ctx) {
+  void Construct(ConstructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
 
-  void Destruct(DestructTask *task, RunContext &ctx) {
+  void Destruct(DestructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
 
-  void Push(PushTask *task, RunContext &ctx) {
+  void Push(PushTask *task, RunContext &rctx) {
     switch (task->phase_) {
       case PushTaskPhase::kSchedule: {
         task->sub_run_.shm_ = task->sub_cli_.shm_;

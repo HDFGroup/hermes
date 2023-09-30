@@ -1,1 +1,3 @@
-kCustom: 0
+kRegisterStager: 0
+kStageIn: 1
+kStageOut: 2

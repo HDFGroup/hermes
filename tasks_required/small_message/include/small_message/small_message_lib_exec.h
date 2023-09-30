@@ -2,26 +2,26 @@
 #define LABSTOR_SMALL_MESSAGE_LIB_EXEC_H_
 
 /** Execute a task */
-void Run(u32 method, Task *task, RunContext &ctx) override {
+void Run(u32 method, Task *task, RunContext &rctx) override {
   switch (method) {
     case Method::kConstruct: {
-      Construct(reinterpret_cast<ConstructTask *>(task), ctx);
+      Construct(reinterpret_cast<ConstructTask *>(task), rctx);
       break;
     }
     case Method::kDestruct: {
-      Destruct(reinterpret_cast<DestructTask *>(task), ctx);
+      Destruct(reinterpret_cast<DestructTask *>(task), rctx);
       break;
     }
     case Method::kMd: {
-      Md(reinterpret_cast<MdTask *>(task), ctx);
+      Md(reinterpret_cast<MdTask *>(task), rctx);
       break;
     }
     case Method::kIo: {
-      Io(reinterpret_cast<IoTask *>(task), ctx);
+      Io(reinterpret_cast<IoTask *>(task), rctx);
       break;
     }
     case Method::kMdPush: {
-      MdPush(reinterpret_cast<MdPushTask *>(task), ctx);
+      MdPush(reinterpret_cast<MdPushTask *>(task), rctx);
       break;
     }
   }
