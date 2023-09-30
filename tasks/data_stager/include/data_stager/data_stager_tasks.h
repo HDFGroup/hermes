@@ -78,7 +78,7 @@ struct DestructTask : public DestroyTaskStateTask {
 /**
  * Register a new stager
  * */
-struct RegisterStagerTask : public Task, TaskFlags<TF_SRL_SYM> {
+struct RegisterStagerTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   hermes::BucketId bkt_id_;
   hipc::ShmArchive<hipc::string> url_;
 
@@ -96,16 +96,64 @@ struct RegisterStagerTask : public Task, TaskFlags<TF_SRL_SYM> {
                      hshm::charbuf &url) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = 0;
+    lane_hash_ = bkt_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
-    method_ = Method::kStageIn;
-    task_flags_.SetBits(0);
+    method_ = Method::kRegisterStager;
+    task_flags_.SetBits(TASK_FIRE_AND_FORGET);
     domain_id_ = domain_id;
 
     // Custom params
     bkt_id_ = bkt_id;
     HSHM_MAKE_AR(url_, alloc, url);
+  }
+
+  /** (De)serialize message call */
+  template<typename Ar>
+  void SerializeStart(Ar &ar) {
+    task_serialize<Ar>(ar);
+  }
+
+  /** (De)serialize message return */
+  template<typename Ar>
+  void SerializeEnd(u32 replica, Ar &ar) {
+  }
+
+  /** Create group */
+  HSHM_ALWAYS_INLINE
+  u32 GetGroup(hshm::charbuf &group) {
+    return TASK_UNORDERED;
+  }
+};
+
+/**
+ * Unregister a new stager
+ * */
+struct UnregisterStagerTask : public Task, TaskFlags<TF_SRL_SYM> {
+  hermes::BucketId bkt_id_;
+
+  /** SHM default constructor */
+  HSHM_ALWAYS_INLINE explicit
+  UnregisterStagerTask(hipc::Allocator *alloc) : Task(alloc) {}
+
+  /** Emplace constructor */
+  HSHM_ALWAYS_INLINE explicit
+  UnregisterStagerTask(hipc::Allocator *alloc,
+                       const TaskNode &task_node,
+                       const DomainId &domain_id,
+                       const TaskStateId &state_id,
+                       hermes::BucketId bkt_id) : Task(alloc) {
+    // Initialize task
+    task_node_ = task_node;
+    lane_hash_ = bkt_id.hash_;
+    prio_ = TaskPrio::kLowLatency;
+    task_state_ = state_id;
+    method_ = Method::kUnregisterStager;
+    task_flags_.SetBits(TASK_FIRE_AND_FORGET);
+    domain_id_ = domain_id;
+
+    // Custom params
+    bkt_id_ = bkt_id;
   }
 
   /** (De)serialize message call */
@@ -143,7 +191,10 @@ struct StageInTask : public Task, TaskFlags<TF_SRL_SYM> {
   StageInTask(hipc::Allocator *alloc,
               const TaskNode &task_node,
               const DomainId &domain_id,
-              const TaskStateId &state_id) : Task(alloc) {
+              const TaskStateId &state_id,
+              const BucketId &bkt_id,
+              const hshm::charbuf &blob_name,
+              float score) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = 0;
@@ -154,6 +205,9 @@ struct StageInTask : public Task, TaskFlags<TF_SRL_SYM> {
     domain_id_ = domain_id;
 
     // Custom params
+    bkt_id_ = bkt_id;
+    HSHM_MAKE_AR(blob_name_, alloc, blob_name);
+    score_ = score;
   }
 
   /** (De)serialize message call */
@@ -192,10 +246,14 @@ struct StageOutTask : public Task, TaskFlags<TF_SRL_SYM> {
   StageOutTask(hipc::Allocator *alloc,
                const TaskNode &task_node,
                const DomainId &domain_id,
-               const TaskStateId &state_id) : Task(alloc) {
+               const TaskStateId &state_id,
+               const BucketId &bkt_id,
+               const hshm::charbuf &blob_name,
+               const hipc::Pointer &data,
+               size_t data_size) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = 0;
+    lane_hash_ = bkt_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kStageOut;
@@ -203,6 +261,10 @@ struct StageOutTask : public Task, TaskFlags<TF_SRL_SYM> {
     domain_id_ = domain_id;
 
     // Custom params
+    bkt_id_ = bkt_id;
+    HSHM_MAKE_AR(blob_name_, alloc, blob_name);
+    data_ = data;
+    data_size_ = data_size;
   }
 
   /** (De)serialize message call */

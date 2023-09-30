@@ -16,6 +16,10 @@ void Run(u32 method, Task *task, RunContext &rctx) override {
       RegisterStager(reinterpret_cast<RegisterStagerTask *>(task), rctx);
       break;
     }
+    case Method::kUnregisterStager: {
+      UnregisterStager(reinterpret_cast<UnregisterStagerTask *>(task), rctx);
+      break;
+    }
     case Method::kStageIn: {
       StageIn(reinterpret_cast<StageInTask *>(task), rctx);
       break;
@@ -39,6 +43,10 @@ void Del(u32 method, Task *task) override {
     }
     case Method::kRegisterStager: {
       LABSTOR_CLIENT->DelTask(reinterpret_cast<RegisterStagerTask *>(task));
+      break;
+    }
+    case Method::kUnregisterStager: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<UnregisterStagerTask *>(task));
       break;
     }
     case Method::kStageIn: {
@@ -66,6 +74,10 @@ void ReplicateStart(u32 method, u32 count, Task *task) override {
       labstor::CALL_REPLICA_START(count, reinterpret_cast<RegisterStagerTask*>(task));
       break;
     }
+    case Method::kUnregisterStager: {
+      labstor::CALL_REPLICA_START(count, reinterpret_cast<UnregisterStagerTask*>(task));
+      break;
+    }
     case Method::kStageIn: {
       labstor::CALL_REPLICA_START(count, reinterpret_cast<StageInTask*>(task));
       break;
@@ -91,6 +103,10 @@ void ReplicateEnd(u32 method, Task *task) override {
       labstor::CALL_REPLICA_END(reinterpret_cast<RegisterStagerTask*>(task));
       break;
     }
+    case Method::kUnregisterStager: {
+      labstor::CALL_REPLICA_END(reinterpret_cast<UnregisterStagerTask*>(task));
+      break;
+    }
     case Method::kStageIn: {
       labstor::CALL_REPLICA_END(reinterpret_cast<StageInTask*>(task));
       break;
@@ -114,6 +130,10 @@ std::vector<DataTransfer> SaveStart(u32 method, BinaryOutputArchive<true> &ar, T
     }
     case Method::kRegisterStager: {
       ar << *reinterpret_cast<RegisterStagerTask*>(task);
+      break;
+    }
+    case Method::kUnregisterStager: {
+      ar << *reinterpret_cast<UnregisterStagerTask*>(task);
       break;
     }
     case Method::kStageIn: {
@@ -146,6 +166,11 @@ TaskPointer LoadStart(u32 method, BinaryInputArchive<true> &ar) override {
       ar >> *reinterpret_cast<RegisterStagerTask*>(task_ptr.ptr_);
       break;
     }
+    case Method::kUnregisterStager: {
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<UnregisterStagerTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<UnregisterStagerTask*>(task_ptr.ptr_);
+      break;
+    }
     case Method::kStageIn: {
       task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<StageInTask>(task_ptr.shm_);
       ar >> *reinterpret_cast<StageInTask*>(task_ptr.ptr_);
@@ -174,6 +199,10 @@ std::vector<DataTransfer> SaveEnd(u32 method, BinaryOutputArchive<false> &ar, Ta
       ar << *reinterpret_cast<RegisterStagerTask*>(task);
       break;
     }
+    case Method::kUnregisterStager: {
+      ar << *reinterpret_cast<UnregisterStagerTask*>(task);
+      break;
+    }
     case Method::kStageIn: {
       ar << *reinterpret_cast<StageInTask*>(task);
       break;
@@ -200,6 +229,10 @@ void LoadEnd(u32 replica, u32 method, BinaryInputArchive<false> &ar, Task *task)
       ar.Deserialize(replica, *reinterpret_cast<RegisterStagerTask*>(task));
       break;
     }
+    case Method::kUnregisterStager: {
+      ar.Deserialize(replica, *reinterpret_cast<UnregisterStagerTask*>(task));
+      break;
+    }
     case Method::kStageIn: {
       ar.Deserialize(replica, *reinterpret_cast<StageInTask*>(task));
       break;
@@ -221,6 +254,9 @@ u32 GetGroup(u32 method, Task *task, hshm::charbuf &group) override {
     }
     case Method::kRegisterStager: {
       return reinterpret_cast<RegisterStagerTask*>(task)->GetGroup(group);
+    }
+    case Method::kUnregisterStager: {
+      return reinterpret_cast<UnregisterStagerTask*>(task)->GetGroup(group);
     }
     case Method::kStageIn: {
       return reinterpret_cast<StageInTask*>(task)->GetGroup(group);
