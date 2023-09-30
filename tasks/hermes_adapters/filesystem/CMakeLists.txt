@@ -53,6 +53,19 @@ EXPORT (
 endif()
 
 #-----------------------------------------------------------------------------
+# Install headers
+#-----------------------------------------------------------------------------
+file(GLOB_RECURSE HERMES_HEADERS "*.h")
+install(
+        FILES
+        ${HERMES_HEADERS}
+        DESTINATION
+        ${CMAKE_INSTALL_PREFIX}/include/hermes_adapters/filesystem
+        COMPONENT
+        headers
+)
+
+#-----------------------------------------------------------------------------
 # Add Target(s) to Coverage
 #-----------------------------------------------------------------------------
 if(HERMES_ENABLE_COVERAGE)

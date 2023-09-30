@@ -13,7 +13,7 @@
 #ifndef HERMES_ADAPTER_ADAPTER_TYPES_H_
 #define HERMES_ADAPTER_ADAPTER_TYPES_H_
 
-#include "../../posix/posix_api.h"
+#include "hermes_adapters/posix/posix_api.h"
 
 namespace hermes::adapter {
 

@@ -3,9 +3,7 @@
 #------------------------------------------------------------------------------
 include_directories(include)
 add_subdirectory(filesystem)
-if (HERMES_ENABLE_POSIX_ADAPTER)
-    add_subdirectory(posix)
-endif()
+add_subdirectory(posix)
 if (HERMES_ENABLE_STDIO_ADAPTER)
     add_subdirectory(stdio)
 endif()

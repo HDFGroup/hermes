@@ -34,6 +34,20 @@ install(
         ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
         RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR}
 )
+
+#-----------------------------------------------------------------------------
+# Install headers
+#-----------------------------------------------------------------------------
+file(GLOB_RECURSE HERMES_HEADERS "*.h")
+install(
+        FILES
+        ${HERMES_HEADERS}
+        DESTINATION
+        ${CMAKE_INSTALL_PREFIX}/include/hermes_adapters/stdio
+        COMPONENT
+        headers
+)
+
 #-----------------------------------------------------------------------------
 # Add Target(s) to Coverage
 #-----------------------------------------------------------------------------

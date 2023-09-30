@@ -59,6 +59,12 @@ if( Hermes_INCLUDE_DIR )
     message(STATUS "found boost at ${Boost_INCLUDE_DIRS}")
   endif()
 
+  # Thallium
+  find_package(thallium CONFIG REQUIRED)
+  if(thallium_FOUND)
+    message(STATUS "found thallium at ${thallium_DIR}")
+  endif()
+
   #-----------------------------------------------------------------------------
   # Mark hermes as found and set all needed packages
   #-----------------------------------------------------------------------------
@@ -74,6 +80,7 @@ if( Hermes_INCLUDE_DIR )
             cereal::cereal
             -ldl -lrt -lc -pthread
             thallium
+            hermes
             ${Boost_LIBRARIES} ${Hermes_LIBRARY})
     set(Hermes_CLIENT_LIBRARIES ${Hermes_LIBRARIES})
   endif(Hermes_LIBRARY)

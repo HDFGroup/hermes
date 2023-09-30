@@ -173,3 +173,16 @@ set(HDF5_HERMES_VFD_INCLUDES_INSTALL_TIME
         ${CMAKE_CURRENT_BINARY_DIR}
         ${HDF5_HERMES_VFD_EXT_INCLUDE_DEPENDENCIES}
         PARENT_SCOPE)
+
+#-----------------------------------------------------------------------------
+# Install headers
+#-----------------------------------------------------------------------------
+file(GLOB_RECURSE HERMES_HEADERS "*.h")
+install(
+        FILES
+        ${HERMES_HEADERS}
+        DESTINATION
+        ${CMAKE_INSTALL_PREFIX}/include/hermes_adapters/vfd
+        COMPONENT
+        headers
+)
