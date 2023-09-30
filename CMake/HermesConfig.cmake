@@ -72,7 +72,9 @@ if( Hermes_INCLUDE_DIR )
             ${HermesShm_LIBRARIES}
             yaml-cpp
             cereal::cereal
-            -ldl -lrt -lc -pthread ${Boost_LIBRARIES} ${Hermes_LIBRARY})
+            -ldl -lrt -lc -pthread
+            thallium
+            ${Boost_LIBRARIES} ${Hermes_LIBRARY})
     set(Hermes_CLIENT_LIBRARIES ${Hermes_LIBRARIES})
   endif(Hermes_LIBRARY)
 
