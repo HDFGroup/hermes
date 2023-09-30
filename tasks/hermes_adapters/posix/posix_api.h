@@ -19,7 +19,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include "../include/hermes_adapters/real_api.h"
+#include "hermes_adapters/real_api.h"
 
 #ifndef O_TMPFILE
 #define O_TMPFILE 0
