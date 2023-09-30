@@ -374,6 +374,23 @@ class Bucket {
    * Reorganize a blob to a new score or node
    * */
   void ReorganizeBlob(const BlobId &blob_id,
+                      float score) {
+    blob_mdm_->AsyncReorganizeBlobRoot(id_, blob_id, score, 0);
+  }
+
+  /**
+   * Reorganize a blob to a new score or node
+   * */
+  void ReorganizeBlob(const BlobId &blob_id,
+                      float score,
+                      Context &ctx) {
+    blob_mdm_->AsyncReorganizeBlobRoot(id_, blob_id, score, 0);
+  }
+
+  /**
+   * Reorganize a blob to a new score or node
+   * */
+  void ReorganizeBlob(const BlobId &blob_id,
                       float score,
                       u32 node_id,
                       Context &ctx) {

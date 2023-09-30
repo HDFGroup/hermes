@@ -9,7 +9,7 @@
 
 find_path(
   Hermes_INCLUDE_DIR
-        Hermes/Hermes_types.h
+        hermes/hermes_types.h
 )
 
 if( Hermes_INCLUDE_DIR )
@@ -53,6 +53,12 @@ if( Hermes_INCLUDE_DIR )
     message(STATUS "found cereal")
   endif()
 
+  # Boost
+  find_package(Boost REQUIRED COMPONENTS regex system filesystem fiber REQUIRED)
+  if (Boost_FOUND)
+    message(STATUS "found boost at ${Boost_INCLUDE_DIRS}")
+  endif()
+
   #-----------------------------------------------------------------------------
   # Mark hermes as found and set all needed packages
   #-----------------------------------------------------------------------------
@@ -61,12 +67,12 @@ if( Hermes_INCLUDE_DIR )
     get_filename_component(Hermes_LIBRARY_DIRS ${Hermes_LIBRARY} PATH)
     # Set uncached variables as per standard.
     set(Hermes_FOUND ON)
-    set(Hermes_INCLUDE_DIRS ${Hermes_INCLUDE_DIR})
+    set(Hermes_INCLUDE_DIRS ${Boost_INCLUDE_DIRS} ${Hermes_INCLUDE_DIR})
     set(Hermes_LIBRARIES
             ${HermesShm_LIBRARIES}
             yaml-cpp
             cereal::cereal
-            -ldl -lrt -lc -pthread ${Hermes_LIBRARY})
+            -ldl -lrt -lc -pthread ${Boost_LIBRARIES} ${Hermes_LIBRARY})
     set(Hermes_CLIENT_LIBRARIES ${Hermes_LIBRARIES})
   endif(Hermes_LIBRARY)
 
