@@ -56,28 +56,44 @@ class Client : public TaskLibClient {
   HSHM_ALWAYS_INLINE
   void AsyncStageInConstruct(StageInTask *task,
                             const TaskNode &task_node,
-                            const DomainId &domain_id) {
+                            const BucketId &bkt_id,
+                            const hshm::charbuf &blob_name,
+                            float score,
+                            u32 node_id) {
     LABSTOR_CLIENT->ConstructTask<StageInTask>(
-        task, task_node, domain_id, id_);
+        task, task_node, id_, bkt_id,
+        blob_name, score, node_id);
   }
   HSHM_ALWAYS_INLINE
-  void StageIn(const DomainId &domain_id) {
-    LPointer<labpq::TypedPushTask<StageInTask>> task = AsyncStageInRoot(domain_id);
+  void StageInRoot(const BucketId &bkt_id,
+               const hshm::charbuf &blob_name,
+               float score,
+               u32 node_id) {
+    LPointer<labpq::TypedPushTask<StageInTask>> task =
+        AsyncStageInRoot(bkt_id, blob_name, score, node_id);
     task.ptr_->Wait();
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(StageIn);
 
   /** Stage out data to a remote source */
   HSHM_ALWAYS_INLINE
-  void AsyncStageOutConstruct(StageInTask *task,
-                             const TaskNode &task_node,
-                             const DomainId &domain_id) {
-    LABSTOR_CLIENT->ConstructTask<StageInTask>(
-        task, task_node, domain_id, id_);
+  void AsyncStageOutConstruct(StageOutTask *task,
+                              const TaskNode &task_node,
+                              const BucketId &bkt_id,
+                              const hshm::charbuf &blob_name,
+                              const hipc::Pointer &data,
+                              size_t data_size) {
+    LABSTOR_CLIENT->ConstructTask<StageOutTask>(
+        task, task_node, id_, bkt_id,
+        blob_name, data, data_size);
   }
   HSHM_ALWAYS_INLINE
-  void StageOut(const DomainId &domain_id) {
-    LPointer<labpq::TypedPushTask<StageInTask>> task = AsyncStageInRoot(domain_id);
+  void StageOutRoot(const BucketId &bkt_id,
+                    const hshm::charbuf &blob_name,
+                    const hipc::Pointer &data,
+                    size_t data_size) {
+    LPointer<labpq::TypedPushTask<StageOutTask>> task =
+        AsyncStageOutRoot(bkt_id, blob_name, data, data_size);
     task.ptr_->Wait();
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(StageOut);

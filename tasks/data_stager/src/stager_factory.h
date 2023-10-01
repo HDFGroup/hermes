@@ -23,6 +23,7 @@ class StagerFactory {
       throw std::runtime_error("Unknown stager type");
     }
     stager->url_ = url;
+    return stager;
   }
 };
 

@@ -112,12 +112,19 @@ struct RegisterStagerTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   template<typename Ar>
   void SerializeStart(Ar &ar) {
     task_serialize<Ar>(ar);
+    ar(bkt_id_, url_);
   }
 
   /** (De)serialize message return */
   template<typename Ar>
   void SerializeEnd(u32 replica, Ar &ar) {
   }
+
+  /** Begin replication */
+  void ReplicateStart(u32 count) {}
+
+  /** Finalize replication */
+  void ReplicateEnd() {}
 
   /** Create group */
   HSHM_ALWAYS_INLINE
@@ -129,7 +136,7 @@ struct RegisterStagerTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
 /**
  * Unregister a new stager
  * */
-struct UnregisterStagerTask : public Task, TaskFlags<TF_SRL_SYM> {
+struct UnregisterStagerTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   hermes::BucketId bkt_id_;
 
   /** SHM default constructor */
@@ -160,12 +167,19 @@ struct UnregisterStagerTask : public Task, TaskFlags<TF_SRL_SYM> {
   template<typename Ar>
   void SerializeStart(Ar &ar) {
     task_serialize<Ar>(ar);
+    ar(bkt_id_);
   }
 
   /** (De)serialize message return */
   template<typename Ar>
   void SerializeEnd(u32 replica, Ar &ar) {
   }
+
+  /** Begin replication */
+  void ReplicateStart(u32 count) {}
+
+  /** Finalize replication */
+  void ReplicateEnd() {}
 
   /** Create group */
   HSHM_ALWAYS_INLINE
@@ -177,10 +191,11 @@ struct UnregisterStagerTask : public Task, TaskFlags<TF_SRL_SYM> {
 /**
  * A task to stage in data from a remote source
  * */
-struct StageInTask : public Task, TaskFlags<TF_SRL_SYM> {
+struct StageInTask : public Task, TaskFlags<TF_LOCAL> {
   hermes::BucketId bkt_id_;
   hipc::ShmArchive<hipc::charbuf> blob_name_;
   float score_;
+  u32 node_id_;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -190,35 +205,31 @@ struct StageInTask : public Task, TaskFlags<TF_SRL_SYM> {
   HSHM_ALWAYS_INLINE explicit
   StageInTask(hipc::Allocator *alloc,
               const TaskNode &task_node,
-              const DomainId &domain_id,
               const TaskStateId &state_id,
               const BucketId &bkt_id,
               const hshm::charbuf &blob_name,
-              float score) : Task(alloc) {
+              float score,
+              u32 node_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = 0;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kStageIn;
-    task_flags_.SetBits(0);
-    domain_id_ = domain_id;
+    task_flags_.SetBits(TASK_COROUTINE | TASK_LOW_LATENCY | TASK_REMOTE_DEBUG_MARK);
+    domain_id_ = DomainId::GetLocal();
 
     // Custom params
     bkt_id_ = bkt_id;
     HSHM_MAKE_AR(blob_name_, alloc, blob_name);
     score_ = score;
+    node_id_ = node_id;
   }
 
-  /** (De)serialize message call */
-  template<typename Ar>
-  void SerializeStart(Ar &ar) {
-    task_serialize<Ar>(ar);
-  }
-
-  /** (De)serialize message return */
-  template<typename Ar>
-  void SerializeEnd(u32 replica, Ar &ar) {
+  /** Destructor */
+  HSHM_ALWAYS_INLINE
+  ~StageInTask() {
+    HSHM_DESTROY_AR(blob_name_)
   }
 
   /** Create group */
@@ -231,7 +242,7 @@ struct StageInTask : public Task, TaskFlags<TF_SRL_SYM> {
 /**
  * A task to stage data out of a hermes to a remote source
  * */
-struct StageOutTask : public Task, TaskFlags<TF_SRL_SYM> {
+struct StageOutTask : public Task, TaskFlags<TF_LOCAL> {
   hermes::BucketId bkt_id_;
   hipc::ShmArchive<hipc::charbuf> blob_name_;
   hipc::Pointer data_;
@@ -245,7 +256,6 @@ struct StageOutTask : public Task, TaskFlags<TF_SRL_SYM> {
   HSHM_ALWAYS_INLINE explicit
   StageOutTask(hipc::Allocator *alloc,
                const TaskNode &task_node,
-               const DomainId &domain_id,
                const TaskStateId &state_id,
                const BucketId &bkt_id,
                const hshm::charbuf &blob_name,
@@ -257,8 +267,8 @@ struct StageOutTask : public Task, TaskFlags<TF_SRL_SYM> {
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kStageOut;
-    task_flags_.SetBits(0);
-    domain_id_ = domain_id;
+    task_flags_.SetBits(TASK_COROUTINE | TASK_LOW_LATENCY | TASK_REMOTE_DEBUG_MARK);
+    domain_id_ = DomainId::GetLocal();
 
     // Custom params
     bkt_id_ = bkt_id;
@@ -267,15 +277,10 @@ struct StageOutTask : public Task, TaskFlags<TF_SRL_SYM> {
     data_size_ = data_size;
   }
 
-  /** (De)serialize message call */
-  template<typename Ar>
-  void SerializeStart(Ar &ar) {
-    task_serialize<Ar>(ar);
-  }
-
-  /** (De)serialize message return */
-  template<typename Ar>
-  void SerializeEnd(u32 replica, Ar &ar) {
+  /** Destructor */
+  HSHM_ALWAYS_INLINE
+  ~StageOutTask() {
+    HSHM_DESTROY_AR(blob_name_)
   }
 
   /** Create group */

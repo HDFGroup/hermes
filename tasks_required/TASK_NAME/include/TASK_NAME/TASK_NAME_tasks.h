@@ -107,6 +107,13 @@ struct CustomTask : public Task, TaskFlags<TF_SRL_SYM> {
   void SerializeEnd(u32 replica, Ar &ar) {
   }
 
+  /** Begin replication */
+  void ReplicateStart(u32 count) {
+  }
+
+  /** Finalize replication */
+  void ReplicateEnd() {}
+
   /** Create group */
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
