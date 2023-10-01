@@ -9,6 +9,7 @@
 #include "hermes_adapters/mapper/abstract_mapper.h"
 #include "hermes/dpe/dpe_factory.h"
 #include "bdev/bdev.h"
+#include "data_stager/data_stager.h"
 
 namespace hermes::bucket_mdm {
 
@@ -23,6 +24,7 @@ class Server : public TaskLib {
   std::atomic<u64> id_alloc_;
   Client bkt_mdm_;
   blob_mdm::Client blob_mdm_;
+  data_stager::Client stager_mdm_;
 
  public:
   Server() = default;
@@ -45,6 +47,7 @@ class Server : public TaskLib {
    * */
   void SetBlobMdm(SetBlobMdmTask *task, RunContext &rctx) {
     blob_mdm_.Init(task->blob_mdm_);
+    stager_mdm_.Init(task->stager_mdm_);
     task->SetModuleComplete();
   }
 
@@ -194,7 +197,8 @@ class Server : public TaskLib {
 
     // Check if the tag exists
     TAG_ID_MAP_T &tag_id_map = tag_id_map_[rctx.lane_id_];
-    hshm::charbuf tag_name = hshm::to_charbuf(*task->tag_name_);
+    hshm::string url = hshm::to_charbuf(*task->url_);
+    hshm::charbuf tag_name = data_stager::Client::ParseUrl(url);
     bool did_create = false;
     if (tag_name.size() > 0) {
       did_create = tag_id_map.find(tag_name) == tag_id_map.end();
@@ -214,6 +218,13 @@ class Server : public TaskLib {
       tag_info.tag_id_ = tag_id;
       tag_info.owner_ = task->blob_owner_;
       tag_info.internal_size_ = task->backend_size_;
+
+      LPointer<data_stager::RegisterStagerTask> register_task =
+          stager_mdm_.AsyncRegisterStager(task->task_node_ + 1,
+                                          tag_id,
+                                          hshm::charbuf(task->url_->str()));
+      register_task->Wait<TASK_YIELD_CO>(task);
+      LABSTOR_CLIENT->DelTask(register_task);
     } else {
       if (tag_name.size()) {
         HILOG(kDebug, "Found existing tag: {}", tag_name.str())

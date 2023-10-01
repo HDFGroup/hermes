@@ -70,14 +70,16 @@ class Client : public TaskLibClient {
   void AsyncSetBucketMdmConstruct(SetBucketMdmTask *task,
                                   const TaskNode &task_node,
                                   const DomainId &domain_id,
-                                  const TaskStateId &blob_mdm_id) {
+                                  const TaskStateId &blob_mdm_id,
+                                  const TaskStateId &stager_mdm) {
     LABSTOR_CLIENT->ConstructTask<SetBucketMdmTask>(
-        task, task_node, domain_id, id_, blob_mdm_id);
+        task, task_node, domain_id, id_, blob_mdm_id, stager_mdm);
   }
   void SetBucketMdmRoot(const DomainId &domain_id,
-                        const TaskStateId &blob_mdm_id) {
+                        const TaskStateId &blob_mdm,
+                        const TaskStateId &stager_mdm) {
     LPointer<labpq::TypedPushTask<SetBucketMdmTask>> push_task =
-        AsyncSetBucketMdmRoot(domain_id, blob_mdm_id);
+        AsyncSetBucketMdmRoot(domain_id, blob_mdm, stager_mdm);
     push_task->Wait();
     LABSTOR_CLIENT->DelTask(push_task);
   }

@@ -11,7 +11,6 @@ namespace hermes::data_stager {
 
 /** Create data_stager requests */
 class Client : public TaskLibClient {
-
  public:
   /** Default constructor */
   Client() = default;
@@ -39,7 +38,8 @@ class Client : public TaskLibClient {
   template<typename ...Args>
   HSHM_ALWAYS_INLINE
   void CreateRoot(Args&& ...args) {
-    auto *task = AsyncCreateRoot(std::forward<Args>(args)...);
+    LPointer<ConstructTask> task =
+        AsyncCreateRoot(std::forward<Args>(args)...);
     task->Wait();
     id_ = task->id_;
     queue_id_ = QueueId(id_);
@@ -51,6 +51,40 @@ class Client : public TaskLibClient {
   void DestroyRoot(const DomainId &domain_id) {
     LABSTOR_ADMIN->DestroyTaskStateRoot(domain_id, id_);
   }
+
+  /** Register task state */
+  HSHM_ALWAYS_INLINE
+  void AsyncRegisterStagerConstruct(RegisterStagerTask *task,
+                                    const TaskNode &task_node,
+                                    const BucketId &bkt_id,
+                                    const hshm::charbuf &url) {
+    LABSTOR_CLIENT->ConstructTask<RegisterStagerTask>(
+        task, task_node, id_, bkt_id, url);
+  }
+  HSHM_ALWAYS_INLINE
+  void RegisterStagerRoot(const BucketId &bkt_id,
+                          const hshm::charbuf &url) {
+    LPointer<labpq::TypedPushTask<RegisterStagerTask>> task =
+        AsyncRegisterStagerRoot(bkt_id, url);
+    task.ptr_->Wait();
+  }
+  LABSTOR_TASK_NODE_PUSH_ROOT(RegisterStager);
+
+  /** Unregister task state */
+  HSHM_ALWAYS_INLINE
+  void AsyncUnregisterStagerConstruct(UnregisterStagerTask *task,
+                                      const TaskNode &task_node,
+                                      const BucketId &bkt_id) {
+    LABSTOR_CLIENT->ConstructTask<UnregisterStagerTask>(
+        task, task_node, id_, bkt_id);
+  }
+  HSHM_ALWAYS_INLINE
+  void UnregisterStagerRoot(const BucketId &bkt_id) {
+    LPointer<labpq::TypedPushTask<UnregisterStagerTask>> task =
+        AsyncUnregisterStagerRoot(bkt_id);
+    task.ptr_->Wait();
+  }
+  LABSTOR_TASK_NODE_PUSH_ROOT(UnregisterStager);
 
   /** Stage in data from a remote source */
   HSHM_ALWAYS_INLINE
@@ -97,6 +131,14 @@ class Client : public TaskLibClient {
     task.ptr_->Wait();
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(StageOut);
+
+  /** URL parser */
+  static hshm::charbuf ParseUrl(const hshm::string &url) {
+    hshm::charbuf ret;
+    ret.resize(url.size() + 1);
+    memcpy(ret.data(), url.data(), url.size() + 1);
+    return ret;
+  }
 };
 
 }  // namespace labstor

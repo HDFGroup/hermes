@@ -40,7 +40,8 @@ class Client : public TaskLibClient {
   template<typename ...Args>
   HSHM_ALWAYS_INLINE
   void CreateRoot(Args&& ...args) {
-    auto *task = AsyncCreateRoot(std::forward<Args>(args)...);
+    LPointer<ConstructTask> task =
+        AsyncCreateRoot(std::forward<Args>(args)...);
     task->Wait();
     id_ = task->id_;
     queue_id_ = QueueId(id_);

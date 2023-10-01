@@ -9,6 +9,7 @@
 #include "hermes/dpe/dpe_factory.h"
 #include "hermes_adapters/posix/posix_api.h"
 #include "bdev/bdev.h"
+#include "data_stager/data_stager.h"
 
 namespace hermes::blob_mdm {
 
@@ -46,6 +47,7 @@ class Server : public TaskLib {
   std::unordered_map<TargetId, TargetInfo*> target_map_;
   Client blob_mdm_;
   bucket_mdm::Client bkt_mdm_;
+  data_stager::Client stager_mdm_;
 
  public:
   Server() = default;
@@ -109,6 +111,7 @@ class Server : public TaskLib {
    * */
   void SetBucketMdm(SetBucketMdmTask *task, RunContext &rctx) {
     bkt_mdm_.Init(task->bkt_mdm_);
+    stager_mdm_.Init(task->stager_mdm_);
     task->SetModuleComplete();
   }
 
@@ -127,7 +130,6 @@ class Server : public TaskLib {
 
     // Update the blob info
     if (task->flags_.Any(HERMES_BLOB_DID_CREATE)) {
-      // Update blob info
       blob_info.name_ = std::move(blob_name);
       blob_info.blob_id_ = task->blob_id_;
       blob_info.tag_id_ = task->tag_id_;
@@ -146,54 +148,11 @@ class Server : public TaskLib {
       PutBlobFreeBuffersPhase(blob_info, task, rctx);
     }
 
-    // Stage in blob data from FS
-    LPointer<char> data_ptr;
-    data_ptr.ptr_ = LABSTOR_CLIENT->GetPrivatePointer<char>(task->data_);
-    data_ptr.shm_ = task->data_;
-    size_t data_off = 0;
-    if (task->filename_->size() > 0) {
-      adapter::BlobPlacement plcmnt;
-      plcmnt.DecodeBlobName(*task->blob_name_);
-      task->flags_.SetBits(HERMES_IS_FILE);
-      data_off = plcmnt.bucket_off_ + task->blob_off_ + task->data_size_;
-      if (blob_info.blob_size_ == 0 &&
-          task->blob_off_ == 0 &&
-          task->data_size_ < task->page_size_) {
-        HILOG(kDebug, "Attempting to stage {} bytes from the backend file {} at offset {}",
-              task->page_size_, task->filename_->str(), plcmnt.bucket_off_);
-        LPointer<char> new_data_ptr = LABSTOR_CLIENT->AllocateBuffer(task->page_size_);
-        int fd = HERMES_POSIX_API->open(task->filename_->c_str(), O_RDONLY);
-        if (fd < 0) {
-          HELOG(kError, "Failed to open file {}", task->filename_->str());
-        }
-        int ret = HERMES_POSIX_API->pread(fd, new_data_ptr.ptr_, task->page_size_, (off_t)plcmnt.bucket_off_);
-        if (ret < 0) {
-          // TODO(llogan): ret != page_size_ will require knowing file size before-hand
-          HELOG(kError, "Failed to stage in {} bytes from {}", task->page_size_, task->filename_->str());
-        }
-        HERMES_POSIX_API->close(fd);
-        memcpy(new_data_ptr.ptr_ + plcmnt.blob_off_, data_ptr.ptr_, task->data_size_);
-        data_ptr = new_data_ptr;
-        task->blob_off_ = 0;
-        if (ret < task->blob_off_ + task->data_size_) {
-          task->data_size_ = task->blob_off_ + task->data_size_;
-        } else {
-          task->data_size_ = ret;
-        }
-        task->flags_.SetBits(HERMES_DID_STAGE_IN);
-        HILOG(kDebug, "Staged {} bytes from the backend file {}",
-              task->data_size_, task->filename_->str());
-      }
-    }
-
     // Determine amount of additional buffering space needed
     size_t needed_space = task->blob_off_ + task->data_size_;
     size_t size_diff = 0;
     if (needed_space > blob_info.max_blob_size_) {
       size_diff = needed_space - blob_info.max_blob_size_;
-    }
-    if (!task->flags_.Any(HERMES_IS_FILE)) {
-      data_off = size_diff;
     }
     blob_info.blob_size_ += size_diff;
     HILOG(kDebug, "The size diff is {} bytes", size_diff)
@@ -230,7 +189,7 @@ class Server : public TaskLib {
     std::vector<LPointer<bdev::WriteTask>> write_tasks;
     write_tasks.reserve(blob_info.buffers_.size());
     size_t blob_off = 0, buf_off = 0;
-    char *blob_buf = data_ptr.ptr_;
+    char *blob_buf = LABSTOR_CLIENT->GetPrivatePointer(task->data_);
     HILOG(kDebug, "Number of buffers {}", blob_info.buffers_.size());
     for (BufferInfo &buf : blob_info.buffers_) {
       size_t blob_left = blob_off;
@@ -268,7 +227,7 @@ class Server : public TaskLib {
     }
     bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
                              task->tag_id_,
-                             data_off,
+                             task->blob_off_ + task->data_size_,
                              update_mode);
     if (task->flags_.Any(HERMES_BLOB_DID_CREATE)) {
       bkt_mdm_.AsyncTagAddBlob(task->task_node_ + 1,
@@ -277,9 +236,6 @@ class Server : public TaskLib {
     }
 
     // Free data
-    if (task->flags_.Any(HERMES_DID_STAGE_IN)) {
-      LABSTOR_CLIENT->FreeBuffer(data_ptr);
-    }
     task->SetModuleComplete();
   }
 

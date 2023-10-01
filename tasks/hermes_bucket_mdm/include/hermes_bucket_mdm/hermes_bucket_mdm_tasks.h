@@ -68,6 +68,7 @@ struct DestructTask : public DestroyTaskStateTask {
 /** Set the BLOB MDM ID */
 struct SetBlobMdmTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   IN TaskStateId blob_mdm_;
+  IN TaskStateId stager_mdm_;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -79,7 +80,8 @@ struct SetBlobMdmTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
                  const TaskNode &task_node,
                  const DomainId &domain_id,
                  const TaskStateId &state_id,
-                 const TaskStateId &blob_mdm) : Task(alloc) {
+                 const TaskStateId &blob_mdm,
+                 const TaskStateId &stager_mdm) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = 0;
@@ -91,6 +93,7 @@ struct SetBlobMdmTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
 
     // Custom params
     blob_mdm_ = blob_mdm;
+    stager_mdm_ = stager_mdm;
   }
 
   /** Destructor */
@@ -100,7 +103,7 @@ struct SetBlobMdmTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   template<typename Ar>
   void SerializeStart(Ar &ar) {
     task_serialize<Ar>(ar);
-    ar(blob_mdm_);
+    ar(blob_mdm_, stager_mdm_);
   }
 
   /** (De)serialize message return */
@@ -335,6 +338,7 @@ struct AppendBlobTask : public Task, TaskFlags<TF_LOCAL> {
 /** A task to get or create a tag */
 struct GetOrCreateTagTask : public Task, TaskFlags<TF_SRL_SYM> {
   IN hipc::ShmArchive<hipc::string> tag_name_;
+  IN hipc::ShmArchive<hipc::string> url_;
   IN bool blob_owner_;
   IN hipc::ShmArchive<hipc::vector<TraitId>> traits_;
   IN size_t backend_size_;

@@ -90,18 +90,17 @@ struct RegisterStagerTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   HSHM_ALWAYS_INLINE explicit
   RegisterStagerTask(hipc::Allocator *alloc,
                      const TaskNode &task_node,
-                     const DomainId &domain_id,
                      const TaskStateId &state_id,
                      hermes::BucketId bkt_id,
-                     hshm::charbuf &url) : Task(alloc) {
+                     const hshm::charbuf &url) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = bkt_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kRegisterStager;
-    task_flags_.SetBits(TASK_FIRE_AND_FORGET);
-    domain_id_ = domain_id;
+    task_flags_.SetBits(TASK_LOW_LATENCY);
+    domain_id_ = DomainId::GetGlobal();
 
     // Custom params
     bkt_id_ = bkt_id;
@@ -147,9 +146,8 @@ struct UnregisterStagerTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   HSHM_ALWAYS_INLINE explicit
   UnregisterStagerTask(hipc::Allocator *alloc,
                        const TaskNode &task_node,
-                       const DomainId &domain_id,
                        const TaskStateId &state_id,
-                       hermes::BucketId bkt_id) : Task(alloc) {
+                       const hermes::BucketId &bkt_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = bkt_id.hash_;
@@ -157,7 +155,7 @@ struct UnregisterStagerTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
     task_state_ = state_id;
     method_ = Method::kUnregisterStager;
     task_flags_.SetBits(TASK_FIRE_AND_FORGET);
-    domain_id_ = domain_id;
+    domain_id_ = DomainId::GetGlobal();
 
     // Custom params
     bkt_id_ = bkt_id;

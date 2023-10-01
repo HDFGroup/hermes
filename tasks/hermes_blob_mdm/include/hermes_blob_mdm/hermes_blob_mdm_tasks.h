@@ -78,6 +78,7 @@ struct DestructTask : public DestroyTaskStateTask {
 /** Set the BUCKET MDM ID */
 struct SetBucketMdmTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   IN TaskStateId bkt_mdm_;
+  IN TaskStateId stager_mdm_;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -89,7 +90,8 @@ struct SetBucketMdmTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
                    const TaskNode &task_node,
                    const DomainId &domain_id,
                    const TaskStateId &state_id,
-                   const TaskStateId &bkt_mdm) : Task(alloc) {
+                   const TaskStateId &bkt_mdm,
+                   const TaskStateId &stager_mdm) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = 0;
@@ -101,6 +103,7 @@ struct SetBucketMdmTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
 
     // Custom params
     bkt_mdm_ = bkt_mdm;
+    stager_mdm_ = stager_mdm;
   }
 
   /** Destructor */
@@ -110,7 +113,7 @@ struct SetBucketMdmTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   template<typename Ar>
   void SerializeStart(Ar &ar) {
     task_serialize<Ar>(ar);
-    ar(bkt_mdm_);
+    ar(bkt_mdm_, stager_mdm_);
   }
 
   /** (De)serialize message return */
