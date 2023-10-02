@@ -218,13 +218,9 @@ class Server : public TaskLib {
       tag_info.tag_id_ = tag_id;
       tag_info.owner_ = task->blob_owner_;
       tag_info.internal_size_ = task->backend_size_;
-
-      LPointer<data_stager::RegisterStagerTask> register_task =
-          stager_mdm_.AsyncRegisterStager(task->task_node_ + 1,
-                                          tag_id,
-                                          hshm::charbuf(task->url_->str()));
-      register_task->Wait<TASK_YIELD_CO>(task);
-      LABSTOR_CLIENT->DelTask(register_task);
+      stager_mdm_.AsyncRegisterStager(task->task_node_ + 1,
+                                      tag_id,
+                                      hshm::charbuf(task->url_->str()));
     } else {
       if (tag_name.size()) {
         HILOG(kDebug, "Found existing tag: {}", tag_name.str())
@@ -294,6 +290,8 @@ class Server : public TaskLib {
               blob_mdm_.AsyncDestroyBlob(task->task_node_ + 1, task->tag_id_, blob_id).ptr_;
           blob_tasks.emplace_back(blob_task);
         }
+        stager_mdm_.AsyncUnregisterStager(task->task_node_ + 1,
+                                          task->tag_id_);
         task->phase_ = DestroyTagPhase::kWaitDestroyBlobs;
         return;
       }

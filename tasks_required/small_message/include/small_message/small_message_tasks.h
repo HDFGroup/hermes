@@ -83,6 +83,15 @@ struct MdTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
     ret_.construct(alloc, 1);
   }
 
+  /** Duplicate message */
+  void Dup(hipc::Allocator *alloc, MdTask &other) {
+    task_dup(other);
+  }
+
+  /** Process duplicate message output */
+  void DupEnd(u32 replica, MdTask &dup_task) {
+  }
+
   /** Begin replication */
   void ReplicateStart(u32 count) {
     ret_.resize(count);
@@ -137,6 +146,15 @@ struct MdPushTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
 
     // Custom params
     ret_.construct(alloc, 1);
+  }
+
+  /** Duplicate message */
+  void Dup(hipc::Allocator *alloc, MdPushTask &other) {
+    task_dup(other);
+  }
+
+  /** Process duplicate message output */
+  void DupEnd(u32 replica, MdPushTask &dup_task) {
   }
 
   /** Begin replication */

@@ -116,18 +116,20 @@ class Client : public TaskLibClient {
                               const BucketId &bkt_id,
                               const hshm::charbuf &blob_name,
                               const hipc::Pointer &data,
-                              size_t data_size) {
+                              size_t data_size,
+                              u32 task_flags) {
     LABSTOR_CLIENT->ConstructTask<StageOutTask>(
         task, task_node, id_, bkt_id,
-        blob_name, data, data_size);
+        blob_name, data, data_size, task_flags);
   }
   HSHM_ALWAYS_INLINE
   void StageOutRoot(const BucketId &bkt_id,
                     const hshm::charbuf &blob_name,
                     const hipc::Pointer &data,
-                    size_t data_size) {
+                    size_t data_size,
+                    u32 task_flags) {
     LPointer<labpq::TypedPushTask<StageOutTask>> task =
-        AsyncStageOutRoot(bkt_id, blob_name, data, data_size);
+        AsyncStageOutRoot(bkt_id, blob_name, data, data_size, task_flags);
     task.ptr_->Wait();
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(StageOut);

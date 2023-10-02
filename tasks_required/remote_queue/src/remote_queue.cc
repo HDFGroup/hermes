@@ -162,6 +162,19 @@ class Server : public TaskLib {
     ClientHandlePushReplicaEnd(task);
   }
 
+  /** Duplicate operations */
+  void Dup(DupTask *task, RunContext &ctx) {
+    for (size_t i = 0; i < task->dups_.size(); ++i) {
+      LPointer<Task> &dup = task->dups_[i];
+      dup->Wait<TASK_YIELD_CO>(task);
+      task->exec_->DupEnd(dup->method_, i, task->orig_task_, dup.ptr_);
+      LABSTOR_CLIENT->DelTask(dup);
+    }
+    task->exec_->ReplicateEnd(task->exec_method_, task->orig_task_);
+    task->orig_task_->SetModuleComplete();
+    task->SetModuleComplete();
+  }
+
  private:
   /** The RPC for processing a small message */
   void RpcPushSmall(const tl::request &req,

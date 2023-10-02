@@ -74,6 +74,11 @@ struct LaneGroup : public PriorityInfo {
   bool IsLowPriority() {
     return flags_.Any(QUEUE_LONG_RUNNING) || prio_ == 0;
   }
+
+  /** Get lane */
+  Lane& GetLane(u32 lane_id) {
+    return (*lanes_)[lane_id];
+  }
 };
 
 /** Represents the HSHM queue type */

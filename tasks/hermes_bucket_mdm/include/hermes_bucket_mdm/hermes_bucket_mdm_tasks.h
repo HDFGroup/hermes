@@ -99,6 +99,15 @@ struct SetBlobMdmTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   /** Destructor */
   ~SetBlobMdmTask() {}
 
+  /** Duplicate message */
+  void Dup(hipc::Allocator *alloc, SetBlobMdmTask &other) {
+    task_dup(other);
+  }
+
+  /** Process duplicate message output */
+  void DupEnd(u32 replica, SetBlobMdmTask &dup_task) {
+  }
+
   /** (De)serialize message call */
   template<typename Ar>
   void SerializeStart(Ar &ar) {

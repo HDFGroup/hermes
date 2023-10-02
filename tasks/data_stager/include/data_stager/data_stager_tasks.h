@@ -99,12 +99,21 @@ struct RegisterStagerTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kRegisterStager;
-    task_flags_.SetBits(TASK_LOW_LATENCY);
+    task_flags_.SetBits(TASK_LOW_LATENCY | TASK_FIRE_AND_FORGET);
     domain_id_ = DomainId::GetGlobal();
 
     // Custom params
     bkt_id_ = bkt_id;
     HSHM_MAKE_AR(url_, alloc, url);
+  }
+
+  /** Duplicate message */
+  void Dup(hipc::Allocator *alloc, RegisterStagerTask &other) {
+    task_dup(other);
+  }
+
+  /** Process duplicate message output */
+  void DupEnd(u32 replica, RegisterStagerTask &dup_task) {
   }
 
   /** (De)serialize message call */
@@ -159,6 +168,15 @@ struct UnregisterStagerTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
 
     // Custom params
     bkt_id_ = bkt_id;
+  }
+
+  /** Duplicate message */
+  void Dup(hipc::Allocator *alloc, UnregisterStagerTask &other) {
+    task_dup(other);
+  }
+
+  /** Process duplicate message output */
+  void DupEnd(u32 replica, UnregisterStagerTask &dup_task) {
   }
 
   /** (De)serialize message call */
@@ -258,14 +276,15 @@ struct StageOutTask : public Task, TaskFlags<TF_LOCAL> {
                const BucketId &bkt_id,
                const hshm::charbuf &blob_name,
                const hipc::Pointer &data,
-               size_t data_size) : Task(alloc) {
+               size_t data_size,
+               u32 task_flags): Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = bkt_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kStageOut;
-    task_flags_.SetBits(TASK_COROUTINE | TASK_LOW_LATENCY | TASK_REMOTE_DEBUG_MARK);
+    task_flags_.SetBits(task_flags | TASK_COROUTINE | TASK_LOW_LATENCY | TASK_REMOTE_DEBUG_MARK);
     domain_id_ = DomainId::GetLocal();
 
     // Custom params
@@ -279,6 +298,9 @@ struct StageOutTask : public Task, TaskFlags<TF_LOCAL> {
   HSHM_ALWAYS_INLINE
   ~StageOutTask() {
     HSHM_DESTROY_AR(blob_name_)
+    if (IsDataOwner()) {
+      LABSTOR_CLIENT->FreeBuffer(data_);
+    }
   }
 
   /** Create group */

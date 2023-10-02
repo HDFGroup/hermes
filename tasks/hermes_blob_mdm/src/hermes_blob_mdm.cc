@@ -116,6 +116,39 @@ class Server : public TaskLib {
   }
 
   /**
+   * Long-running task to stage out data periodically
+   * */
+  void FlushData(FlushDataTask *task, RunContext &rctx) {
+    // Get the blob info data structure
+    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
+    for (auto &it : blob_map) {
+      BlobInfo &blob_info = it.second;
+      if (blob_info.last_flush_ > 0 &&
+          blob_info.mod_count_ > blob_info.last_flush_) {
+        blob_info.last_flush_ = 1;
+        blob_info.mod_count_ = 0;
+        blob_info.access_freq_ = 0;
+        blob_info.UpdateWriteStats();
+        LPointer<char> data = LABSTOR_CLIENT->AllocateBuffer(blob_info.blob_size_);
+        LPointer<GetBlobTask> get_blob =
+            blob_mdm_.AsyncGetBlob(task->task_node_ + 1,
+                                   blob_info.tag_id_,
+                                   blob_info.name_,
+                                   blob_info.blob_id_,
+                                   0, blob_info.blob_size_,
+                                   data.shm_);
+        get_blob->Wait<TASK_YIELD_CO>(task);
+        stager_mdm_.AsyncStageOut(task->task_node_ + 1,
+                                  blob_info.tag_id_,
+                                  blob_info.name_,
+                                  data.shm_, blob_info.blob_size_,
+                                  TASK_DATA_OWNER | TASK_FIRE_AND_FORGET);
+      }
+    }
+    task->SetModuleComplete();
+  }
+
+  /**
    * Create a blob's metadata
    * */
   void PutBlob(PutBlobTask *task, RunContext &rctx) {
@@ -136,10 +169,19 @@ class Server : public TaskLib {
       blob_info.blob_size_ = 0;
       blob_info.max_blob_size_ = 0;
       blob_info.score_ = task->score_;
-      blob_info.mod_count_ = 0;
+      blob_info.mod_count_ = 1;
       blob_info.access_freq_ = 0;
-      blob_info.last_flush_ = 0;
+      blob_info.last_flush_ = 1;
       blob_info.UpdateWriteStats();
+      if (task->flags_.Any(HERMES_IS_FILE)) {
+        LPointer<data_stager::StageInTask> stage_task =
+            stager_mdm_.AsyncStageIn(task->task_node_ + 1,
+                                     task->tag_id_,
+                                     blob_info.name_,
+                                     task->score_, 0);
+        stage_task->Wait<TASK_YIELD_CO>(task);
+        LABSTOR_CLIENT->DelTask(stage_task);
+      }
     } else {
       // Modify existing blob
       blob_info.UpdateWriteStats();
@@ -179,7 +221,7 @@ class Server : public TaskLib {
           // SubPlacement &next_placement = schema.plcmnts_[sub_idx + 1];
           // size_t diff = alloc_task->size_ - alloc_task->alloc_size_;
           // next_placement.size_ += diff;
-          HILOG(kFatal, "Ran outta space in this tier -- will fix soon")
+          HELOG(kFatal, "Ran outta space in this tier -- will fix soon")
         }
         LABSTOR_CLIENT->DelTask(alloc_task);
       }

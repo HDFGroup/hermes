@@ -99,6 +99,17 @@ class Client : public ConfigurationManager {
     return task;
   }
 
+  /** Create a default-constructed task */
+  template<typename TaskT, typename ...Args>
+  HSHM_ALWAYS_INLINE
+  LPointer<TaskT> NewEmptyTask() {
+    LPointer<TaskT> task = main_alloc_->NewObjLocal<TaskT>(main_alloc_);
+    if (task.ptr_ == nullptr) {
+      throw std::runtime_error("Could not allocate buffer");
+    }
+    return task;
+  }
+
   /** Allocate task */
   template<typename TaskT, typename ...Args>
   HSHM_ALWAYS_INLINE
@@ -307,6 +318,40 @@ class Client : public ConfigurationManager {
                                                      task);\
       return push_task;\
   }
+
+/** Call duplicate if applicable */
+template<typename TaskT>
+constexpr inline void CALL_DUPLICATE(TaskT *orig_task, std::vector<LPointer<Task>> &dups) {
+  if constexpr(TaskT::REPLICA) {
+    for (LPointer<Task> &dup : dups) {
+      LPointer<TaskT> task = LABSTOR_CLIENT->NewEmptyTask<TaskT>();
+      orig_task->Dup(LABSTOR_CLIENT->main_alloc_, *task.ptr_);
+      dup.ptr_ = task.ptr_;
+      dup.shm_ = task.shm_;
+    }
+  }
+}
+/** Call duplicate if applicable */
+template<typename TaskT>
+constexpr inline void CALL_DUPLICATE_END(u32 replica, TaskT *orig_task, TaskT *dup_task) {
+  if constexpr(TaskT::REPLICA) {
+    orig_task->DupEnd(replica, *dup_task);
+  }
+}
+/** Call replica start if applicable */
+template<typename TaskT>
+constexpr inline void CALL_REPLICA_START(u32 count, TaskT *task) {
+  if constexpr(TaskT::REPLICA) {
+    task->ReplicateStart(count);
+  }
+}
+/** Call replica end if applicable */
+template<typename TaskT>
+constexpr inline void CALL_REPLICA_END(TaskT *task) {
+  if constexpr(TaskT::REPLICA) {
+    task->ReplicateEnd();
+  }
+}
 
 }  // namespace labstor
 

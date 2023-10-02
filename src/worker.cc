@@ -87,6 +87,12 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
         task->DisableRun();
         task->SetUnordered();
         task->UnsetCoroutine();
+      } else if (task->IsLaneAll()) {
+        LABSTOR_REMOTE_QUEUE->DisperseLocal(task, exec, work_entry.queue_, work_entry.group_);
+        task->DisableRun();
+        task->SetUnordered();
+        task->UnsetCoroutine();
+        task->UnsetLaneAll();
       } else if (task->IsCoroutine()) {
         if (!task->IsStarted()) {
           rctx.stack_ptr_ = malloc(rctx.stack_size_);

@@ -184,6 +184,17 @@ struct CreateTaskStateTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
     HSHM_DESTROY_AR(queue_info_);
   }
 
+  /** Duplicate message */
+  template<typename TaskT>
+  void Dup(hipc::Allocator *alloc, TaskT &other) {
+    task_dup(other);
+  }
+
+  /** Process duplicate message output */
+  template<typename TaskT>
+  void DupEnd(u32 replica, TaskT &dup_task) {
+  }
+
   /** Replication (does nothing) */
   void ReplicateStart(u32 count) {
   }

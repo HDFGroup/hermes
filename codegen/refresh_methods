@@ -81,6 +81,35 @@ def refresh_methods(TASK_ROOT):
     lines += ['  }']
     lines += ['}']
 
+    ## Create the Dup method
+    lines += ['/** Duplicate a task */',
+              'void Dup(u32 method, Task *orig_task, std::vector<LPointer<Task>> &dups) override {',
+              '  switch (method) {']
+    for method_enum_name, method_off in methods:
+        method_name = method_enum_name.replace('k', '', 1)
+        task_name = method_name + "Task"
+        lines += [f'    case Method::{method_enum_name}: {{',
+                  f'      labstor::CALL_DUPLICATE(reinterpret_cast<{task_name}*>(orig_task), dups);',
+                  f'      break;',
+                  f'    }}']
+    lines += ['  }']
+    lines += ['}']
+
+    ## Register a duplicate's output
+    lines += ['/** Register the duplicate output with the origin task */',
+              'void DupEnd(u32 method, u32 replica, Task *orig_task, Task *dup_task) override {',
+              '  switch (method) {']
+    for method_enum_name, method_off in methods:
+        method_name = method_enum_name.replace('k', '', 1)
+        task_name = method_name + "Task"
+        task_cast = f'reinterpret_cast<{task_name}*>'
+        lines += [f'    case Method::{method_enum_name}: {{',
+                  f'      labstor::CALL_DUPLICATE_END(replica, {task_cast}(orig_task), {task_cast}(dup_task));',
+                  f'      break;',
+                  f'    }}']
+    lines += ['  }']
+    lines += ['}']
+
     ## Create the ReplicateStart method
     lines += ['/** Ensure there is space to store replicated outputs */',
               'void ReplicateStart(u32 method, u32 count, Task *task) override {',

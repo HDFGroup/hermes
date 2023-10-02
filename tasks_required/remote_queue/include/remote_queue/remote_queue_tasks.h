@@ -111,7 +111,7 @@ struct PushTask : public Task, TaskFlags<TF_LOCAL> {
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kPush;
-    task_flags_.SetBits(TASK_LOW_LATENCY | TASK_PREEMPTIVE | TASK_REMOTE_DEBUG_MARK);
+    task_flags_.SetBits(TASK_LOW_LATENCY | TASK_PREEMPTIVE | TASK_REMOTE_DEBUG_MARK | TASK_FIRE_AND_FORGET);
     domain_id_ = domain_id;
 
     // Custom params
@@ -120,6 +120,51 @@ struct PushTask : public Task, TaskFlags<TF_LOCAL> {
     exec_ = exec;
     exec_method_ = exec_method;
     xfer_ = std::move(xfer);
+  }
+
+  /** Create group */
+  HSHM_ALWAYS_INLINE
+  u32 GetGroup(hshm::charbuf &group) {
+    return TASK_UNORDERED;
+  }
+};
+
+/**
+ * A task to push a serialized task onto the remote queue
+ * */
+struct DupTask : public Task, TaskFlags<TF_LOCAL> {
+  IN Task *orig_task_;
+  IN TaskState *exec_;
+  IN u32 exec_method_;
+  IN std::vector<LPointer<Task>> dups_;
+
+  /** SHM default constructor */
+  HSHM_ALWAYS_INLINE explicit
+  DupTask(hipc::Allocator *alloc) : Task(alloc) {}
+
+  /** Emplace constructor */
+  HSHM_ALWAYS_INLINE explicit
+  DupTask(hipc::Allocator *alloc,
+           const TaskNode &task_node,
+           const TaskStateId &state_id,
+           Task *orig_task,
+           TaskState *exec,
+           u32 exec_method,
+           std::vector<LPointer<Task>> &dups) : Task(alloc) {
+    // Initialize task
+    task_node_ = task_node;
+    lane_hash_ = 0;
+    prio_ = TaskPrio::kLowLatency;
+    task_state_ = state_id;
+    method_ = Method::kDup;
+    task_flags_.SetBits(TASK_LOW_LATENCY | TASK_REMOTE_DEBUG_MARK | TASK_FIRE_AND_FORGET | TASK_COROUTINE);
+    domain_id_ = DomainId::GetLocal();
+
+    // Custom params
+    orig_task_ = orig_task;
+    exec_ = exec;
+    exec_method_ = exec_method;
+    dups_ = std::move(dups);
   }
 
   /** Create group */

@@ -131,6 +131,136 @@ void Del(u32 method, Task *task) override {
     }
   }
 }
+/** Duplicate a task */
+void Dup(u32 method, Task *orig_task, std::vector<LPointer<Task>> &dups) override {
+  switch (method) {
+    case Method::kConstruct: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<ConstructTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kDestruct: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<DestructTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kGetOrCreateTag: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<GetOrCreateTagTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kGetTagId: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<GetTagIdTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kGetTagName: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<GetTagNameTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kRenameTag: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<RenameTagTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kDestroyTag: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<DestroyTagTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kTagAddBlob: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<TagAddBlobTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kTagRemoveBlob: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<TagRemoveBlobTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kTagClearBlobs: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<TagClearBlobsTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kUpdateSize: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<UpdateSizeTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kAppendBlobSchema: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<AppendBlobSchemaTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kAppendBlob: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<AppendBlobTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kGetSize: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<GetSizeTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kSetBlobMdm: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<SetBlobMdmTask*>(orig_task), dups);
+      break;
+    }
+  }
+}
+/** Register the duplicate output with the origin task */
+void DupEnd(u32 method, u32 replica, Task *orig_task, Task *dup_task) override {
+  switch (method) {
+    case Method::kConstruct: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<ConstructTask*>(orig_task), reinterpret_cast<ConstructTask*>(dup_task));
+      break;
+    }
+    case Method::kDestruct: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<DestructTask*>(orig_task), reinterpret_cast<DestructTask*>(dup_task));
+      break;
+    }
+    case Method::kGetOrCreateTag: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<GetOrCreateTagTask*>(orig_task), reinterpret_cast<GetOrCreateTagTask*>(dup_task));
+      break;
+    }
+    case Method::kGetTagId: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<GetTagIdTask*>(orig_task), reinterpret_cast<GetTagIdTask*>(dup_task));
+      break;
+    }
+    case Method::kGetTagName: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<GetTagNameTask*>(orig_task), reinterpret_cast<GetTagNameTask*>(dup_task));
+      break;
+    }
+    case Method::kRenameTag: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<RenameTagTask*>(orig_task), reinterpret_cast<RenameTagTask*>(dup_task));
+      break;
+    }
+    case Method::kDestroyTag: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<DestroyTagTask*>(orig_task), reinterpret_cast<DestroyTagTask*>(dup_task));
+      break;
+    }
+    case Method::kTagAddBlob: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<TagAddBlobTask*>(orig_task), reinterpret_cast<TagAddBlobTask*>(dup_task));
+      break;
+    }
+    case Method::kTagRemoveBlob: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<TagRemoveBlobTask*>(orig_task), reinterpret_cast<TagRemoveBlobTask*>(dup_task));
+      break;
+    }
+    case Method::kTagClearBlobs: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<TagClearBlobsTask*>(orig_task), reinterpret_cast<TagClearBlobsTask*>(dup_task));
+      break;
+    }
+    case Method::kUpdateSize: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<UpdateSizeTask*>(orig_task), reinterpret_cast<UpdateSizeTask*>(dup_task));
+      break;
+    }
+    case Method::kAppendBlobSchema: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<AppendBlobSchemaTask*>(orig_task), reinterpret_cast<AppendBlobSchemaTask*>(dup_task));
+      break;
+    }
+    case Method::kAppendBlob: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<AppendBlobTask*>(orig_task), reinterpret_cast<AppendBlobTask*>(dup_task));
+      break;
+    }
+    case Method::kGetSize: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<GetSizeTask*>(orig_task), reinterpret_cast<GetSizeTask*>(dup_task));
+      break;
+    }
+    case Method::kSetBlobMdm: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<SetBlobMdmTask*>(orig_task), reinterpret_cast<SetBlobMdmTask*>(dup_task));
+      break;
+    }
+  }
+}
 /** Ensure there is space to store replicated outputs */
 void ReplicateStart(u32 method, u32 count, Task *task) override {
   switch (method) {

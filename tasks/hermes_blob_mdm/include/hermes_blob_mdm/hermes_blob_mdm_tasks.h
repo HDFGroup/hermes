@@ -109,6 +109,15 @@ struct SetBucketMdmTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   /** Destructor */
   ~SetBucketMdmTask() {}
 
+  /** Duplicate message */
+  void Dup(hipc::Allocator *alloc, SetBucketMdmTask &other) {
+    task_dup(other);
+  }
+
+  /** Process duplicate message output */
+  void DupEnd(u32 replica, SetBucketMdmTask &dup_task) {
+  }
+
   /** (De)serialize message call */
   template<typename Ar>
   void SerializeStart(Ar &ar) {
@@ -1130,6 +1139,60 @@ struct ReorganizeBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
     srl << tag_id_.unique_;
     srl << tag_id_.node_id_;
     return 0;
+  }
+};
+
+/** A task to reorganize a blob's composition in the hierarchy */
+struct FlushDataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
+  /** SHM default constructor */
+  HSHM_ALWAYS_INLINE explicit
+  FlushDataTask(hipc::Allocator *alloc) : Task(alloc) {}
+
+  /** Emplace constructor */
+  HSHM_ALWAYS_INLINE explicit
+  FlushDataTask(hipc::Allocator *alloc,
+                const TaskNode &task_node,
+                const TaskStateId &state_id) : Task(alloc) {
+    // Initialize task
+    task_node_ = task_node;
+    lane_hash_ = 0;
+    prio_ = TaskPrio::kLowLatency;
+    task_state_ = state_id;
+    method_ = Method::kReorganizeBlob;
+    task_flags_.SetBits(TASK_LANE_ALL | TASK_FIRE_AND_FORGET | TASK_LONG_RUNNING | TASK_COROUTINE);
+    domain_id_ = DomainId::GetGlobal();
+  }
+
+  /** Duplicate message */
+  void Dup(hipc::Allocator *alloc, FlushDataTask &other) {
+    task_dup(other);
+  }
+
+  /** Process duplicate message output */
+  void DupEnd(u32 replica, FlushDataTask &dup_task) {
+  }
+
+  /** (De)serialize message call */
+  template<typename Ar>
+  void SerializeStart(Ar &ar) {
+    task_serialize<Ar>(ar);
+  }
+
+  /** (De)serialize message return */
+  template<typename Ar>
+  void SerializeEnd(u32 replica, Ar &ar) {
+  }
+
+  /** Begin replication */
+  void ReplicateStart(u32 count) {}
+
+  /** Finalize replication */
+  void ReplicateEnd() {}
+
+  /** Create group */
+  HSHM_ALWAYS_INLINE
+  u32 GetGroup(hshm::charbuf &group) {
+    return TASK_GROUP_ANY;
   }
 };
 

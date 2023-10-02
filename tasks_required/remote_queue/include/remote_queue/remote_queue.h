@@ -59,7 +59,7 @@ class Client : public TaskLibClient {
     LABSTOR_ADMIN->DestroyTaskStateRoot(domain_id, id_);
   }
 
-  /** Call a custom method */
+  /** Disperse a task among a domain of nodes */
   HSHM_ALWAYS_INLINE
   void Disperse(Task *orig_task,
                 TaskState *exec,
@@ -68,7 +68,8 @@ class Client : public TaskLibClient {
     HILOG(kDebug, "Beginning dispersion for (task_node={}, task_state={}, method={})",
           orig_task->task_node_ + 1, orig_task->task_state_, orig_task->method_)
     BinaryOutputArchive<true> ar(DomainId::GetNode(LABSTOR_CLIENT->node_id_));
-    auto xfer = exec->SaveStart(orig_task->method_, ar, orig_task);
+    std::vector<DataTransfer> xfer =
+        exec->SaveStart(orig_task->method_, ar, orig_task);
 
     // Create subtasks
     exec->ReplicateStart(orig_task->method_, domain_ids.size(), orig_task);
@@ -77,6 +78,31 @@ class Client : public TaskLibClient {
         domain_ids, orig_task, exec, orig_task->method_, xfer);
     MultiQueue *queue = LABSTOR_CLIENT->GetQueue(queue_id_);
     queue->Emplace(orig_task->prio_, orig_task->lane_hash_, push_task.shm_);
+  }
+
+  /** Disperse a task among each lane of this node */
+  HSHM_ALWAYS_INLINE
+  void DisperseLocal(Task *orig_task, TaskState *exec,
+                     MultiQueue *orig_queue, LaneGroup *lane_group) {
+    // Duplicate task
+    HILOG(kDebug, "Beginning duplication for (task_node={}, task_state={}, method={})",
+          orig_task->task_node_ + 1, orig_task->task_state_, orig_task->method_);
+    std::vector<LPointer<Task>> dups(lane_group->num_lanes_);
+    exec->Dup(orig_task->method_, orig_task, dups);
+    for (size_t i = 0; i < dups.size(); ++i) {
+      LPointer<Task> &task = dups[i];
+      task->UnsetFireAndForget();
+      task->lane_hash_ = i;
+      orig_queue->Emplace(task->prio_, task->lane_hash_, task.shm_);
+    }
+
+    // Create duplicate task
+    exec->ReplicateStart(orig_task->method_, lane_group->num_lanes_, orig_task);
+    LPointer<DupTask> dup_task = LABSTOR_CLIENT->NewTask<DupTask>(
+        orig_task->task_node_ + 1, id_,
+        orig_task, exec, orig_task->method_, dups);
+    MultiQueue *queue = LABSTOR_CLIENT->GetQueue(queue_id_);
+    queue->Emplace(orig_task->prio_, orig_task->lane_hash_, dup_task.shm_);
   }
 
   /** Spawn task to accept new connections */

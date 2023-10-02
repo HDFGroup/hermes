@@ -83,6 +83,88 @@ void Del(u32 method, Task *task) override {
     }
   }
 }
+/** Duplicate a task */
+void Dup(u32 method, Task *orig_task, std::vector<LPointer<Task>> &dups) override {
+  switch (method) {
+    case Method::kCreateTaskState: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<CreateTaskStateTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kDestroyTaskState: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<DestroyTaskStateTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kRegisterTaskLib: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<RegisterTaskLibTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kDestroyTaskLib: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<DestroyTaskLibTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kGetOrCreateTaskStateId: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<GetOrCreateTaskStateIdTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kGetTaskStateId: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<GetTaskStateIdTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kStopRuntime: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<StopRuntimeTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kSetWorkOrchQueuePolicy: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<SetWorkOrchQueuePolicyTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kSetWorkOrchProcPolicy: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<SetWorkOrchProcPolicyTask*>(orig_task), dups);
+      break;
+    }
+  }
+}
+/** Register the duplicate output with the origin task */
+void DupEnd(u32 method, u32 replica, Task *orig_task, Task *dup_task) override {
+  switch (method) {
+    case Method::kCreateTaskState: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<CreateTaskStateTask*>(orig_task), reinterpret_cast<CreateTaskStateTask*>(dup_task));
+      break;
+    }
+    case Method::kDestroyTaskState: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<DestroyTaskStateTask*>(orig_task), reinterpret_cast<DestroyTaskStateTask*>(dup_task));
+      break;
+    }
+    case Method::kRegisterTaskLib: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<RegisterTaskLibTask*>(orig_task), reinterpret_cast<RegisterTaskLibTask*>(dup_task));
+      break;
+    }
+    case Method::kDestroyTaskLib: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<DestroyTaskLibTask*>(orig_task), reinterpret_cast<DestroyTaskLibTask*>(dup_task));
+      break;
+    }
+    case Method::kGetOrCreateTaskStateId: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<GetOrCreateTaskStateIdTask*>(orig_task), reinterpret_cast<GetOrCreateTaskStateIdTask*>(dup_task));
+      break;
+    }
+    case Method::kGetTaskStateId: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<GetTaskStateIdTask*>(orig_task), reinterpret_cast<GetTaskStateIdTask*>(dup_task));
+      break;
+    }
+    case Method::kStopRuntime: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<StopRuntimeTask*>(orig_task), reinterpret_cast<StopRuntimeTask*>(dup_task));
+      break;
+    }
+    case Method::kSetWorkOrchQueuePolicy: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<SetWorkOrchQueuePolicyTask*>(orig_task), reinterpret_cast<SetWorkOrchQueuePolicyTask*>(dup_task));
+      break;
+    }
+    case Method::kSetWorkOrchProcPolicy: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<SetWorkOrchProcPolicyTask*>(orig_task), reinterpret_cast<SetWorkOrchProcPolicyTask*>(dup_task));
+      break;
+    }
+  }
+}
 /** Ensure there is space to store replicated outputs */
 void ReplicateStart(u32 method, u32 count, Task *task) override {
   switch (method) {

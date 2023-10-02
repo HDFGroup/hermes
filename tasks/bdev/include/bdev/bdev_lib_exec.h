@@ -75,6 +75,80 @@ void Del(u32 method, Task *task) override {
     }
   }
 }
+/** Duplicate a task */
+void Dup(u32 method, Task *orig_task, std::vector<LPointer<Task>> &dups) override {
+  switch (method) {
+    case Method::kConstruct: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<ConstructTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kDestruct: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<DestructTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kWrite: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<WriteTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kRead: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<ReadTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kAllocate: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<AllocateTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kFree: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<FreeTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kMonitor: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<MonitorTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kUpdateCapacity: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<UpdateCapacityTask*>(orig_task), dups);
+      break;
+    }
+  }
+}
+/** Register the duplicate output with the origin task */
+void DupEnd(u32 method, u32 replica, Task *orig_task, Task *dup_task) override {
+  switch (method) {
+    case Method::kConstruct: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<ConstructTask*>(orig_task), reinterpret_cast<ConstructTask*>(dup_task));
+      break;
+    }
+    case Method::kDestruct: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<DestructTask*>(orig_task), reinterpret_cast<DestructTask*>(dup_task));
+      break;
+    }
+    case Method::kWrite: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<WriteTask*>(orig_task), reinterpret_cast<WriteTask*>(dup_task));
+      break;
+    }
+    case Method::kRead: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<ReadTask*>(orig_task), reinterpret_cast<ReadTask*>(dup_task));
+      break;
+    }
+    case Method::kAllocate: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<AllocateTask*>(orig_task), reinterpret_cast<AllocateTask*>(dup_task));
+      break;
+    }
+    case Method::kFree: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<FreeTask*>(orig_task), reinterpret_cast<FreeTask*>(dup_task));
+      break;
+    }
+    case Method::kMonitor: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<MonitorTask*>(orig_task), reinterpret_cast<MonitorTask*>(dup_task));
+      break;
+    }
+    case Method::kUpdateCapacity: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<UpdateCapacityTask*>(orig_task), reinterpret_cast<UpdateCapacityTask*>(dup_task));
+      break;
+    }
+  }
+}
 /** Ensure there is space to store replicated outputs */
 void ReplicateStart(u32 method, u32 count, Task *task) override {
   switch (method) {

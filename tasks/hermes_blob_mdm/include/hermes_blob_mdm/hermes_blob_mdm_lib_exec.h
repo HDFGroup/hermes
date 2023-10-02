@@ -72,6 +72,10 @@ void Run(u32 method, Task *task, RunContext &rctx) override {
       SetBucketMdm(reinterpret_cast<SetBucketMdmTask *>(task), rctx);
       break;
     }
+    case Method::kFlushData: {
+      FlushData(reinterpret_cast<FlushDataTask *>(task), rctx);
+      break;
+    }
   }
 }
 /** Delete a task */
@@ -143,6 +147,164 @@ void Del(u32 method, Task *task) override {
     }
     case Method::kSetBucketMdm: {
       LABSTOR_CLIENT->DelTask(reinterpret_cast<SetBucketMdmTask *>(task));
+      break;
+    }
+    case Method::kFlushData: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<FlushDataTask *>(task));
+      break;
+    }
+  }
+}
+/** Duplicate a task */
+void Dup(u32 method, Task *orig_task, std::vector<LPointer<Task>> &dups) override {
+  switch (method) {
+    case Method::kConstruct: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<ConstructTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kDestruct: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<DestructTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kPutBlob: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<PutBlobTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kGetBlob: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<GetBlobTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kTruncateBlob: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<TruncateBlobTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kDestroyBlob: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<DestroyBlobTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kTagBlob: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<TagBlobTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kBlobHasTag: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<BlobHasTagTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kGetBlobId: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<GetBlobIdTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kGetOrCreateBlobId: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<GetOrCreateBlobIdTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kGetBlobName: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<GetBlobNameTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kGetBlobSize: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<GetBlobSizeTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kGetBlobScore: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<GetBlobScoreTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kGetBlobBuffers: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<GetBlobBuffersTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kRenameBlob: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<RenameBlobTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kReorganizeBlob: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<ReorganizeBlobTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kSetBucketMdm: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<SetBucketMdmTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kFlushData: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<FlushDataTask*>(orig_task), dups);
+      break;
+    }
+  }
+}
+/** Register the duplicate output with the origin task */
+void DupEnd(u32 method, u32 replica, Task *orig_task, Task *dup_task) override {
+  switch (method) {
+    case Method::kConstruct: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<ConstructTask*>(orig_task), reinterpret_cast<ConstructTask*>(dup_task));
+      break;
+    }
+    case Method::kDestruct: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<DestructTask*>(orig_task), reinterpret_cast<DestructTask*>(dup_task));
+      break;
+    }
+    case Method::kPutBlob: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<PutBlobTask*>(orig_task), reinterpret_cast<PutBlobTask*>(dup_task));
+      break;
+    }
+    case Method::kGetBlob: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<GetBlobTask*>(orig_task), reinterpret_cast<GetBlobTask*>(dup_task));
+      break;
+    }
+    case Method::kTruncateBlob: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<TruncateBlobTask*>(orig_task), reinterpret_cast<TruncateBlobTask*>(dup_task));
+      break;
+    }
+    case Method::kDestroyBlob: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<DestroyBlobTask*>(orig_task), reinterpret_cast<DestroyBlobTask*>(dup_task));
+      break;
+    }
+    case Method::kTagBlob: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<TagBlobTask*>(orig_task), reinterpret_cast<TagBlobTask*>(dup_task));
+      break;
+    }
+    case Method::kBlobHasTag: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<BlobHasTagTask*>(orig_task), reinterpret_cast<BlobHasTagTask*>(dup_task));
+      break;
+    }
+    case Method::kGetBlobId: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<GetBlobIdTask*>(orig_task), reinterpret_cast<GetBlobIdTask*>(dup_task));
+      break;
+    }
+    case Method::kGetOrCreateBlobId: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<GetOrCreateBlobIdTask*>(orig_task), reinterpret_cast<GetOrCreateBlobIdTask*>(dup_task));
+      break;
+    }
+    case Method::kGetBlobName: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<GetBlobNameTask*>(orig_task), reinterpret_cast<GetBlobNameTask*>(dup_task));
+      break;
+    }
+    case Method::kGetBlobSize: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<GetBlobSizeTask*>(orig_task), reinterpret_cast<GetBlobSizeTask*>(dup_task));
+      break;
+    }
+    case Method::kGetBlobScore: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<GetBlobScoreTask*>(orig_task), reinterpret_cast<GetBlobScoreTask*>(dup_task));
+      break;
+    }
+    case Method::kGetBlobBuffers: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<GetBlobBuffersTask*>(orig_task), reinterpret_cast<GetBlobBuffersTask*>(dup_task));
+      break;
+    }
+    case Method::kRenameBlob: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<RenameBlobTask*>(orig_task), reinterpret_cast<RenameBlobTask*>(dup_task));
+      break;
+    }
+    case Method::kReorganizeBlob: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<ReorganizeBlobTask*>(orig_task), reinterpret_cast<ReorganizeBlobTask*>(dup_task));
+      break;
+    }
+    case Method::kSetBucketMdm: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<SetBucketMdmTask*>(orig_task), reinterpret_cast<SetBucketMdmTask*>(dup_task));
+      break;
+    }
+    case Method::kFlushData: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<FlushDataTask*>(orig_task), reinterpret_cast<FlushDataTask*>(dup_task));
       break;
     }
   }
@@ -218,6 +380,10 @@ void ReplicateStart(u32 method, u32 count, Task *task) override {
       labstor::CALL_REPLICA_START(count, reinterpret_cast<SetBucketMdmTask*>(task));
       break;
     }
+    case Method::kFlushData: {
+      labstor::CALL_REPLICA_START(count, reinterpret_cast<FlushDataTask*>(task));
+      break;
+    }
   }
 }
 /** Determine success and handle failures */
@@ -291,6 +457,10 @@ void ReplicateEnd(u32 method, Task *task) override {
       labstor::CALL_REPLICA_END(reinterpret_cast<SetBucketMdmTask*>(task));
       break;
     }
+    case Method::kFlushData: {
+      labstor::CALL_REPLICA_END(reinterpret_cast<FlushDataTask*>(task));
+      break;
+    }
   }
 }
 /** Serialize a task when initially pushing into remote */
@@ -362,6 +532,10 @@ std::vector<DataTransfer> SaveStart(u32 method, BinaryOutputArchive<true> &ar, T
     }
     case Method::kSetBucketMdm: {
       ar << *reinterpret_cast<SetBucketMdmTask*>(task);
+      break;
+    }
+    case Method::kFlushData: {
+      ar << *reinterpret_cast<FlushDataTask*>(task);
       break;
     }
   }
@@ -456,6 +630,11 @@ TaskPointer LoadStart(u32 method, BinaryInputArchive<true> &ar) override {
       ar >> *reinterpret_cast<SetBucketMdmTask*>(task_ptr.ptr_);
       break;
     }
+    case Method::kFlushData: {
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<FlushDataTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<FlushDataTask*>(task_ptr.ptr_);
+      break;
+    }
   }
   return task_ptr;
 }
@@ -528,6 +707,10 @@ std::vector<DataTransfer> SaveEnd(u32 method, BinaryOutputArchive<false> &ar, Ta
     }
     case Method::kSetBucketMdm: {
       ar << *reinterpret_cast<SetBucketMdmTask*>(task);
+      break;
+    }
+    case Method::kFlushData: {
+      ar << *reinterpret_cast<FlushDataTask*>(task);
       break;
     }
   }
@@ -604,6 +787,10 @@ void LoadEnd(u32 replica, u32 method, BinaryInputArchive<false> &ar, Task *task)
       ar.Deserialize(replica, *reinterpret_cast<SetBucketMdmTask*>(task));
       break;
     }
+    case Method::kFlushData: {
+      ar.Deserialize(replica, *reinterpret_cast<FlushDataTask*>(task));
+      break;
+    }
   }
 }
 /** Get the grouping of the task */
@@ -659,6 +846,9 @@ u32 GetGroup(u32 method, Task *task, hshm::charbuf &group) override {
     }
     case Method::kSetBucketMdm: {
       return reinterpret_cast<SetBucketMdmTask*>(task)->GetGroup(group);
+    }
+    case Method::kFlushData: {
+      return reinterpret_cast<FlushDataTask*>(task)->GetGroup(group);
     }
   }
   return -1;

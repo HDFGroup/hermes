@@ -107,6 +107,15 @@ struct CustomTask : public Task, TaskFlags<TF_SRL_SYM> {
   void SerializeEnd(u32 replica, Ar &ar) {
   }
 
+  /** Duplicate message */
+  void Dup(hipc::Allocator *alloc, CustomTask &other) {
+    task_dup(other);
+  }
+
+  /** Process duplicate message output */
+  void DupEnd(u32 replica, CustomTask &dup_task) {
+  }
+
   /** Begin replication */
   void ReplicateStart(u32 count) {
   }

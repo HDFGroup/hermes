@@ -51,6 +51,12 @@ class TaskLib;
 #define TASK_PREEMPTIVE BIT_OPT(u32, 17)
 /** This task is apart of remote debugging */
 #define TASK_REMOTE_DEBUG_MARK BIT_OPT(u32, 18)
+/** This task will match all groups */
+#define TASK_GROUP_ANY BIT_OPT(u32, 19)
+/** This task can be scheduled on any lane */
+#define TASK_LANE_ANY BIT_OPT(u32, 20)
+/** This task should be scheduled on all lanes */
+#define TASK_LANE_ALL BIT_OPT(u32, 21)
 
 /** Used to define task methods */
 #define TASK_METHOD_T static inline const u32
@@ -177,6 +183,7 @@ static inline std::ostream &operator<<(std::ostream &os, const TaskNode &obj) {
 #define TF_SRL_ASYM (TF_SRL_ASYM_START | TF_SRL_ASYM_END)
 /** This task uses replication */
 #define TF_REPLICA BIT_OPT(u32, 31)
+/** This task uses duplication */
 /** This task is intended to be used only locally */
 #define TF_LOCAL BIT_OPT(u32, 5)
 
@@ -196,20 +203,6 @@ class IsTask {};
 /** Determine this task uses SerializeEnd */
 #define USES_SRL_END(T) \
   T::SRL_SYM_END
-/** Call replica start if applicable */
-template<typename T>
-constexpr inline void CALL_REPLICA_START(u32 count, T *task) {
-  if constexpr(T::REPLICA) {
-    task->ReplicateStart(count);
-  }
-}
-/** Call replica end if applicable */
-template<typename T>
-constexpr inline void CALL_REPLICA_END(T *task) {
-  if constexpr(T::REPLICA) {
-    task->ReplicateEnd();
-  }
-}
 
 /** Compile-time flags indicating task methods and operation support */
 template<u32 FLAGS>
@@ -386,6 +379,16 @@ struct Task : public hipc::ShmContainer {
     return task_flags_.Any(TASK_PREEMPTIVE);
   }
 
+  /** This task should be dispersed across all lanes */
+  HSHM_ALWAYS_INLINE bool IsLaneAll() {
+    return task_flags_.Any(TASK_LANE_ALL);
+  }
+
+  /** Unset this task as lane-dispersable */
+  HSHM_ALWAYS_INLINE void UnsetLaneAll() {
+    task_flags_.UnsetBits(TASK_LANE_ALL);
+  }
+
   /** Yield the task */
   template<int THREAD_MODEL = 0>
   HSHM_ALWAYS_INLINE
@@ -499,13 +502,24 @@ struct Task : public hipc::ShmContainer {
   /** Sets this Task as empty */
   HSHM_ALWAYS_INLINE void SetNull() {}
 
- /**====================================
-  * Serialization
-  * ===================================*/
- template<typename Ar>
- void task_serialize(Ar &ar) {
-   ar(task_state_, task_node_, domain_id_, lane_hash_, prio_, method_, task_flags_);
- }
+  /**====================================
+   * Serialization
+   * ===================================*/
+  template<typename Ar>
+  void task_serialize(Ar &ar) {
+    ar(task_state_, task_node_, domain_id_, lane_hash_, prio_, method_, task_flags_);
+  }
+
+  template<typename TaskT>
+  void task_dup(TaskT &other) {
+    task_state_ = other.task_state_;
+    task_node_ = other.task_node_;
+    domain_id_ = other.domain_id_;
+    lane_hash_ = other.lane_hash_;
+    prio_ = other.prio_;
+    method_ = other.method_;
+    task_flags_ = other.task_flags_;
+  }
 
   /**====================================
    * Grouping

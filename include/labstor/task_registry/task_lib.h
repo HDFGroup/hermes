@@ -44,6 +44,12 @@ class TaskLib {
   /** Delete a task */
   virtual void Del(u32 method, Task *task) = 0;
 
+  /** Duplicate a task */
+  virtual void Dup(u32 method, Task *orig_task, std::vector<LPointer<Task>> &dups) = 0;
+
+  /** Register end of duplicate */
+  virtual void DupEnd(u32 method, u32 replica, Task *orig_task, Task *dup_task) = 0;
+
   /** Allow task to store replicas of completion */
   virtual void ReplicateStart(u32 method, u32 count, Task *task) = 0;
 
