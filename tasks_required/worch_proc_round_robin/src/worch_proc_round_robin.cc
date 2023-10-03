@@ -10,15 +10,15 @@ namespace labstor::worch_proc_round_robin {
 
 class Server : public TaskLib {
  public:
-  void Construct(ConstructTask *task, RunContext &ctx) {
+  void Construct(ConstructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
 
-  void Destruct(DestructTask *task, RunContext &ctx) {
+  void Destruct(DestructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
 
-  void Schedule(ScheduleTask *task, RunContext &ctx) {
+  void Schedule(ScheduleTask *task, RunContext &rctx) {
     int rr = 0;
     for (Worker &worker : LABSTOR_WORK_ORCHESTRATOR->workers_) {
       worker.SetCpuAffinity(rr % HERMES_SYSTEM_INFO->ncpu_);

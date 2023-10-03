@@ -64,7 +64,7 @@ class ConfigurationManager {
 
 }  // namespace hermes
 
-#define HERMES_CONF hshm::Singleton<hermes::ConfigurationManager>::GetInstance()
+#define HERMES_CONF hshm::Singleton<::hermes::ConfigurationManager>::GetInstance()
 #define HERMES_CLIENT_CONF HERMES_CONF->client_config_
 #define HERMES_SERVER_CONF HERMES_CONF->server_config_
 

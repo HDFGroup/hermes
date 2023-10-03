@@ -102,7 +102,7 @@ class MpiioIoClient : public hermes::adapter::fs::FilesystemIoClient {
 
 /** Simplify access to the stateless StdioIoClient Singleton */
 #define HERMES_MPIIO_IO_CLIENT \
-  hshm::EasySingleton<hermes::adapter::fs::MpiioIoClient>::GetInstance()
+  hshm::EasySingleton<::hermes::adapter::fs::MpiioIoClient>::GetInstance()
 #define HERMES_MPIIO_IO_CLIENT_T hermes::adapter::fs::MpiioIoClient*
 
 #endif  // HERMES_ADAPTER_MPIIO_MPIIO_IO_CLIENT_H_

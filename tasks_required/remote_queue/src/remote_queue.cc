@@ -23,7 +23,7 @@ class Server : public TaskLib {
   Server() = default;
 
   /** Construct remote queue */
-  void Construct(ConstructTask *task, RunContext &ctx) {
+  void Construct(ConstructTask *task, RunContext &rctx) {
     HILOG(kInfo, "(node {}) Constructing remote queue (task_node={}, task_state={}, method={})",
           LABSTOR_CLIENT->node_id_, task->task_node_, task->task_state_, task->method_);
     LABSTOR_THALLIUM->RegisterRpc("RpcPushSmall", [this](const tl::request &req,
@@ -45,7 +45,7 @@ class Server : public TaskLib {
   }
 
   /** Destroy remote queue */
-  void Destruct(DestructTask *task, RunContext &ctx) {
+  void Destruct(DestructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
 
@@ -144,7 +144,7 @@ class Server : public TaskLib {
   }
 
   /** Push operation called on client */
-  void Push(PushTask *task, RunContext &ctx) {
+  void Push(PushTask *task, RunContext &rctx) {
     std::vector<DataTransfer> &xfer = task->xfer_;
     switch (xfer.size()) {
       case 1: {

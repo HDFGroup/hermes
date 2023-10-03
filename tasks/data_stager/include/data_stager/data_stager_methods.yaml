@@ -1,0 +1,4 @@
+kRegisterStager: 0
+kUnregisterStager: 1
+kStageIn: 2
+kStageOut: 3

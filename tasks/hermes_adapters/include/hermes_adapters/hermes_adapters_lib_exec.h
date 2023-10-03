@@ -2,18 +2,18 @@
 #define LABSTOR_HERMES_ADAPTERS_LIB_EXEC_H_
 
 /** Execute a task */
-void Run(u32 method, Task *task, RunContext &ctx) override {
+void Run(u32 method, Task *task, RunContext &rctx) override {
   switch (method) {
     case Method::kConstruct: {
-      Construct(reinterpret_cast<ConstructTask *>(task), ctx);
+      Construct(reinterpret_cast<ConstructTask *>(task), rctx);
       break;
     }
     case Method::kDestruct: {
-      Destruct(reinterpret_cast<DestructTask *>(task), ctx);
+      Destruct(reinterpret_cast<DestructTask *>(task), rctx);
       break;
     }
     case Method::kCustom: {
-      Custom(reinterpret_cast<CustomTask *>(task), ctx);
+      Custom(reinterpret_cast<CustomTask *>(task), rctx);
       break;
     }
   }

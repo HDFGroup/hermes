@@ -328,7 +328,7 @@ TEST_CASE("TestTimespecLatency") {
 //  ctx.page_size_ = 4096;
 //  std::string data(ctx.page_size_, 0);
 //  for (size_t i = 0; i < ops; ++i) {
-//    HERMES_FILESYSTEM_API->Write(bkt, data.data(), i * ctx.page_size_, data.size(), false, ctx);
+//    HERMES_FILESYSTEM_API->Write(bkt, data.data(), i * ctx.page_size_, data.size(), false, rctx);
 //  }
 //  t.Pause();
 //
@@ -349,12 +349,12 @@ TEST_CASE("TestTimespecLatency") {
 //  ctx.page_size_ = 4096;
 //  std::string data(ctx.page_size_, 0);
 //  for (size_t i = 0; i < ops; ++i) {
-//    HERMES_FILESYSTEM_API->Write(bkt, data.data(), i * ctx.page_size_, data.size(), false, ctx);
+//    HERMES_FILESYSTEM_API->Write(bkt, data.data(), i * ctx.page_size_, data.size(), false, rctx);
 //  }
 //
 //  t.Resume();
 //  for (size_t i = 0; i < ops; ++i) {
-//    HERMES_FILESYSTEM_API->Read(bkt, data.data(), i * ctx.page_size_, data.size(), false, ctx);
+//    HERMES_FILESYSTEM_API->Read(bkt, data.data(), i * ctx.page_size_, data.size(), false, rctx);
 //  }
 //  t.Pause();
 //

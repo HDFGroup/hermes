@@ -46,6 +46,12 @@ typedef TaskStateId TargetId;
 /** Represents a trait */
 typedef TaskStateId TraitId;
 
+/** Different categories of traits */
+enum class TraitType {
+  kStagingTrait,
+  kProducerOpTrait
+};
+
 /** Represents a blob  */
 typedef hshm::charbuf Blob;
 

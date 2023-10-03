@@ -50,7 +50,7 @@ class Server : public TaskLib {
  public:
   Server() = default;
 
-  void Construct(ConstructTask *task, RunContext &ctx) {
+  void Construct(ConstructTask *task, RunContext &rctx) {
     id_alloc_ = 0;
     node_id_ = LABSTOR_CLIENT->node_id_;
     // Initialize blob maps
@@ -88,7 +88,7 @@ class Server : public TaskLib {
     task->SetModuleComplete();
   }
 
-  void Destruct(DestructTask *task, RunContext &ctx) {
+  void Destruct(DestructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
 
@@ -107,7 +107,7 @@ class Server : public TaskLib {
   /**
    * Set the Bucket MDM
    * */
-  void SetBucketMdm(SetBucketMdmTask *task, RunContext &ctx) {
+  void SetBucketMdm(SetBucketMdmTask *task, RunContext &rctx) {
     bkt_mdm_.Init(task->bkt_mdm_);
     task->SetModuleComplete();
   }
@@ -115,14 +115,14 @@ class Server : public TaskLib {
   /**
    * Create a blob's metadata
    * */
-  void PutBlob(PutBlobTask *task, RunContext &ctx) {
+  void PutBlob(PutBlobTask *task, RunContext &rctx) {
     // Get the blob info data structure
     hshm::charbuf blob_name = hshm::to_charbuf(*task->blob_name_);
     if (task->blob_id_.IsNull()) {
       task->blob_id_ = GetOrCreateBlobId(task->tag_id_, task->lane_hash_,
-                                         blob_name, ctx, task->flags_);
+                                         blob_name, rctx, task->flags_);
     }
-    BLOB_MAP_T &blob_map = blob_map_[ctx.lane_id_];
+    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     BlobInfo &blob_info = blob_map[task->blob_id_];
 
     // Update the blob info
@@ -143,7 +143,7 @@ class Server : public TaskLib {
       blob_info.UpdateWriteStats();
     }
     if (task->flags_.Any(HERMES_BLOB_REPLACE)) {
-      PutBlobFreeBuffersPhase(blob_info, task, ctx);
+      PutBlobFreeBuffersPhase(blob_info, task, rctx);
     }
 
     // Stage in blob data from FS
@@ -284,7 +284,7 @@ class Server : public TaskLib {
   }
 
   /** Release buffers */
-  void PutBlobFreeBuffersPhase(BlobInfo &blob_info, PutBlobTask *task, RunContext &ctx) {
+  void PutBlobFreeBuffersPhase(BlobInfo &blob_info, PutBlobTask *task, RunContext &rctx) {
     for (BufferInfo &buf : blob_info.buffers_) {
       TargetInfo &target = *target_map_[buf.tid_];
       std::vector<BufferInfo> buf_vec = {buf};
@@ -296,24 +296,24 @@ class Server : public TaskLib {
   }
 
   /** Get a blob's data */
-  void GetBlob(GetBlobTask *task, RunContext &ctx) {
+  void GetBlob(GetBlobTask *task, RunContext &rctx) {
     switch (task->phase_) {
       case GetBlobPhase::kStart: {
-        GetBlobGetPhase(task, ctx);
+        GetBlobGetPhase(task, rctx);
       }
       case GetBlobPhase::kWait: {
-        GetBlobWaitPhase(task, ctx);
+        GetBlobWaitPhase(task, rctx);
       }
     }
   }
 
-  void GetBlobGetPhase(GetBlobTask *task, RunContext &ctx) {
+  void GetBlobGetPhase(GetBlobTask *task, RunContext &rctx) {
     if (task->blob_id_.IsNull()) {
       hshm::charbuf blob_name = hshm::to_charbuf(*task->blob_name_);
       task->blob_id_ = GetOrCreateBlobId(task->tag_id_, task->lane_hash_,
-                                         blob_name, ctx, task->flags_);
+                                         blob_name, rctx, task->flags_);
     }
-    BLOB_MAP_T &blob_map = blob_map_[ctx.lane_id_];
+    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     BlobInfo &blob_info = blob_map[task->blob_id_];
     HSHM_MAKE_AR0(task->bdev_reads_, nullptr);
     std::vector<bdev::ReadTask*> &read_tasks = *task->bdev_reads_;
@@ -346,7 +346,7 @@ class Server : public TaskLib {
     task->phase_ = GetBlobPhase::kWait;
   }
 
-  void GetBlobWaitPhase(GetBlobTask *task, RunContext &ctx) {
+  void GetBlobWaitPhase(GetBlobTask *task, RunContext &rctx) {
     std::vector<bdev::ReadTask*> &read_tasks = *task->bdev_reads_;
     for (bdev::ReadTask *&read_task : read_tasks) {
       if (!read_task->IsComplete()) {
@@ -364,8 +364,8 @@ class Server : public TaskLib {
   /**
    * Tag a blob
    * */
-  void TagBlob(TagBlobTask *task, RunContext &ctx) {
-    BLOB_MAP_T &blob_map = blob_map_[ctx.lane_id_];
+  void TagBlob(TagBlobTask *task, RunContext &rctx) {
+    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     auto it = blob_map.find(task->blob_id_);
     if (it == blob_map.end()) {
       task->SetModuleComplete();
@@ -379,8 +379,8 @@ class Server : public TaskLib {
   /**
    * Check if blob has a tag
    * */
-  void BlobHasTag(BlobHasTagTask *task, RunContext &ctx) {
-    BLOB_MAP_T &blob_map = blob_map_[ctx.lane_id_];
+  void BlobHasTag(BlobHasTagTask *task, RunContext &rctx) {
+    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     auto it = blob_map.find(task->blob_id_);
     if (it == blob_map.end()) {
       task->SetModuleComplete();
@@ -397,25 +397,25 @@ class Server : public TaskLib {
    * Create \a blob_id BLOB ID
    * */
   BlobId GetOrCreateBlobId(TagId &tag_id, u32 lane_hash,
-                           const hshm::charbuf &blob_name, RunContext &ctx,
+                           const hshm::charbuf &blob_name, RunContext &rctx,
                            bitfield32_t &flags) {
     hshm::charbuf blob_name_unique = GetBlobNameWithBucket(tag_id, blob_name);
-    BLOB_ID_MAP_T &blob_id_map = blob_id_map_[ctx.lane_id_];
+    BLOB_ID_MAP_T &blob_id_map = blob_id_map_[rctx.lane_id_];
     auto it = blob_id_map.find(blob_name_unique);
     if (it == blob_id_map.end()) {
       BlobId blob_id = BlobId(node_id_, lane_hash, id_alloc_.fetch_add(1));
       blob_id_map.emplace(blob_name_unique, blob_id);
       flags.SetBits(HERMES_BLOB_DID_CREATE);
-      BLOB_MAP_T &blob_map = blob_map_[ctx.lane_id_];
+      BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
       blob_map.emplace(blob_id, BlobInfo());
       return blob_id;
     }
     return it->second;
   }
-  void GetOrCreateBlobId(GetOrCreateBlobIdTask *task, RunContext &ctx) {
+  void GetOrCreateBlobId(GetOrCreateBlobIdTask *task, RunContext &rctx) {
     hshm::charbuf blob_name = hshm::to_charbuf(*task->blob_name_);
     bitfield32_t flags;
-    task->blob_id_ = GetOrCreateBlobId(task->tag_id_, task->lane_hash_, blob_name, ctx, flags);
+    task->blob_id_ = GetOrCreateBlobId(task->tag_id_, task->lane_hash_, blob_name, rctx, flags);
     task->SetModuleComplete();
   }
 
@@ -423,10 +423,10 @@ class Server : public TaskLib {
    * Get \a blob_name BLOB from \a bkt_id bucket
    * */
   HSHM_ALWAYS_INLINE
-  void GetBlobId(GetBlobIdTask *task, RunContext &ctx) {
+  void GetBlobId(GetBlobIdTask *task, RunContext &rctx) {
     hshm::charbuf blob_name = hshm::to_charbuf(*task->blob_name_);
     hshm::charbuf blob_name_unique = GetBlobNameWithBucket(task->tag_id_, blob_name);
-    BLOB_ID_MAP_T &blob_id_map = blob_id_map_[ctx.lane_id_];
+    BLOB_ID_MAP_T &blob_id_map = blob_id_map_[rctx.lane_id_];
     auto it = blob_id_map.find(blob_name_unique);
     if (it == blob_id_map.end()) {
       task->blob_id_ = BlobId::GetNull();
@@ -442,8 +442,8 @@ class Server : public TaskLib {
   /**
    * Get \a blob_name BLOB name from \a blob_id BLOB id
    * */
-  void GetBlobName(GetBlobNameTask *task, RunContext &ctx) {
-    BLOB_MAP_T &blob_map = blob_map_[ctx.lane_id_];
+  void GetBlobName(GetBlobNameTask *task, RunContext &rctx) {
+    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     auto it = blob_map.find(task->blob_id_);
     if (it == blob_map.end()) {
       task->SetModuleComplete();
@@ -457,14 +457,14 @@ class Server : public TaskLib {
   /**
    * Get \a score from \a blob_id BLOB id
    * */
-  void GetBlobSize(GetBlobSizeTask *task, RunContext &ctx) {
+  void GetBlobSize(GetBlobSizeTask *task, RunContext &rctx) {
     if (task->blob_id_.IsNull()) {
       bitfield32_t flags;
       task->blob_id_ = GetOrCreateBlobId(task->tag_id_, task->lane_hash_,
                                          hshm::to_charbuf(*task->blob_name_),
-                                         ctx, flags);
+                                         rctx, flags);
     }
-    BLOB_MAP_T &blob_map = blob_map_[ctx.lane_id_];
+    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     auto it = blob_map.find(task->blob_id_);
     if (it == blob_map.end()) {
       task->size_ = 0;
@@ -479,8 +479,8 @@ class Server : public TaskLib {
   /**
    * Get \a score from \a blob_id BLOB id
    * */
-  void GetBlobScore(GetBlobScoreTask *task, RunContext &ctx) {
-    BLOB_MAP_T &blob_map = blob_map_[ctx.lane_id_];
+  void GetBlobScore(GetBlobScoreTask *task, RunContext &rctx) {
+    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     auto it = blob_map.find(task->blob_id_);
     if (it == blob_map.end()) {
       task->SetModuleComplete();
@@ -494,8 +494,8 @@ class Server : public TaskLib {
   /**
    * Get \a blob_id blob's buffers
    * */
-  void GetBlobBuffers(GetBlobBuffersTask *task, RunContext &ctx) {
-    BLOB_MAP_T &blob_map = blob_map_[ctx.lane_id_];
+  void GetBlobBuffers(GetBlobBuffersTask *task, RunContext &rctx) {
+    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     auto it = blob_map.find(task->blob_id_);
     if (it == blob_map.end()) {
       task->SetModuleComplete();
@@ -510,14 +510,14 @@ class Server : public TaskLib {
    * Rename \a blob_id blob to \a new_blob_name new blob name
    * in \a bkt_id bucket.
    * */
-  void RenameBlob(RenameBlobTask *task, RunContext &ctx) {
-    BLOB_MAP_T &blob_map = blob_map_[ctx.lane_id_];
+  void RenameBlob(RenameBlobTask *task, RunContext &rctx) {
+    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     auto it = blob_map.find(task->blob_id_);
     if (it == blob_map.end()) {
       task->SetModuleComplete();
       return;
     }
-    BLOB_ID_MAP_T &blob_id_map = blob_id_map_[ctx.lane_id_];
+    BLOB_ID_MAP_T &blob_id_map = blob_id_map_[rctx.lane_id_];
     BlobInfo &blob = it->second;
     blob_id_map.erase(blob.name_);
     blob_id_map[blob.name_] = task->blob_id_;
@@ -528,8 +528,8 @@ class Server : public TaskLib {
   /**
    * Truncate a blob to a new size
    * */
-  void TruncateBlob(TruncateBlobTask *task, RunContext &ctx) {
-    BLOB_MAP_T &blob_map = blob_map_[ctx.lane_id_];
+  void TruncateBlob(TruncateBlobTask *task, RunContext &rctx) {
+    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     auto it = blob_map.find(task->blob_id_);
     if (it == blob_map.end()) {
       task->SetModuleComplete();
@@ -543,16 +543,16 @@ class Server : public TaskLib {
   /**
    * Destroy \a blob_id blob in \a bkt_id bucket
    * */
-  void DestroyBlob(DestroyBlobTask *task, RunContext &ctx) {
+  void DestroyBlob(DestroyBlobTask *task, RunContext &rctx) {
     switch (task->phase_) {
       case DestroyBlobPhase::kFreeBuffers: {
-        BLOB_MAP_T &blob_map = blob_map_[ctx.lane_id_];
+        BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
         auto it = blob_map.find(task->blob_id_);
         if (it == blob_map.end()) {
           task->SetModuleComplete();
           return;
         }
-        BLOB_ID_MAP_T &blob_id_map = blob_id_map_[ctx.lane_id_];
+        BLOB_ID_MAP_T &blob_id_map = blob_id_map_[rctx.lane_id_];
         BlobInfo &blob_info = it->second;
         hshm::charbuf unique_name = GetBlobNameWithBucket(blob_info.tag_id_, blob_info.name_);
         blob_id_map.erase(unique_name);
@@ -577,7 +577,7 @@ class Server : public TaskLib {
         for (bdev::FreeTask *&free_task : free_tasks) {
           LABSTOR_CLIENT->DelTask(free_task);
         }
-        BLOB_MAP_T &blob_map = blob_map_[ctx.lane_id_];
+        BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
         BlobInfo &blob_info = blob_map[task->blob_id_];
         bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
                                  task->tag_id_,
@@ -593,10 +593,10 @@ class Server : public TaskLib {
   /**
    * Reorganize \a blob_id blob in \a bkt_id bucket
    * */
-  void ReorganizeBlob(ReorganizeBlobTask *task, RunContext &ctx) {
+  void ReorganizeBlob(ReorganizeBlobTask *task, RunContext &rctx) {
     switch (task->phase_) {
       case ReorganizeBlobPhase::kGet: {
-        BLOB_MAP_T &blob_map = blob_map_[ctx.lane_id_];
+        BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
         auto it = blob_map.find(task->blob_id_);
         if (it == blob_map.end()) {
           task->SetModuleComplete();
