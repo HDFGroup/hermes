@@ -359,7 +359,22 @@ class Server : public TaskLib {
     task->SetModuleComplete();
   }
 
-
+  /** Get contained blob IDs */
+  void GetContainedBlobIds(GetContainedBlobIdsTask *task, RunContext &rctx) {
+    TAG_MAP_T &tag_map = tag_map_[rctx.lane_id_];
+    auto it = tag_map.find(task->tag_id_);
+    if (it == tag_map.end()) {
+      task->SetModuleComplete();
+      return;
+    }
+    TagInfo &tag = it->second;
+    hipc::vector<BlobId> &blobs = (*task->blob_ids_);
+    blobs.reserve(tag.blobs_.size());
+    for (BlobId &blob_id : tag.blobs_) {
+      blobs.emplace_back(blob_id);
+    }
+    task->SetModuleComplete();
+  }
 
  public:
 #include "hermes_bucket_mdm/hermes_bucket_mdm_lib_exec.h"

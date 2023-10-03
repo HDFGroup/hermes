@@ -599,8 +599,7 @@ class Bucket {
    * Get the set of blob IDs contained in the bucket
    * */
   std::vector<BlobId> GetContainedBlobIds() {
-    // TODO(llogan)
-    return {};
+    return bkt_mdm_->GetContainedBlobIdsRoot(id_);
   }
 };
 
