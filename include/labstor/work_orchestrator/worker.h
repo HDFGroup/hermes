@@ -267,7 +267,7 @@ class Worker {
   bool CheckTaskGroup(Task *task, TaskState *exec,
                       u32 lane_id,
                       TaskNode node, const bool &is_remote) {
-    if (is_remote || task->IsStarted()) {
+    if (is_remote || task->IsStarted() || task->IsLaneAll()) {
       return true;
     }
     int ret = exec->GetGroup(task->method_, task, group_);

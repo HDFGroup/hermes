@@ -8,7 +8,7 @@
 #include "hermes_adapters/mapper/abstract_mapper.h"
 #include "hermes_adapters/posix/posix_api.h"
 #include "hermes_blob_mdm/hermes_blob_mdm.h"
-#include "stager_factory.h"
+#include "data_stager/factory/stager_factory.h"
 
 namespace hermes::data_stager {
 

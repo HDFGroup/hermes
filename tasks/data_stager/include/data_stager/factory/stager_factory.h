@@ -5,7 +5,7 @@
 #ifndef HERMES_TASKS_DATA_STAGER_SRC_STAGER_FACTORY_H_
 #define HERMES_TASKS_DATA_STAGER_SRC_STAGER_FACTORY_H_
 
-#include "data_stager/data_stager.h"
+#include "../data_stager.h"
 #include "abstract_stager.h"
 #include "binary_stager.h"
 

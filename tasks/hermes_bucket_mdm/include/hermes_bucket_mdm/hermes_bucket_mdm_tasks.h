@@ -347,7 +347,6 @@ struct AppendBlobTask : public Task, TaskFlags<TF_LOCAL> {
 /** A task to get or create a tag */
 struct GetOrCreateTagTask : public Task, TaskFlags<TF_SRL_SYM> {
   IN hipc::ShmArchive<hipc::string> tag_name_;
-  IN hipc::ShmArchive<hipc::string> url_;
   IN bool blob_owner_;
   IN hipc::ShmArchive<hipc::vector<TraitId>> traits_;
   IN size_t backend_size_;

@@ -13,6 +13,7 @@ class BinaryFileStager : public AbstractStager {
  public:
   int fd_;
   size_t page_size_;
+  std::string path_;
 
  public:
   /** Default constructor */
@@ -23,8 +24,30 @@ class BinaryFileStager : public AbstractStager {
     HERMES_POSIX_API->close(fd_);
   }
 
+  /** Build file url */
+  static hshm::charbuf BuildFileUrl(const std::string &path, size_t page_size) {
+    std::stringstream ss;
+    ss << "file://" << path << ":" << page_size;
+    return hshm::charbuf(ss.str());
+  }
+
+  /** Parse file url */
+  static void ParseFileUrl(const std::string &url, std::string &path, size_t &page_size) {
+    // Parse url
+    std::string protocol, action;
+    std::vector<std::string> tokens;
+    GetUrlProtocolAndAction(url, protocol, action, tokens);
+    // file://[path]:[page_size]
+    if (protocol == "file") {
+      path = tokens[0];
+      page_size = std::stoul(tokens[1]);
+    }
+  }
+
   /** Create the data stager payload */
   void RegisterStager(RegisterStagerTask *task, RunContext &rctx) override {
+    std::string path;
+    ParseFileUrl(task->url_->str(), path_, page_size_);
     fd_ = HERMES_POSIX_API->open(url_.c_str(), O_RDWR);
     if (fd_ < 0) {
       HELOG(kError, "Failed to open file {}", url_);

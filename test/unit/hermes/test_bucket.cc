@@ -363,3 +363,52 @@ TEST_CASE("TestHermesBucketAppend1n") {
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }
+
+TEST_CASE("TestDataStager") {
+  int rank, nprocs;
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+
+  if (rank == 0) {
+    std::vector<char> data(KILOBYTES(256));
+    FILE *file = fopen("/tmp/test.txt", "w");
+    fwrite(data.data(), sizeof(char), data.size(), file);
+    fclose(file);
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  if (rank == 0) {
+    // Initialize Hermes on all nodes
+    HERMES->ClientInit();
+
+    // Create a bucket
+    hermes::Context ctx;
+    std::stringstream ss;
+    ss << "file::/tmp/test.txt" << ":";
+    ss << KILOBYTES(4);
+    hermes::Bucket bkt(ss.str(), KILOBYTES(256), HERMES_IS_FILE);
+
+    // Put a few blobs in the bucket
+    size_t page_size = KILOBYTES(4);
+    size_t count_per_proc = 16;
+    size_t off = rank * count_per_proc;
+    size_t proc_count = off + count_per_proc;
+    for (size_t i = off; i < proc_count; ++i) {
+      HILOG(kInfo, "Iteration: {}", i);
+      // Put a blob
+      hermes::Blob blob(KILOBYTES(4));
+      memset(blob.data(), i % 256, blob.size());
+      bkt.Append(blob, page_size, ctx);
+      hermes::Blob blob2;
+      bkt.Get(std::to_string(i), blob2, ctx);
+      REQUIRE(blob.size() == blob2.size());
+      REQUIRE(blob == blob2);
+    }
+    for (size_t i = off; i < proc_count; ++i) {
+      HILOG(kInfo, "ContainsBlob Iteration: {}", i);
+      REQUIRE(bkt.ContainsBlob(std::to_string(i)));
+    }
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+}

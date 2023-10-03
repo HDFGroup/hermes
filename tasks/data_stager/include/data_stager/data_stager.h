@@ -133,14 +133,6 @@ class Client : public TaskLibClient {
     task.ptr_->Wait();
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(StageOut);
-
-  /** URL parser */
-  static hshm::charbuf ParseUrl(const hshm::string &url) {
-    hshm::charbuf ret;
-    ret.resize(url.size() + 1);
-    memcpy(ret.data(), url.data(), url.size() + 1);
-    return ret;
-  }
 };
 
 }  // namespace labstor
