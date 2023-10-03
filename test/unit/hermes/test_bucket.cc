@@ -363,3 +363,30 @@ TEST_CASE("TestHermesBucketAppend1n") {
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }
+
+TEST_CASE("TestHermesGetContainedBlobIds") {
+  int rank, nprocs;
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+
+  // Initialize Hermes on all nodes
+  HERMES->ClientInit();
+
+  // Create a bucket
+  hermes::Context ctx;
+  hermes::Bucket bkt("append_test" + std::to_string(rank));
+
+  // Put a few blobs in the bucket
+  for (int i = 0; i < 10; ++i) {
+    hermes::Blob blob(KILOBYTES(4));
+    memset(blob.data(), i % 256, blob.size());
+    bkt.Put(std::to_string(i), blob, ctx);
+  }
+
+  // Get contained blob ids
+  std::vector<hermes::BlobId> blob_ids;
+  blob_ids = bkt.GetContainedBlobIds();
+  REQUIRE(blob_ids.size() == 10);
+  MPI_Barrier(MPI_COMM_WORLD);
+}
