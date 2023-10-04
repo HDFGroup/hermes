@@ -416,6 +416,7 @@ TEST_CASE("TestHermesGetContainedBlobIds") {
     hermes::BlobId blob_id = bkt.Put(std::to_string(i), blob, ctx);
     HILOG(kInfo, "(iteration {}) Using BlobID: {}", i, blob_id);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
 
   // Get contained blob ids
   std::vector<hermes::BlobId> blob_ids;
