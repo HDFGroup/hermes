@@ -178,8 +178,9 @@ class MpiioFs : public Filesystem {
       mdm->request_map.erase(iter);
       delete (hreq);
       return MPI_SUCCESS;
-    }*/
-    return real_api->MPI_Wait(req, status);
+    }
+    return real_api->MPI_Wait(req, status);*/
+    return 0;
   }
 
   int WaitAll(int count, MPI_Request *req, MPI_Status *status) {
