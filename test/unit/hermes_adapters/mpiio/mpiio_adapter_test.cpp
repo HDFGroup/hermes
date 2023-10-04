@@ -18,7 +18,7 @@
 #include "adapter_test_utils.h"
 #include "catch_config.h"
 #if HERMES_INTERCEPT == 1
-#include "filesystem/filesystem.h"
+#include "hermes_adapters/filesystem/filesystem.h"
 #endif
 
 #include "adapter_test_utils.h"
