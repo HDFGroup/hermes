@@ -883,7 +883,7 @@ struct GetContainedBlobIdsTask : public Task, TaskFlags<TF_SRL_SYM> {
   template<typename Ar>
   void SerializeStart(Ar &ar) {
     task_serialize<Ar>(ar);
-    ar(tag_id_);
+    ar(tag_id_, blob_ids_);
   }
 
   /** (De)serialize message return */
