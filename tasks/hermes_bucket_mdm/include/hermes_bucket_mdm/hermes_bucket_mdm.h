@@ -172,7 +172,7 @@ class Client : public TaskLibClient {
   void AsyncGetTagNameConstruct(GetTagNameTask *task,
                                 const TaskNode &task_node,
                                 const TagId &tag_id) {
-    u32 hash = tag_id.unique_;
+    u32 hash = tag_id.hash_;
     LABSTOR_CLIENT->ConstructTask<GetTagNameTask>(
         task, task_node, DomainId::GetNode(HASH_TO_NODE_ID(hash)), id_,
         tag_id);
@@ -193,7 +193,7 @@ class Client : public TaskLibClient {
                                const TaskNode &task_node,
                                const TagId &tag_id,
                                const hshm::charbuf &new_tag_name) {
-    u32 hash = tag_id.unique_;
+    u32 hash = tag_id.hash_;
     LABSTOR_CLIENT->ConstructTask<RenameTagTask>(
         task, task_node, DomainId::GetNode(HASH_TO_NODE_ID(hash)), id_,
         tag_id, new_tag_name);
@@ -210,7 +210,7 @@ class Client : public TaskLibClient {
   void AsyncDestroyTagConstruct(DestroyTagTask *task,
                                 const TaskNode &task_node,
                                 const TagId &tag_id) {
-    u32 hash = tag_id.unique_;
+    u32 hash = tag_id.hash_;
     LABSTOR_CLIENT->ConstructTask<DestroyTagTask>(
         task, task_node, DomainId::GetNode(HASH_TO_NODE_ID(hash)), id_,
         tag_id);
@@ -228,7 +228,7 @@ class Client : public TaskLibClient {
                                 const TaskNode &task_node,
                                 const TagId &tag_id,
                                 const BlobId &blob_id) {
-    u32 hash = tag_id.unique_;
+    u32 hash = tag_id.hash_;
     LABSTOR_CLIENT->ConstructTask<TagAddBlobTask>(
         task, task_node, DomainId::GetNode(HASH_TO_NODE_ID(hash)), id_,
         tag_id, blob_id);
@@ -245,7 +245,7 @@ class Client : public TaskLibClient {
   void AsyncTagRemoveBlobConstruct(TagRemoveBlobTask *task,
                                    const TaskNode &task_node,
                                    const TagId &tag_id, const BlobId &blob_id) {
-    u32 hash = tag_id.unique_;
+    u32 hash = tag_id.hash_;
     LABSTOR_CLIENT->ConstructTask<TagRemoveBlobTask>(
         task, task_node, DomainId::GetNode(HASH_TO_NODE_ID(hash)), id_,
         tag_id, blob_id);
@@ -262,7 +262,7 @@ class Client : public TaskLibClient {
   void AsyncTagClearBlobsConstruct(TagClearBlobsTask *task,
                                    const TaskNode &task_node,
                                    const TagId &tag_id) {
-    u32 hash = tag_id.unique_;
+    u32 hash = tag_id.hash_;
     LABSTOR_CLIENT->ConstructTask<TagClearBlobsTask>(
         task, task_node, DomainId::GetNode(HASH_TO_NODE_ID(hash)), id_,
         tag_id);
@@ -279,7 +279,7 @@ class Client : public TaskLibClient {
   void AsyncGetSizeConstruct(GetSizeTask *task,
                              const TaskNode &task_node,
                              const TagId &tag_id) {
-    u32 hash = tag_id.unique_;
+    u32 hash = tag_id.hash_;
     LABSTOR_CLIENT->ConstructTask<GetSizeTask>(
         task, task_node, DomainId::GetNode(HASH_TO_NODE_ID(hash)), id_,
         tag_id);
@@ -294,6 +294,26 @@ class Client : public TaskLibClient {
     return size;
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(GetSize);
+
+  /** Get contained blob ids */
+  void AsyncGetContainedBlobIdsConstruct(GetContainedBlobIdsTask *task,
+                             const TaskNode &task_node,
+                             const TagId &tag_id) {
+    u32 hash = tag_id.hash_;
+    LABSTOR_CLIENT->ConstructTask<GetContainedBlobIdsTask>(
+        task, task_node, DomainId::GetNode(HASH_TO_NODE_ID(hash)), id_,
+        tag_id);
+  }
+  std::vector<BlobId> GetContainedBlobIdsRoot(const TagId &tag_id) {
+    LPointer<labpq::TypedPushTask<GetContainedBlobIdsTask>> push_task =
+        AsyncGetContainedBlobIdsRoot(tag_id);
+    push_task->Wait();
+    GetContainedBlobIdsTask *task = push_task->get();
+    std::vector<BlobId> blob_ids = task->blob_ids_->vec();
+    LABSTOR_CLIENT->DelTask(push_task);
+    return blob_ids;
+  }
+  LABSTOR_TASK_NODE_PUSH_ROOT(GetContainedBlobIds);
 };
 
 }  // namespace labstor

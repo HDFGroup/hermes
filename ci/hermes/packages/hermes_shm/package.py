@@ -19,6 +19,8 @@ class HermesShm(CMakePackage):
         args = []
         if '+debug' in self.spec:
             args.append('-DCMAKE_BUILD_TYPE=Debug')
+        else:
+            args.append('-DCMAKE_BUILD_TYPE=Release')
         return args
 
     def set_include(self, env, path):

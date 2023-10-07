@@ -16,6 +16,7 @@ struct Method : public TaskMethod {
   TASK_METHOD_T kAppendBlob = kLast + 13;
   TASK_METHOD_T kGetSize = kLast + 14;
   TASK_METHOD_T kSetBlobMdm = kLast + 15;
+  TASK_METHOD_T kGetContainedBlobIds = kLast + 16;
 };
 
 #endif  // LABSTOR_HERMES_BUCKET_MDM_METHODS_H_

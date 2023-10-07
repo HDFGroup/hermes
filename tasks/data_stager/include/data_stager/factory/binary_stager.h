@@ -6,6 +6,7 @@
 #define HERMES_TASKS_DATA_STAGER_SRC_BINARY_STAGER_H_
 
 #include "abstract_stager.h"
+#include "hermes_adapters/mapper/abstract_mapper.h"
 
 namespace hermes::data_stager {
 
@@ -36,7 +37,7 @@ class BinaryFileStager : public AbstractStager {
     // Parse url
     std::string protocol, action;
     std::vector<std::string> tokens;
-    GetUrlProtocolAndAction(url, protocol, action, tokens);
+    Client::GetUrlProtocolAndAction(url, protocol, action, tokens);
     // file://[path]:[page_size]
     if (protocol == "file") {
       path = tokens[0];
@@ -46,11 +47,10 @@ class BinaryFileStager : public AbstractStager {
 
   /** Create the data stager payload */
   void RegisterStager(RegisterStagerTask *task, RunContext &rctx) override {
-    std::string path;
     ParseFileUrl(task->url_->str(), path_, page_size_);
-    fd_ = HERMES_POSIX_API->open(url_.c_str(), O_RDWR);
+    fd_ = HERMES_POSIX_API->open(path_.c_str(), O_RDWR);
     if (fd_ < 0) {
-      HELOG(kError, "Failed to open file {}", url_);
+      HELOG(kError, "Failed to open file {}", path_);
     }
   }
 

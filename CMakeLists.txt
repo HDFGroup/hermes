@@ -12,7 +12,7 @@ option(HERMES_ENABLE_DOXYGEN "Check how well the code is documented" OFF)
 
 option(HERMES_ENABLE_POSIX_ADAPTER "Build the Hermes POSIX adapter." ON)
 option(HERMES_ENABLE_STDIO_ADAPTER "Build the Hermes stdio adapter." ON)
-option(HERMES_ENABLE_MPIIO_ADAPTER "Build the Hermes MPI-IO adapter." OFF)
+option(HERMES_ENABLE_MPIIO_ADAPTER "Build the Hermes MPI-IO adapter." ON)
 option(HERMES_ENABLE_PUBSUB_ADAPTER "Build the Hermes pub/sub adapter." OFF)
 option(HERMES_ENABLE_KVSTORE "Build the Hermes KVStore adapter." OFF)
 option(HERMES_ENABLE_VFD "Build the Hermes HDF5 Virtual File Driver" OFF)

@@ -18,8 +18,9 @@ const char* kLabstorServerDefaultConfigStr =
 "  shm_allocator: kScalablePageAllocator\n"
 "  # The name of the shared memory region to create\n"
 "  shm_name: \"labstor_shm\"\n"
-"  # The size of the shared memory region to allocate\n"
+"  # The size of the shared memory region to allocate for general data structures\n"
 "  shm_size: 0g\n"
+"  # The size of the shared memory to allocate for data buffers\n"
 "\n"
 "### Define properties of RPCs\n"
 "rpc:\n"
@@ -52,6 +53,7 @@ const char* kLabstorServerDefaultConfigStr =
 "  \'hermes_mdm\',\n"
 "  \'hermes_blob_mdm\',\n"
 "  \'hermes_bucket_mdm\',\n"
+"  \'data_stager\',\n"
 "  \'posix_bdev\',\n"
 "  \'ram_bdev\'\n"
 "]\n";

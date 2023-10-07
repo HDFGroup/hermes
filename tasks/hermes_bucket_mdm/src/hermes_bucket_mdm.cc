@@ -197,8 +197,8 @@ class Server : public TaskLib {
 
     // Check if the tag exists
     TAG_ID_MAP_T &tag_id_map = tag_id_map_[rctx.lane_id_];
-    hshm::string url = hshm::to_charbuf(*task->url_);
-    hshm::charbuf tag_name = data_stager::Client::ParseUrl(url);
+    hshm::string url = hshm::to_charbuf(*task->tag_name_);
+    hshm::charbuf tag_name = data_stager::Client::GetTagNameFromUrl(url);
     bool did_create = false;
     if (tag_name.size() > 0) {
       did_create = tag_id_map.find(tag_name) == tag_id_map.end();
@@ -220,7 +220,7 @@ class Server : public TaskLib {
       tag_info.internal_size_ = task->backend_size_;
       stager_mdm_.AsyncRegisterStager(task->task_node_ + 1,
                                       tag_id,
-                                      hshm::charbuf(task->url_->str()));
+                                      hshm::charbuf(task->tag_name_->str()));
     } else {
       if (tag_name.size()) {
         HILOG(kDebug, "Found existing tag: {}", tag_name.str())
@@ -368,7 +368,22 @@ class Server : public TaskLib {
     task->SetModuleComplete();
   }
 
-
+  /** Get contained blob IDs */
+  void GetContainedBlobIds(GetContainedBlobIdsTask *task, RunContext &rctx) {
+    TAG_MAP_T &tag_map = tag_map_[rctx.lane_id_];
+    auto it = tag_map.find(task->tag_id_);
+    if (it == tag_map.end()) {
+      task->SetModuleComplete();
+      return;
+    }
+    TagInfo &tag = it->second;
+    hipc::vector<BlobId> &blobs = (*task->blob_ids_);
+    blobs.reserve(tag.blobs_.size());
+    for (BlobId &blob_id : tag.blobs_) {
+      blobs.emplace_back(blob_id);
+    }
+    task->SetModuleComplete();
+  }
 
  public:
 #include "hermes_bucket_mdm/hermes_bucket_mdm_lib_exec.h"

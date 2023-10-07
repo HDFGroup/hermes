@@ -228,7 +228,7 @@ struct StageInTask : public Task, TaskFlags<TF_LOCAL> {
               u32 node_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = 0;
+    lane_hash_ = bkt_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kStageIn;

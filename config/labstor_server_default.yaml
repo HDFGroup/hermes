@@ -50,6 +50,7 @@ task_registry: [
   'hermes_mdm',
   'hermes_blob_mdm',
   'hermes_bucket_mdm',
+  'data_stager',
   'posix_bdev',
   'ram_bdev'
 ]

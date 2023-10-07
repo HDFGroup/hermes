@@ -233,8 +233,6 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
   IN float score_;
   IN bitfield32_t flags_;
   IN BlobId blob_id_;
-  IN hipc::ShmArchive<hipc::charbuf> filename_;
-  IN size_t page_size_;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -280,8 +278,9 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     data_ = data;
     score_ = score;
     flags_ = flags;
-    HSHM_MAKE_AR(filename_, alloc, ctx.filename_);
-    page_size_ = ctx.page_size_;
+    if (ctx.flags_.Any(HERMES_IS_FILE)) {
+      flags_.SetBits(HERMES_IS_FILE);
+    }
     HILOG(kDebug, "Construct PUT task for {}, while getting BlobId is {}",
           blob_name.str(), flags_.Any(HERMES_GET_BLOB_ID));
   }
@@ -289,7 +288,6 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
   /** Destructor */
   ~PutBlobTask() {
     HSHM_DESTROY_AR(blob_name_);
-    HSHM_DESTROY_AR(filename_);
     if (IsDataOwner()) {
       LABSTOR_CLIENT->FreeBuffer(data_);
     }
@@ -303,7 +301,7 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
                       data_size_, domain_id_);
     task_serialize<Ar>(ar);
     ar & xfer;
-    ar(tag_id_, blob_name_, blob_id_, blob_off_, data_size_, score_, flags_, filename_, page_size_);
+    ar(tag_id_, blob_name_, blob_id_, blob_off_, data_size_, score_, flags_);
   }
 
   /** Deserialize message call */
@@ -313,7 +311,7 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     task_serialize<Ar>(ar);
     ar & xfer;
     data_ = HERMES_MEMORY_MANAGER->Convert<void, hipc::Pointer>(xfer.data_);
-    ar(tag_id_, blob_name_, blob_id_, blob_off_, data_size_, score_, flags_, filename_, page_size_);
+    ar(tag_id_, blob_name_, blob_id_, blob_off_, data_size_, score_, flags_);
   }
 
   /** (De)serialize message return */
@@ -348,8 +346,6 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
   INOUT BlobId blob_id_;
   IN size_t blob_off_;
   IN hipc::Pointer data_;
-  IN hipc::ShmArchive<hipc::charbuf> filename_;
-  IN size_t page_size_;
   INOUT ssize_t data_size_;
   IN bitfield32_t flags_;
   TEMP int phase_ = GetBlobPhase::kStart;
@@ -396,8 +392,6 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     data_ = data;
     flags_ = flags;
     HSHM_MAKE_AR(blob_name_, alloc, blob_name);
-    HSHM_MAKE_AR(filename_, alloc, ctx.filename_);
-    page_size_ = ctx.page_size_;
   }
 
   /** Convert data to a data structure */
@@ -421,7 +415,6 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
   /** Destructor */
   ~GetBlobTask() {
     HSHM_DESTROY_AR(blob_name_);
-    HSHM_DESTROY_AR(filename_);
   }
 
   /** (De)serialize message call */
@@ -432,7 +425,7 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
                       data_size_, domain_id_);
     task_serialize<Ar>(ar);
     ar & xfer;
-    ar(tag_id_, blob_name_, blob_id_, blob_off_, data_size_, filename_, page_size_, flags_);
+    ar(tag_id_, blob_name_, blob_id_, blob_off_, data_size_, flags_);
   }
 
   /** Deserialize message call */
@@ -442,7 +435,7 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     task_serialize<Ar>(ar);
     ar & xfer;
     data_ = HERMES_MEMORY_MANAGER->Convert<void, hipc::Pointer>(xfer.data_);
-    ar(tag_id_, blob_name_, blob_id_, blob_off_, data_size_, filename_, page_size_, flags_);
+    ar(tag_id_, blob_name_, blob_id_, blob_off_, data_size_, flags_);
   }
 
   /** (De)serialize message return */

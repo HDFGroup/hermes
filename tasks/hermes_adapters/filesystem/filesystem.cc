@@ -125,7 +125,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   // Perform a PartialPut for each page
   Context ctx;
   ctx.page_size_ = stat.page_size_;
-  ctx.filename_ = stat.path_;
+  ctx.flags_.SetBits(HERMES_IS_FILE);
   for (const BlobPlacement &p : mapping) {
     const Blob page((const char*)ptr + data_offset, p.blob_size_);
     if (!is_append) {
@@ -193,8 +193,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
 
   // Perform a PartialPut for each page
   Context ctx;
-  ctx.page_size_ = stat.page_size_;
-  ctx.filename_ = stat.path_;
+  ctx.flags_.SetBits(HERMES_IS_FILE);
   for (const BlobPlacement &p : mapping) {
     Blob page((const char*)ptr + data_offset, p.blob_size_);
     std::string blob_name(p.CreateBlobName().str());

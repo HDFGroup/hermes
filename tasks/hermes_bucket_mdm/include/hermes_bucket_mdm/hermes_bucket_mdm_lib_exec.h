@@ -64,6 +64,10 @@ void Run(u32 method, Task *task, RunContext &rctx) override {
       SetBlobMdm(reinterpret_cast<SetBlobMdmTask *>(task), rctx);
       break;
     }
+    case Method::kGetContainedBlobIds: {
+      GetContainedBlobIds(reinterpret_cast<GetContainedBlobIdsTask *>(task), rctx);
+      break;
+    }
   }
 }
 /** Delete a task */
@@ -127,6 +131,10 @@ void Del(u32 method, Task *task) override {
     }
     case Method::kSetBlobMdm: {
       LABSTOR_CLIENT->DelTask(reinterpret_cast<SetBlobMdmTask *>(task));
+      break;
+    }
+    case Method::kGetContainedBlobIds: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<GetContainedBlobIdsTask *>(task));
       break;
     }
   }
@@ -324,6 +332,10 @@ void ReplicateStart(u32 method, u32 count, Task *task) override {
       labstor::CALL_REPLICA_START(count, reinterpret_cast<SetBlobMdmTask*>(task));
       break;
     }
+    case Method::kGetContainedBlobIds: {
+      labstor::CALL_REPLICA_START(count, reinterpret_cast<GetContainedBlobIdsTask*>(task));
+      break;
+    }
   }
 }
 /** Determine success and handle failures */
@@ -389,6 +401,10 @@ void ReplicateEnd(u32 method, Task *task) override {
       labstor::CALL_REPLICA_END(reinterpret_cast<SetBlobMdmTask*>(task));
       break;
     }
+    case Method::kGetContainedBlobIds: {
+      labstor::CALL_REPLICA_END(reinterpret_cast<GetContainedBlobIdsTask*>(task));
+      break;
+    }
   }
 }
 /** Serialize a task when initially pushing into remote */
@@ -452,6 +468,10 @@ std::vector<DataTransfer> SaveStart(u32 method, BinaryOutputArchive<true> &ar, T
     }
     case Method::kSetBlobMdm: {
       ar << *reinterpret_cast<SetBlobMdmTask*>(task);
+      break;
+    }
+    case Method::kGetContainedBlobIds: {
+      ar << *reinterpret_cast<GetContainedBlobIdsTask*>(task);
       break;
     }
   }
@@ -536,6 +556,11 @@ TaskPointer LoadStart(u32 method, BinaryInputArchive<true> &ar) override {
       ar >> *reinterpret_cast<SetBlobMdmTask*>(task_ptr.ptr_);
       break;
     }
+    case Method::kGetContainedBlobIds: {
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<GetContainedBlobIdsTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<GetContainedBlobIdsTask*>(task_ptr.ptr_);
+      break;
+    }
   }
   return task_ptr;
 }
@@ -600,6 +625,10 @@ std::vector<DataTransfer> SaveEnd(u32 method, BinaryOutputArchive<false> &ar, Ta
     }
     case Method::kSetBlobMdm: {
       ar << *reinterpret_cast<SetBlobMdmTask*>(task);
+      break;
+    }
+    case Method::kGetContainedBlobIds: {
+      ar << *reinterpret_cast<GetContainedBlobIdsTask*>(task);
       break;
     }
   }
@@ -668,6 +697,10 @@ void LoadEnd(u32 replica, u32 method, BinaryInputArchive<false> &ar, Task *task)
       ar.Deserialize(replica, *reinterpret_cast<SetBlobMdmTask*>(task));
       break;
     }
+    case Method::kGetContainedBlobIds: {
+      ar.Deserialize(replica, *reinterpret_cast<GetContainedBlobIdsTask*>(task));
+      break;
+    }
   }
 }
 /** Get the grouping of the task */
@@ -717,6 +750,9 @@ u32 GetGroup(u32 method, Task *task, hshm::charbuf &group) override {
     }
     case Method::kSetBlobMdm: {
       return reinterpret_cast<SetBlobMdmTask*>(task)->GetGroup(group);
+    }
+    case Method::kGetContainedBlobIds: {
+      return reinterpret_cast<GetContainedBlobIdsTask*>(task)->GetGroup(group);
     }
   }
   return -1;

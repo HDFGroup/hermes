@@ -114,8 +114,8 @@ struct Context {
   /** Page size to use for FS reads / writes*/
   size_t page_size_;
 
-  /** File name used for FS reads / writes */
-  std::string filename_;
+  /** Flags */
+  bitfield32_t flags_;
 
   /** The node id the blob will be accessed from */
   u32 node_id_;

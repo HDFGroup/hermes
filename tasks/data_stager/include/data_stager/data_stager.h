@@ -133,6 +133,40 @@ class Client : public TaskLibClient {
     task.ptr_->Wait();
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(StageOut);
+
+  /** Parse url */
+  static void GetUrlProtocolAndAction(const std::string &url,
+                                      std::string &protocol,
+                                      std::string &action,
+                                      std::vector<std::string> &tokens) {
+    // Determine the protocol + action
+    std::string token;
+    size_t found = url.find("://");
+    if (found != std::string::npos) {
+      protocol = url.substr(0, found);
+      action = url.substr(found + 3);
+    }
+
+    // Divide action into tokens
+    std::stringstream ss(action);
+    while (std::getline(ss, token, ':')) {
+      tokens.push_back(token);
+    }
+  }
+
+  /** Bucket name from url */
+  static hshm::charbuf GetTagNameFromUrl(const hshm::string &url) {
+    // Parse url
+    std::string protocol, action;
+    std::vector<std::string> tokens;
+    GetUrlProtocolAndAction(url.str(), protocol, action, tokens);
+    if (protocol == "file") {
+      // file://[path]:[page_size]
+      std::string path = tokens[0];
+      return hshm::charbuf(path);
+    }
+    return url;
+  }
 };
 
 }  // namespace labstor
