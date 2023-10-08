@@ -48,6 +48,7 @@ class Server : public TaskLib {
   Client blob_mdm_;
   bucket_mdm::Client bkt_mdm_;
   data_stager::Client stager_mdm_;
+  LPointer<FlushDataTask> flush_task_;
 
  public:
   Server() = default;
@@ -58,7 +59,7 @@ class Server : public TaskLib {
     // Initialize blob maps
     blob_id_map_.resize(LABSTOR_QM_RUNTIME->max_lanes_);
     blob_map_.resize(LABSTOR_QM_RUNTIME->max_lanes_);
-    // Initialize target tasks
+    // Initialize targets
     target_tasks_.reserve(HERMES_SERVER_CONF.devices_.size());
     for (DeviceInfo &dev : HERMES_SERVER_CONF.devices_) {
       std::string dev_type;
@@ -110,8 +111,11 @@ class Server : public TaskLib {
    * Set the Bucket MDM
    * */
   void SetBucketMdm(SetBucketMdmTask *task, RunContext &rctx) {
-    bkt_mdm_.Init(task->bkt_mdm_);
-    stager_mdm_.Init(task->stager_mdm_);
+    if (bkt_mdm_.id_.IsNull()) {
+      bkt_mdm_.Init(task->bkt_mdm_);
+      stager_mdm_.Init(task->stager_mdm_);
+      flush_task_ = blob_mdm_.AsyncFlushData(task->task_node_ + 1);
+    }
     task->SetModuleComplete();
   }
 
@@ -121,6 +125,9 @@ class Server : public TaskLib {
   void FlushData(FlushDataTask *task, RunContext &rctx) {
     // Get the blob info data structure
     BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
+    if (stager_mdm_.id_.IsNull()) {
+      return;
+    }
     for (auto &it : blob_map) {
       BlobInfo &blob_info = it.second;
       if (blob_info.last_flush_ > 0 &&
@@ -145,7 +152,7 @@ class Server : public TaskLib {
                                   TASK_DATA_OWNER | TASK_FIRE_AND_FORGET);
       }
     }
-    task->SetModuleComplete();
+    // task->SetModuleComplete();
   }
 
   /**

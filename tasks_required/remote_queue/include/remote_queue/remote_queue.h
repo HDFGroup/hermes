@@ -93,6 +93,7 @@ class Client : public TaskLibClient {
       LPointer<Task> &task = dups[i];
       task->UnsetFireAndForget();
       task->lane_hash_ = i;
+      task->UnsetLaneAll();
       orig_queue->Emplace(task->prio_, task->lane_hash_, task.shm_);
     }
 

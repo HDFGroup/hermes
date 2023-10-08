@@ -325,7 +325,7 @@ constexpr inline void CALL_DUPLICATE(TaskT *orig_task, std::vector<LPointer<Task
   if constexpr(TaskT::REPLICA) {
     for (LPointer<Task> &dup : dups) {
       LPointer<TaskT> task = LABSTOR_CLIENT->NewEmptyTask<TaskT>();
-      orig_task->Dup(LABSTOR_CLIENT->main_alloc_, *task.ptr_);
+      task.ptr_->Dup(LABSTOR_CLIENT->main_alloc_, *orig_task);
       dup.ptr_ = task.ptr_;
       dup.shm_ = task.shm_;
     }

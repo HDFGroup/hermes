@@ -292,6 +292,35 @@ TEST_CASE("TestTimespecLatency") {
   HILOG(kInfo, "Latency: {} MOps", ops / t.GetUsec());
 }
 
+TEST_CASE("TestTimerLatency") {
+  size_t ops = (1 << 20);
+  hshm::Timer t, tmp;
+
+  t.Resume();
+  double usec;
+  for (size_t i = 0; i < ops; ++i) {
+    usec = tmp.GetUsecFromStart();
+  }
+  t.Pause();
+
+  HILOG(kInfo, "Latency: {} MOps (usec={})", ops / t.GetUsec(), usec);
+}
+
+TEST_CASE("TestTimepointLatency") {
+  size_t ops = (1 << 20);
+  hshm::Timer t;
+  hshm::Timepoint tmp;
+
+  t.Resume();
+  double usec;
+  for (size_t i = 0; i < ops; ++i) {
+    usec = tmp.GetUsecFromStart();
+  }
+  t.Pause();
+
+  HILOG(kInfo, "Latency: {} MOps (usec={})", ops / t.GetUsec(), usec);
+}
+
 /** Time to process a request */
 //TEST_CASE("TestHermesGetBlobIdLatency") {
 //  HERMES->ClientInit();

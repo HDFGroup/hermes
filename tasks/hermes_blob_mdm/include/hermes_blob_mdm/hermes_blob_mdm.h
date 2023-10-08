@@ -425,6 +425,14 @@ class Client : public TaskLibClient {
     LABSTOR_CLIENT->DelTask(push_task);
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(DestroyBlob);
+
+  /** Initialize automatic flushing */
+  void AsyncFlushDataConstruct(FlushDataTask *task,
+                               const TaskNode &task_node) {
+    LABSTOR_CLIENT->ConstructTask<FlushDataTask>(
+        task, task_node, id_);
+  }
+  LABSTOR_TASK_NODE_PUSH_ROOT(FlushData);
 };
 
 }  // namespace labstor
