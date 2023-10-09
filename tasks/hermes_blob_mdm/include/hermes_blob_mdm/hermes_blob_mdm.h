@@ -149,7 +149,7 @@ class Client : public TaskLibClient {
                              hipc::Pointer &data,
                              Context ctx = Context(),
                              bitfield32_t flags = bitfield32_t(0)) {
-    HILOG(kDebug, "Beginning GET (task_node={})", task_node);
+    // HILOG(kDebug, "Beginning GET (task_node={})", task_node);
     LABSTOR_CLIENT->ConstructTask<GetBlobTask>(
         task, task_node, DomainId::GetNode(blob_id.node_id_), id_,
         tag_id, blob_name, blob_id, off, data_size, data, ctx, flags);
@@ -185,7 +185,7 @@ class Client : public TaskLibClient {
                                     const BlobId &blob_id,
                                     float score,
                                     u32 node_id) {
-    HILOG(kDebug, "Beginning REORGANIZE (task_node={})", task_node);
+    // HILOG(kDebug, "Beginning REORGANIZE (task_node={})", task_node);
     LABSTOR_CLIENT->ConstructTask<ReorganizeBlobTask>(
         task, task_node, DomainId::GetNode(blob_id.node_id_), id_,
         tag_id, blob_id, score, node_id);
@@ -297,7 +297,7 @@ class Client : public TaskLibClient {
                                  const TagId &tag_id,
                                  const hshm::charbuf &blob_name,
                                  const BlobId &blob_id) {
-    HILOG(kDebug, "Getting blob size {}", task_node);
+    // HILOG(kDebug, "Getting blob size {}", task_node);
     LABSTOR_CLIENT->ConstructTask<GetBlobSizeTask>(
         task, task_node, DomainId::GetNode(blob_id.node_id_), id_,
         tag_id, blob_name, blob_id);

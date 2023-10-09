@@ -1150,8 +1150,13 @@ struct FlushDataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kFlushData;
-    task_flags_.SetBits(TASK_LANE_ALL | TASK_FIRE_AND_FORGET | TASK_LONG_RUNNING | TASK_COROUTINE);
-    SetPeriodSec(10);  // TODO(llogan): don't hardcode this
+    task_flags_.SetBits(
+        TASK_LANE_ALL |
+        TASK_FIRE_AND_FORGET |
+        TASK_LONG_RUNNING |
+        TASK_COROUTINE |
+        TASK_REMOTE_DEBUG_MARK);
+    SetPeriodSec(2);  // TODO(llogan): don't hardcode this
     domain_id_ = DomainId::GetLocal();
   }
 

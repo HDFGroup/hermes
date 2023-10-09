@@ -89,7 +89,7 @@ class BinaryFileStager : public AbstractStager {
   void StageOut(blob_mdm::Client &blob_mdm, StageOutTask *task, RunContext &rctx) override {
     adapter::BlobPlacement plcmnt;
     plcmnt.DecodeBlobName(*task->blob_name_, page_size_);
-    HILOG(kDebug, "Attempting to stage {} bytes from the backend file {} at offset {}",
+    HILOG(kDebug, "Attempting to stage {} bytes to the backend file {} at offset {}",
           page_size_, url_, plcmnt.bucket_off_);
     char *data = LABSTOR_CLIENT->GetPrivatePointer(task->data_);
     ssize_t real_size = HERMES_POSIX_API->pwrite(fd_,
