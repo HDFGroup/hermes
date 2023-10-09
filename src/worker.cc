@@ -73,7 +73,6 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
     if (!task->IsRunDisabled() &&
         CheckTaskGroup(task, exec, work_entry.lane_id_, task->task_node_, is_remote) &&
         task->ShouldRun(work_entry.cur_time_)) {
-      // TODO(llogan): Make a remote debug macro
 #ifdef REMOTE_DEBUG
       if (task->task_state_ != LABSTOR_QM_CLIENT->admin_task_state_ &&
           !task->task_flags_.Any(TASK_REMOTE_DEBUG_MARK) &&
@@ -87,12 +86,12 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
       if (is_remote) {
         auto ids = LABSTOR_RUNTIME->ResolveDomainId(task->domain_id_);
         LABSTOR_REMOTE_QUEUE->Disperse(task, exec, ids);
-        task->DisableRun();
+        task->SetDisableRun();
         task->SetUnordered();
         task->UnsetCoroutine();
       } else if (task->IsLaneAll()) {
         LABSTOR_REMOTE_QUEUE->DisperseLocal(task, exec, work_entry.queue_, work_entry.group_);
-        task->DisableRun();
+        task->SetDisableRun();
         task->SetUnordered();
         task->UnsetCoroutine();
         task->UnsetLaneAll();
@@ -116,7 +115,7 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
           task->SetStarted();
         }
       } else if (task->IsPreemptive()) {
-        task->DisableRun();
+        task->SetDisableRun();
         entry->thread_ = LABSTOR_WORK_ORCHESTRATOR->SpawnAsyncThread(&Worker::RunPreemptive, task);
       } else {
         task->SetStarted();

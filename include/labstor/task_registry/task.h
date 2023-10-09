@@ -301,8 +301,13 @@ struct Task : public hipc::ShmContainer {
   }
 
   /** Disable the running of a task */
-  HSHM_ALWAYS_INLINE void DisableRun() {
+  HSHM_ALWAYS_INLINE void SetDisableRun() {
     task_flags_.SetBits(TASK_DISABLE_RUN);
+  }
+
+  /** Enable the running of a task */
+  HSHM_ALWAYS_INLINE void UnsetDisableRun() {
+    task_flags_.UnsetBits(TASK_DISABLE_RUN);
   }
 
   /** Check if running task is disable */

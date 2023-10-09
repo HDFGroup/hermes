@@ -32,14 +32,14 @@ class Server : public TaskLib {
         // NOTE(llogan): Assumes a minimum of two workers, admin on worker 0.
         if (lane_group.IsLowPriority()) {
           for (u32 lane_id = lane_group.num_scheduled_; lane_id < lane_group.num_lanes_; ++lane_id) {
-            HILOG(kDebug, "Scheduling the queue {} (lane {})", queue.id_, lane_id);
+            // HILOG(kDebug, "Scheduling the queue {} (lane {})", queue.id_, lane_id);
             Worker &worker = LABSTOR_WORK_ORCHESTRATOR->workers_[0];
             worker.PollQueues({WorkEntry(lane_group.prio_, lane_id, &queue)});
           }
           lane_group.num_scheduled_ = lane_group.num_lanes_;
         } else {
           for (u32 lane_id = lane_group.num_scheduled_; lane_id < lane_group.num_lanes_; ++lane_id) {
-            HILOG(kDebug, "Scheduling the queue {} (lane {})", queue.id_, lane_id);
+            // HILOG(kDebug, "Scheduling the queue {} (lane {})", queue.id_, lane_id);
             u32 worker_id = (count_ % (LABSTOR_WORK_ORCHESTRATOR->workers_.size() - 1)) + 1;
             Worker &worker = LABSTOR_WORK_ORCHESTRATOR->workers_[worker_id];
             worker.PollQueues({WorkEntry(lane_group.prio_, lane_id, &queue)});

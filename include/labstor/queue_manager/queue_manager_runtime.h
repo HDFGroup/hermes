@@ -60,14 +60,14 @@ class QueueManagerRuntime : public QueueManager {
   void CreateQueue(const QueueId &id, const std::vector<PriorityInfo> &queue_info) {
     MultiQueue *queue = GetQueue(id);
     if (id.IsNull()) {
-      HILOG(kDebug, "Cannot create null queue {}", id);
+      HELOG(kError, "Cannot create null queue {}", id);
       return;
     }
     if (!queue->id_.IsNull()) {
-      HILOG(kDebug, "Queue {} already exists", id);
+      HELOG(kError, "Queue {} already exists", id);
       return;
     }
-    HILOG(kDebug, "Creating queue {}", id);
+    // HILOG(kDebug, "Creating queue {}", id);
     queue_map_->replace(queue_map_->begin() + id.unique_, id, queue_info);
   }
 

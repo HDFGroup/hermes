@@ -201,8 +201,8 @@ class TaskRegistry {
       task->SetModuleComplete();
       return false;
     }
-    HILOG(kInfo, "(node {}) Creating an instance of {} with name {}",
-          LABSTOR_CLIENT->node_id_, lib_name, state_name)
+//    HILOG(kInfo, "(node {}) Creating an instance of {} with name {}",
+//          LABSTOR_CLIENT->node_id_, lib_name, state_name)
 
     // Find the task library to instantiate
     auto it = libs_.find(lib_name);
@@ -234,7 +234,7 @@ class TaskRegistry {
     task_state->name_ = state_name;
     task_state_ids_.emplace(state_name, state_id);
     task_states_.emplace(state_id, task_state);
-    HILOG(kInfo, "(node {})  Allocated an instance of {} with name {} and ID {}",
+    HILOG(kInfo, "(node {})  Created an instance of {} with name {} and ID {}",
           LABSTOR_CLIENT->node_id_, lib_name, state_name, state_id)
     return true;
   }

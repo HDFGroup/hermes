@@ -70,7 +70,12 @@ class Server : public TaskLib {
           task->orig_task_->task_node_,
           task->orig_task_->task_state_,
           task->orig_task_->method_);
-    task->orig_task_->SetModuleComplete();
+    if (!task->orig_task_->IsLongRunning()) {
+      task->orig_task_->SetModuleComplete();
+    } else {
+      task->orig_task_->UnsetStarted();
+      task->orig_task_->UnsetDisableRun();
+    }
     task->SetModuleComplete();
   }
 
