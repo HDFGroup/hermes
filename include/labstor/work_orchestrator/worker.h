@@ -28,6 +28,9 @@ struct WorkEntry {
   Lane *lane_;
   LaneGroup *group_;
   MultiQueue *queue_;
+  hshm::Timepoint last_monitor_;
+  hshm::Timepoint cur_time_;
+  double sample_epoch_;
 
   /** Default constructor */
   HSHM_ALWAYS_INLINE
@@ -364,7 +367,7 @@ class Worker {
   }
 
   void PollGrouped(WorkEntry &entry);
-  static void RunBlocking(bctx::transfer_t t);
+  static void RunCoroutine(bctx::transfer_t t);
   static void RunPreemptive(void *data);
 };
 

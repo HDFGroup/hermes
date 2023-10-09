@@ -125,13 +125,12 @@ class Server : public TaskLib {
   void FlushData(FlushDataTask *task, RunContext &rctx) {
     // Get the blob info data structure
     BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
-    if (stager_mdm_.id_.IsNull()) {
-      return;
-    }
     for (auto &it : blob_map) {
       BlobInfo &blob_info = it.second;
       if (blob_info.last_flush_ > 0 &&
           blob_info.mod_count_ > blob_info.last_flush_) {
+        HILOG(kDebug, "Flushing blob {} (mod_count={}, last_flush={})",
+              blob_info.blob_id_, blob_info.mod_count_, blob_info.last_flush_);
         blob_info.last_flush_ = 1;
         blob_info.mod_count_ = 0;
         blob_info.access_freq_ = 0;

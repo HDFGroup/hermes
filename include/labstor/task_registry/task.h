@@ -43,20 +43,14 @@ class TaskLib;
 #define TASK_DISABLE_RUN BIT_OPT(u32, 13)
 /** This task owns the data in the task */
 #define TASK_DATA_OWNER BIT_OPT(u32, 14)
-/** This task is marked */
-#define TASK_MARKED BIT_OPT(u32, 15)
 /** This task uses co-routine wait */
-#define TASK_COROUTINE BIT_OPT(u32, 16)
+#define TASK_COROUTINE BIT_OPT(u32, 15)
 /** This task uses argobot wait */
 #define TASK_PREEMPTIVE BIT_OPT(u32, 17)
-/** This task is apart of remote debugging */
-#define TASK_REMOTE_DEBUG_MARK BIT_OPT(u32, 18)
-/** This task will match all groups */
-#define TASK_GROUP_ANY BIT_OPT(u32, 19)
-/** This task can be scheduled on any lane */
-#define TASK_LANE_ANY BIT_OPT(u32, 20)
 /** This task should be scheduled on all lanes */
-#define TASK_LANE_ALL BIT_OPT(u32, 21)
+#define TASK_LANE_ALL BIT_OPT(u32, 19)
+/** This task is apart of remote debugging */
+#define TASK_REMOTE_DEBUG_MARK BIT_OPT(u32, 31)
 
 /** Used to define task methods */
 #define TASK_METHOD_T static inline const u32
@@ -253,6 +247,8 @@ struct Task : public hipc::ShmContainer {
   u32 method_;                 /**< The method to call in the state */
   bitfield32_t task_flags_;    /**< Properties of the task */
   std::atomic<int> delcnt_ = 0;    /**< # of times deltask called */
+  double period_ns_;              /**< The period of the task */
+  hshm::Timepoint start_;      /**< The time the task started */
   RunContext ctx_;
 
   /**====================================
@@ -345,21 +341,6 @@ struct Task : public hipc::ShmContainer {
   }
 
   /** Set this task as started */
-  HSHM_ALWAYS_INLINE void SetMarked() {
-    task_flags_.SetBits(TASK_MARKED);
-  }
-
-  /** Set this task as started */
-  HSHM_ALWAYS_INLINE void UnsetMarked() {
-    task_flags_.UnsetBits(TASK_MARKED);
-  }
-
-  /** Check if task is marked */
-  HSHM_ALWAYS_INLINE bool IsMarked() {
-    return task_flags_.Any(TASK_MARKED);
-  }
-
-  /** Set this task as started */
   HSHM_ALWAYS_INLINE void UnsetLongRunning() {
     task_flags_.UnsetBits(TASK_LONG_RUNNING);
   }
@@ -387,6 +368,49 @@ struct Task : public hipc::ShmContainer {
   /** Unset this task as lane-dispersable */
   HSHM_ALWAYS_INLINE void UnsetLaneAll() {
     task_flags_.UnsetBits(TASK_LANE_ALL);
+  }
+
+  /** Set period in nanoseconds */
+  HSHM_ALWAYS_INLINE void SetPeriodNs(double ns) {
+    period_ns_ = ns;
+  }
+
+  /** Set period in microseconds */
+  HSHM_ALWAYS_INLINE void SetPeriodUs(double us) {
+    period_ns_ = us * 1000;
+  }
+
+  /** Set period in milliseconds */
+  HSHM_ALWAYS_INLINE void SetPeriodMs(double ms) {
+    period_ns_ = ms * 1000000;
+  }
+
+  /** Set period in seconds */
+  HSHM_ALWAYS_INLINE void SetPeriodSec(double sec) {
+    period_ns_ = sec * 1000000000;
+  }
+
+  /** Set period in minutes */
+  HSHM_ALWAYS_INLINE void SetPeriodMin(double min) {
+    period_ns_ = min * 60000000000;
+  }
+
+  /** Determine if time has elapsed */
+  HSHM_ALWAYS_INLINE bool ShouldRun(hshm::Timepoint &cur_time) {
+    if (!IsStarted()) {
+      start_ = cur_time;
+      return true;
+    }
+    if (IsLongRunning()) {
+      return start_.GetNsecFromStart(cur_time) >= period_ns_;
+    } else {
+      return true;
+    }
+  }
+
+  /** Mark this task as having been run */
+  HSHM_ALWAYS_INLINE void DidRun(hshm::Timepoint &cur_time) {
+    start_ = cur_time;
   }
 
   /** Yield the task */
@@ -507,7 +531,9 @@ struct Task : public hipc::ShmContainer {
    * ===================================*/
   template<typename Ar>
   void task_serialize(Ar &ar) {
-    ar(task_state_, task_node_, domain_id_, lane_hash_, prio_, method_, task_flags_);
+    // NOTE(llogan): don't serialize start_ because of clock drift
+    ar(task_state_, task_node_, domain_id_, lane_hash_, prio_, method_,
+       task_flags_, period_ns_);
   }
 
   template<typename TaskT>
@@ -519,6 +545,8 @@ struct Task : public hipc::ShmContainer {
     prio_ = other.prio_;
     method_ = other.method_;
     task_flags_ = other.task_flags_;
+    period_ns_ = other.period_ns_;
+    start_ = other.start_;
   }
 
   /**====================================

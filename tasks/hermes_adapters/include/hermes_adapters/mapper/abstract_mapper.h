@@ -30,28 +30,32 @@ enum class MapperType {
 */
 struct BlobPlacement {
   size_t page_;       /**< The index in the array placements */
-  size_t page_size_;  /**< The size of a page */
   size_t bucket_off_; /**< Offset from file start (for FS) */
   size_t blob_off_;   /**< Offset from BLOB start */
   size_t blob_size_;  /**< Size after offset to read */
-  int time_;          /**< The order of the blob in a list of blobs */
+
+  /** create a BLOB name from index. */
+  static hshm::charbuf CreateBlobName(size_t page) {
+    hshm::charbuf buf(sizeof(page));
+    labstor::LocalSerialize srl(buf);
+    srl << page;
+    return buf;
+  }
 
   /** create a BLOB name from index. */
   hshm::charbuf CreateBlobName() const {
-    hshm::charbuf buf(sizeof(page_) + sizeof(blob_off_));
+    hshm::charbuf buf(sizeof(page_));
     labstor::LocalSerialize srl(buf);
     srl << page_;
-    srl << page_size_;
     return buf;
   }
 
   /** decode \a blob_name BLOB name to index.  */
   template<typename StringT>
-  void DecodeBlobName(const StringT &blob_name) {
+  void DecodeBlobName(const StringT &blob_name, size_t page_size) {
     labstor::LocalDeserialize srl(blob_name);
     srl >> page_;
-    srl >> page_size_;
-    bucket_off_ = page_ * page_size_;
+    bucket_off_ = page_ * page_size;
     blob_off_ = 0;
   }
 };

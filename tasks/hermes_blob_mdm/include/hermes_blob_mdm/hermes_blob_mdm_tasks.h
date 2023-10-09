@@ -281,8 +281,6 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     if (ctx.flags_.Any(HERMES_IS_FILE)) {
       flags_.SetBits(HERMES_IS_FILE);
     }
-    HILOG(kDebug, "Construct PUT task for {}, while getting BlobId is {}",
-          blob_name.str(), flags_.Any(HERMES_GET_BLOB_ID));
   }
 
   /** Destructor */
@@ -1153,6 +1151,7 @@ struct FlushDataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
     task_state_ = state_id;
     method_ = Method::kFlushData;
     task_flags_.SetBits(TASK_LANE_ALL | TASK_FIRE_AND_FORGET | TASK_LONG_RUNNING | TASK_COROUTINE);
+    SetPeriodSec(10);  // TODO(llogan): don't hardcode this
     domain_id_ = DomainId::GetGlobal();
   }
 

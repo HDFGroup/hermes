@@ -238,7 +238,6 @@ struct ReadTask : public Task, TaskFlags<TF_LOCAL> {
 
 /** A task to monitor bdev statistics */
 struct MonitorTask : public Task, TaskFlags<TF_LOCAL> {
-  IN size_t freq_ms_;  /**< Frequency in ms */
   OUT size_t rem_cap_; /**< Remaining capacity of the target */
 
   /** SHM default constructor */
@@ -260,10 +259,10 @@ struct MonitorTask : public Task, TaskFlags<TF_LOCAL> {
     task_state_ = state_id;
     method_ = Method::kMonitor;
     task_flags_.SetBits(TASK_LONG_RUNNING | TASK_REMOTE_DEBUG_MARK);
+    SetPeriodMs(freq_ms);
     domain_id_ = domain_id;
 
     // Custom
-    freq_ms_ = freq_ms;
     rem_cap_ = rem_cap;
   }
 

@@ -36,6 +36,7 @@ void Worker::Run() {
         continue;
       }
     }
+    work_entry.cur_time_.Now();
     PollGrouped(work_entry);
   }
 }
@@ -69,7 +70,9 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
     }
     // Attempt to run the task if it's ready and runnable
     bool is_remote = task->domain_id_.IsRemote(LABSTOR_RPC->GetNumHosts(), LABSTOR_CLIENT->node_id_);
-    if (!task->IsRunDisabled() && CheckTaskGroup(task, exec, work_entry.lane_id_, task->task_node_, is_remote)) {
+    if (!task->IsRunDisabled() &&
+        CheckTaskGroup(task, exec, work_entry.lane_id_, task->task_node_, is_remote) &&
+        task->ShouldRun(work_entry.cur_time_)) {
       // TODO(llogan): Make a remote debug macro
 #ifdef REMOTE_DEBUG
       if (task->task_state_ != LABSTOR_QM_CLIENT->admin_task_state_ &&
@@ -102,11 +105,16 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
           }
           rctx.jmp_.fctx = bctx::make_fcontext(
               (char*)rctx.stack_ptr_ + rctx.stack_size_,
-              rctx.stack_size_, &RunBlocking);
+              rctx.stack_size_, &RunCoroutine);
           task->SetStarted();
         }
         rctx.jmp_ = bctx::jump_fcontext(rctx.jmp_.fctx, task);
-        HILOG(kDebug, "Jumping into function")
+        if (!task->IsStarted()) {
+          rctx.jmp_.fctx = bctx::make_fcontext(
+              (char*)rctx.stack_ptr_ + rctx.stack_size_,
+              rctx.stack_size_, &RunCoroutine);
+          task->SetStarted();
+        }
       } else if (task->IsPreemptive()) {
         task->DisableRun();
         entry->thread_ = LABSTOR_WORK_ORCHESTRATOR->SpawnAsyncThread(&Worker::RunPreemptive, task);
@@ -114,6 +122,7 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
         task->SetStarted();
         exec->Run(task->method_, task, rctx);
       }
+      task->DidRun(work_entry.cur_time_);
     }
     // Cleanup on task completion
     if (task->IsModuleComplete()) {
@@ -134,12 +143,13 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
   }
 }
 
-void Worker::RunBlocking(bctx::transfer_t t) {
+void Worker::RunCoroutine(bctx::transfer_t t) {
   Task *task = reinterpret_cast<Task*>(t.data);
   RunContext &rctx = task->ctx_;
   TaskState *&exec = rctx.exec_;
   rctx.jmp_ = t;
   exec->Run(task->method_, task, rctx);
+  task->UnsetStarted();
   task->Yield<TASK_YIELD_CO>();
 }
 
@@ -147,7 +157,15 @@ void Worker::RunPreemptive(void *data) {
   Task *task = reinterpret_cast<Task *>(data);
   TaskState *exec = LABSTOR_TASK_REGISTRY->GetTaskState(task->task_state_);
   RunContext rctx(0);
-  exec->Run(task->method_, task, rctx);
+  do {
+    hshm::Timepoint now;
+    now.Now();
+    if (task->ShouldRun(now)) {
+      exec->Run(task->method_, task, rctx);
+      task->DidRun(now);
+    }
+    task->Yield<TASK_YIELD_ABT>();
+  } while(!task->IsModuleComplete());
 }
 
 }  // namespace labstor

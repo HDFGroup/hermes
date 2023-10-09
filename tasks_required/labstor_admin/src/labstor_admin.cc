@@ -80,10 +80,7 @@ class Server : public TaskLib {
         state_name.c_str(),
         task->id_,
         task);
-    if (!ret) {
-      task->SetModuleComplete();
-      return;
-    }
+    task->SetModuleComplete();
     HILOG(kInfo, "(node {}) Allocated task state {} with id {}",
           LABSTOR_CLIENT->node_id_, state_name, task->task_state_);
   }

@@ -371,7 +371,13 @@ TEST_CASE("TestHermesDataStager") {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 
-  std::vector<char> data(KILOBYTES(256), 0);
+  // create dataset
+  size_t count_per_proc = 16;
+  size_t off = rank * count_per_proc;
+  size_t proc_count = off + count_per_proc;
+  size_t page_size = KILOBYTES(4);
+  size_t file_size = nprocs * page_size * 16;
+  std::vector<char> data(file_size, 0);
   if (rank == 0) {
     FILE *file = fopen("/tmp/test.txt", "w");
     fwrite(data.data(), sizeof(char), data.size(), file);
@@ -383,8 +389,6 @@ TEST_CASE("TestHermesDataStager") {
   HERMES->ClientInit();
 
   // Create a stageable bucket
-  size_t file_size = KILOBYTES(256);
-  size_t page_size = KILOBYTES(4);
   using hermes::data_stager::BinaryFileStager;
   hermes::Context ctx;
   ctx.flags_.SetBits(HERMES_IS_FILE);
@@ -392,17 +396,15 @@ TEST_CASE("TestHermesDataStager") {
   hermes::Bucket bkt(url.str(), file_size, HERMES_IS_FILE);
 
   // Put a few blobs in the bucket
-  size_t count_per_proc = 16;
-  size_t off = rank * count_per_proc;
-  size_t proc_count = off + count_per_proc;
   for (size_t i = off; i < proc_count; ++i) {
     HILOG(kInfo, "Iteration: {}", i);
     // Put a blob
     hermes::Blob blob(page_size / 2);
     memset(blob.data(), i % 256, blob.size());
-    bkt.PartialPut(std::to_string(i), blob, 0, ctx);
+    hshm::charbuf blob_name = hermes::adapter::BlobPlacement::CreateBlobName(i);
+    bkt.PartialPut(blob_name.str(), blob, 0, ctx);
     hermes::Blob blob2;
-    bkt.Get(std::to_string(i), blob2, ctx);
+    bkt.Get(blob_name.str(), blob2, ctx);
     REQUIRE(blob2.size() == page_size);
     hermes::Blob full_blob(page_size);
     memcpy(full_blob.data(), blob.data(), blob.size());
@@ -410,8 +412,9 @@ TEST_CASE("TestHermesDataStager") {
     REQUIRE(full_blob == blob2);
   }
   for (size_t i = off; i < proc_count; ++i) {
+    hshm::charbuf blob_name = hermes::adapter::BlobPlacement::CreateBlobName(i);
     HILOG(kInfo, "ContainsBlob Iteration: {}", i);
-    REQUIRE(bkt.ContainsBlob(std::to_string(i)));
+    REQUIRE(bkt.ContainsBlob(blob_name.str()));
   }
   MPI_Barrier(MPI_COMM_WORLD);
 

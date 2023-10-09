@@ -218,9 +218,11 @@ class Server : public TaskLib {
       tag_info.tag_id_ = tag_id;
       tag_info.owner_ = task->blob_owner_;
       tag_info.internal_size_ = task->backend_size_;
-      stager_mdm_.AsyncRegisterStager(task->task_node_ + 1,
-                                      tag_id,
-                                      hshm::charbuf(task->tag_name_->str()));
+      if (task->flags_.Any(HERMES_IS_FILE)) {
+        stager_mdm_.AsyncRegisterStager(task->task_node_ + 1,
+                                        tag_id,
+                                        hshm::charbuf(task->tag_name_->str()));
+      }
     } else {
       if (tag_name.size()) {
         HILOG(kDebug, "Found existing tag: {}", tag_name.str())

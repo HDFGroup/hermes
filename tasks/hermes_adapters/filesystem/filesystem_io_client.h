@@ -297,15 +297,6 @@ struct FilesystemIoClientState {
  * */
 class FilesystemIoClient {
  public:
-  /** Decode I/O client context from the original blob name */
-  FsIoOptions DecodeBlobName(const std::string &blob_name) {
-    FsIoOptions decode_opts;
-    BlobPlacement p;
-    p.DecodeBlobName(blob_name);
-    decode_opts.backend_off_ = p.page_ * p.page_size_;
-    return decode_opts;
-  }
-
   /** virtual destructor */
   virtual ~FilesystemIoClient() = default;
 

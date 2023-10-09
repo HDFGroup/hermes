@@ -57,7 +57,7 @@ class BinaryFileStager : public AbstractStager {
   /** Stage data in from remote source */
   void StageIn(blob_mdm::Client &blob_mdm, StageInTask *task, RunContext &rctx) override {
     adapter::BlobPlacement plcmnt;
-    plcmnt.DecodeBlobName(*task->blob_name_);
+    plcmnt.DecodeBlobName(*task->blob_name_, page_size_);
     HILOG(kDebug, "Attempting to stage {} bytes from the backend file {} at offset {}",
           page_size_, url_, plcmnt.bucket_off_);
     LPointer<char> blob = LABSTOR_CLIENT->AllocateBuffer(page_size_);
@@ -68,6 +68,7 @@ class BinaryFileStager : public AbstractStager {
     if (real_size < 0) {
       HELOG(kError, "Failed to stage in {} bytes from {}",
             page_size_, url_);
+      return;
     }
     memcpy(blob.ptr_ + plcmnt.blob_off_, blob.ptr_, real_size);
     HILOG(kDebug, "Staged {} bytes from the backend file {}",
@@ -87,7 +88,7 @@ class BinaryFileStager : public AbstractStager {
   /** Stage data out to remote source */
   void StageOut(blob_mdm::Client &blob_mdm, StageOutTask *task, RunContext &rctx) override {
     adapter::BlobPlacement plcmnt;
-    plcmnt.DecodeBlobName(*task->blob_name_);
+    plcmnt.DecodeBlobName(*task->blob_name_, page_size_);
     HILOG(kDebug, "Attempting to stage {} bytes from the backend file {} at offset {}",
           page_size_, url_, plcmnt.bucket_off_);
     char *data = LABSTOR_CLIENT->GetPrivatePointer(task->data_);

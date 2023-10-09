@@ -262,7 +262,6 @@ class Server : public TaskLib {
     MultiQueue *queue = LABSTOR_CLIENT->GetQueue(QueueId(state_id));
     orig_task->UnsetFireAndForget();
     orig_task->UnsetStarted();
-    orig_task->UnsetMarked();
     orig_task->UnsetDataOwner();
     orig_task->UnsetLongRunning();
     queue->Emplace(orig_task->prio_, orig_task->lane_hash_, p);
