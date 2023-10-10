@@ -36,7 +36,6 @@ void Worker::Run() {
         continue;
       }
     }
-    work_entry.cur_time_.Now();
     PollGrouped(work_entry);
   }
 }

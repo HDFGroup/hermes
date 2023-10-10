@@ -43,6 +43,7 @@ struct WorkEntry {
     group_ = &queue->GetGroup(prio);
     lane_ = &queue->GetLane(*group_, lane_id);
     count_ = 0;
+    cur_time_.Now();
   }
 
   /** Copy constructor */
@@ -53,6 +54,7 @@ struct WorkEntry {
     lane_ = other.lane_;
     group_ = other.group_;
     queue_ = other.queue_;
+    cur_time_.Now();
   }
 
   /** Copy assignment */
@@ -64,6 +66,7 @@ struct WorkEntry {
       lane_ = other.lane_;
       group_ = other.group_;
       queue_ = other.queue_;
+      cur_time_.Now();
     }
     return *this;
   }
@@ -76,6 +79,7 @@ struct WorkEntry {
     lane_ = other.lane_;
     group_ = other.group_;
     queue_ = other.queue_;
+    cur_time_.Now();
   }
 
   /** Move assignment */
@@ -87,6 +91,7 @@ struct WorkEntry {
       lane_ = other.lane_;
       group_ = other.group_;
       queue_ = other.queue_;
+      cur_time_.Now();
     }
     return *this;
   }
