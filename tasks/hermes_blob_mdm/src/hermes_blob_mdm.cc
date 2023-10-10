@@ -114,6 +114,7 @@ class Server : public TaskLib {
     if (bkt_mdm_.id_.IsNull()) {
       bkt_mdm_.Init(task->bkt_mdm_);
       stager_mdm_.Init(task->stager_mdm_);
+      // TODO(llogan): Add back
       // flush_task_ = blob_mdm_.AsyncFlushData(task->task_node_ + 1);
     }
     task->SetModuleComplete();

@@ -231,14 +231,12 @@ class Client : public ConfigurationManager {
   /** Free a buffer */
   HSHM_ALWAYS_INLINE
   void FreeBuffer(hipc::Pointer &p) {
-    // TODO(llogan): verify leak
      main_alloc_->Free(p);
   }
 
   /** Free a buffer */
   HSHM_ALWAYS_INLINE
   void FreeBuffer(LPointer<char> &p) {
-    // TODO(llogan): verify leak
      main_alloc_->FreeLocalPtr(p);
   }
 };
