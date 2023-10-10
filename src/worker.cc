@@ -29,6 +29,8 @@ void Worker::Run() {
   if (relinquish_queues_.size() > 0) {
     _RelinquishQueues();
   }
+  hshm::Timepoint now;
+  now.Now();
   for (WorkEntry &work_entry : work_queue_) {
     if (!work_entry.lane_->flags_.Any(QUEUE_LOW_LATENCY)) {
       work_entry.count_ += 1;
@@ -36,6 +38,7 @@ void Worker::Run() {
         continue;
       }
     }
+    work_entry.cur_time_ = now;
     PollGrouped(work_entry);
   }
 }
