@@ -24,7 +24,7 @@ using hshm::MpiTimer;
 void GatherTimes(std::string test_name, size_t io_size, MpiTimer &t) {
   t.Collect();
   if (t.rank_ == 0) {
-    double max = t.GetUsec();
+    double max = t.GetSec();
     double mbps = io_size / t.GetUsec();
     HIPRINT("{}: Time: {} sec, MBps (or MOps): {}, Count: {}, Nprocs: {}\n",
             test_name, max, mbps, io_size, t.nprocs_);
