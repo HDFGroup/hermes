@@ -495,6 +495,7 @@ TEST_CASE("TestHermesDataOp") {
   // Create a bucket that supports derived quantities
   using hermes::data_stager::BinaryFileStager;
   hermes::Context ctx;
+  ctx.flags_.SetBits(HERMES_HAS_DERIVED);
   std::string url = "data_bkt";
   hermes::Bucket bkt(url, 0, HERMES_HAS_DERIVED);
 

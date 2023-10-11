@@ -159,7 +159,7 @@ struct RegisterOpTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   /** Get opgraph */
   OpGraph GetOpGraph() {
     OpGraph graph;
-    std::stringstream ss;
+    std::stringstream ss(op_graph_->str());
     cereal::BinaryInputArchive ar(ss);
     ar >> graph;
     return graph;
@@ -185,6 +185,7 @@ struct RegisterOpTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   /** Duplicate message */
   void Dup(hipc::Allocator *alloc, RegisterOpTask &other) {
     task_dup(other);
+    HSHM_MAKE_AR(op_graph_, alloc, *other.op_graph_);
   }
 
   /** Process duplicate message output */
@@ -263,7 +264,7 @@ struct RegisterDataTask : public Task, TaskFlags<TF_LOCAL> {
 /**
  * Run an operation over a piece of data
  * */
-struct RunOpTask : public Task, TaskFlags<TF_LOCAL> {
+struct RunOpTask : public Task, TaskFlags<TF_LOCAL | TF_REPLICA> {
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
   RunOpTask(hipc::Allocator *alloc) : Task(alloc) {}
@@ -283,6 +284,20 @@ struct RunOpTask : public Task, TaskFlags<TF_LOCAL> {
     SetPeriodSec(1);  // TODO(llogan): don't hardcode this
     domain_id_ = DomainId::GetLocal();
   }
+
+  /** Duplicate message */
+  void Dup(hipc::Allocator *alloc, RunOpTask &other) {
+    task_dup(other);
+  }
+
+  /** Process duplicate message output */
+  void DupEnd(u32 replica, RunOpTask &dup_task) {}
+
+  /** Begin replication */
+  void ReplicateStart(u32 count) {}
+
+  /** Finalize replication */
+  void ReplicateEnd() {}
 
   /** Create group */
   HSHM_ALWAYS_INLINE

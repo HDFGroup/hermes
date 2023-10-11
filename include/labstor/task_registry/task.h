@@ -402,7 +402,6 @@ struct Task : public hipc::ShmContainer {
 
   /** Determine if time has elapsed */
   HSHM_ALWAYS_INLINE bool ShouldRun(hshm::Timepoint &cur_time) {
-    return true;
     if (!IsStarted()) {
       start_ = cur_time;
       return true;

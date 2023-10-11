@@ -49,6 +49,7 @@ task_registry: [
   'hermes_mdm',
   'hermes_blob_mdm',
   'hermes_bucket_mdm',
+  'hermes_data_op',
   'data_stager',
   'posix_bdev',
   'ram_bdev'

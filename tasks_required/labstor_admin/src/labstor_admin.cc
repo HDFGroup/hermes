@@ -69,6 +69,10 @@ class Server : public TaskLib {
       task->SetModuleComplete();
       return;
     }
+    // Create the task queue for the state
+    QueueId qid(task->id_);
+    MultiQueue *queue = LABSTOR_QM_RUNTIME->CreateQueue(
+        qid, task->queue_info_->vec());
     // Run the task state's submethod
     task->method_ = Method::kConstruct;
     bool ret = LABSTOR_TASK_REGISTRY->CreateTaskState(
@@ -76,10 +80,7 @@ class Server : public TaskLib {
         state_name.c_str(),
         task->id_,
         task);
-    // Create the task queue for the state
-    QueueId qid(task->id_);
-    LABSTOR_QM_RUNTIME->CreateQueue(
-        qid, task->queue_info_->vec());
+    queue->flags_.SetBits(QUEUE_READY);
     task->SetModuleComplete();
     HILOG(kInfo, "(node {}) Allocated task state {} with id {}",
           LABSTOR_CLIENT->node_id_, state_name, task->task_state_);

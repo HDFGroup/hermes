@@ -46,29 +46,33 @@ class QueueManagerRuntime : public QueueManager {
     queue_map_ = shm.queue_map_.get();
     queue_map_->resize(max_queues_);
     // Create the admin queue
-    CreateQueue(admin_queue_, {
+    MultiQueue *queue;
+    queue = CreateQueue(admin_queue_, {
       {1, 1, qm.queue_depth_, QUEUE_UNORDERED}
     });
-    CreateQueue(process_queue_, {
+    queue->flags_.SetBits(QUEUE_READY);
+    queue = CreateQueue(process_queue_, {
         {1, 1, qm.queue_depth_, QUEUE_UNORDERED},
         {1, 1, qm.queue_depth_, QUEUE_LONG_RUNNING},
         {qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY}
     });
+    queue->flags_.SetBits(QUEUE_READY);
   }
 
   /** Create a new queue (with pre-allocated ID) in the map */
-  void CreateQueue(const QueueId &id, const std::vector<PriorityInfo> &queue_info) {
+  MultiQueue* CreateQueue(const QueueId &id, const std::vector<PriorityInfo> &queue_info) {
     MultiQueue *queue = GetQueue(id);
     if (id.IsNull()) {
       HELOG(kError, "Cannot create null queue {}", id);
-      return;
+      return nullptr;
     }
     if (!queue->id_.IsNull()) {
       HELOG(kError, "Queue {} already exists", id);
-      return;
+      return nullptr;
     }
     // HILOG(kDebug, "Creating queue {}", id);
     queue_map_->replace(queue_map_->begin() + id.unique_, id, queue_info);
+    return queue;
   }
 
   /**

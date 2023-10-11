@@ -25,7 +25,7 @@ class Server : public TaskLib {
   void Schedule(ScheduleTask *task, RunContext &rctx) {
     // Check if any new queues need to be scheduled
     for (MultiQueue &queue : *LABSTOR_QM_RUNTIME->queue_map_) {
-      if (queue.id_.IsNull()) {
+      if (queue.id_.IsNull() || !queue.flags_.Any(QUEUE_READY)) {
         continue;
       }
       for (LaneGroup &lane_group : *queue.groups_) {

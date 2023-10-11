@@ -281,10 +281,7 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     data_size_ = data_size;
     data_ = data;
     score_ = score;
-    flags_ = bitfield32_t(flags);
-    if (ctx.flags_.Any(HERMES_IS_FILE)) {
-      flags_.SetBits(HERMES_IS_FILE);
-    }
+    flags_ = bitfield32_t(flags | ctx.flags_.bits_);
   }
 
   /** Destructor */

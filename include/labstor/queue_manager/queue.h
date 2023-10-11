@@ -9,16 +9,18 @@
 #include "labstor/task_registry/task.h"
 #include <vector>
 
-/** This queue contains only latency-sensitive tasks */
-#define QUEUE_LOW_LATENCY BIT_OPT(u32, 0)
-/** This queue is currently being resized */
-#define QUEUE_RESIZE BIT_OPT(u32, 1)
-/** This queue is currently processing updates */
-#define QUEUE_UPDATE BIT_OPT(u32, 2)
 /** Requests in this queue can be processed in any order */
-#define QUEUE_UNORDERED BIT_OPT(u32, 3)
+#define QUEUE_READY BIT_OPT(u32, 0)
+/** This queue contains only latency-sensitive tasks */
+#define QUEUE_LOW_LATENCY BIT_OPT(u32, 1)
+/** This queue is currently being resized */
+#define QUEUE_RESIZE BIT_OPT(u32, 2)
+/** This queue is currently processing updates */
+#define QUEUE_UPDATE BIT_OPT(u32, 3)
+/** Requests in this queue can be processed in any order */
+#define QUEUE_UNORDERED BIT_OPT(u32, 4)
 /** Requests in this queue are long-running */
-#define QUEUE_LONG_RUNNING BIT_OPT(u32, 3)
+#define QUEUE_LONG_RUNNING BIT_OPT(u32, 5)
 
 namespace labstor {
 
