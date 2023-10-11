@@ -34,6 +34,11 @@ class Hermes {
     return hermes::Bucket(path, ctx, backend_size, flags);
   }
 
+  /** Register an operation graph */
+  void RegisterOp(hermes::data_op::OpGraph &op_graph) {
+    HERMES_CONF->op_mdm_.RegisterOpRoot(op_graph);
+  }
+
   /** Clear all data from hermes */
   void Clear() {
     // TODO(llogan)

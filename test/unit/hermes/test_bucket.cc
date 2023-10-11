@@ -365,62 +365,6 @@ TEST_CASE("TestHermesBucketAppend1n") {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST_CASE("TestHermesDataStager") {
-  int rank, nprocs;
-  MPI_Barrier(MPI_COMM_WORLD);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-
-  // create dataset
-  size_t count_per_proc = 16;
-  size_t off = rank * count_per_proc;
-  size_t proc_count = off + count_per_proc;
-  size_t page_size = KILOBYTES(4);
-  size_t file_size = nprocs * page_size * 16;
-  std::vector<char> data(file_size, 0);
-  if (rank == 0) {
-    FILE *file = fopen("/tmp/test.txt", "w");
-    fwrite(data.data(), sizeof(char), data.size(), file);
-    fclose(file);
-  }
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  // Initialize Hermes on all nodes
-  HERMES->ClientInit();
-
-  // Create a stageable bucket
-  using hermes::data_stager::BinaryFileStager;
-  hermes::Context ctx;
-  ctx.flags_.SetBits(HERMES_IS_FILE);
-  hshm::charbuf url = BinaryFileStager::BuildFileUrl("/tmp/test.txt", page_size);
-  hermes::Bucket bkt(url.str(), file_size, HERMES_IS_FILE);
-
-  // Put a few blobs in the bucket
-  for (size_t i = off; i < proc_count; ++i) {
-    HILOG(kInfo, "Iteration: {}", i);
-    // Put a blob
-    hermes::Blob blob(page_size / 2);
-    memset(blob.data(), i % 256, blob.size());
-    hshm::charbuf blob_name = hermes::adapter::BlobPlacement::CreateBlobName(i);
-    bkt.PartialPut(blob_name.str(), blob, 0, ctx);
-    hermes::Blob blob2;
-    bkt.Get(blob_name.str(), blob2, ctx);
-    REQUIRE(blob2.size() == page_size);
-    hermes::Blob full_blob(page_size);
-    memcpy(full_blob.data(), blob.data(), blob.size());
-    memcpy(full_blob.data() + blob.size(), data.data(), page_size / 2);
-    REQUIRE(full_blob == blob2);
-  }
-  for (size_t i = off; i < proc_count; ++i) {
-    hshm::charbuf blob_name = hermes::adapter::BlobPlacement::CreateBlobName(i);
-    HILOG(kInfo, "ContainsBlob Iteration: {}", i);
-    REQUIRE(bkt.ContainsBlob(blob_name.str()));
-  }
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  // Verify staging happened
-}
-
 TEST_CASE("TestHermesMultiGetBucket") {
   int rank, nprocs;
   MPI_Barrier(MPI_COMM_WORLD);
@@ -480,4 +424,104 @@ TEST_CASE("TestHermesGetContainedBlobIds") {
   blob_ids = bkt.GetContainedBlobIds();
   REQUIRE(blob_ids.size() == num_blobs);
   MPI_Barrier(MPI_COMM_WORLD);
+}
+
+TEST_CASE("TestHermesDataStager") {
+  int rank, nprocs;
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+
+  // create dataset
+  size_t count_per_proc = 16;
+  size_t off = rank * count_per_proc;
+  size_t proc_count = off + count_per_proc;
+  size_t page_size = KILOBYTES(4);
+  size_t file_size = nprocs * page_size * 16;
+  std::vector<char> data(file_size, 0);
+  if (rank == 0) {
+    FILE *file = fopen("/tmp/test.txt", "w");
+    fwrite(data.data(), sizeof(char), data.size(), file);
+    fclose(file);
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  // Initialize Hermes on all nodes
+  HERMES->ClientInit();
+
+  // Create a stageable bucket
+  using hermes::data_stager::BinaryFileStager;
+  hermes::Context ctx;
+  ctx.flags_.SetBits(HERMES_IS_FILE);
+  hshm::charbuf url = BinaryFileStager::BuildFileUrl("/tmp/test.txt", page_size);
+  hermes::Bucket bkt(url.str(), file_size, HERMES_IS_FILE);
+
+  // Put a few blobs in the bucket
+  for (size_t i = off; i < proc_count; ++i) {
+    HILOG(kInfo, "Iteration: {}", i);
+    // Put a blob
+    hermes::Blob blob(page_size / 2);
+    memset(blob.data(), i % 256, blob.size());
+    hshm::charbuf blob_name = hermes::adapter::BlobPlacement::CreateBlobName(i);
+    bkt.PartialPut(blob_name.str(), blob, 0, ctx);
+    hermes::Blob blob2;
+    bkt.Get(blob_name.str(), blob2, ctx);
+    REQUIRE(blob2.size() == page_size);
+    hermes::Blob full_blob(page_size);
+    memcpy(full_blob.data(), blob.data(), blob.size());
+    memcpy(full_blob.data() + blob.size(), data.data(), page_size / 2);
+    REQUIRE(full_blob == blob2);
+  }
+  for (size_t i = off; i < proc_count; ++i) {
+    hshm::charbuf blob_name = hermes::adapter::BlobPlacement::CreateBlobName(i);
+    HILOG(kInfo, "ContainsBlob Iteration: {}", i);
+    REQUIRE(bkt.ContainsBlob(blob_name.str()));
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  // Verify staging happened
+}
+
+
+TEST_CASE("TestHermesDataOp") {
+  int rank, nprocs;
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+
+  // Initialize Hermes on all nodes
+  HERMES->ClientInit();
+
+  // Create a bucket that supports derived quantities
+  using hermes::data_stager::BinaryFileStager;
+  hermes::Context ctx;
+  std::string url = "data_bkt";
+  hermes::Bucket bkt(url, 0, HERMES_HAS_DERIVED);
+
+  // Create the derived quantity with
+  hermes::data_op::OpGraph op_graph;
+  hermes::data_op::Op op;
+  op.in_.emplace_back(url);
+  op.var_name_.url_ = url + "_min";
+  op.op_name_ = "min";
+  op_graph.ops_.emplace_back(op);
+  HERMES->RegisterOp(op_graph);
+
+  size_t count_per_proc = 16;
+  size_t off = rank * count_per_proc;
+  size_t proc_count = off + count_per_proc;
+  size_t page_size = KILOBYTES(4);
+
+  // Put a few blobs in the bucket
+  for (size_t i = off; i < proc_count; ++i) {
+    HILOG(kInfo, "Iteration: {}", i);
+    // Put a blob
+    hermes::Blob blob(page_size);
+    memset(blob.data(), i % 256, blob.size());
+    std::string blob_name = std::to_string(i);
+    bkt.Put(blob_name, blob, ctx);
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  // Verify derived operator happens
 }

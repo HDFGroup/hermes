@@ -186,11 +186,11 @@ class Server : public TaskLib {
       }
 
       // Store the minimum in Hermes
-      std::string min_blob_name = data.blob_name_ + "_min";
+      std::string min_blob_name = data.blob_name_;
       blob_mdm_.AsyncPutBlob(task->task_node_ + 1,
-                             data.bkt_id_,
+                             op.var_name_.bkt_id_,
                              hshm::charbuf(min_blob_name),
-                             data.blob_id_,
+                             BlobId::GetNull(),
                              0, sizeof(float),
                              min_ptr.shm_, 0, 0);
     }

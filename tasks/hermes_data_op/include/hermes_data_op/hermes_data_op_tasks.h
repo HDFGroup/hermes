@@ -28,6 +28,12 @@ struct OpBucketName {
   LPointer<bucket_mdm::GetOrCreateTagTask>
       bkt_id_task_;  // Task to get bucket ID (internal)
 
+  /** Default constructor */
+  OpBucketName() = default;
+
+  /** Emplace constructor */
+  OpBucketName(const std::string &url) : url_(url) {}
+
   template<typename Ar>
   void serialize(Ar &ar) {
     ar(url_);
