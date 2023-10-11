@@ -70,16 +70,18 @@ class Client : public TaskLibClient {
   void AsyncSetBucketMdmConstruct(SetBucketMdmTask *task,
                                   const TaskNode &task_node,
                                   const DomainId &domain_id,
-                                  const TaskStateId &blob_mdm_id,
-                                  const TaskStateId &stager_mdm) {
+                                  const TaskStateId &blob_mdm,
+                                  const TaskStateId &stager_mdm,
+                                  const TaskStateId &op_mdm) {
     LABSTOR_CLIENT->ConstructTask<SetBucketMdmTask>(
-        task, task_node, domain_id, id_, blob_mdm_id, stager_mdm);
+        task, task_node, domain_id, id_, blob_mdm, stager_mdm, op_mdm);
   }
   void SetBucketMdmRoot(const DomainId &domain_id,
                         const TaskStateId &blob_mdm,
-                        const TaskStateId &stager_mdm) {
+                        const TaskStateId &stager_mdm,
+                        const TaskStateId &op_mdm) {
     LPointer<labpq::TypedPushTask<SetBucketMdmTask>> push_task =
-        AsyncSetBucketMdmRoot(domain_id, blob_mdm, stager_mdm);
+        AsyncSetBucketMdmRoot(domain_id, blob_mdm, stager_mdm, op_mdm);
     push_task->Wait();
     LABSTOR_CLIENT->DelTask(push_task);
   }
@@ -127,9 +129,9 @@ class Client : public TaskLibClient {
       TagId tag_id, const hshm::charbuf &blob_name,
       const BlobId &blob_id, size_t blob_off, size_t blob_size,
       const hipc::Pointer &blob, float score,
-      bitfield32_t flags,
+      u32 flags,
       Context ctx = Context(),
-      bitfield32_t task_flags = bitfield32_t(TASK_FIRE_AND_FORGET | TASK_DATA_OWNER | TASK_LOW_LATENCY)) {
+      u32 task_flags = TASK_FIRE_AND_FORGET | TASK_DATA_OWNER | TASK_LOW_LATENCY) {
     LABSTOR_CLIENT->ConstructTask<PutBlobTask>(
         task, task_node, DomainId::GetNode(blob_id.node_id_), id_,
         tag_id, blob_name, blob_id,
@@ -148,7 +150,7 @@ class Client : public TaskLibClient {
                              ssize_t data_size,
                              hipc::Pointer &data,
                              Context ctx = Context(),
-                             bitfield32_t flags = bitfield32_t(0)) {
+                             u32 flags = 0) {
     // HILOG(kDebug, "Beginning GET (task_node={})", task_node);
     LABSTOR_CLIENT->ConstructTask<GetBlobTask>(
         task, task_node, DomainId::GetNode(blob_id.node_id_), id_,
@@ -160,7 +162,7 @@ class Client : public TaskLibClient {
                      ssize_t data_size,
                      hipc::Pointer &data,
                      Context ctx = Context(),
-                     bitfield32_t flags = bitfield32_t(0)) {
+                     u32 flags = 0) {
     LPointer<labpq::TypedPushTask<GetBlobTask>> push_task =
         AsyncGetBlobRoot(tag_id, hshm::charbuf(""), blob_id, off, data_size, data, ctx, flags);
     push_task->Wait();

@@ -79,6 +79,7 @@ struct DestructTask : public DestroyTaskStateTask {
 struct SetBucketMdmTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   IN TaskStateId bkt_mdm_;
   IN TaskStateId stager_mdm_;
+  IN TaskStateId op_mdm_;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -91,7 +92,8 @@ struct SetBucketMdmTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
                    const DomainId &domain_id,
                    const TaskStateId &state_id,
                    const TaskStateId &bkt_mdm,
-                   const TaskStateId &stager_mdm) : Task(alloc) {
+                   const TaskStateId &stager_mdm,
+                   const TaskStateId &op_mdm) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = 0;
@@ -104,6 +106,7 @@ struct SetBucketMdmTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
     // Custom params
     bkt_mdm_ = bkt_mdm;
     stager_mdm_ = stager_mdm;
+    op_mdm_ = op_mdm;
   }
 
   /** Destructor */
@@ -222,6 +225,7 @@ class PutBlobPhase {
 #define HERMES_IS_FILE BIT_OPT(u32, 3)
 #define HERMES_BLOB_DID_CREATE BIT_OPT(u32, 4)
 #define HERMES_GET_BLOB_ID BIT_OPT(u32, 5)
+#define HERMES_HAS_DERIVED BIT_OPT(u32, 6)
 
 /** A task to put data in a blob */
 struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> {
@@ -251,15 +255,15 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
               size_t data_size,
               const hipc::Pointer &data,
               float score,
-              bitfield32_t flags,
+              u32 flags,
               const Context &ctx,
-              bitfield32_t task_flags) : Task(alloc) {
+              u32 task_flags) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kPutBlob;
-    task_flags_ = task_flags;
+    task_flags_ = bitfield32_t(task_flags);
     task_flags_.SetBits(TASK_COROUTINE);
     if (!blob_id.IsNull()) {
       lane_hash_ = blob_id.hash_;
@@ -277,7 +281,7 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     data_size_ = data_size;
     data_ = data;
     score_ = score;
-    flags_ = flags;
+    flags_ = bitfield32_t(flags);
     if (ctx.flags_.Any(HERMES_IS_FILE)) {
       flags_.SetBits(HERMES_IS_FILE);
     }
@@ -367,7 +371,7 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
               ssize_t data_size,
               hipc::Pointer &data,
               const Context &ctx,
-              bitfield32_t flags) : Task(alloc) {
+              u32 flags) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     prio_ = TaskPrio::kLowLatency;
@@ -388,7 +392,7 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     blob_off_ = off;
     data_size_ = data_size;
     data_ = data;
-    flags_ = flags;
+    flags_ = bitfield32_t(flags);
     HSHM_MAKE_AR(blob_name_, alloc, blob_name);
   }
 

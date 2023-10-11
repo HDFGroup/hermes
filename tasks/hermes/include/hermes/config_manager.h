@@ -10,6 +10,7 @@
 #include "hermes_mdm/hermes_mdm.h"
 #include "hermes_bucket_mdm/hermes_bucket_mdm.h"
 #include "hermes_blob_mdm/hermes_blob_mdm.h"
+#include "hermes_data_op/hermes_data_op.h"
 #include "hermes/config_client.h"
 #include "hermes/config_server.h"
 #include "data_stager/data_stager.h"
@@ -22,6 +23,7 @@ class ConfigurationManager {
   bucket_mdm::Client bkt_mdm_;
   blob_mdm::Client blob_mdm_;
   data_stager::Client stager_mdm_;
+  data_op::Client op_mdm_;
   ServerConfig server_config_;
   ClientConfig client_config_;
   bool is_initialized_ = false;
@@ -40,8 +42,9 @@ class ConfigurationManager {
     mdm_.CreateRoot(DomainId::GetGlobal(), "hermes_mdm");
     blob_mdm_.CreateRoot(DomainId::GetGlobal(), "hermes_blob_mdm");
     bkt_mdm_.CreateRoot(DomainId::GetGlobal(), "hermes_bkt_mdm");
+    op_mdm_.CreateRoot(DomainId::GetGlobal(), "hermes_op_mdm", bkt_mdm_.id_, blob_mdm_.id_);
     stager_mdm_.CreateRoot(DomainId::GetGlobal(), "hermes_stager_mdm", blob_mdm_.id_);
-    blob_mdm_.SetBucketMdmRoot(DomainId::GetGlobal(), bkt_mdm_.id_, stager_mdm_.id_);
+    blob_mdm_.SetBucketMdmRoot(DomainId::GetGlobal(), bkt_mdm_.id_, stager_mdm_.id_, op_mdm_.id_);
     bkt_mdm_.SetBlobMdmRoot(DomainId::GetGlobal(), blob_mdm_.id_, stager_mdm_.id_);
     is_initialized_ = true;
   }

@@ -202,6 +202,10 @@ void Dup(u32 method, Task *orig_task, std::vector<LPointer<Task>> &dups) overrid
       labstor::CALL_DUPLICATE(reinterpret_cast<SetBlobMdmTask*>(orig_task), dups);
       break;
     }
+    case Method::kGetContainedBlobIds: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<GetContainedBlobIdsTask*>(orig_task), dups);
+      break;
+    }
   }
 }
 /** Register the duplicate output with the origin task */
@@ -265,6 +269,10 @@ void DupEnd(u32 method, u32 replica, Task *orig_task, Task *dup_task) override {
     }
     case Method::kSetBlobMdm: {
       labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<SetBlobMdmTask*>(orig_task), reinterpret_cast<SetBlobMdmTask*>(dup_task));
+      break;
+    }
+    case Method::kGetContainedBlobIds: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<GetContainedBlobIdsTask*>(orig_task), reinterpret_cast<GetContainedBlobIdsTask*>(dup_task));
       break;
     }
   }

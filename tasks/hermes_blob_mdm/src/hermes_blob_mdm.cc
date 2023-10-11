@@ -10,6 +10,7 @@
 #include "hermes_adapters/posix/posix_api.h"
 #include "bdev/bdev.h"
 #include "data_stager/data_stager.h"
+#include "hermes_data_op/hermes_data_op.h"
 
 namespace hermes::blob_mdm {
 
@@ -48,6 +49,7 @@ class Server : public TaskLib {
   Client blob_mdm_;
   bucket_mdm::Client bkt_mdm_;
   data_stager::Client stager_mdm_;
+  data_op::Client op_mdm_;
   LPointer<FlushDataTask> flush_task_;
 
  public:
@@ -114,6 +116,7 @@ class Server : public TaskLib {
     if (bkt_mdm_.id_.IsNull()) {
       bkt_mdm_.Init(task->bkt_mdm_);
       stager_mdm_.Init(task->stager_mdm_);
+      op_mdm_.Init(task->op_mdm_);
       // TODO(llogan): Add back
       // flush_task_ = blob_mdm_.AsyncFlushData(task->task_node_ + 1);
     }
@@ -284,6 +287,14 @@ class Server : public TaskLib {
       bkt_mdm_.AsyncTagAddBlob(task->task_node_ + 1,
                                task->tag_id_,
                                task->blob_id_);
+    }
+    if (task->flags_.Any(HERMES_HAS_DERIVED)) {
+      op_mdm_.AsyncRegisterData(task->task_node_ + 1,
+                                task->tag_id_,
+                                task->blob_name_->str(),
+                                task->blob_id_,
+                                task->blob_off_,
+                                task->data_size_);
     }
 
     // Free data
@@ -636,7 +647,7 @@ class Server : public TaskLib {
                                                  task->data_size_,
                                                  task->data_,
                                                  task->score_,
-                                                 bitfield32_t(HERMES_BLOB_REPLACE)).ptr_;
+                                                 HERMES_BLOB_REPLACE).ptr_;
         task->SetModuleComplete();
       }
     }

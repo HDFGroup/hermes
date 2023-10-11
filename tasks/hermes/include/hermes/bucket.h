@@ -234,7 +234,7 @@ class Bucket {
     LPointer<labpq::TypedPushTask<PutBlobTask>> push_task;
     push_task = blob_mdm_->AsyncPutBlobRoot(id_, blob_name_buf,
                                             blob_id, blob_off, blob.size(), p.shm_, ctx.blob_score_,
-                                            flags, ctx, task_flags);
+                                            flags.bits_, ctx, task_flags.bits_);
     if constexpr (!ASYNC) {
       if (flags.Any(HERMES_GET_BLOB_ID)) {
         push_task->Wait();
@@ -433,7 +433,7 @@ class Bucket {
     push_task = blob_mdm_->AsyncGetBlobRoot(id_, hshm::to_charbuf(blob_name),
                                             blob_id, blob_off,
                                             data_size, data_p.shm_,
-                                            ctx, flags);
+                                            ctx, flags.bits_);
     return push_task;
   }
 

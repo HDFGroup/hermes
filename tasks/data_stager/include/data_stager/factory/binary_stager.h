@@ -79,8 +79,8 @@ class BinaryFileStager : public AbstractStager {
                               task->bkt_id_,
                               hshm::to_charbuf(*task->blob_name_),
                               hermes::BlobId::GetNull(),
-                              0, real_size, blob.shm_, task->score_, bitfield32_t(0),
-                              ctx, bitfield32_t(TASK_DATA_OWNER | TASK_LOW_LATENCY));
+                              0, real_size, blob.shm_, task->score_, 0,
+                              ctx, TASK_DATA_OWNER | TASK_LOW_LATENCY);
     put_task->Wait<TASK_YIELD_CO>(task);
     LABSTOR_CLIENT->DelTask(put_task);
   }

@@ -154,6 +154,7 @@ include_directories(${CMAKE_SOURCE_DIR}/tasks/hermes_blob_mdm/include)
 include_directories(${CMAKE_SOURCE_DIR}/tasks/hermes_bucket_mdm/include)
 include_directories(${CMAKE_SOURCE_DIR}/tasks/hermes_adapters/include)
 include_directories(${CMAKE_SOURCE_DIR}/tasks/data_stager/include)
+include_directories(${CMAKE_SOURCE_DIR}/tasks/hermes_data_op/include)
 
 # Test includes
 include_directories(${CMAKE_SOURCE_DIR}/test/unit)
