@@ -133,12 +133,14 @@ class Server : public TaskLib {
     for (OpBucketName &bkt_name : op.in_) {
       OpPendingData &op_data = op_data_map_[bkt_name.bkt_id_];
       pending = op_data.pending_;
+      std::list<OpData> pruned;
       for (auto iter = pending.begin(); iter != pending.end(); ++iter) {
         OpData &data = *iter;
         ++data.refcnt_;
-        if (data.refcnt_ == op_data.num_refs_) {
-          op_data.pending_.erase(iter);
+        if (data.refcnt_ < op_data.num_refs_) {
+          pruned.push_back(data);
         }
+        op_data.pending_ = pruned;
       }
     }
     op_data_lock_.Unlock();
