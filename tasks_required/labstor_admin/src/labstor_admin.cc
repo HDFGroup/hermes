@@ -134,6 +134,10 @@ class Server : public TaskLib {
     task->SetModuleComplete();
   }
 
+  void Flush(FlushTask *task, RunContext &rctx) {
+
+  }
+
  public:
 #include "labstor_admin/labstor_admin_lib_exec.h"
 };

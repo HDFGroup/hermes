@@ -145,6 +145,7 @@ class Worker {
   bitfield32_t flags_;  /** Worker metadata flags */
   std::unordered_map<hshm::charbuf, TaskNode> group_map_;  /** Determine if a task can be executed right now */
   hshm::charbuf group_;  /** The current group */
+  int flush_count_ = 0;
 
 
  public:

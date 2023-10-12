@@ -7,3 +7,4 @@ kGetTaskStateId: 5
 kStopRuntime: 6
 kSetWorkOrchQueuePolicy: 7
 kSetWorkOrchProcPolicy: 8
+kFlush: 9

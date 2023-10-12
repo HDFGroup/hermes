@@ -416,6 +416,60 @@ struct SetWorkOrchestratorPolicyTask : public Task, TaskFlags<TF_SRL_SYM> {
 using SetWorkOrchQueuePolicyTask = SetWorkOrchestratorPolicyTask<0>;
 using SetWorkOrchProcPolicyTask = SetWorkOrchestratorPolicyTask<1>;
 
+/** A task to destroy a Task state */
+struct FlushTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
+  /** SHM default constructor */
+  FlushTask(hipc::Allocator *alloc) : Task(alloc) {}
+
+  /** Emplace constructor */
+  HSHM_ALWAYS_INLINE explicit
+  FlushTask(hipc::Allocator *alloc,
+            const TaskNode &task_node,
+            const DomainId &domain_id) : Task(alloc) {
+    // Initialize task
+    task_node_ = task_node;
+    lane_hash_ = 0;
+    prio_ = TaskPrio::kAdmin;
+    task_state_ = LABSTOR_QM_CLIENT->admin_task_state_;
+    method_ = Method::kFlush;
+    task_flags_.SetBits(TASK_LANE_ALL);
+    domain_id_ = domain_id;
+  }
+
+  /** Duplicate message */
+  template<typename TaskT>
+  void Dup(hipc::Allocator *alloc, TaskT &other) {
+    task_dup(other);
+  }
+
+  /** Process duplicate message output */
+  template<typename TaskT>
+  void DupEnd(u32 replica, TaskT &dup_task) {}
+
+  /** (De)serialize message call */
+  template<typename Ar>
+  void SerializeStart(Ar &ar) {
+    task_serialize<Ar>(ar);
+  }
+
+  /** (De)serialize message return */
+  template<typename Ar>
+  void SerializeEnd(u32 replica, Ar &ar) {}
+
+  /** Begin replication */
+  void ReplicateStart(u32 count) {}
+
+  /** Finalize replication */
+  void ReplicateEnd() {}
+
+  /** Create group */
+  HSHM_ALWAYS_INLINE
+  u32 GetGroup(hshm::charbuf &group) {
+    return TASK_UNORDERED;
+  }
+};
+
+
 }  // namespace labstor::Admin
 
 #endif  // LABSTOR_TASKS_LABSTOR_ADMIN_INCLUDE_LABSTOR_ADMIN_LABSTOR_ADMIN_TASKS_H_

@@ -227,6 +227,7 @@ struct RunContext {
   size_t stack_size_ = KILOBYTES(64);  /**< The size of the stack for the task (runtime) */
   void *stack_ptr_;                    /**< The pointer to the stack (runtime) */
   TaskLib *exec_;
+  int *flush_count_;
 
   /** Default constructor */
   RunContext() {}
