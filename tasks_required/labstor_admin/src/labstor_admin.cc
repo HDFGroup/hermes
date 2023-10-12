@@ -135,7 +135,26 @@ class Server : public TaskLib {
   }
 
   void Flush(FlushTask *task, RunContext &rctx) {
-
+    HILOG(kDebug, "Beginning to flush runtime");
+    for (Worker &worker : LABSTOR_WORK_ORCHESTRATOR->workers_) {
+      worker.flush_.flushing_ = true;
+    }
+    while (true) {
+      int count = 0;
+      for (Worker &worker : LABSTOR_WORK_ORCHESTRATOR->workers_) {
+        if (worker.flush_.flushing_) {
+          count += 1;
+          break;
+        }
+      }
+      if (count) {
+        task->Yield<TASK_YIELD_CO>();
+      } else {
+        break;
+      }
+    }
+    HILOG(kDebug, "Flushing completed");
+    task->SetModuleComplete();
   }
 
  public:

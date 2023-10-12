@@ -40,6 +40,35 @@ TEST_CASE("TestIpc") {
   HILOG(kInfo, "Latency: {} MOps", ops / t.GetUsec());
 }
 
+TEST_CASE("TestFlush") {
+  int rank, nprocs;
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+  labstor::small_message::Client client;
+  LABSTOR_ADMIN->RegisterTaskLibRoot(labstor::DomainId::GetGlobal(), "small_message");
+  client.CreateRoot(labstor::DomainId::GetGlobal(), "ipc_test");
+  MPI_Barrier(MPI_COMM_WORLD);
+  hshm::Timer t;
+
+  int pid = getpid();
+  ProcessAffiner::SetCpuAffinity(pid, 8);
+
+  t.Resume();
+  size_t ops = 256;
+  for (size_t i = 0; i < ops; ++i) {
+    int ret;
+    HILOG(kInfo, "Sending message {}", i);
+    int node_id = 1 + ((rank + 1) % nprocs);
+    LPointer<labstor::small_message::MdTask> task =
+        client.AsyncMdRoot(labstor::DomainId::GetNode(node_id));
+  }
+  LABSTOR_ADMIN->FlushRoot(DomainId::GetGlobal());
+  t.Pause();
+
+  HILOG(kInfo, "Latency: {} MOps", ops / t.GetUsec());
+}
+
 void TestIpcMultithread(int nprocs) {
   labstor::small_message::Client client;
   LABSTOR_ADMIN->RegisterTaskLibRoot(labstor::DomainId::GetGlobal(), "small_message");

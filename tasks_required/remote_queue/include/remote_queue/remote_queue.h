@@ -77,7 +77,7 @@ class Client : public TaskLibClient {
         orig_task->task_node_ + 1, DomainId::GetLocal(), id_,
         domain_ids, orig_task, exec, orig_task->method_, xfer);
     MultiQueue *queue = LABSTOR_CLIENT->GetQueue(queue_id_);
-    queue->Emplace(orig_task->prio_, orig_task->lane_hash_, push_task.shm_);
+    queue->Emplace(TaskPrio::kLowLatency, orig_task->lane_hash_, push_task.shm_);
   }
 
   /** Disperse a task among each lane of this node */

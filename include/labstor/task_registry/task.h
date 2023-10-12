@@ -49,6 +49,8 @@ class TaskLib;
 #define TASK_PREEMPTIVE BIT_OPT(u32, 17)
 /** This task should be scheduled on all lanes */
 #define TASK_LANE_ALL BIT_OPT(u32, 19)
+/** This task flushes the runtime */
+#define TASK_FLUSH BIT_OPT(u32, 20)
 /** This task is apart of remote debugging */
 #define TASK_REMOTE_DEBUG_MARK BIT_OPT(u32, 31)
 
@@ -220,6 +222,21 @@ class TaskPrio {
   TASK_PRIO_T kLowLatency = 2;
 };
 
+
+/** Used to indicate the amount of work remaining to do when flushing */
+struct WorkPending {
+  bool flushing_;
+  std::atomic<int> pending_;
+
+  /** Default constructor */
+  WorkPending()
+  : flushing_(false), pending_(0) {}
+
+  /** Copy constructor */
+  WorkPending(const WorkPending &other)
+  : flushing_(other.flushing_), pending_(other.pending_.load()) {}
+};
+
 /** Context passed to the Run method of a task */
 struct RunContext {
   u32 lane_id_;  /**< The lane id of the task */
@@ -227,7 +244,7 @@ struct RunContext {
   size_t stack_size_ = KILOBYTES(64);  /**< The size of the stack for the task (runtime) */
   void *stack_ptr_;                    /**< The pointer to the stack (runtime) */
   TaskLib *exec_;
-  int *flush_count_;
+  WorkPending *flush_;
 
   /** Default constructor */
   RunContext() {}
@@ -401,9 +418,14 @@ struct Task : public hipc::ShmContainer {
     period_ns_ = min * 60000000000;
   }
 
+  /** This task flushes the runtime */
+  HSHM_ALWAYS_INLINE bool IsFlush() {
+    return task_flags_.Any(TASK_FLUSH);
+  }
+
   /** Determine if time has elapsed */
-  HSHM_ALWAYS_INLINE bool ShouldRun(hshm::Timepoint &cur_time) {
-    if (!IsStarted()) {
+  HSHM_ALWAYS_INLINE bool ShouldRun(hshm::Timepoint &cur_time, bool flushing) {
+    if (!IsStarted() || flushing) {
       start_ = cur_time;
       return true;
     }

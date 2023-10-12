@@ -432,7 +432,7 @@ struct FlushTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
     prio_ = TaskPrio::kAdmin;
     task_state_ = LABSTOR_QM_CLIENT->admin_task_state_;
     method_ = Method::kFlush;
-    task_flags_.SetBits(TASK_LANE_ALL);
+    task_flags_.SetBits(TASK_FLUSH | TASK_COROUTINE);
     domain_id_ = domain_id;
   }
 

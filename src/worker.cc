@@ -13,7 +13,11 @@ void Worker::Loop() {
   WorkOrchestrator *orchestrator = LABSTOR_WORK_ORCHESTRATOR;
   while (orchestrator->IsAlive()) {
     try {
+      flush_.pending_ = 0;
       Run();
+      if (flush_.flushing_ && flush_.pending_ == 0) {
+        flush_.flushing_ = false;
+      }
     } catch (hshm::Error &e) {
       HELOG(kFatal, "(node {}) Worker {} caught an error: {}", LABSTOR_CLIENT->node_id_, id_, e.what());
     }
@@ -32,12 +36,12 @@ void Worker::Run() {
   hshm::Timepoint now;
   now.Now();
   for (WorkEntry &work_entry : work_queue_) {
-    if (!work_entry.lane_->flags_.Any(QUEUE_LOW_LATENCY)) {
-      work_entry.count_ += 1;
-      if (work_entry.count_ % 4096 != 0) {
-        continue;
-      }
-    }
+//    if (!work_entry.lane_->flags_.Any(QUEUE_LOW_LATENCY)) {
+//      work_entry.count_ += 1;
+//      if (work_entry.count_ % 4096 != 0) {
+//        continue;
+//      }
+//    }
     work_entry.cur_time_ = now;
     PollGrouped(work_entry);
   }
@@ -60,6 +64,7 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
     task = LABSTOR_CLIENT->GetPrivatePointer<Task>(entry->p_);
     RunContext &rctx = task->ctx_;
     rctx.lane_id_ = work_entry.lane_id_;
+    rctx.flush_ = &flush_;
     // Get the task state
     TaskState *&exec = rctx.exec_;
     exec = LABSTOR_TASK_REGISTRY->GetTaskState(task->task_state_);
@@ -74,7 +79,7 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
     bool is_remote = task->domain_id_.IsRemote(LABSTOR_RPC->GetNumHosts(), LABSTOR_CLIENT->node_id_);
     if (!task->IsRunDisabled() &&
         CheckTaskGroup(task, exec, work_entry.lane_id_, task->task_node_, is_remote) &&
-        task->ShouldRun(work_entry.cur_time_)) {
+        task->ShouldRun(work_entry.cur_time_, flush_.flushing_)) {
 #ifdef REMOTE_DEBUG
       if (task->task_state_ != LABSTOR_QM_CLIENT->admin_task_state_ &&
           !task->task_flags_.Any(TASK_REMOTE_DEBUG_MARK) &&
@@ -124,6 +129,9 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
         exec->Run(task->method_, task, rctx);
       }
       task->DidRun(work_entry.cur_time_);
+      if (!task->IsModuleComplete() && !task->IsFlush()) {
+        flush_.pending_ += 1;
+      }
     }
     // Cleanup on task completion
     if (task->IsModuleComplete()) {
@@ -150,19 +158,26 @@ void Worker::RunCoroutine(bctx::transfer_t t) {
   rctx.jmp_ = t;
   exec->Run(task->method_, task, rctx);
   task->UnsetStarted();
+  if (task->IsLongRunning()) {
+    rctx.flush_->pending_ -= 1;
+  }
   task->Yield<TASK_YIELD_CO>();
 }
 
 void Worker::RunPreemptive(void *data) {
   Task *task = reinterpret_cast<Task *>(data);
   TaskState *exec = LABSTOR_TASK_REGISTRY->GetTaskState(task->task_state_);
+  RunContext &real_rctx = task->ctx_;
   RunContext rctx(0);
   do {
     hshm::Timepoint now;
     now.Now();
-    if (task->ShouldRun(now)) {
+    if (task->ShouldRun(now, real_rctx.flush_->flushing_)) {
       exec->Run(task->method_, task, rctx);
       task->DidRun(now);
+    }
+    if (task->IsLongRunning()) {
+      real_rctx.flush_->pending_ -= 1;
     }
     task->Yield<TASK_YIELD_ABT>();
   } while(!task->IsModuleComplete());

@@ -215,6 +215,21 @@ class Client : public TaskLibClient {
     LABSTOR_CLIENT->DelTask(task);
   }
   LABSTOR_TASK_NODE_ADMIN_ROOT(SetWorkOrchProcPolicy);
+
+  /** Flush the runtime */
+  void AsyncFlushConstruct(FlushTask *task,
+                           const TaskNode &task_node,
+                           const DomainId &domain_id) {
+    LABSTOR_CLIENT->ConstructTask<FlushTask>(
+        task, task_node, domain_id);
+  }
+  void FlushRoot(const DomainId &domain_id) {
+    LPointer<FlushTask> task =
+        AsyncFlushRoot(domain_id);
+    task->Wait();
+    LABSTOR_CLIENT->DelTask(task);
+  }
+  LABSTOR_TASK_NODE_ADMIN_ROOT(Flush);
 };
 
 }  // namespace labstor::Admin

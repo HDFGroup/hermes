@@ -140,12 +140,13 @@ class Worker {
   hshm::spsc_queue<std::vector<WorkEntry>> poll_queues_;
   /** A set of queues to stop polling in a worker */
   hshm::spsc_queue<std::vector<WorkEntry>> relinquish_queues_;
-  size_t sleep_us_;  /** Time the worker should sleep after a run */
-  u32 retries_;      /** The number of times to repeat the internal run loop before sleeping */
+  size_t sleep_us_;     /** Time the worker should sleep after a run */
+  u32 retries_;         /** The number of times to repeat the internal run loop before sleeping */
   bitfield32_t flags_;  /** Worker metadata flags */
-  std::unordered_map<hshm::charbuf, TaskNode> group_map_;  /** Determine if a task can be executed right now */
+  std::unordered_map<hshm::charbuf, TaskNode>
+      group_map_;        /** Determine if a task can be executed right now */
   hshm::charbuf group_;  /** The current group */
-  int flush_count_ = 0;
+  WorkPending flush_;    /** Info needed for flushing ops */
 
 
  public:
