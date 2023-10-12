@@ -524,5 +524,9 @@ TEST_CASE("TestHermesDataOp") {
   }
   MPI_Barrier(MPI_COMM_WORLD);
 
+  // LABSTOR_ADMIN->FlushRoot(DomainId::GetGlobal());
   // Verify derived operator happens
+  hermes::Bucket bkt_min("data_bkt_min", 0, 0);
+  size_t size = bkt_min.GetSize();
+  REQUIRE(size == sizeof(float) * count_per_proc * nprocs);
 }
