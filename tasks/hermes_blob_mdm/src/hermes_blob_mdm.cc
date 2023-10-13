@@ -653,6 +653,18 @@ class Server : public TaskLib {
     }
   }
 
+  /**
+     * Get \a blob_name BLOB from \a bkt_id bucket
+     * */
+  HSHM_ALWAYS_INLINE
+  void PollBlobMetadata(GetBlobIdTask *task, RunContext &rctx) {
+    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
+    for (const std::pair<BlobId, BlobInfo> &blob_part : blob_map) {
+      const BlobInfo &blob_info = blob_part.second;
+    }
+    task->SetModuleComplete();
+  }
+
  public:
 #include "hermes_blob_mdm/hermes_blob_mdm_lib_exec.h"
 };

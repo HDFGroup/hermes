@@ -4,6 +4,8 @@ class HermesShm(CMakePackage):
     homepage = "https://github.com/lukemartinlogan/hermes_shm/wiki"
     git = "https://github.com/lukemartinlogan/hermes_shm.git"
     version('master', branch='master')
+    variant('ares', default=False, description='Enable full libfabric install')
+
     depends_on('mochi-thallium~cereal@0.10.1')
     depends_on('catch2@3.0.1')
     # depends_on('mpi')
@@ -12,6 +14,8 @@ class HermesShm(CMakePackage):
     depends_on('cereal')
     depends_on('yaml-cpp')
     depends_on('doxygen@1.9.3')
+    depends_on('libfabric fabrics=sockets,tcp,udp,efa,gni,mlx,mrail,psm,psm2,psm3,rxm,rxd,shm,usnix,verbs,xpmem',
+               when='+ares')
 
     variant('debug', default=False, description='Build shared libraries')
 
