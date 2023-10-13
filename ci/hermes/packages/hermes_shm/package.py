@@ -14,7 +14,7 @@ class HermesShm(CMakePackage):
     depends_on('cereal')
     depends_on('yaml-cpp')
     depends_on('doxygen@1.9.3')
-    depends_on('libfabric fabrics=sockets,tcp,udp,efa,gni,mlx,mrail,psm,psm2,psm3,rxm,rxd,shm,usnix,verbs,xpmem',
+    depends_on('libfabric fabrics=sockets,tcp,udp,efa,gni,mlx,mrail,psm,psm2,psm3,rxm,rxd,shm,usnic,verbs,xpmem',
                when='+ares')
 
     variant('debug', default=False, description='Build shared libraries')
