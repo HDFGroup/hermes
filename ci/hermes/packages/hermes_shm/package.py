@@ -7,8 +7,7 @@ class HermesShm(CMakePackage):
     variant('ares', default=False, description='Enable full libfabric install')
     variant('only_verbs', default=False, description='Only verbs')
 
-    depends_on('mochi-thallium~cereal@0.10.1 +ofi')
-    depends_on('mercury+ofi')
+    depends_on('mochi-thallium~cereal@0.10.1')
     depends_on('catch2@3.0.1')
     # depends_on('mpi')
     depends_on('mpich@3.3.2')
