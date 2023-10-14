@@ -654,14 +654,18 @@ class Server : public TaskLib {
   }
 
   /**
-     * Get \a blob_name BLOB from \a bkt_id bucket
-     * */
+   * Get all metadata about a blob
+   * */
   HSHM_ALWAYS_INLINE
-  void PollBlobMetadata(GetBlobIdTask *task, RunContext &rctx) {
+  void PollBlobMetadata(PollBlobMetadataTask *task, RunContext &rctx) {
     BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
+    std::vector<BlobInfo> blob_mdms;
+    blob_mdms.reserve(blob_map.size());
     for (const std::pair<BlobId, BlobInfo> &blob_part : blob_map) {
       const BlobInfo &blob_info = blob_part.second;
+      blob_mdms.emplace_back(blob_info);
     }
+    task->SerializeBlobMetadata(blob_mdms);
     task->SetModuleComplete();
   }
 

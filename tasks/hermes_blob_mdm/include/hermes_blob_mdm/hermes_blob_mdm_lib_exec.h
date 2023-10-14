@@ -76,6 +76,10 @@ void Run(u32 method, Task *task, RunContext &rctx) override {
       FlushData(reinterpret_cast<FlushDataTask *>(task), rctx);
       break;
     }
+    case Method::kPollBlobMetadata: {
+      PollBlobMetadata(reinterpret_cast<PollBlobMetadataTask *>(task), rctx);
+      break;
+    }
   }
 }
 /** Delete a task */
@@ -151,6 +155,10 @@ void Del(u32 method, Task *task) override {
     }
     case Method::kFlushData: {
       LABSTOR_CLIENT->DelTask(reinterpret_cast<FlushDataTask *>(task));
+      break;
+    }
+    case Method::kPollBlobMetadata: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<PollBlobMetadataTask *>(task));
       break;
     }
   }
@@ -230,6 +238,10 @@ void Dup(u32 method, Task *orig_task, std::vector<LPointer<Task>> &dups) overrid
       labstor::CALL_DUPLICATE(reinterpret_cast<FlushDataTask*>(orig_task), dups);
       break;
     }
+    case Method::kPollBlobMetadata: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<PollBlobMetadataTask*>(orig_task), dups);
+      break;
+    }
   }
 }
 /** Register the duplicate output with the origin task */
@@ -305,6 +317,10 @@ void DupEnd(u32 method, u32 replica, Task *orig_task, Task *dup_task) override {
     }
     case Method::kFlushData: {
       labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<FlushDataTask*>(orig_task), reinterpret_cast<FlushDataTask*>(dup_task));
+      break;
+    }
+    case Method::kPollBlobMetadata: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<PollBlobMetadataTask*>(orig_task), reinterpret_cast<PollBlobMetadataTask*>(dup_task));
       break;
     }
   }
@@ -384,6 +400,10 @@ void ReplicateStart(u32 method, u32 count, Task *task) override {
       labstor::CALL_REPLICA_START(count, reinterpret_cast<FlushDataTask*>(task));
       break;
     }
+    case Method::kPollBlobMetadata: {
+      labstor::CALL_REPLICA_START(count, reinterpret_cast<PollBlobMetadataTask*>(task));
+      break;
+    }
   }
 }
 /** Determine success and handle failures */
@@ -461,6 +481,10 @@ void ReplicateEnd(u32 method, Task *task) override {
       labstor::CALL_REPLICA_END(reinterpret_cast<FlushDataTask*>(task));
       break;
     }
+    case Method::kPollBlobMetadata: {
+      labstor::CALL_REPLICA_END(reinterpret_cast<PollBlobMetadataTask*>(task));
+      break;
+    }
   }
 }
 /** Serialize a task when initially pushing into remote */
@@ -536,6 +560,10 @@ std::vector<DataTransfer> SaveStart(u32 method, BinaryOutputArchive<true> &ar, T
     }
     case Method::kFlushData: {
       ar << *reinterpret_cast<FlushDataTask*>(task);
+      break;
+    }
+    case Method::kPollBlobMetadata: {
+      ar << *reinterpret_cast<PollBlobMetadataTask*>(task);
       break;
     }
   }
@@ -635,6 +663,11 @@ TaskPointer LoadStart(u32 method, BinaryInputArchive<true> &ar) override {
       ar >> *reinterpret_cast<FlushDataTask*>(task_ptr.ptr_);
       break;
     }
+    case Method::kPollBlobMetadata: {
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<PollBlobMetadataTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<PollBlobMetadataTask*>(task_ptr.ptr_);
+      break;
+    }
   }
   return task_ptr;
 }
@@ -711,6 +744,10 @@ std::vector<DataTransfer> SaveEnd(u32 method, BinaryOutputArchive<false> &ar, Ta
     }
     case Method::kFlushData: {
       ar << *reinterpret_cast<FlushDataTask*>(task);
+      break;
+    }
+    case Method::kPollBlobMetadata: {
+      ar << *reinterpret_cast<PollBlobMetadataTask*>(task);
       break;
     }
   }
@@ -791,6 +828,10 @@ void LoadEnd(u32 replica, u32 method, BinaryInputArchive<false> &ar, Task *task)
       ar.Deserialize(replica, *reinterpret_cast<FlushDataTask*>(task));
       break;
     }
+    case Method::kPollBlobMetadata: {
+      ar.Deserialize(replica, *reinterpret_cast<PollBlobMetadataTask*>(task));
+      break;
+    }
   }
 }
 /** Get the grouping of the task */
@@ -849,6 +890,9 @@ u32 GetGroup(u32 method, Task *task, hshm::charbuf &group) override {
     }
     case Method::kFlushData: {
       return reinterpret_cast<FlushDataTask*>(task)->GetGroup(group);
+    }
+    case Method::kPollBlobMetadata: {
+      return reinterpret_cast<PollBlobMetadataTask*>(task)->GetGroup(group);
     }
   }
   return -1;

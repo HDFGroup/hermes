@@ -9,6 +9,10 @@
 
 namespace hermes {
 
+struct MetadataTable {
+  std::vector<BlobInfo> blob_info_;
+};
+
 class Hermes {
  public:
   /** Init hermes client */
@@ -24,6 +28,13 @@ class Hermes {
   /** Get tag ID */
   TagId GetTagId(const std::string &tag_name) {
     return HERMES_CONF->bkt_mdm_.GetTagIdRoot(hshm::to_charbuf(tag_name));
+  }
+
+  /** Collect a snapshot of all metadata in Hermes */
+  MetadataTable CollectMetadataSnapshot() {
+    MetadataTable table;
+    table.blob_info_ = HERMES_CONF->blob_mdm_.PollBlobMetadataRoot();
+    return table;
   }
 
   /** Get or create a bucket */

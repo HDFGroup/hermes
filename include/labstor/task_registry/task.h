@@ -47,6 +47,8 @@ class TaskLib;
 #define TASK_COROUTINE BIT_OPT(u32, 15)
 /** This task uses argobot wait */
 #define TASK_PREEMPTIVE BIT_OPT(u32, 17)
+/** This task can be scheduled on any lane */
+#define TASK_LANE_ANY BIT_OPT(u32, 18)
 /** This task should be scheduled on all lanes */
 #define TASK_LANE_ALL BIT_OPT(u32, 19)
 /** This task flushes the runtime */

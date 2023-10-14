@@ -36,22 +36,14 @@ spack install hermes@dev-1.1
 
 Hermes makes use of the CMake build system and requires an out of source build.
 
-    cd /path/to/hermes
-    mkdir build
-    cd build
-    ccmake ..
-
-Type 'c' to configure until there are no errors, then generate the makefile with 'g'. The default options should suffice for most use cases. In addition, we recommend the following options.
-
-    -DCMAKE_INSTALL_PREFIX=/installation/prefix
-    -DCMAKE_PREFIX_PATH=/path/to/dependencies
-    -DCMAKE_BUILD_RPATH=/path/to/dependencies/lib
-    -DCMAKE_INSTALL_RPATH=/path/to/dependencies/lib
-    -DCMAKE_BUILD_TYPE=Release
-    -DCMAKE_CXX_COMPILER=`which mpicxx`
-    -DBUILD_SHARED_LIBS=ON
-
-After the makefile has been generated, you can type `make -j 4` or `cmake --build . -- -j 4`. Add `VERBOSE=1` to see detailed compiler output.
+```
+cd /path/to/hermes
+mkdir build
+cd build
+cmake ../ -DCMAKE_BUILD_TYPE=Relase -DCMAKE_INSTALL_PREFIX=...
+make -j8
+make install
+```
 
 ### Testing and Installation
 

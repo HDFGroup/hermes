@@ -16,3 +16,4 @@ kRenameBlob: 14
 kReorganizeBlob: 15
 kSetBucketMdm: 16
 kFlushData: 17
+kPollBlobMetadata: 18

@@ -1194,6 +1194,107 @@ struct FlushDataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   }
 };
 
+/** A task to collect blob metadata */
+struct PollBlobMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
+  OUT hipc::ShmArchive<hipc::vector<hipc::string>> blob_mdms_;
+
+  /** SHM default constructor */
+  HSHM_ALWAYS_INLINE explicit
+  PollBlobMetadataTask(hipc::Allocator *alloc) : Task(alloc) {}
+
+  /** Emplace constructor */
+  HSHM_ALWAYS_INLINE explicit
+  PollBlobMetadataTask(hipc::Allocator *alloc,
+                       const TaskNode &task_node,
+                       const TaskStateId &state_id) : Task(alloc) {
+    // Initialize task
+    task_node_ = task_node;
+    lane_hash_ = 0;
+    prio_ = TaskPrio::kLowLatency;
+    task_state_ = state_id;
+    method_ = Method::kPollBlobMetadata;
+    task_flags_.SetBits(TASK_LANE_ALL);
+    domain_id_ = DomainId::GetGlobal();
+
+    // Custom params
+    HSHM_MAKE_AR0(blob_mdms_, alloc)
+    blob_mdms_->reserve(1);
+  }
+
+  /** Serialize blob info */
+  void SerializeBlobMetadata(const std::vector<BlobInfo> &blob_info) {
+    std::stringstream ss;
+    cereal::BinaryOutputArchive ar(ss);
+    ar << blob_info;
+    blob_mdms_->emplace_back(ss.str());
+  }
+
+  /** Deserialize blob info */
+  void DeserializeBlobMetadata(const std::string &srl, std::vector<BlobInfo> &blob_mdms) {
+    std::vector<BlobInfo> tmp_blob_mdms;
+    std::stringstream ss(srl);
+    cereal::BinaryInputArchive ar(ss);
+    ar >> tmp_blob_mdms;
+    for (BlobInfo &blob_info : tmp_blob_mdms) {
+      blob_mdms.emplace_back(blob_info);
+    }
+  }
+
+  std::vector<BlobInfo> DeserializeBlobMetadata() {
+    std::vector<BlobInfo> blob_mdms;
+    for (const hipc::string &srl : *blob_mdms_) {
+      DeserializeBlobMetadata(srl.str(), blob_mdms);
+    }
+    return blob_mdms;
+  }
+
+  /** Destructor */
+  ~PollBlobMetadataTask() {
+    HSHM_DESTROY_AR(blob_mdms_)
+  }
+
+  /** Duplicate message */
+  void Dup(hipc::Allocator *alloc, PollBlobMetadataTask &other) {
+    task_dup(other);
+    HSHM_MAKE_AR(blob_mdms_, alloc, *other.blob_mdms_);
+  }
+
+  /** Process duplicate message output */
+  void DupEnd(u32 replica, PollBlobMetadataTask &dup_task) {
+    (*blob_mdms_)[replica] = (*dup_task.blob_mdms_)[0];
+  }
+
+  /** (De)serialize message call */
+  template<typename Ar>
+  void SerializeStart(Ar &ar) {
+    task_serialize<Ar>(ar);
+    ar(blob_mdms_);
+  }
+
+  /** (De)serialize message return */
+  template<typename Ar>
+  void SerializeEnd(u32 replica, Ar &ar) {
+    ar(blob_mdms_);
+  }
+
+  /** Begin replication */
+  void ReplicateStart(u32 count) {
+    blob_mdms_->resize(count);
+  }
+
+  /** Finalize replication */
+  void ReplicateEnd() {
+    std::vector<BlobInfo> blob_mdms = DeserializeBlobMetadata();
+    SerializeBlobMetadata(blob_mdms);
+  }
+
+  /** Create group */
+  HSHM_ALWAYS_INLINE
+  u32 GetGroup(hshm::charbuf &group) {
+    return TASK_UNORDERED;
+  }
+};
+
 }  // namespace hermes::blob_mdm
 
 #endif //LABSTOR_TASKS_HERMES_BLOB_MDM_INCLUDE_HERMES_BLOB_MDM_HERMES_BLOB_MDM_TASKS_H_

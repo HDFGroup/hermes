@@ -340,19 +340,6 @@ struct UniqueId {
   }
 };
 
-/** A sized data pointer */
-template<typename T = char>
-struct DataPointer {
-  hipc::Pointer ptr_;
-  size_t size_;
-
-  /** Serialization */
-  template<typename Ar>
-  void serialize(Ar &ar) {
-    ar(ptr_, size_);
-  }
-};
-
 /** Uniquely identify a task state */
 using TaskStateId = UniqueId<1>;
 /** Uniquely identify a queue */

@@ -275,27 +275,45 @@ struct BlobInfo {
   std::atomic<size_t> mod_count_;   /**< The number of times blob modified */
   std::atomic<size_t> last_flush_;  /**< The last mod that was flushed */
 
+  /** Serialization */
+  template<typename Ar>
+  void serialize(Ar &ar) {
+    ar(tag_id_, blob_id_, name_, buffers_, tags_, blob_size_, max_blob_size_,
+       score_, access_freq_, last_access_, mod_count_, last_flush_);
+  }
+
+  /** Default constructor */
   BlobInfo() = default;
 
+  /** Copy constructor */
   BlobInfo(const BlobInfo &other) {
-    blob_id_ = other.blob_id_;
     tag_id_ = other.tag_id_;
+    blob_id_ = other.blob_id_;
+    name_ = other.name_;
+    buffers_ = other.buffers_;
+    tags_ = other.tags_;
     blob_size_ = other.blob_size_;
+    max_blob_size_ = other.max_blob_size_;
     score_ = other.score_;
+    access_freq_ = other.access_freq_.load();
+    last_access_ = other.last_access_;
     mod_count_ = other.mod_count_.load();
     last_flush_ = other.last_flush_.load();
   }
 
+  /** Update modify stats */
   void UpdateWriteStats() {
     mod_count_.fetch_add(1);
     UpdateReadStats();
   }
 
+  /** Update read stats */
   void UpdateReadStats() {
     last_access_ = GetTimeFromStartNs();
     access_freq_.fetch_add(1);
   }
 
+  /** Get the time from start in nanoseconds */
   static u64 GetTimeFromStartNs() {
     struct timespec currentTime;
     clock_gettime(CLOCK_MONOTONIC, &currentTime);

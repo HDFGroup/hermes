@@ -14,6 +14,7 @@
 #include <cereal/types/list.hpp>
 #include <cereal/types/unordered_map.hpp>
 #include <cereal/types/unordered_set.hpp>
+#include <cereal/types/atomic.hpp>
 
 namespace labstor {
 
@@ -74,6 +75,13 @@ struct DataTransferBase {
          data_size_ == other.data_size_ &&
          node_id_ == other.node_id_;
   }
+};
+
+/** A sized data pointer indicating data I/O direction */
+struct DataPointer {
+  hshm::bitfield32_t flags_;  /**< Indicates how data will be accessed */
+  hipc::Pointer data_;        /**< The SHM address of data on the node */
+  size_t data_size_;          /**< The amount of data to transfer */
 };
 
 using DataTransfer = DataTransferBase<true>;
@@ -151,6 +159,12 @@ class BinaryOutputArchive {
       }
     } else if constexpr (std::is_same_v<T, DataTransfer>){
       var.node_id_ = node_id_;
+      xfer_.emplace_back(var);
+    } else if constexpr(std::is_same_v<T, DataPointer>) {
+      DataTransfer xfer;
+      xfer.flags_ = var.flags_;
+      xfer.data_ = HERMES_MEMORY_MANAGER->Convert<char>(var.data_);
+      xfer.data_size_ = var.size_;
       xfer_.emplace_back(var);
     } else {
       ar_ << var;
@@ -244,7 +258,12 @@ class BinaryInputArchive {
       }
     } else if constexpr (std::is_same_v<T, DataTransfer>) {
       var = xfer_[xfer_off_++];
-    }  else {
+    } else if constexpr(std::is_same_v<T, DataPointer>) {
+      DataTransfer &xfer = xfer_[xfer_off_++];
+      var.shm_ = HERMES_MEMORY_MANAGER->Convert<char>(xfer.data_);
+      var.size_ = xfer.data_size_;
+      var.flags_ = xfer.flags_;
+    } else {
       ar_ >> var;
     }
     return Deserialize(replica, std::forward<Args>(args)...);

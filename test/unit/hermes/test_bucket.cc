@@ -482,7 +482,6 @@ TEST_CASE("TestHermesDataStager") {
   // Verify staging happened
 }
 
-
 TEST_CASE("TestHermesDataOp") {
   int rank, nprocs;
   MPI_Barrier(MPI_COMM_WORLD);
@@ -529,4 +528,33 @@ TEST_CASE("TestHermesDataOp") {
   hermes::Bucket bkt_min("data_bkt_min", 0, 0);
   size_t size = bkt_min.GetSize();
   REQUIRE(size == sizeof(float) * count_per_proc * nprocs);
+}
+
+TEST_CASE("TestHermesCollectMetadata") {
+  int rank, nprocs;
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+
+  // Initialize Hermes on all nodes
+  HERMES->ClientInit();
+
+  // Create a bucket
+  hermes::Context ctx;
+  hermes::Bucket bkt("append_test" + std::to_string(rank));
+  u32 num_blobs = 1024;
+
+  // Put a few blobs in the bucket
+  for (int i = 0; i < num_blobs; ++i) {
+    hermes::Blob blob(KILOBYTES(4));
+    memset(blob.data(), i % 256, blob.size());
+    hermes::BlobId blob_id = bkt.Put(std::to_string(i), blob, ctx);
+    HILOG(kInfo, "(iteration {}) Using BlobID: {}", i, blob_id);
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  // Get contained blob ids
+  hermes::MetadataTable table = HERMES->CollectMetadataSnapshot();
+  REQUIRE(table.blob_info_.size() == 1024 * nprocs);
+  MPI_Barrier(MPI_COMM_WORLD);
 }

@@ -435,6 +435,26 @@ class Client : public TaskLibClient {
         task, task_node, id_);
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(FlushData);
+
+  /**
+   * Get all blob metadata
+   * */
+  void AsyncPollBlobMetadataConstruct(PollBlobMetadataTask *task,
+                                  const TaskNode &task_node) {
+    LABSTOR_CLIENT->ConstructTask<PollBlobMetadataTask>(
+        task, task_node, id_);
+  }
+  std::vector<BlobInfo> PollBlobMetadataRoot() {
+    LPointer<labpq::TypedPushTask<PollBlobMetadataTask>> push_task =
+        AsyncPollBlobMetadataRoot();
+    push_task->Wait();
+    PollBlobMetadataTask *task = push_task->get();
+    std::vector<BlobInfo> blob_mdms =
+        task->DeserializeBlobMetadata();
+    LABSTOR_CLIENT->DelTask(push_task);
+    return blob_mdms;
+  }
+  LABSTOR_TASK_NODE_PUSH_ROOT(PollBlobMetadata);
 };
 
 }  // namespace labstor
