@@ -5,11 +5,16 @@ class Hermes(CMakePackage):
     url = "https://github.com/HDFGroup/hermes/tarball/master"
     git = "https://github.com/HDFGroup/hermes.git"
 
-    version('master', branch='master')
-    version('pnnl', branch='pnnl')
-    version('dev-priv', git='https://github.com/lukemartinlogan/hermes.git', branch='dev')
-    version('dev-1.1', git='https://github.com/lukemartinlogan/hermes.git', branch='hermes-1.1')
-    version('hdf-1.1', git='https://github.com/HDFGroup/hermes.git', branch='hermes-1.1')
+    version('master',
+            branch='master', submodules=True)
+    version('pnnl',
+            branch='pnnl', submodules=True)
+    version('dev-priv', git='https://github.com/lukemartinlogan/hermes.git',
+            branch='dev', submodules=True)
+    version('dev-1.1', git='https://github.com/lukemartinlogan/hermes.git',
+            branch='hermes-1.1', submodules=True)
+    version('hdf-1.1', git='https://github.com/HDFGroup/hermes.git',
+            branch='hermes-1.1', submodules=True)
 
     variant('vfd', default=False, description='Enable HDF5 VFD')
     variant('ares', default=False, description='Enable full libfabric install')
