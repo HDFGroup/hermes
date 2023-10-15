@@ -11,9 +11,8 @@ OUTPUT:
 """
 
 from codegen.hrun_config.generator import create_config
-from codegen.util.paths import HRUN_ROOT
+from codegen.util.paths import HERMES_ROOT
 
-HERMES_ROOT = f'{HRUN_ROOT}/tasks/hermes'
 create_config(
     path=f"{HERMES_ROOT}/config/hermes_client_default.yaml",
     var_name="kHermesClientDefaultConfigStr",

@@ -1,17 +1,17 @@
 #------------------------------------------------------------------------------
-# Build Small Message Task Library
+# Build Hrun Admin Task Library
 #------------------------------------------------------------------------------
-add_library(hermes SHARED
-        hermes_config_manager.cc)
-add_dependencies(hermes ${Hermes_RUNTIME_DEPS})
-target_link_libraries(hermes ${Hermes_RUNTIME_LIBRARIES})
+add_library(hrun_admin SHARED
+        ${CMAKE_CURRENT_SOURCE_DIR}/hrun_admin.cc)
+add_dependencies(hrun_admin ${Hermes_RUNTIME_DEPS})
+target_link_libraries(hrun_admin ${Hermes_RUNTIME_LIBRARIES})
 
 #------------------------------------------------------------------------------
-# Install Small Message Task Library
+# Install Hrun Admin Task Library
 #------------------------------------------------------------------------------
 install(
         TARGETS
-        hermes
+        hrun_admin
         EXPORT
         ${HERMES_EXPORTED_TARGETS}
         LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
@@ -35,7 +35,7 @@ install(
 # Export all exported targets to the build tree for use by parent project
 #-----------------------------------------------------------------------------
 set(HERMES_EXPORTED_LIBS
-        hermes
+        hrun_admin
         ${HERMES_EXPORTED_LIBS})
 if(NOT HERMES_EXTERNALLY_CONFIGURED)
     EXPORT (
@@ -50,5 +50,5 @@ endif()
 # Coverage
 #------------------------------------------------------------------------------
 if(HERMES_ENABLE_COVERAGE)
-    set_coverage_flags(hermes)
+    set_coverage_flags(hrun_admin)
 endif()
