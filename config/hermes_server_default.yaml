@@ -82,32 +82,6 @@ devices:
 # any amount of memory
 max_memory: 0g
 
-### Define properties of RPCs
-rpc:
-  # A path to a file containing a list of server names, 1 per line. If your
-  # servers are named according to a pattern (e.g., server-1, server-2, etc.),
-  # prefer the `rpc_server_base_name` and `rpc_host_number_range` options. If this
-  # option is not empty, it will override anything in `rpc_server_base_name`.
-  host_file: ""
-
-  # Host names can be defined using the following syntax:
-  # ares-comp-[0-9]-40g will convert to ares-comp-0-40g, ares-comp-1-40g, ...
-  # ares-comp[00-09] will convert to ares-comp-00, ares-comp-01, ...
-  host_names: ["localhost"]
-
-  # The RPC protocol. This must come from the documentation of the specific RPC
-  # library in use.
-  protocol: "ofi+sockets"
-
-  # RPC domain name for verbs transport. Blank for tcp.
-  domain: ""
-
-  # Desired RPC port number.
-  port: 8080
-
-  # The number of handler threads for each RPC server.
-  num_threads: 4
-
 ### Define properties of the BORG
 buffer_organizer:
   # The number of threads used in the background organization of internal Hermes buffers.
@@ -161,17 +135,63 @@ mdm:
   est_bucket_count: 100000
   est_num_traits: 256
 
-# The shared memory prefix for the hermes shared memory segment. A username
-# will be automatically appended.
-shmem_name: "/hermes_shm_"
-
 # The interval in milliseconds at which to update the global system view.
 system_view_state_update_interval_ms: 1000
 
-### Define the names of the traits to search LD_LIBRARY_PATH for
-traits:
-  - "hermes_posix_io_client"
-  - "hermes_stdio_io_client"
-  - "hermes_mpiio_io_client"
-  - "hermes_example_trait"
-  - "hermes_prefetcher_trait"
+### Runtime orchestration settings
+work_orchestrator:
+  # The number of worker threads to spawn
+  max_workers: 4
+
+### Queue Manager settings
+queue_manager:
+  # The default depth of allocated queues
+  queue_depth: 256
+  # The maximum number of lanes per queue
+  max_lanes: 16
+  # The maximum number of queues
+  max_queues: 1024
+  # The shared memory allocator to use
+  shm_allocator: kScalablePageAllocator
+  # The name of the shared memory region to create
+  shm_name: "hrun_shm"
+  # The size of the shared memory region to allocate for general data structures
+  shm_size: 0g
+  # The size of the shared memory to allocate for data buffers
+
+### Define properties of RPCs
+rpc:
+  # A path to a file containing a list of server names, 1 per line. If your
+  # servers are named according to a pattern (e.g., server-1, server-2, etc.),
+  # prefer the `rpc_server_base_name` and `rpc_host_number_range` options. If this
+  # option is not empty, it will override anything in `rpc_server_base_name`.
+  host_file: ""
+
+  # Host names can be defined using the following syntax:
+  # ares-comp-[0-9]-40g will convert to ares-comp-0-40g, ares-comp-1-40g, ...
+  # ares-comp[00-09] will convert to ares-comp-00, ares-comp-01, ...
+  host_names: ["localhost"]
+
+  # The RPC protocol. This must come from the documentation of the specific RPC
+  # library in use.
+  protocol: "ofi+sockets"
+
+  # RPC domain name for verbs transport. Blank for tcp.
+  domain: ""
+
+  # Desired RPC port number.
+  port: 8080
+
+  # The number of handler threads for each RPC server.
+  num_threads: 4
+
+### Task Registry
+task_registry: [
+  'hermes_mdm',
+  'hermes_blob_mdm',
+  'hermes_bucket_mdm',
+  'hermes_data_op',
+  'data_stager',
+  'posix_bdev',
+  'ram_bdev'
+]

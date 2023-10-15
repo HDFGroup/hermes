@@ -168,14 +168,6 @@ class ServerConfig : public BaseConfig {
   /** The length of a view state epoch */
   u32 system_view_state_update_interval_ms;
 
-  /** The max amount of memory hermes uses for non-buffering tasks */
-  size_t max_memory_;
-
-  /** A base name for the BufferPool shared memory segement. Hermes appends the
-   * value of the USER environment variable to this string.
-   */
-  std::string shmem_name_;
-
  public:
   /** Default constructor */
   ServerConfig() = default;
@@ -212,13 +204,6 @@ class ServerConfig : public BaseConfig {
     }
     if (yaml_conf["traits"]) {
       ParseTraitInfo(yaml_conf["traits"]);
-    }
-    if (yaml_conf["shmem_name"]) {
-      shmem_name_ = yaml_conf["shmem_name"].as<std::string>();
-    }
-    if (yaml_conf["max_memory"]) {
-      max_memory_ = hshm::ConfigParse::ParseSize(
-          yaml_conf["max_memory"].as<std::string>());
     }
   }
 
