@@ -669,6 +669,16 @@ class Server : public TaskLib {
     task->SetModuleComplete();
   }
 
+  /**
+   * Get all metadata about a blob
+   * */
+  HSHM_ALWAYS_INLINE
+  void PollTargetMetadata(PollBlobMetadataTask *task, RunContext &rctx) {
+    for (const bdev::Client &bdev_client : targets_) {
+    }
+    task->SetModuleComplete();
+  }
+
  public:
 #include "hermes_blob_mdm/hermes_blob_mdm_lib_exec.h"
 };

@@ -80,6 +80,10 @@ void Run(u32 method, Task *task, RunContext &rctx) override {
       PollBlobMetadata(reinterpret_cast<PollBlobMetadataTask *>(task), rctx);
       break;
     }
+    case Method::kPollTargetMetadata: {
+      PollTargetMetadata(reinterpret_cast<PollTargetMetadataTask *>(task), rctx);
+      break;
+    }
   }
 }
 /** Delete a task */
@@ -159,6 +163,10 @@ void Del(u32 method, Task *task) override {
     }
     case Method::kPollBlobMetadata: {
       LABSTOR_CLIENT->DelTask(reinterpret_cast<PollBlobMetadataTask *>(task));
+      break;
+    }
+    case Method::kPollTargetMetadata: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<PollTargetMetadataTask *>(task));
       break;
     }
   }
@@ -242,6 +250,10 @@ void Dup(u32 method, Task *orig_task, std::vector<LPointer<Task>> &dups) overrid
       labstor::CALL_DUPLICATE(reinterpret_cast<PollBlobMetadataTask*>(orig_task), dups);
       break;
     }
+    case Method::kPollTargetMetadata: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<PollTargetMetadataTask*>(orig_task), dups);
+      break;
+    }
   }
 }
 /** Register the duplicate output with the origin task */
@@ -321,6 +333,10 @@ void DupEnd(u32 method, u32 replica, Task *orig_task, Task *dup_task) override {
     }
     case Method::kPollBlobMetadata: {
       labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<PollBlobMetadataTask*>(orig_task), reinterpret_cast<PollBlobMetadataTask*>(dup_task));
+      break;
+    }
+    case Method::kPollTargetMetadata: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<PollTargetMetadataTask*>(orig_task), reinterpret_cast<PollTargetMetadataTask*>(dup_task));
       break;
     }
   }
@@ -404,6 +420,10 @@ void ReplicateStart(u32 method, u32 count, Task *task) override {
       labstor::CALL_REPLICA_START(count, reinterpret_cast<PollBlobMetadataTask*>(task));
       break;
     }
+    case Method::kPollTargetMetadata: {
+      labstor::CALL_REPLICA_START(count, reinterpret_cast<PollTargetMetadataTask*>(task));
+      break;
+    }
   }
 }
 /** Determine success and handle failures */
@@ -485,6 +505,10 @@ void ReplicateEnd(u32 method, Task *task) override {
       labstor::CALL_REPLICA_END(reinterpret_cast<PollBlobMetadataTask*>(task));
       break;
     }
+    case Method::kPollTargetMetadata: {
+      labstor::CALL_REPLICA_END(reinterpret_cast<PollTargetMetadataTask*>(task));
+      break;
+    }
   }
 }
 /** Serialize a task when initially pushing into remote */
@@ -564,6 +588,10 @@ std::vector<DataTransfer> SaveStart(u32 method, BinaryOutputArchive<true> &ar, T
     }
     case Method::kPollBlobMetadata: {
       ar << *reinterpret_cast<PollBlobMetadataTask*>(task);
+      break;
+    }
+    case Method::kPollTargetMetadata: {
+      ar << *reinterpret_cast<PollTargetMetadataTask*>(task);
       break;
     }
   }
@@ -668,6 +696,11 @@ TaskPointer LoadStart(u32 method, BinaryInputArchive<true> &ar) override {
       ar >> *reinterpret_cast<PollBlobMetadataTask*>(task_ptr.ptr_);
       break;
     }
+    case Method::kPollTargetMetadata: {
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<PollTargetMetadataTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<PollTargetMetadataTask*>(task_ptr.ptr_);
+      break;
+    }
   }
   return task_ptr;
 }
@@ -748,6 +781,10 @@ std::vector<DataTransfer> SaveEnd(u32 method, BinaryOutputArchive<false> &ar, Ta
     }
     case Method::kPollBlobMetadata: {
       ar << *reinterpret_cast<PollBlobMetadataTask*>(task);
+      break;
+    }
+    case Method::kPollTargetMetadata: {
+      ar << *reinterpret_cast<PollTargetMetadataTask*>(task);
       break;
     }
   }
@@ -832,6 +869,10 @@ void LoadEnd(u32 replica, u32 method, BinaryInputArchive<false> &ar, Task *task)
       ar.Deserialize(replica, *reinterpret_cast<PollBlobMetadataTask*>(task));
       break;
     }
+    case Method::kPollTargetMetadata: {
+      ar.Deserialize(replica, *reinterpret_cast<PollTargetMetadataTask*>(task));
+      break;
+    }
   }
 }
 /** Get the grouping of the task */
@@ -893,6 +934,9 @@ u32 GetGroup(u32 method, Task *task, hshm::charbuf &group) override {
     }
     case Method::kPollBlobMetadata: {
       return reinterpret_cast<PollBlobMetadataTask*>(task)->GetGroup(group);
+    }
+    case Method::kPollTargetMetadata: {
+      return reinterpret_cast<PollTargetMetadataTask*>(task)->GetGroup(group);
     }
   }
   return -1;

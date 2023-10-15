@@ -20,6 +20,7 @@ struct Method : public TaskMethod {
   TASK_METHOD_T kSetBucketMdm = kLast + 16;
   TASK_METHOD_T kFlushData = kLast + 17;
   TASK_METHOD_T kPollBlobMetadata = kLast + 18;
+  TASK_METHOD_T kPollTargetMetadata = kLast + 19;
 };
 
 #endif  // LABSTOR_HERMES_BLOB_MDM_METHODS_H_

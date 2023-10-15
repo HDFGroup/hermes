@@ -1196,7 +1196,8 @@ struct FlushDataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
 
 /** A task to collect blob metadata */
 struct PollBlobMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
-  OUT hipc::ShmArchive<hipc::vector<hipc::string>> blob_mdms_;
+  OUT hipc::ShmArchive<hipc::string> my_blob_mdms_;
+  TEMP hipc::ShmArchive<hipc::vector<hipc::string>> blob_mdms_;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -1217,8 +1218,8 @@ struct PollBlobMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
     domain_id_ = DomainId::GetGlobal();
 
     // Custom params
+    HSHM_MAKE_AR0(my_blob_mdms_, alloc)
     HSHM_MAKE_AR0(blob_mdms_, alloc)
-    blob_mdms_->reserve(1);
   }
 
   /** Serialize blob info */
@@ -1226,7 +1227,7 @@ struct PollBlobMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
     std::stringstream ss;
     cereal::BinaryOutputArchive ar(ss);
     ar << blob_info;
-    blob_mdms_->emplace_back(ss.str());
+    (*my_blob_mdms_) = ss.str();
   }
 
   /** Deserialize blob info */
@@ -1240,7 +1241,8 @@ struct PollBlobMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
     }
   }
 
-  std::vector<BlobInfo> DeserializeBlobMetadata() {
+  /** Get combined output of all replicas */
+  std::vector<BlobInfo> MergeBlobMetadata() {
     std::vector<BlobInfo> blob_mdms;
     for (const hipc::string &srl : *blob_mdms_) {
       DeserializeBlobMetadata(srl.str(), blob_mdms);
@@ -1248,33 +1250,42 @@ struct PollBlobMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
     return blob_mdms;
   }
 
+  /** Deserialize final query output */
+  std::vector<BlobInfo> DeserializeBlobMetadata() {
+    std::vector<BlobInfo> blob_mdms;
+    DeserializeBlobMetadata(my_blob_mdms_->str(), blob_mdms);
+    return blob_mdms;
+  }
+
   /** Destructor */
   ~PollBlobMetadataTask() {
+    HSHM_DESTROY_AR(my_blob_mdms_)
     HSHM_DESTROY_AR(blob_mdms_)
   }
 
   /** Duplicate message */
   void Dup(hipc::Allocator *alloc, PollBlobMetadataTask &other) {
     task_dup(other);
-    HSHM_MAKE_AR(blob_mdms_, alloc, *other.blob_mdms_);
+    HSHM_MAKE_AR(blob_mdms_, alloc, *other.blob_mdms_)
+    HSHM_MAKE_AR(my_blob_mdms_, alloc, *other.my_blob_mdms_)
   }
 
   /** Process duplicate message output */
   void DupEnd(u32 replica, PollBlobMetadataTask &dup_task) {
-    (*blob_mdms_)[replica] = (*dup_task.blob_mdms_)[0];
+    (*blob_mdms_)[replica] = (*dup_task.my_blob_mdms_);
   }
 
   /** (De)serialize message call */
   template<typename Ar>
   void SerializeStart(Ar &ar) {
     task_serialize<Ar>(ar);
-    ar(blob_mdms_);
+    ar(my_blob_mdms_);
   }
 
   /** (De)serialize message return */
   template<typename Ar>
   void SerializeEnd(u32 replica, Ar &ar) {
-    ar(blob_mdms_);
+    ar((*blob_mdms_)[replica]);
   }
 
   /** Begin replication */
@@ -1284,8 +1295,120 @@ struct PollBlobMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
 
   /** Finalize replication */
   void ReplicateEnd() {
-    std::vector<BlobInfo> blob_mdms = DeserializeBlobMetadata();
+    std::vector<BlobInfo> blob_mdms = MergeBlobMetadata();
     SerializeBlobMetadata(blob_mdms);
+  }
+
+  /** Create group */
+  HSHM_ALWAYS_INLINE
+  u32 GetGroup(hshm::charbuf &group) {
+    return TASK_UNORDERED;
+  }
+};
+
+/** A task to collect blob metadata */
+struct PollTargetMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
+  OUT hipc::ShmArchive<hipc::string> my_target_mdms_;
+  TEMP hipc::ShmArchive<hipc::vector<hipc::string>> target_mdms_;
+
+  /** SHM default constructor */
+  HSHM_ALWAYS_INLINE explicit
+  PollTargetMetadataTask(hipc::Allocator *alloc) : Task(alloc) {}
+
+  /** Emplace constructor */
+  HSHM_ALWAYS_INLINE explicit
+  PollTargetMetadataTask(hipc::Allocator *alloc,
+                         const TaskNode &task_node,
+                         const TaskStateId &state_id) : Task(alloc) {
+    // Initialize task
+    task_node_ = task_node;
+    lane_hash_ = 0;
+    prio_ = TaskPrio::kLowLatency;
+    task_state_ = state_id;
+    method_ = Method::kPollTargetMetadata;
+    task_flags_.SetBits(TASK_COROUTINE);
+    domain_id_ = DomainId::GetGlobal();
+
+    // Custom params
+    HSHM_MAKE_AR0(my_target_mdms_, alloc)
+    HSHM_MAKE_AR0(target_mdms_, alloc)
+  }
+
+  /** Serialize target info */
+  void SerializeTargetMetadata(const std::vector<BlobInfo> &target_info) {
+    std::stringstream ss;
+    cereal::BinaryOutputArchive ar(ss);
+    ar << target_info;
+    (*my_target_mdms_) = ss.str();
+  }
+
+  /** Deserialize target info */
+  void DeserializeTargetMetadata(const std::string &srl, std::vector<BlobInfo> &target_mdms) {
+    std::vector<BlobInfo> tmp_target_mdms;
+    std::stringstream ss(srl);
+    cereal::BinaryInputArchive ar(ss);
+    ar >> tmp_target_mdms;
+    for (BlobInfo &target_info : tmp_target_mdms) {
+      target_mdms.emplace_back(target_info);
+    }
+  }
+
+  /** Get combined output of all replicas */
+  std::vector<BlobInfo> MergeTargetMetadata() {
+    std::vector<BlobInfo> target_mdms;
+    for (const hipc::string &srl : *target_mdms_) {
+      DeserializeTargetMetadata(srl.str(), target_mdms);
+    }
+    return target_mdms;
+  }
+
+  /** Deserialize final query output */
+  std::vector<BlobInfo> DeserializeTargetMetadata() {
+    std::vector<BlobInfo> target_mdms;
+    DeserializeTargetMetadata(my_target_mdms_->str(), target_mdms);
+    return target_mdms;
+  }
+
+  /** Destructor */
+  ~PollBlobMetadataTask() {
+    HSHM_DESTROY_AR(my_target_mdms_)
+    HSHM_DESTROY_AR(target_mdms_)
+  }
+
+  /** Duplicate message */
+  void Dup(hipc::Allocator *alloc, PollTargetMetadataTask &other) {
+    task_dup(other);
+    HSHM_MAKE_AR(target_mdms_, alloc, *other.target_mdms_)
+    HSHM_MAKE_AR(my_target_mdms_, alloc, *other.my_target_mdms_)
+  }
+
+  /** Process duplicate message output */
+  void DupEnd(u32 replica, PollTargetMetadataTask &dup_task) {
+    (*target_mdms_)[replica] = (*dup_task.my_target_mdms_);
+  }
+
+  /** (De)serialize message call */
+  template<typename Ar>
+  void SerializeStart(Ar &ar) {
+    task_serialize<Ar>(ar);
+    ar(my_target_mdms_);
+  }
+
+  /** (De)serialize message return */
+  template<typename Ar>
+  void SerializeEnd(u32 replica, Ar &ar) {
+    ar((*target_mdms_)[replica]);
+  }
+
+  /** Begin replication */
+  void ReplicateStart(u32 count) {
+    target_mdms_->resize(count);
+  }
+
+  /** Finalize replication */
+  void ReplicateEnd() {
+    std::vector<BlobInfo> target_mdms = MergeTargetMetadata();
+    SerializeTargetMetadata(target_mdms);
   }
 
   /** Create group */
