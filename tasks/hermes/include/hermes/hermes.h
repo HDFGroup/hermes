@@ -37,7 +37,7 @@ class Hermes {
     MetadataTable table;
     table.blob_info_ = HERMES_CONF->blob_mdm_.PollBlobMetadataRoot();
     table.target_info_ = HERMES_CONF->blob_mdm_.PollTargetMetadataRoot();
-    // table.bkt_info_ = HERMES_CONF->bkt_mdm_.PollTagMetadataRoot();
+    table.bkt_info_ = HERMES_CONF->bkt_mdm_.PollTagMetadataRoot();
     return table;
   }
 

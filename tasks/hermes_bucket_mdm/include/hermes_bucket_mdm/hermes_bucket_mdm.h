@@ -314,6 +314,26 @@ class Client : public TaskLibClient {
     return blob_ids;
   }
   LABSTOR_TASK_NODE_PUSH_ROOT(GetContainedBlobIds);
+
+  /**
+  * Get all tag metadata
+  * */
+  void AsyncPollTagMetadataConstruct(PollTagMetadataTask *task,
+                                        const TaskNode &task_node) {
+    LABSTOR_CLIENT->ConstructTask<PollTagMetadataTask>(
+        task, task_node, id_);
+  }
+  std::vector<TagInfo> PollTagMetadataRoot() {
+    LPointer<labpq::TypedPushTask<PollTagMetadataTask>> push_task =
+        AsyncPollTagMetadataRoot();
+    push_task->Wait();
+    PollTagMetadataTask *task = push_task->get();
+    std::vector<TagInfo> target_mdms =
+        task->DeserializeTagMetadata();
+    LABSTOR_CLIENT->DelTask(push_task);
+    return target_mdms;
+  }
+  LABSTOR_TASK_NODE_PUSH_ROOT(PollTagMetadata);
 };
 
 }  // namespace labstor

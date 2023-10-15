@@ -556,5 +556,7 @@ TEST_CASE("TestHermesCollectMetadata") {
   // Get contained blob ids
   hermes::MetadataTable table = HERMES->CollectMetadataSnapshot();
   REQUIRE(table.blob_info_.size() == 1024 * nprocs);
+  REQUIRE(table.bkt_info_.size() == 1);
+  REQUIRE(table.target_info_.size() >= 4);
   MPI_Barrier(MPI_COMM_WORLD);
 }

@@ -332,6 +332,12 @@ struct TagInfo {
   size_t internal_size_;
   size_t page_size_;
   bool owner_;
+
+  /** Serialization */
+  template<typename Ar>
+  void serialize(Ar &ar) {
+    ar(tag_id_, name_, internal_size_, page_size_, owner_);
+  }
 };
 
 /** The types of I/O that can be performed (for IoCall RPC) */

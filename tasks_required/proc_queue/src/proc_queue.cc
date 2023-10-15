@@ -26,8 +26,8 @@ class Server : public TaskLib {
         task->sub_run_.shm_ = task->sub_cli_.shm_;
         task->sub_run_.ptr_ = LABSTOR_CLIENT->GetPrivatePointer<Task>(task->sub_cli_.shm_);
         Task *&ptr = task->sub_run_.ptr_;
-        HILOG(kDebug, "Scheduling task {} on state {} tid {}",
-              ptr->task_node_, ptr->task_state_, GetLinuxTid());
+//        HILOG(kDebug, "Scheduling task {} on state {} tid {}",
+//              ptr->task_node_, ptr->task_state_, GetLinuxTid());
         if (ptr->IsFireAndForget()) {
           ptr->UnsetFireAndForget();
         }

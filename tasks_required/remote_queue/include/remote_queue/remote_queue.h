@@ -85,8 +85,8 @@ class Client : public TaskLibClient {
   void DisperseLocal(Task *orig_task, TaskState *exec,
                      MultiQueue *orig_queue, LaneGroup *lane_group) {
     // Duplicate task
-    HILOG(kDebug, "Beginning duplication for (task_node={}, task_state={}, method={})",
-          orig_task->task_node_ + 1, orig_task->task_state_, orig_task->method_);
+//    HILOG(kDebug, "Beginning duplication for (task_node={}, task_state={}, method={})",
+//          orig_task->task_node_ + 1, orig_task->task_state_, orig_task->method_);
     std::vector<LPointer<Task>> dups(lane_group->num_lanes_);
     exec->Dup(orig_task->method_, orig_task, dups);
     for (size_t i = 0; i < dups.size(); ++i) {

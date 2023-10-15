@@ -385,6 +385,22 @@ class Server : public TaskLib {
     task->SetModuleComplete();
   }
 
+  /**
+  * Get all metadata about a blob
+  * */
+  HSHM_ALWAYS_INLINE
+  void PollTagMetadata(PollTagMetadataTask *task, RunContext &rctx) {
+    TAG_MAP_T &blob_map = tag_map_[rctx.lane_id_];
+    std::vector<TagInfo> tag_mdms;
+    tag_mdms.reserve(blob_map.size());
+    for (const std::pair<TagId, TagInfo> &tag_part : blob_map) {
+      const TagInfo &tag_info = tag_part.second;
+      tag_mdms.emplace_back(tag_info);
+    }
+    task->SerializeTagMetadata(tag_mdms);
+    task->SetModuleComplete();
+  }
+
  public:
 #include "hermes_bucket_mdm/hermes_bucket_mdm_lib_exec.h"
 };

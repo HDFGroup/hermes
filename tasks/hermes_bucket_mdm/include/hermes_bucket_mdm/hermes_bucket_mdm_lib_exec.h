@@ -68,6 +68,10 @@ void Run(u32 method, Task *task, RunContext &rctx) override {
       GetContainedBlobIds(reinterpret_cast<GetContainedBlobIdsTask *>(task), rctx);
       break;
     }
+    case Method::kPollTagMetadata: {
+      PollTagMetadata(reinterpret_cast<PollTagMetadataTask *>(task), rctx);
+      break;
+    }
   }
 }
 /** Delete a task */
@@ -135,6 +139,10 @@ void Del(u32 method, Task *task) override {
     }
     case Method::kGetContainedBlobIds: {
       LABSTOR_CLIENT->DelTask(reinterpret_cast<GetContainedBlobIdsTask *>(task));
+      break;
+    }
+    case Method::kPollTagMetadata: {
+      LABSTOR_CLIENT->DelTask(reinterpret_cast<PollTagMetadataTask *>(task));
       break;
     }
   }
@@ -206,6 +214,10 @@ void Dup(u32 method, Task *orig_task, std::vector<LPointer<Task>> &dups) overrid
       labstor::CALL_DUPLICATE(reinterpret_cast<GetContainedBlobIdsTask*>(orig_task), dups);
       break;
     }
+    case Method::kPollTagMetadata: {
+      labstor::CALL_DUPLICATE(reinterpret_cast<PollTagMetadataTask*>(orig_task), dups);
+      break;
+    }
   }
 }
 /** Register the duplicate output with the origin task */
@@ -273,6 +285,10 @@ void DupEnd(u32 method, u32 replica, Task *orig_task, Task *dup_task) override {
     }
     case Method::kGetContainedBlobIds: {
       labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<GetContainedBlobIdsTask*>(orig_task), reinterpret_cast<GetContainedBlobIdsTask*>(dup_task));
+      break;
+    }
+    case Method::kPollTagMetadata: {
+      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<PollTagMetadataTask*>(orig_task), reinterpret_cast<PollTagMetadataTask*>(dup_task));
       break;
     }
   }
@@ -344,6 +360,10 @@ void ReplicateStart(u32 method, u32 count, Task *task) override {
       labstor::CALL_REPLICA_START(count, reinterpret_cast<GetContainedBlobIdsTask*>(task));
       break;
     }
+    case Method::kPollTagMetadata: {
+      labstor::CALL_REPLICA_START(count, reinterpret_cast<PollTagMetadataTask*>(task));
+      break;
+    }
   }
 }
 /** Determine success and handle failures */
@@ -413,6 +433,10 @@ void ReplicateEnd(u32 method, Task *task) override {
       labstor::CALL_REPLICA_END(reinterpret_cast<GetContainedBlobIdsTask*>(task));
       break;
     }
+    case Method::kPollTagMetadata: {
+      labstor::CALL_REPLICA_END(reinterpret_cast<PollTagMetadataTask*>(task));
+      break;
+    }
   }
 }
 /** Serialize a task when initially pushing into remote */
@@ -480,6 +504,10 @@ std::vector<DataTransfer> SaveStart(u32 method, BinaryOutputArchive<true> &ar, T
     }
     case Method::kGetContainedBlobIds: {
       ar << *reinterpret_cast<GetContainedBlobIdsTask*>(task);
+      break;
+    }
+    case Method::kPollTagMetadata: {
+      ar << *reinterpret_cast<PollTagMetadataTask*>(task);
       break;
     }
   }
@@ -569,6 +597,11 @@ TaskPointer LoadStart(u32 method, BinaryInputArchive<true> &ar) override {
       ar >> *reinterpret_cast<GetContainedBlobIdsTask*>(task_ptr.ptr_);
       break;
     }
+    case Method::kPollTagMetadata: {
+      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<PollTagMetadataTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<PollTagMetadataTask*>(task_ptr.ptr_);
+      break;
+    }
   }
   return task_ptr;
 }
@@ -637,6 +670,10 @@ std::vector<DataTransfer> SaveEnd(u32 method, BinaryOutputArchive<false> &ar, Ta
     }
     case Method::kGetContainedBlobIds: {
       ar << *reinterpret_cast<GetContainedBlobIdsTask*>(task);
+      break;
+    }
+    case Method::kPollTagMetadata: {
+      ar << *reinterpret_cast<PollTagMetadataTask*>(task);
       break;
     }
   }
@@ -709,6 +746,10 @@ void LoadEnd(u32 replica, u32 method, BinaryInputArchive<false> &ar, Task *task)
       ar.Deserialize(replica, *reinterpret_cast<GetContainedBlobIdsTask*>(task));
       break;
     }
+    case Method::kPollTagMetadata: {
+      ar.Deserialize(replica, *reinterpret_cast<PollTagMetadataTask*>(task));
+      break;
+    }
   }
 }
 /** Get the grouping of the task */
@@ -761,6 +802,9 @@ u32 GetGroup(u32 method, Task *task, hshm::charbuf &group) override {
     }
     case Method::kGetContainedBlobIds: {
       return reinterpret_cast<GetContainedBlobIdsTask*>(task)->GetGroup(group);
+    }
+    case Method::kPollTagMetadata: {
+      return reinterpret_cast<PollTagMetadataTask*>(task)->GetGroup(group);
     }
   }
   return -1;

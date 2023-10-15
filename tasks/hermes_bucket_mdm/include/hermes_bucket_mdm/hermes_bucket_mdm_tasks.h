@@ -914,6 +914,118 @@ struct GetContainedBlobIdsTask : public Task, TaskFlags<TF_SRL_SYM> {
   }
 };
 
+/** A task to collect blob metadata */
+struct PollTagMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
+  OUT hipc::ShmArchive<hipc::string> my_tag_mdms_;
+  TEMP hipc::ShmArchive<hipc::vector<hipc::string>> tag_mdms_;
+
+  /** SHM default constructor */
+  HSHM_ALWAYS_INLINE explicit
+  PollTagMetadataTask(hipc::Allocator *alloc) : Task(alloc) {}
+
+  /** Emplace constructor */
+  HSHM_ALWAYS_INLINE explicit
+  PollTagMetadataTask(hipc::Allocator *alloc,
+                       const TaskNode &task_node,
+                       const TaskStateId &state_id) : Task(alloc) {
+    // Initialize task
+    task_node_ = task_node;
+    lane_hash_ = 0;
+    prio_ = TaskPrio::kLowLatency;
+    task_state_ = state_id;
+    method_ = Method::kPollTagMetadata;
+    task_flags_.SetBits(TASK_LANE_ALL);
+    domain_id_ = DomainId::GetGlobal();
+
+    // Custom params
+    HSHM_MAKE_AR0(my_tag_mdms_, alloc)
+    HSHM_MAKE_AR0(tag_mdms_, alloc)
+  }
+
+  /** Serialize tag info */
+  void SerializeTagMetadata(const std::vector<TagInfo> &tag_info) {
+    std::stringstream ss;
+    cereal::BinaryOutputArchive ar(ss);
+    ar << tag_info;
+    (*my_tag_mdms_) = ss.str();
+  }
+
+  /** Deserialize tag info */
+  void DeserializeTagMetadata(const std::string &srl, std::vector<TagInfo> &tag_mdms) {
+    std::vector<TagInfo> tmp_tag_mdms;
+    std::stringstream ss(srl);
+    cereal::BinaryInputArchive ar(ss);
+    ar >> tmp_tag_mdms;
+    for (TagInfo &tag_info : tmp_tag_mdms) {
+      tag_mdms.emplace_back(tag_info);
+    }
+  }
+
+  /** Get combined output of all replicas */
+  std::vector<TagInfo> MergeTagMetadata() {
+    std::vector<TagInfo> tag_mdms;
+    for (const hipc::string &srl : *tag_mdms_) {
+      DeserializeTagMetadata(srl.str(), tag_mdms);
+    }
+    return tag_mdms;
+  }
+
+  /** Deserialize final query output */
+  std::vector<TagInfo> DeserializeTagMetadata() {
+    std::vector<TagInfo> tag_mdms;
+    DeserializeTagMetadata(my_tag_mdms_->str(), tag_mdms);
+    return tag_mdms;
+  }
+
+  /** Destructor */
+  ~PollTagMetadataTask() {
+    HSHM_DESTROY_AR(my_tag_mdms_)
+    HSHM_DESTROY_AR(tag_mdms_)
+  }
+
+  /** Duplicate message */
+  void Dup(hipc::Allocator *alloc, PollTagMetadataTask &other) {
+    task_dup(other);
+    HSHM_MAKE_AR(tag_mdms_, alloc, *other.tag_mdms_)
+    HSHM_MAKE_AR(my_tag_mdms_, alloc, *other.my_tag_mdms_)
+  }
+
+  /** Process duplicate message output */
+  void DupEnd(u32 replica, PollTagMetadataTask &dup_task) {
+    (*tag_mdms_)[replica] = (*dup_task.my_tag_mdms_);
+  }
+
+  /** (De)serialize message call */
+  template<typename Ar>
+  void SerializeStart(Ar &ar) {
+    task_serialize<Ar>(ar);
+    ar(my_tag_mdms_);
+  }
+
+  /** (De)serialize message return */
+  template<typename Ar>
+  void SerializeEnd(u32 replica, Ar &ar) {
+    ar((*tag_mdms_)[replica]);
+  }
+
+  /** Begin replication */
+  void ReplicateStart(u32 count) {
+    tag_mdms_->resize(count);
+  }
+
+  /** Finalize replication */
+  void ReplicateEnd() {
+    std::vector<TagInfo> tag_mdms = MergeTagMetadata();
+    SerializeTagMetadata(tag_mdms);
+  }
+
+  /** Create group */
+  HSHM_ALWAYS_INLINE
+  u32 GetGroup(hshm::charbuf &group) {
+    return TASK_UNORDERED;
+  }
+};
+
 }  // namespace hermes::bucket_mdm
 
 #endif  // LABSTOR_TASKS_HERMES_BUCKET_MDM_INCLUDE_HERMES_BUCKET_MDM_HERMES_BUCKET_MDM_TASKS_H_
