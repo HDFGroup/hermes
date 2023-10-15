@@ -17,12 +17,12 @@ create_config(
     path=f"{HERMES_ROOT}/config/hermes_client_default.yaml",
     var_name="kHermesClientDefaultConfigStr",
     config_path=f"{HERMES_ROOT}/include/hermes/config_client_default.h",
-    macro_name="CLIENT"
+    macro_name="HERMES_CLIENT"
 )
 
 create_config(
     path=f"{HERMES_ROOT}/config/hermes_server_default.yaml",
     var_name="kHermesServerDefaultConfigStr",
     config_path=f"{HERMES_ROOT}/include/hermes/config_server_default.h",
-    macro_name="SERVER"
+    macro_name="HERMES_SERVER"
 )

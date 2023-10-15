@@ -13,7 +13,7 @@ def create_config(path, var_name, config_path, macro_name):
 
     # Create the hermes config string
     string_lines = []
-    string_lines.append(f"const char* {var_name} = ")
+    string_lines.append(f"const inline char* {var_name} = ")
     for line in yaml_config_lines:
         line = line.replace('\"', '\\\"')
         line = line.replace('\'', '\\\'')

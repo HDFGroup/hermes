@@ -195,10 +195,8 @@ enable_testing()
 add_subdirectory(test)
 
 #-----------------------------------------------------------------------------
-# Install HRUN Headers
+# Install Hermes Headers
 #-----------------------------------------------------------------------------
-install(DIRECTORY hrun/include DESTINATION ${CMAKE_INSTALL_PREFIX})
-
 configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/CMake/HermesConfig.cmake
         ${PROJECT_BINARY_DIR}/CMakeFiles/HermesConfig.cmake @ONLY
@@ -210,3 +208,5 @@ install(
         DESTINATION
         ${CMAKE_INSTALL_PREFIX}/cmake
 )
+
+install(DIRECTORY include DESTINATION ${CMAKE_INSTALL_PREFIX})

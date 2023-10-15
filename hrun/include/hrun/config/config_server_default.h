@@ -1,6 +1,6 @@
-#ifndef HRUN_SRC_CONFIG_SERVER_DEFAULT_H_
-#define HRUN_SRC_CONFIG_SERVER_DEFAULT_H_
-const char* kHrunServerDefaultConfigStr =
+#ifndef HRUN_SRC_CONFIG_HRUN_SERVER_DEFAULT_H_
+#define HRUN_SRC_CONFIG_HRUN_SERVER_DEFAULT_H_
+const inline char* kHrunServerDefaultConfigStr = 
 "### Runtime orchestration settings\n"
 "work_orchestrator:\n"
 "  # The number of worker threads to spawn\n"
@@ -58,4 +58,4 @@ const char* kHrunServerDefaultConfigStr =
 "  \'posix_bdev\',\n"
 "  \'ram_bdev\'\n"
 "]\n";
-#endif  // HRUN_SRC_CONFIG_SERVER_DEFAULT_H_
+#endif  // HRUN_SRC_CONFIG_HRUN_SERVER_DEFAULT_H_

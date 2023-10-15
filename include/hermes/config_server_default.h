@@ -1,6 +1,6 @@
-#ifndef HRUN_SRC_CONFIG_SERVER_DEFAULT_H_
-#define HRUN_SRC_CONFIG_SERVER_DEFAULT_H_
-static inline const char* kHermesServerDefaultConfigStr =
+#ifndef HRUN_SRC_CONFIG_HERMES_SERVER_DEFAULT_H_
+#define HRUN_SRC_CONFIG_HERMES_SERVER_DEFAULT_H_
+const inline char* kHermesServerDefaultConfigStr = 
 "# Example Hermes configuration file\n"
 "\n"
 "### Define properties of the storage devices\n"
@@ -178,4 +178,4 @@ static inline const char* kHermesServerDefaultConfigStr =
 "  - \"hermes_mpiio_io_client\"\n"
 "  - \"hermes_example_trait\"\n"
 "  - \"hermes_prefetcher_trait\"\n";
-#endif  // HRUN_SRC_CONFIG_SERVER_DEFAULT_H_
+#endif  // HRUN_SRC_CONFIG_HERMES_SERVER_DEFAULT_H_

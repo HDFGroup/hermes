@@ -1,6 +1,6 @@
-#ifndef HRUN_SRC_CONFIG_CLIENT_DEFAULT_H_
-#define HRUN_SRC_CONFIG_CLIENT_DEFAULT_H_
-static inline const char* kHermesClientDefaultConfigStr =
+#ifndef HRUN_SRC_CONFIG_HERMES_CLIENT_DEFAULT_H_
+#define HRUN_SRC_CONFIG_HERMES_CLIENT_DEFAULT_H_
+const inline char* kHermesClientDefaultConfigStr = 
 "stop_daemon: false\n"
 "path_inclusions: [\"/tmp/test_hermes\"]\n"
 "path_exclusions: [\"/\"]\n"
@@ -11,4 +11,4 @@ static inline const char* kHermesClientDefaultConfigStr =
 "  - path: \"/\"\n"
 "    page_size: 1MB\n"
 "    mode: kDefault\n";
-#endif  // HRUN_SRC_CONFIG_CLIENT_DEFAULT_H_
+#endif  // HRUN_SRC_CONFIG_HERMES_CLIENT_DEFAULT_H_

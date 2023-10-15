@@ -11,6 +11,7 @@ find_path(
   Hermes_INCLUDE_DIR
         hermes/hermes_types.h
 )
+message("Hermes_INCLUDE_DIR: ${Hermes_INCLUDE_DIR}")
 
 if( Hermes_INCLUDE_DIR )
   get_filename_component(Hermes_DIR ${Hermes_INCLUDE_DIR} PATH)
@@ -20,8 +21,10 @@ if( Hermes_INCLUDE_DIR )
   #-----------------------------------------------------------------------------
   find_library(
     Hermes_LIBRARY
-    NAMES hrun_client hrun_runtime
+    NAMES hrun_client hrun_server
   )
+
+  message("Hermes_LIBRARY: ${Hermes_LIBRARY}")
 
   # HermesShm
   find_package(HermesShm CONFIG REQUIRED)
@@ -91,10 +94,10 @@ endif(Hermes_INCLUDE_DIR)
 	    
 if(Hermes_FOUND)
   if(NOT Hermes_FIND_QUIETLY)
-    message(STATUS "FindHermes: Found both Hermes.h and libHermes_client.so")
+    message(STATUS "FindHermes: Found both Hermes.h and libhrun_client.so")
   endif(NOT Hermes_FIND_QUIETLY)
 else(Hermes_FOUND)
   if(Hermes_FIND_REQUIRED)
-    message(STATUS "FindHermes: Could not find Hermes.h and/or libHermes_client.so")
+    message(STATUS "FindHermes: Could not find Hermes.h and/or libhrun_client.so")
   endif(Hermes_FIND_REQUIRED)
 endif(Hermes_FOUND)

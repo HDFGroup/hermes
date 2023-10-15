@@ -16,4 +16,13 @@ endif()
 #-----------------------------------------------------------------------------
 # Install HRUN Admin Task Library Headers
 #-----------------------------------------------------------------------------
-install(DIRECTORY include DESTINATION ${CMAKE_INSTALL_PREFIX})
+file(GLOB_RECURSE HERMES_HEADERS "*.h")
+install(
+        FILES
+        ${HERMES_HEADERS}
+        DESTINATION
+        ${CMAKE_INSTALL_PREFIX}/include/hermes_adapters
+        COMPONENT
+        headers
+)
+install(DIRECTORY mapper DESTINATION ${CMAKE_INSTALL_PREFIX}/include/hermes_adapters)
