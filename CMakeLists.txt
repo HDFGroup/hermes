@@ -16,7 +16,9 @@ option(HERMES_ENABLE_MPIIO_ADAPTER "Build the Hermes MPI-IO adapter." ON)
 option(HERMES_ENABLE_PUBSUB_ADAPTER "Build the Hermes pub/sub adapter." OFF)
 option(HERMES_ENABLE_KVSTORE "Build the Hermes KVStore adapter." OFF)
 option(HERMES_ENABLE_VFD "Build the Hermes HDF5 Virtual File Driver" OFF)
-option(HERMES_ENABLE_PYTHON "Build the Hermes Python wrapper" OFF)
+option(HERMES_ENABLE_PYTHON "Build the Hermes Python wrapper" ON)
+
+message("HERMES_ENABLE_PYTHON: ${HERMES_ENABLE_PYTHON}")
 
 #-----------------------------------------------------------------------------
 # Compiler Optimization
