@@ -673,9 +673,24 @@ class Server : public TaskLib {
    * Get all metadata about a blob
    * */
   HSHM_ALWAYS_INLINE
-  void PollTargetMetadata(PollBlobMetadataTask *task, RunContext &rctx) {
+  void PollTargetMetadata(PollTargetMetadataTask *task, RunContext &rctx) {
+    std::vector<TargetStats> target_mdms;
+    target_mdms.reserve(targets_.size());
     for (const bdev::Client &bdev_client : targets_) {
+      bool is_remote = bdev_client.domain_id_.IsRemote(LABSTOR_RPC->GetNumHosts(), LABSTOR_CLIENT->node_id_);
+      if (is_remote) {
+        continue;
+      }
+      TargetStats stats;
+      stats.tgt_id_ = bdev_client.id_;
+      stats.rem_cap_ = bdev_client.monitor_task_->rem_cap_;
+      stats.max_cap_ = bdev_client.max_cap_;
+      stats.bandwidth_ = bdev_client.bandwidth_;
+      stats.latency_ = bdev_client.latency_;
+      stats.score_ = bdev_client.score_;
+      target_mdms.emplace_back(stats);
     }
+    task->SerializeTargetMetadata(target_mdms);
     task->SetModuleComplete();
   }
 

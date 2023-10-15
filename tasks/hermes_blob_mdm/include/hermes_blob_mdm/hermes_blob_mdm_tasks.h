@@ -1335,7 +1335,7 @@ struct PollTargetMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> 
   }
 
   /** Serialize target info */
-  void SerializeTargetMetadata(const std::vector<BlobInfo> &target_info) {
+  void SerializeTargetMetadata(const std::vector<TargetStats> &target_info) {
     std::stringstream ss;
     cereal::BinaryOutputArchive ar(ss);
     ar << target_info;
@@ -1343,19 +1343,19 @@ struct PollTargetMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> 
   }
 
   /** Deserialize target info */
-  void DeserializeTargetMetadata(const std::string &srl, std::vector<BlobInfo> &target_mdms) {
-    std::vector<BlobInfo> tmp_target_mdms;
+  void DeserializeTargetMetadata(const std::string &srl, std::vector<TargetStats> &target_mdms) {
+    std::vector<TargetStats> tmp_target_mdms;
     std::stringstream ss(srl);
     cereal::BinaryInputArchive ar(ss);
     ar >> tmp_target_mdms;
-    for (BlobInfo &target_info : tmp_target_mdms) {
+    for (TargetStats &target_info : tmp_target_mdms) {
       target_mdms.emplace_back(target_info);
     }
   }
 
   /** Get combined output of all replicas */
-  std::vector<BlobInfo> MergeTargetMetadata() {
-    std::vector<BlobInfo> target_mdms;
+  std::vector<TargetStats> MergeTargetMetadata() {
+    std::vector<TargetStats> target_mdms;
     for (const hipc::string &srl : *target_mdms_) {
       DeserializeTargetMetadata(srl.str(), target_mdms);
     }
@@ -1363,14 +1363,14 @@ struct PollTargetMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> 
   }
 
   /** Deserialize final query output */
-  std::vector<BlobInfo> DeserializeTargetMetadata() {
-    std::vector<BlobInfo> target_mdms;
+  std::vector<TargetStats> DeserializeTargetMetadata() {
+    std::vector<TargetStats> target_mdms;
     DeserializeTargetMetadata(my_target_mdms_->str(), target_mdms);
     return target_mdms;
   }
 
   /** Destructor */
-  ~PollBlobMetadataTask() {
+  ~PollTargetMetadataTask() {
     HSHM_DESTROY_AR(my_target_mdms_)
     HSHM_DESTROY_AR(target_mdms_)
   }
@@ -1407,7 +1407,7 @@ struct PollTargetMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> 
 
   /** Finalize replication */
   void ReplicateEnd() {
-    std::vector<BlobInfo> target_mdms = MergeTargetMetadata();
+    std::vector<TargetStats> target_mdms = MergeTargetMetadata();
     SerializeTargetMetadata(target_mdms);
   }
 

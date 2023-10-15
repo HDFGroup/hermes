@@ -159,11 +159,13 @@ class Client : public ConfigurationManager {
   HSHM_ALWAYS_INLINE
   void DelTask(TaskT *task) {
     // TODO(llogan): verify leak
+#ifdef TASK_DEBUG
     task->delcnt_++;
     if (task->delcnt_ != 1) {
       HELOG(kFatal, "Freed task {} times: node={}, state={}. method={}",
             task->delcnt_.load(), task->task_node_, task->task_state_, task->method_)
     }
+#endif
     main_alloc_->DelObj<TaskT>(task);
   }
 
@@ -171,11 +173,13 @@ class Client : public ConfigurationManager {
   template<typename TaskT>
   HSHM_ALWAYS_INLINE
   void DelTask(LPointer<TaskT> &task) {
+#ifdef TASK_DEBUG
     task->delcnt_++;
     if (task->delcnt_ != 1) {
       HELOG(kFatal, "Freed task {} times: node={}, state={}. method={}",
             task->delcnt_.load(), task->task_node_, task->task_state_, task->method_)
     }
+#endif
     main_alloc_->DelObjLocal<TaskT>(task);
   }
 

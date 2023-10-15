@@ -161,6 +161,24 @@ class Server {
 
 namespace hermes {
 typedef bdev::Client TargetInfo;
+
+struct TargetStats {
+ public:
+  TargetId tgt_id_;
+  size_t rem_cap_;      /**< Current remaining capacity */
+  size_t max_cap_;      /**< maximum capacity of the target */
+  double bandwidth_;    /**< the bandwidth of the device */
+  double latency_;      /**< the latency of the device */
+  float score_;         /**< Relative importance of this tier */
+
+ public:
+  /** Serialize */
+  template<typename Ar>
+  void serialize(Ar &ar) {
+    ar(tgt_id_, max_cap_, bandwidth_,
+       latency_, score_, rem_cap_);
+  }
+};
 }  // namespace hermes
 
 #endif  // LABSTOR_bdev_H_

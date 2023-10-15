@@ -11,6 +11,8 @@ namespace hermes {
 
 struct MetadataTable {
   std::vector<BlobInfo> blob_info_;
+  std::vector<TargetStats> target_info_;
+  std::vector<TagInfo> bkt_info_;
 };
 
 class Hermes {
@@ -34,6 +36,8 @@ class Hermes {
   MetadataTable CollectMetadataSnapshot() {
     MetadataTable table;
     table.blob_info_ = HERMES_CONF->blob_mdm_.PollBlobMetadataRoot();
+    table.target_info_ = HERMES_CONF->blob_mdm_.PollTargetMetadataRoot();
+    // table.bkt_info_ = HERMES_CONF->bkt_mdm_.PollTagMetadataRoot();
     return table;
   }
 
