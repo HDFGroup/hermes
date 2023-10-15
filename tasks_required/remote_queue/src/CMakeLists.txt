@@ -7,7 +7,7 @@ add_library(remote_queue SHARED
         remote_queue.cc)
 add_dependencies(remote_queue ${Hermes_RUNTIME_DEPS})
 target_link_libraries(remote_queue
-        labstor_runtime ${libfabric_LIBRARIES})
+        hrun_runtime ${libfabric_LIBRARIES})
 
 #------------------------------------------------------------------------------
 # Install Small Message Task Library

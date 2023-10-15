@@ -1,5 +1,5 @@
-#ifndef LABSTOR_SRC_CONFIG_SERVER_DEFAULT_H_
-#define LABSTOR_SRC_CONFIG_SERVER_DEFAULT_H_
+#ifndef HRUN_SRC_CONFIG_SERVER_DEFAULT_H_
+#define HRUN_SRC_CONFIG_SERVER_DEFAULT_H_
 static inline const char* kHermesServerDefaultConfigStr =
 "# Example Hermes configuration file\n"
 "\n"
@@ -178,4 +178,4 @@ static inline const char* kHermesServerDefaultConfigStr =
 "  - \"hermes_mpiio_io_client\"\n"
 "  - \"hermes_example_trait\"\n"
 "  - \"hermes_prefetcher_trait\"\n";
-#endif  // LABSTOR_SRC_CONFIG_SERVER_DEFAULT_H_
+#endif  // HRUN_SRC_CONFIG_SERVER_DEFAULT_H_

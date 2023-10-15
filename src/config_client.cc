@@ -10,14 +10,14 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "labstor/config/config_client.h"
-#include "labstor/config/config_client_default.h"
+#include "hrun/config/config_client.h"
+#include "hrun/config/config_client_default.h"
 #include "hermes_shm/util/config_parse.h"
 #include <filesystem>
 
 namespace stdfs = std::filesystem;
 
-namespace labstor::config {
+namespace hrun::config {
 
 /** parse the YAML node */
 void ClientConfig::ParseYAML(YAML::Node &yaml_conf) {
@@ -31,4 +31,4 @@ void ClientConfig::LoadDefault() {
   LoadText(kLabstorClientDefaultConfigStr, false);
 }
 
-}  // namespace labstor::config
+}  // namespace hrun::config

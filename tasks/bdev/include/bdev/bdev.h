@@ -2,8 +2,8 @@
 // Created by lukemartinlogan on 6/29/23.
 //
 
-#ifndef LABSTOR_bdev_H_
-#define LABSTOR_bdev_H_
+#ifndef HRUN_bdev_H_
+#define HRUN_bdev_H_
 
 #include "bdev_tasks.h"
 
@@ -40,13 +40,13 @@ class Client : public TaskLibClient {
     domain_id_ = domain_id;
     id_ = TaskStateId::GetNull();
     CopyDevInfo(dev_info);
-    QueueManagerInfo &qm = LABSTOR_CLIENT->server_config_.queue_manager_;
+    QueueManagerInfo &qm = HRUN_CLIENT->server_config_.queue_manager_;
     std::vector<PriorityInfo> queue_info = {
         {1, 1, qm.queue_depth_, 0},
         {1, 1, qm.queue_depth_, QUEUE_LONG_RUNNING},
         {4, 4, qm.queue_depth_, QUEUE_LOW_LATENCY}
     };
-    return LABSTOR_ADMIN->AsyncCreateTaskState<ConstructTask>(
+    return HRUN_ADMIN->AsyncCreateTaskState<ConstructTask>(
         task_node, domain_id, state_name, lib_name, id_,
         queue_info, dev_info);
   }
@@ -55,10 +55,10 @@ class Client : public TaskLibClient {
       id_ = task->id_;
       queue_id_ = QueueId(id_);
       monitor_task_ = AsyncMonitor(task->task_node_, 100).ptr_;
-      LABSTOR_CLIENT->DelTask(task);
+      HRUN_CLIENT->DelTask(task);
     }
   }
-  LABSTOR_TASK_NODE_ROOT(AsyncCreateTaskState);
+  HRUN_TASK_NODE_ROOT(AsyncCreateTaskState);
   template<typename ...Args>
   HSHM_ALWAYS_INLINE
   void CreateRoot(Args&& ...args) {
@@ -71,7 +71,7 @@ class Client : public TaskLibClient {
   /** Destroy task state + queue */
   HSHM_ALWAYS_INLINE
   void DestroyRoot(const std::string &state_name) {
-    LABSTOR_ADMIN->DestroyTaskStateRoot(domain_id_, id_);
+    HRUN_ADMIN->DestroyTaskStateRoot(domain_id_, id_);
     monitor_task_->SetModuleComplete();
   }
 
@@ -80,19 +80,19 @@ class Client : public TaskLibClient {
   void AsyncMonitorConstruct(MonitorTask *task,
                              const TaskNode &task_node,
                              size_t freq_ms) {
-    LABSTOR_CLIENT->ConstructTask<MonitorTask>(
+    HRUN_CLIENT->ConstructTask<MonitorTask>(
         task, task_node, domain_id_, id_, freq_ms, max_cap_);
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(Monitor);
+  HRUN_TASK_NODE_PUSH_ROOT(Monitor);
 
   /** Update bdev capacity */
   void AsyncUpdateCapacityConstruct(UpdateCapacityTask *task,
                                     const TaskNode &task_node,
                                     ssize_t size) {
-    LABSTOR_CLIENT->ConstructTask<UpdateCapacityTask>(
+    HRUN_CLIENT->ConstructTask<UpdateCapacityTask>(
         task, task_node, domain_id_, id_, size);
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(UpdateCapacity);
+  HRUN_TASK_NODE_PUSH_ROOT(UpdateCapacity);
 
   /** Get bdev remaining capacity */
   HSHM_ALWAYS_INLINE
@@ -106,10 +106,10 @@ class Client : public TaskLibClient {
                               const TaskNode &task_node,
                               size_t size,
                               std::vector<BufferInfo> &buffers) {
-    LABSTOR_CLIENT->ConstructTask<AllocateTask>(
+    HRUN_CLIENT->ConstructTask<AllocateTask>(
         task, task_node, domain_id_, id_, size, &buffers);
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(Allocate);
+  HRUN_TASK_NODE_PUSH_ROOT(Allocate);
 
   /** Free data */
   HSHM_ALWAYS_INLINE
@@ -117,30 +117,30 @@ class Client : public TaskLibClient {
                           const TaskNode &task_node,
                           const std::vector<BufferInfo> &buffers,
                           bool fire_and_forget) {
-    LABSTOR_CLIENT->ConstructTask<FreeTask>(
+    HRUN_CLIENT->ConstructTask<FreeTask>(
         task, task_node, domain_id_, id_, buffers, fire_and_forget);
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(Free);
+  HRUN_TASK_NODE_PUSH_ROOT(Free);
 
   /** Allocate buffers from the bdev */
   HSHM_ALWAYS_INLINE
   void AsyncWriteConstruct(WriteTask *task,
                            const TaskNode &task_node,
                            const char *data, size_t off, size_t size) {
-    LABSTOR_CLIENT->ConstructTask<WriteTask>(
+    HRUN_CLIENT->ConstructTask<WriteTask>(
         task, task_node, domain_id_, id_, data, off, size);
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(Write);
+  HRUN_TASK_NODE_PUSH_ROOT(Write);
 
   /** Allocate buffers from the bdev */
   HSHM_ALWAYS_INLINE
   void AsyncReadConstruct(ReadTask *task,
                           const TaskNode &task_node,
                           char *data, size_t off, size_t size) {
-    LABSTOR_CLIENT->ConstructTask<ReadTask>(
+    HRUN_CLIENT->ConstructTask<ReadTask>(
         task, task_node, domain_id_, id_, data, off, size);
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(Read);
+  HRUN_TASK_NODE_PUSH_ROOT(Read);
 };
 
 class Server {
@@ -181,4 +181,4 @@ struct TargetStats {
 };
 }  // namespace hermes
 
-#endif  // LABSTOR_bdev_H_
+#endif  // HRUN_bdev_H_

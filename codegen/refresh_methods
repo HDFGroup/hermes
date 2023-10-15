@@ -7,7 +7,7 @@ USAGE: ./referesh_methods [TASK_DIR]
 import yaml
 import os
 import sys
-from codegen.util.paths import LABSTOR_ROOT
+from codegen.util.paths import HRUN_ROOT
 
 def refresh_methods(TASK_ROOT):
     if not os.path.exists(f'{TASK_ROOT}/include'):
@@ -16,8 +16,8 @@ def refresh_methods(TASK_ROOT):
     METHODS_H = f'{TASK_ROOT}/include/{TASK_NAME}/{TASK_NAME}_methods.h'
     METHODS_YAML = f'{TASK_ROOT}/include/{TASK_NAME}/{TASK_NAME}_methods.yaml'
     LIB_EXEC_H = f'{TASK_ROOT}/include/{TASK_NAME}/{TASK_NAME}_lib_exec.h'
-    METHOD_MACRO = f'LABSTOR_{TASK_NAME.upper()}_METHODS_H_'
-    LIB_EXEC_MACRO = f'LABSTOR_{TASK_NAME.upper()}_LIB_EXEC_H_'
+    METHOD_MACRO = f'HRUN_{TASK_NAME.upper()}_METHODS_H_'
+    LIB_EXEC_MACRO = f'HRUN_{TASK_NAME.upper()}_LIB_EXEC_H_'
 
     with open(METHODS_YAML) as fp:
         methods = yaml.load(fp, Loader=yaml.FullLoader)
@@ -26,7 +26,7 @@ def refresh_methods(TASK_ROOT):
     if 'kLast' in methods:
         del methods['kLast']
     methods = sorted(methods.items(), key=lambda x: x[1])
-    if TASK_NAME != 'labstor_admin':
+    if TASK_NAME != 'hrun_admin':
         methods.insert(0, ('kConstruct', -2))
         methods.insert(1, ('kDestruct', -1))
 
@@ -75,7 +75,7 @@ def refresh_methods(TASK_ROOT):
         method_name = method_enum_name.replace('k', '', 1)
         task_name = method_name + "Task"
         lines += [f'    case Method::{method_enum_name}: {{',
-                  f'      LABSTOR_CLIENT->DelTask(reinterpret_cast<{task_name} *>(task));',
+                  f'      HRUN_CLIENT->DelTask(reinterpret_cast<{task_name} *>(task));',
                   f'      break;',
                   f'    }}']
     lines += ['  }']
@@ -89,7 +89,7 @@ def refresh_methods(TASK_ROOT):
         method_name = method_enum_name.replace('k', '', 1)
         task_name = method_name + "Task"
         lines += [f'    case Method::{method_enum_name}: {{',
-                  f'      labstor::CALL_DUPLICATE(reinterpret_cast<{task_name}*>(orig_task), dups);',
+                  f'      hrun::CALL_DUPLICATE(reinterpret_cast<{task_name}*>(orig_task), dups);',
                   f'      break;',
                   f'    }}']
     lines += ['  }']
@@ -104,7 +104,7 @@ def refresh_methods(TASK_ROOT):
         task_name = method_name + "Task"
         task_cast = f'reinterpret_cast<{task_name}*>'
         lines += [f'    case Method::{method_enum_name}: {{',
-                  f'      labstor::CALL_DUPLICATE_END(replica, {task_cast}(orig_task), {task_cast}(dup_task));',
+                  f'      hrun::CALL_DUPLICATE_END(replica, {task_cast}(orig_task), {task_cast}(dup_task));',
                   f'      break;',
                   f'    }}']
     lines += ['  }']
@@ -118,7 +118,7 @@ def refresh_methods(TASK_ROOT):
         method_name = method_enum_name.replace('k', '', 1)
         task_name = method_name + "Task"
         lines += [f'    case Method::{method_enum_name}: {{',
-                  f'      labstor::CALL_REPLICA_START(count, reinterpret_cast<{task_name}*>(task));',
+                  f'      hrun::CALL_REPLICA_START(count, reinterpret_cast<{task_name}*>(task));',
                   f'      break;',
                   f'    }}']
     lines += ['  }']
@@ -132,7 +132,7 @@ def refresh_methods(TASK_ROOT):
         method_name = method_enum_name.replace('k', '', 1)
         task_name = method_name + "Task"
         lines += [f'    case Method::{method_enum_name}: {{',
-                  f'      labstor::CALL_REPLICA_END(reinterpret_cast<{task_name}*>(task));',
+                  f'      hrun::CALL_REPLICA_END(reinterpret_cast<{task_name}*>(task));',
                   f'      break;',
                   f'    }}']
     lines += ['  }']
@@ -162,7 +162,7 @@ def refresh_methods(TASK_ROOT):
         method_name = method_enum_name.replace('k', '', 1)
         task_name = method_name + "Task"
         lines += [f'    case Method::{method_enum_name}: {{',
-                  f'      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<{task_name}>(task_ptr.shm_);',
+                  f'      task_ptr.ptr_ = HRUN_CLIENT->NewEmptyTask<{task_name}>(task_ptr.shm_);',
                   f'      ar >> *reinterpret_cast<{task_name}*>(task_ptr.ptr_);',
                   f'      break;',
                   f'    }}']

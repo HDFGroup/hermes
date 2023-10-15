@@ -2,11 +2,11 @@
 // Created by lukemartinlogan on 6/29/23.
 //
 
-#include "labstor_admin/labstor_admin.h"
-#include "labstor/api/labstor_runtime.h"
+#include "hrun_admin/hrun_admin.h"
+#include "hrun/api/hrun_runtime.h"
 #include "TASK_NAME/TASK_NAME.h"
 
-namespace labstor::TASK_NAME {
+namespace hrun::TASK_NAME {
 
 class Server : public TaskLib {
  public:
@@ -28,6 +28,6 @@ class Server : public TaskLib {
 #include "TASK_NAME/TASK_NAME_lib_exec.h"
 };
 
-}  // namespace labstor::TASK_NAME
+}  // namespace hrun::TASK_NAME
 
-LABSTOR_TASK_CC(labstor::TASK_NAME::Server, "TASK_NAME");
+HRUN_TASK_CC(hrun::TASK_NAME::Server, "TASK_NAME");

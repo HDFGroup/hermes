@@ -60,7 +60,7 @@ class BinaryFileStager : public AbstractStager {
     plcmnt.DecodeBlobName(*task->blob_name_, page_size_);
     HILOG(kDebug, "Attempting to stage {} bytes from the backend file {} at offset {}",
           page_size_, url_, plcmnt.bucket_off_);
-    LPointer<char> blob = LABSTOR_CLIENT->AllocateBuffer(page_size_);
+    LPointer<char> blob = HRUN_CLIENT->AllocateBuffer(page_size_);
     ssize_t real_size = HERMES_POSIX_API->pread(fd_,
                                                 blob.ptr_,
                                                 page_size_,
@@ -82,7 +82,7 @@ class BinaryFileStager : public AbstractStager {
                               0, real_size, blob.shm_, task->score_, 0,
                               ctx, TASK_DATA_OWNER | TASK_LOW_LATENCY);
     put_task->Wait<TASK_YIELD_CO>(task);
-    LABSTOR_CLIENT->DelTask(put_task);
+    HRUN_CLIENT->DelTask(put_task);
   }
 
   /** Stage data out to remote source */
@@ -91,7 +91,7 @@ class BinaryFileStager : public AbstractStager {
     plcmnt.DecodeBlobName(*task->blob_name_, page_size_);
     HILOG(kDebug, "Attempting to stage {} bytes to the backend file {} at offset {}",
           page_size_, url_, plcmnt.bucket_off_);
-    char *data = LABSTOR_CLIENT->GetPrivatePointer(task->data_);
+    char *data = HRUN_CLIENT->GetPrivatePointer(task->data_);
     ssize_t real_size = HERMES_POSIX_API->pwrite(fd_,
                                                  data,
                                                  task->data_size_,

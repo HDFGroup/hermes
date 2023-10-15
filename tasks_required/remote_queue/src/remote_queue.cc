@@ -2,22 +2,22 @@
 // Created by lukemartinlogan on 6/29/23.
 //
 
-#include "labstor_admin/labstor_admin.h"
-#include "labstor/api/labstor_runtime.h"
+#include "hrun_admin/hrun_admin.h"
+#include "hrun/api/hrun_runtime.h"
 #include "remote_queue/remote_queue.h"
 
 namespace thallium {
 
 /** Serialize I/O type enum */
-SERIALIZE_ENUM(labstor::IoType);
+SERIALIZE_ENUM(hrun::IoType);
 
 }  // namespace thallium
 
-namespace labstor::remote_queue {
+namespace hrun::remote_queue {
 
 class Server : public TaskLib {
  public:
-  labstor::remote_queue::Client client_;
+  hrun::remote_queue::Client client_;
 
  public:
   Server() = default;
@@ -25,14 +25,14 @@ class Server : public TaskLib {
   /** Construct remote queue */
   void Construct(ConstructTask *task, RunContext &rctx) {
     HILOG(kInfo, "(node {}) Constructing remote queue (task_node={}, task_state={}, method={})",
-          LABSTOR_CLIENT->node_id_, task->task_node_, task->task_state_, task->method_);
-    LABSTOR_THALLIUM->RegisterRpc("RpcPushSmall", [this](const tl::request &req,
+          HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, task->method_);
+    HRUN_THALLIUM->RegisterRpc("RpcPushSmall", [this](const tl::request &req,
                                                          TaskStateId state_id,
                                                          u32 method,
                                                          std::string &params) {
       this->RpcPushSmall(req, state_id, method, params);
     });
-    LABSTOR_THALLIUM->RegisterRpc("RpcPushBulk", [this](const tl::request &req,
+    HRUN_THALLIUM->RegisterRpc("RpcPushBulk", [this](const tl::request &req,
                                                         const tl::bulk &bulk,
                                                         TaskStateId state_id,
                                                         u32 method,
@@ -89,9 +89,9 @@ class Server : public TaskLib {
             task->orig_task_->task_node_,
             task->orig_task_->task_state_,
             task->orig_task_->method_,
-            LABSTOR_CLIENT->node_id_,
+            HRUN_CLIENT->node_id_,
             domain_id.id_);
-      std::string ret = LABSTOR_THALLIUM->SyncCall<std::string>(domain_id.id_,
+      std::string ret = HRUN_THALLIUM->SyncCall<std::string>(domain_id.id_,
                                                                 "RpcPushSmall",
                                                                 task->exec_->id_,
                                                                 task->exec_method_,
@@ -101,7 +101,7 @@ class Server : public TaskLib {
             task->orig_task_->task_node_,
             task->orig_task_->task_state_,
             task->orig_task_->method_,
-            LABSTOR_CLIENT->node_id_,
+            HRUN_CLIENT->node_id_,
             domain_id.id_);
       ClientHandlePushReplicaOutput(replica, ret, task);
     }
@@ -123,10 +123,10 @@ class Server : public TaskLib {
             task->orig_task_->task_node_,
             task->orig_task_->task_state_,
             task->orig_task_->method_,
-            LABSTOR_CLIENT->node_id_,
+            HRUN_CLIENT->node_id_,
             domain_id.id_,
             static_cast<int>(io_type));
-      std::string ret = LABSTOR_THALLIUM->SyncIoCall<std::string>(domain_id.id_,
+      std::string ret = HRUN_THALLIUM->SyncIoCall<std::string>(domain_id.id_,
                                                                   "RpcPushBulk",
                                                                   io_type,
                                                                   data,
@@ -141,7 +141,7 @@ class Server : public TaskLib {
             task->orig_task_->task_node_,
             task->orig_task_->task_state_,
             task->orig_task_->method_,
-            LABSTOR_CLIENT->node_id_,
+            HRUN_CLIENT->node_id_,
             domain_id.id_,
             static_cast<int>(io_type));
       ClientHandlePushReplicaOutput(replica, ret, task);
@@ -173,7 +173,7 @@ class Server : public TaskLib {
       LPointer<Task> &dup = task->dups_[i];
       dup->Wait<TASK_YIELD_CO>(task);
       task->exec_->DupEnd(dup->method_, i, task->orig_task_, dup.ptr_);
-      LABSTOR_CLIENT->DelTask(dup);
+      HRUN_CLIENT->DelTask(dup);
     }
     task->exec_->ReplicateEnd(task->exec_method_, task->orig_task_);
     task->orig_task_->SetModuleComplete();
@@ -222,15 +222,15 @@ class Server : public TaskLib {
 
     // Process the message
     if (io_type == IoType::kWrite) {
-      LABSTOR_THALLIUM->IoCallServer(req, bulk, io_type, data.data(), data_size);
-      HILOG(kDebug, "(node {}) Write blob integer: {}", LABSTOR_CLIENT->node_id_, (int)data[0])
+      HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.data(), data_size);
+      HILOG(kDebug, "(node {}) Write blob integer: {}", HRUN_CLIENT->node_id_, (int)data[0])
     }
     TaskState *exec;
     Task *orig_task;
     RpcExec(req, state_id, method, xfer, orig_task, exec);
     if (io_type == IoType::kRead) {
-      HILOG(kDebug, "(node {}) Read blob integer: {}", LABSTOR_CLIENT->node_id_, (int)data[0])
-      LABSTOR_THALLIUM->IoCallServer(req, bulk, io_type, data.data(), data_size);
+      HILOG(kDebug, "(node {}) Read blob integer: {}", HRUN_CLIENT->node_id_, (int)data[0])
+      HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.data(), data_size);
     }
 
     // Return
@@ -247,24 +247,24 @@ class Server : public TaskLib {
     BinaryInputArchive<true> ar(xfer);
 
     // Deserialize task
-    exec = LABSTOR_TASK_REGISTRY->GetTaskState(state_id);
+    exec = HRUN_TASK_REGISTRY->GetTaskState(state_id);
     if (exec == nullptr) {
       HELOG(kFatal, "(node {}) Could not find the task state {}",
-            LABSTOR_CLIENT->node_id_, state_id);
+            HRUN_CLIENT->node_id_, state_id);
       req.respond(std::string());
       return;
     } else {
       HILOG(kDebug, "(node {}) Found task state {}",
-            LABSTOR_CLIENT->node_id_,
+            HRUN_CLIENT->node_id_,
             state_id);
     }
     TaskPointer task_ptr = exec->LoadStart(method, ar);
     orig_task = task_ptr.ptr_;
     hipc::Pointer &p = task_ptr.shm_;
-    orig_task->domain_id_ = DomainId::GetNode(LABSTOR_CLIENT->node_id_);
+    orig_task->domain_id_ = DomainId::GetNode(HRUN_CLIENT->node_id_);
 
     // Execute task
-    MultiQueue *queue = LABSTOR_CLIENT->GetQueue(QueueId(state_id));
+    MultiQueue *queue = HRUN_CLIENT->GetQueue(QueueId(state_id));
     orig_task->UnsetFireAndForget();
     orig_task->UnsetStarted();
     orig_task->UnsetDataOwner();
@@ -272,7 +272,7 @@ class Server : public TaskLib {
     queue->Emplace(orig_task->prio_, orig_task->lane_hash_, p);
     HILOG(kDebug,
           "(node {}) Executing task (task_node={}, task_state={}/{}, state_name={}, method={}, size={}, lane_hash={})",
-          LABSTOR_CLIENT->node_id_,
+          HRUN_CLIENT->node_id_,
           orig_task->task_node_,
           orig_task->task_state_,
           state_id,
@@ -286,16 +286,16 @@ class Server : public TaskLib {
   void RpcComplete(const tl::request &req,
                    u32 method, Task *orig_task,
                    TaskState *exec, TaskStateId state_id) {
-    BinaryOutputArchive<false> ar(DomainId::GetNode(LABSTOR_CLIENT->node_id_));
+    BinaryOutputArchive<false> ar(DomainId::GetNode(HRUN_CLIENT->node_id_));
     std::vector<DataTransfer> out_xfer = exec->SaveEnd(method, ar, orig_task);
     HILOG(kDebug, "(node {}) Returning {} bytes of data (task_node={}, task_state={}/{}, method={})",
-          LABSTOR_CLIENT->node_id_,
+          HRUN_CLIENT->node_id_,
           out_xfer[0].data_size_,
           orig_task->task_node_,
           orig_task->task_state_,
           state_id,
           method);
-    LABSTOR_CLIENT->DelTask(exec, orig_task);
+    HRUN_CLIENT->DelTask(exec, orig_task);
     if (out_xfer.size() > 0 && out_xfer[0].data_size_ > 0) {
       req.respond(std::string((char *) out_xfer[0].data_, out_xfer[0].data_size_));
     } else {
@@ -306,6 +306,6 @@ class Server : public TaskLib {
  public:
 #include "remote_queue/remote_queue_lib_exec.h"
 };
-}  // namespace labstor
+}  // namespace hrun
 
-LABSTOR_TASK_CC(labstor::remote_queue::Server, "remote_queue");
+HRUN_TASK_CC(hrun::remote_queue::Server, "remote_queue");

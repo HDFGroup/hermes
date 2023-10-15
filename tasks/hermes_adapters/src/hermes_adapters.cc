@@ -2,11 +2,11 @@
 // Created by lukemartinlogan on 6/29/23.
 //
 
-#include "labstor_admin/labstor_admin.h"
-#include "labstor/api/labstor_runtime.h"
+#include "hrun_admin/hrun_admin.h"
+#include "hrun/api/hrun_runtime.h"
 #include "hermes_adapters/hermes_adapters.h"
 
-namespace labstor::hermes_adapters {
+namespace hrun::hermes_adapters {
 
 class Server : public TaskLib {
  public:
@@ -34,6 +34,6 @@ class Server : public TaskLib {
 #include "hermes_adapters/hermes_adapters_lib_exec.h"
 };
 
-}  // namespace labstor::hermes_adapters
+}  // namespace hrun::hermes_adapters
 
-LABSTOR_TASK_CC(labstor::hermes_adapters::Server, "hermes_adapters");
+HRUN_TASK_CC(hrun::hermes_adapters::Server, "hermes_adapters");

@@ -4,28 +4,28 @@
 
 #include <thread>
 #include "basic_test.h"
-#include "labstor/api/labstor_client.h"
-#include "labstor_admin/labstor_admin.h"
+#include "hrun/api/hrun_client.h"
+#include "hrun_admin/hrun_admin.h"
 #include "small_message/small_message.h"
 #include "hermes_shm/util/timer.h"
-#include "labstor/work_orchestrator/affinity.h"
+#include "hrun/work_orchestrator/affinity.h"
 #include "hermes/hermes.h"
-#include "labstor/work_orchestrator/worker.h"
-#include "labstor/api/labstor_runtime.h"
+#include "hrun/work_orchestrator/worker.h"
+#include "hrun/api/hrun_runtime.h"
 
 /** The performance of getting a queue */
 TEST_CASE("TestGetQueue") {
-  /*labstor::QueueId qid(0, 3);
-  LABSTOR_ADMIN->CreateQueueRoot(labstor::DomainId::GetLocal(), qid,
+  /*hrun::QueueId qid(0, 3);
+  HRUN_ADMIN->CreateQueueRoot(hrun::DomainId::GetLocal(), qid,
                                  16, 16, 256,
                                  hshm::bitfield32_t(0));
-  LABSTOR_CLIENT->GetQueue(qid);
+  HRUN_CLIENT->GetQueue(qid);
 
   hshm::Timer t;
   t.Resume();
   size_t ops = (1 << 20);
   for (size_t i = 0; i < ops; ++i) {
-    labstor::MultiQueue *queue = LABSTOR_CLIENT->GetQueue(qid);
+    hrun::MultiQueue *queue = HRUN_CLIENT->GetQueue(qid);
     REQUIRE(queue->id_ == qid);
   }
   t.Pause();
@@ -41,12 +41,12 @@ TEST_CASE("TestHshmAllocateFree") {
   size_t count = (1 << 8);
   size_t reps = ops / count;
   for (size_t i = 0; i < reps; ++i) {
-    std::vector<labstor::Task*> tasks(count);
+    std::vector<hrun::Task*> tasks(count);
     for (size_t j = 0; j < count; ++j) {
-      tasks[j] = LABSTOR_CLIENT->NewTaskRoot<labstor::Task>().ptr_;
+      tasks[j] = HRUN_CLIENT->NewTaskRoot<hrun::Task>().ptr_;
     }
     for (size_t j = 0; j < count; ++j) {
-      LABSTOR_CLIENT->DelTask(tasks[j]);
+      HRUN_CLIENT->DelTask(tasks[j]);
     }
   }
   t.Pause();
@@ -92,39 +92,39 @@ TEST_CASE("TestPointerQueueVecEmplacePop") {
 
 /** Single-thread performance of getting, emplacing, and popping a queue */
 TEST_CASE("TestHshmQueueEmplacePop") {
-  labstor::QueueId qid(0, 3);
+  hrun::QueueId qid(0, 3);
   u32 ops = (1 << 20);
   std::vector<PriorityInfo> queue_info = {
       {16, 16, ops, 0}
   };
-  auto queue = hipc::make_uptr<labstor::MultiQueue>(
+  auto queue = hipc::make_uptr<hrun::MultiQueue>(
       qid, queue_info);
-  labstor::LaneData entry;
-  auto task = LABSTOR_CLIENT->NewTaskRoot<labstor::Task>();
+  hrun::LaneData entry;
+  auto task = HRUN_CLIENT->NewTaskRoot<hrun::Task>();
   entry.p_ = task.shm_;
 
   hshm::Timer t;
   t.Resume();
-  labstor::Lane &lane = queue->GetLane(0, 0);
+  hrun::Lane &lane = queue->GetLane(0, 0);
   for (size_t i = 0; i < ops; ++i) {
     queue->Emplace(0, 0, entry);
     lane.pop();
   }
   t.Pause();
 
-  LABSTOR_CLIENT->DelTask(task);
+  HRUN_CLIENT->DelTask(task);
   HILOG(kInfo, "Latency: {} MOps", ops / t.GetUsec());
 }
 
 /** Single-thread performance of getting a lane from a queue */
 TEST_CASE("TestHshmQueueGetLane") {
-  labstor::QueueId qid(0, 3);
+  hrun::QueueId qid(0, 3);
   std::vector<PriorityInfo> queue_info = {
       {16, 16, 256, 0}
   };
-  auto queue = hipc::make_uptr<labstor::MultiQueue>(
+  auto queue = hipc::make_uptr<hrun::MultiQueue>(
       qid, queue_info);
-  labstor::LaneGroup group = queue->GetGroup(0);
+  hrun::LaneGroup group = queue->GetGroup(0);
 
   hshm::Timer t;
   size_t ops = (1 << 20);
@@ -139,24 +139,24 @@ TEST_CASE("TestHshmQueueGetLane") {
 
 /** Single-thread performance of getting, emplacing, and popping a queue */
 TEST_CASE("TestHshmQueueAllocateEmplacePop") {
-  labstor::QueueId qid(0, 3);
+  hrun::QueueId qid(0, 3);
   std::vector<PriorityInfo> queue_info = {
       {16, 16, 256, 0}
   };
-  auto queue = hipc::make_uptr<labstor::MultiQueue>(
+  auto queue = hipc::make_uptr<hrun::MultiQueue>(
       qid, queue_info);
-  labstor::Lane &lane = queue->GetLane(0, 0);
+  hrun::Lane &lane = queue->GetLane(0, 0);
 
   hshm::Timer t;
   size_t ops = (1 << 20);
   t.Resume();
   for (size_t i = 0; i < ops; ++i) {
-    labstor::LaneData entry;
-    auto task = LABSTOR_CLIENT->NewTaskRoot<labstor::Task>();
+    hrun::LaneData entry;
+    auto task = HRUN_CLIENT->NewTaskRoot<hrun::Task>();
     entry.p_ = task.shm_;
     queue->Emplace(0, 0, entry);
     lane.pop();
-    LABSTOR_CLIENT->DelTask(task);
+    HRUN_CLIENT->DelTask(task);
   }
   t.Pause();
 
@@ -202,16 +202,16 @@ TEST_CASE("TestSpawnJoinArgoThread") {
 }
 
 void TestWorkerIterationLatency(u32 num_queues, u32 num_lanes) {
-  LABSTOR_RUNTIME->Create();
+  HRUN_RUNTIME->Create();
 
-  labstor::Worker worker(0);
-  std::vector<hipc::uptr<labstor::MultiQueue>> queues;
+  hrun::Worker worker(0);
+  std::vector<hipc::uptr<hrun::MultiQueue>> queues;
   for (u32 i = 0; i < num_queues; ++i) {
-    labstor::QueueId qid(0, i + 1);
+    hrun::QueueId qid(0, i + 1);
     std::vector<PriorityInfo> queue_info = {
         {num_lanes, num_lanes, 256, 0}
     };
-    auto queue = hipc::make_uptr<labstor::MultiQueue>(
+    auto queue = hipc::make_uptr<hrun::MultiQueue>(
         qid, queue_info);
     queues.emplace_back(std::move(queue));
     for (u32 j = 0; j < num_lanes; ++j) {
@@ -219,22 +219,22 @@ void TestWorkerIterationLatency(u32 num_queues, u32 num_lanes) {
     }
   }
 
-  labstor::small_message::Client client;
-  LABSTOR_ADMIN->RegisterTaskLibRoot(labstor::DomainId::GetLocal(), "small_message");\
-  client.CreateRoot(labstor::DomainId::GetLocal(), "ipc_test");
+  hrun::small_message::Client client;
+  HRUN_ADMIN->RegisterTaskLibRoot(hrun::DomainId::GetLocal(), "small_message");\
+  client.CreateRoot(hrun::DomainId::GetLocal(), "ipc_test");
 
   hshm::Timer t;
   t.Resume();
   // size_t ops = (1 << 20);
   size_t ops = 256;
   for (size_t i = 0; i < ops; ++i) {
-    hipc::LPointer<labstor::small_message::MdPushTask> task;
-    labstor::TaskNode task_node(labstor::TaskId((u32)0, (u64)i));
+    hipc::LPointer<hrun::small_message::MdPushTask> task;
+    hrun::TaskNode task_node(hrun::TaskId((u32)0, (u64)i));
     task = client.AsyncMdPushEmplace(queues[num_queues - 1].get(),
                                      task_node,
-                                     labstor::DomainId::GetLocal());
+                                     hrun::DomainId::GetLocal());
     worker.Run();
-    LABSTOR_CLIENT->DelTask(task);
+    HRUN_CLIENT->DelTask(task);
   }
   t.Pause();
 
@@ -243,7 +243,7 @@ void TestWorkerIterationLatency(u32 num_queues, u32 num_lanes) {
 
 /** Time for worker to process a request */
 TEST_CASE("TestWorkerLatency") {
-  TRANSPARENT_LABSTOR();
+  TRANSPARENT_HRUN();
   TestWorkerIterationLatency(1, 16);
   TestWorkerIterationLatency(5, 16);
   TestWorkerIterationLatency(10, 16);
@@ -252,16 +252,16 @@ TEST_CASE("TestWorkerLatency") {
 
 /** Time to process a request */
 TEST_CASE("TestRoundTripLatency") {
-  TRANSPARENT_LABSTOR();
+  TRANSPARENT_HRUN();
   HERMES->ClientInit();
-  labstor::small_message::Client client;
-  LABSTOR_ADMIN->RegisterTaskLibRoot(labstor::DomainId::GetLocal(), "small_message");
+  hrun::small_message::Client client;
+  HRUN_ADMIN->RegisterTaskLibRoot(hrun::DomainId::GetLocal(), "small_message");
 //  int count = 25;
 //  for (int i = 0; i < count; ++i) {
-//    labstor::small_message::Client client2;
-//    client2.CreateRoot(labstor::DomainId::GetLocal(), "ipc_test" + std::to_string(i));
+//    hrun::small_message::Client client2;
+//    client2.CreateRoot(hrun::DomainId::GetLocal(), "ipc_test" + std::to_string(i));
 //  }
-  client.CreateRoot(labstor::DomainId::GetLocal(), "ipc_test");
+  client.CreateRoot(hrun::DomainId::GetLocal(), "ipc_test");
   hshm::Timer t;
 
   int pid = getpid();
@@ -271,7 +271,7 @@ TEST_CASE("TestRoundTripLatency") {
   size_t ops = (1 << 20);
   // size_t ops = 1024;
   for (size_t i = 0; i < ops; ++i) {
-    client.MdPushRoot(labstor::DomainId::GetLocal());
+    client.MdPushRoot(hrun::DomainId::GetLocal());
   }
   t.Pause();
 

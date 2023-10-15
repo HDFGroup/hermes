@@ -3,26 +3,26 @@
 """
 USAGE:
     cd codegen/bin
-    python3 labstor_config.py
+    python3 hrun_config.py
 
 OUTPUT:
-    ${LABSTOR}/src/config_client_default.h (if client)
-    ${LABSTOR}/src/config_server_default.h (if server)
+    ${HRUN}/src/config_client_default.h (if client)
+    ${HRUN}/src/config_server_default.h (if server)
 """
 
-from codegen.labstor_config.generator import create_config
-from codegen.util.paths import LABSTOR_ROOT
+from codegen.hrun_config.generator import create_config
+from codegen.util.paths import HRUN_ROOT
 
 create_config(
-    path=f"{LABSTOR_ROOT}/config/labstor_client_default.yaml",
+    path=f"{HRUN_ROOT}/config/hrun_client_default.yaml",
     var_name="kLabstorClientDefaultConfigStr",
-    config_path=f"{LABSTOR_ROOT}/include/labstor/config/config_client_default.h",
+    config_path=f"{HRUN_ROOT}/include/hrun/config/config_client_default.h",
     macro_name="CLIENT"
 )
 
 create_config(
-    path=f"{LABSTOR_ROOT}/config/labstor_server_default.yaml",
+    path=f"{HRUN_ROOT}/config/hrun_server_default.yaml",
     var_name="kLabstorServerDefaultConfigStr",
-    config_path=f"{LABSTOR_ROOT}/include/labstor/config/config_server_default.h",
+    config_path=f"{HRUN_ROOT}/include/hrun/config/config_server_default.h",
     macro_name="SERVER"
 )

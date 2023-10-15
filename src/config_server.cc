@@ -15,11 +15,11 @@
 #include <ostream>
 #include "hermes_shm/util/logging.h"
 #include "hermes_shm/util/config_parse.h"
-#include "labstor/config/config.h"
-#include "labstor/config/config_server.h"
-#include "labstor/config/config_server_default.h"
+#include "hrun/config/config.h"
+#include "hrun/config/config_server.h"
+#include "hrun/config/config_server_default.h"
 
-namespace labstor::config {
+namespace hrun::config {
 
 /** parse work orchestrator info from YAML config */
 void ServerConfig::ParseWorkOrchestrator(YAML::Node yaml_conf) {
@@ -103,4 +103,4 @@ void ServerConfig::LoadDefault() {
   LoadText(kLabstorServerDefaultConfigStr, false);
 }
 
-}  // namespace labstor::config
+}  // namespace hrun::config

@@ -2,13 +2,13 @@
 // Created by lukemartinlogan on 8/14/23.
 //
 
-#ifndef LABSTOR_TASKS_BDEV_INCLUDE_BDEV_BDEV_TASKS_H_
-#define LABSTOR_TASKS_BDEV_INCLUDE_BDEV_BDEV_TASKS_H_
+#ifndef HRUN_TASKS_BDEV_INCLUDE_BDEV_BDEV_TASKS_H_
+#define HRUN_TASKS_BDEV_INCLUDE_BDEV_BDEV_TASKS_H_
 
-#include "labstor/api/labstor_client.h"
-#include "labstor/task_registry/task_lib.h"
-#include "labstor_admin/labstor_admin.h"
-#include "labstor/queue_manager/queue_manager_client.h"
+#include "hrun/api/hrun_client.h"
+#include "hrun/task_registry/task_lib.h"
+#include "hrun_admin/hrun_admin.h"
+#include "hrun/queue_manager/queue_manager_client.h"
 #include "hermes/hermes_types.h"
 #include "hermes/config_server.h"
 #include "proc_queue/proc_queue.h"
@@ -16,12 +16,12 @@
 namespace hermes::bdev {
 
 #include "bdev_methods.h"
-#include "labstor/labstor_namespace.h"
+#include "hrun/hrun_namespace.h"
 
 /**
  * A task to create hermes_mdm
  * */
-using labstor::Admin::CreateTaskStateTask;
+using hrun::Admin::CreateTaskStateTask;
 struct ConstructTask : public CreateTaskStateTask {
   IN DeviceInfo info_;
 
@@ -47,7 +47,7 @@ struct ConstructTask : public CreateTaskStateTask {
 };
 
 /** A task to destroy hermes_mdm */
-using labstor::Admin::DestroyTaskStateTask;
+using hrun::Admin::DestroyTaskStateTask;
 struct DestructTask : public DestroyTaskStateTask {
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -309,4 +309,4 @@ struct UpdateCapacityTask : public Task, TaskFlags<TF_LOCAL> {
 
 }  // namespace hermes::bdev
 
-#endif  // LABSTOR_TASKS_BDEV_INCLUDE_BDEV_BDEV_TASKS_H_
+#endif  // HRUN_TASKS_BDEV_INCLUDE_BDEV_BDEV_TASKS_H_

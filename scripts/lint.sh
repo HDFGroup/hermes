@@ -1,6 +1,6 @@
 #!/bin/bash
 
-LABSTOR_ROOT=$1
+HRUN_ROOT=$1
 
 cpplint --recursive \
-"${LABSTOR_ROOT}/src" "${LABSTOR_ROOT}/include" "${LABSTOR_ROOT}/test"
+"${HRUN_ROOT}/src" "${HRUN_ROOT}/include" "${HRUN_ROOT}/test"

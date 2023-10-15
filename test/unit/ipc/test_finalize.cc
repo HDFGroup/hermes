@@ -3,9 +3,9 @@
 //
 
 #include "basic_test.h"
-#include "labstor/api/labstor_client.h"
-#include "labstor_admin/labstor_admin.h"
+#include "hrun/api/hrun_client.h"
+#include "hrun_admin/hrun_admin.h"
 
 TEST_CASE("TestFinalize") {
-  LABSTOR_ADMIN->AsyncStopRuntimeRoot(labstor::DomainId::GetGlobal());
+  HRUN_ADMIN->AsyncStopRuntimeRoot(hrun::DomainId::GetGlobal());
 }

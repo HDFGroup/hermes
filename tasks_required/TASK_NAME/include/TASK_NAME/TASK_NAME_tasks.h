@@ -2,26 +2,26 @@
 // Created by lukemartinlogan on 8/11/23.
 //
 
-#ifndef LABSTOR_TASKS_TASK_TEMPL_INCLUDE_TASK_NAME_TASK_NAME_TASKS_H_
-#define LABSTOR_TASKS_TASK_TEMPL_INCLUDE_TASK_NAME_TASK_NAME_TASKS_H_
+#ifndef HRUN_TASKS_TASK_TEMPL_INCLUDE_TASK_NAME_TASK_NAME_TASKS_H_
+#define HRUN_TASKS_TASK_TEMPL_INCLUDE_TASK_NAME_TASK_NAME_TASKS_H_
 
-#include "labstor/api/labstor_client.h"
-#include "labstor/task_registry/task_lib.h"
-#include "labstor_admin/labstor_admin.h"
-#include "labstor/queue_manager/queue_manager_client.h"
+#include "hrun/api/hrun_client.h"
+#include "hrun/task_registry/task_lib.h"
+#include "hrun_admin/hrun_admin.h"
+#include "hrun/queue_manager/queue_manager_client.h"
 #include "proc_queue/proc_queue.h"
 
-namespace labstor::TASK_NAME {
+namespace hrun::TASK_NAME {
 
 #include "TASK_NAME_methods.h"
-#include "labstor/labstor_namespace.h"
-using labstor::proc_queue::TypedPushTask;
-using labstor::proc_queue::PushTask;
+#include "hrun/hrun_namespace.h"
+using hrun::proc_queue::TypedPushTask;
+using hrun::proc_queue::PushTask;
 
 /**
  * A task to create TASK_NAME
  * */
-using labstor::Admin::CreateTaskStateTask;
+using hrun::Admin::CreateTaskStateTask;
 struct ConstructTask : public CreateTaskStateTask {
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -48,7 +48,7 @@ struct ConstructTask : public CreateTaskStateTask {
 };
 
 /** A task to destroy TASK_NAME */
-using labstor::Admin::DestroyTaskStateTask;
+using hrun::Admin::DestroyTaskStateTask;
 struct DestructTask : public DestroyTaskStateTask {
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -130,6 +130,6 @@ struct CustomTask : public Task, TaskFlags<TF_SRL_SYM> {
   }
 };
 
-}  // namespace labstor::TASK_NAME
+}  // namespace hrun::TASK_NAME
 
-#endif  // LABSTOR_TASKS_TASK_TEMPL_INCLUDE_TASK_NAME_TASK_NAME_TASKS_H_
+#endif  // HRUN_TASKS_TASK_TEMPL_INCLUDE_TASK_NAME_TASK_NAME_TASKS_H_

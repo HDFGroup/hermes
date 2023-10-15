@@ -37,7 +37,7 @@ struct BlobPlacement {
   /** create a BLOB name from index. */
   static hshm::charbuf CreateBlobName(size_t page) {
     hshm::charbuf buf(sizeof(page));
-    labstor::LocalSerialize srl(buf);
+    hrun::LocalSerialize srl(buf);
     srl << page;
     return buf;
   }
@@ -45,7 +45,7 @@ struct BlobPlacement {
   /** create a BLOB name from index. */
   hshm::charbuf CreateBlobName() const {
     hshm::charbuf buf(sizeof(page_));
-    labstor::LocalSerialize srl(buf);
+    hrun::LocalSerialize srl(buf);
     srl << page_;
     return buf;
   }
@@ -53,7 +53,7 @@ struct BlobPlacement {
   /** decode \a blob_name BLOB name to index.  */
   template<typename StringT>
   void DecodeBlobName(const StringT &blob_name, size_t page_size) {
-    labstor::LocalDeserialize srl(blob_name);
+    hrun::LocalDeserialize srl(blob_name);
     srl >> page_;
     bucket_off_ = page_ * page_size;
     blob_off_ = 0;

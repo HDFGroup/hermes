@@ -1,5 +1,5 @@
-#ifndef LABSTOR_HERMES_BUCKET_MDM_LIB_EXEC_H_
-#define LABSTOR_HERMES_BUCKET_MDM_LIB_EXEC_H_
+#ifndef HRUN_HERMES_BUCKET_MDM_LIB_EXEC_H_
+#define HRUN_HERMES_BUCKET_MDM_LIB_EXEC_H_
 
 /** Execute a task */
 void Run(u32 method, Task *task, RunContext &rctx) override {
@@ -78,71 +78,71 @@ void Run(u32 method, Task *task, RunContext &rctx) override {
 void Del(u32 method, Task *task) override {
   switch (method) {
     case Method::kConstruct: {
-      LABSTOR_CLIENT->DelTask(reinterpret_cast<ConstructTask *>(task));
+      HRUN_CLIENT->DelTask(reinterpret_cast<ConstructTask *>(task));
       break;
     }
     case Method::kDestruct: {
-      LABSTOR_CLIENT->DelTask(reinterpret_cast<DestructTask *>(task));
+      HRUN_CLIENT->DelTask(reinterpret_cast<DestructTask *>(task));
       break;
     }
     case Method::kGetOrCreateTag: {
-      LABSTOR_CLIENT->DelTask(reinterpret_cast<GetOrCreateTagTask *>(task));
+      HRUN_CLIENT->DelTask(reinterpret_cast<GetOrCreateTagTask *>(task));
       break;
     }
     case Method::kGetTagId: {
-      LABSTOR_CLIENT->DelTask(reinterpret_cast<GetTagIdTask *>(task));
+      HRUN_CLIENT->DelTask(reinterpret_cast<GetTagIdTask *>(task));
       break;
     }
     case Method::kGetTagName: {
-      LABSTOR_CLIENT->DelTask(reinterpret_cast<GetTagNameTask *>(task));
+      HRUN_CLIENT->DelTask(reinterpret_cast<GetTagNameTask *>(task));
       break;
     }
     case Method::kRenameTag: {
-      LABSTOR_CLIENT->DelTask(reinterpret_cast<RenameTagTask *>(task));
+      HRUN_CLIENT->DelTask(reinterpret_cast<RenameTagTask *>(task));
       break;
     }
     case Method::kDestroyTag: {
-      LABSTOR_CLIENT->DelTask(reinterpret_cast<DestroyTagTask *>(task));
+      HRUN_CLIENT->DelTask(reinterpret_cast<DestroyTagTask *>(task));
       break;
     }
     case Method::kTagAddBlob: {
-      LABSTOR_CLIENT->DelTask(reinterpret_cast<TagAddBlobTask *>(task));
+      HRUN_CLIENT->DelTask(reinterpret_cast<TagAddBlobTask *>(task));
       break;
     }
     case Method::kTagRemoveBlob: {
-      LABSTOR_CLIENT->DelTask(reinterpret_cast<TagRemoveBlobTask *>(task));
+      HRUN_CLIENT->DelTask(reinterpret_cast<TagRemoveBlobTask *>(task));
       break;
     }
     case Method::kTagClearBlobs: {
-      LABSTOR_CLIENT->DelTask(reinterpret_cast<TagClearBlobsTask *>(task));
+      HRUN_CLIENT->DelTask(reinterpret_cast<TagClearBlobsTask *>(task));
       break;
     }
     case Method::kUpdateSize: {
-      LABSTOR_CLIENT->DelTask(reinterpret_cast<UpdateSizeTask *>(task));
+      HRUN_CLIENT->DelTask(reinterpret_cast<UpdateSizeTask *>(task));
       break;
     }
     case Method::kAppendBlobSchema: {
-      LABSTOR_CLIENT->DelTask(reinterpret_cast<AppendBlobSchemaTask *>(task));
+      HRUN_CLIENT->DelTask(reinterpret_cast<AppendBlobSchemaTask *>(task));
       break;
     }
     case Method::kAppendBlob: {
-      LABSTOR_CLIENT->DelTask(reinterpret_cast<AppendBlobTask *>(task));
+      HRUN_CLIENT->DelTask(reinterpret_cast<AppendBlobTask *>(task));
       break;
     }
     case Method::kGetSize: {
-      LABSTOR_CLIENT->DelTask(reinterpret_cast<GetSizeTask *>(task));
+      HRUN_CLIENT->DelTask(reinterpret_cast<GetSizeTask *>(task));
       break;
     }
     case Method::kSetBlobMdm: {
-      LABSTOR_CLIENT->DelTask(reinterpret_cast<SetBlobMdmTask *>(task));
+      HRUN_CLIENT->DelTask(reinterpret_cast<SetBlobMdmTask *>(task));
       break;
     }
     case Method::kGetContainedBlobIds: {
-      LABSTOR_CLIENT->DelTask(reinterpret_cast<GetContainedBlobIdsTask *>(task));
+      HRUN_CLIENT->DelTask(reinterpret_cast<GetContainedBlobIdsTask *>(task));
       break;
     }
     case Method::kPollTagMetadata: {
-      LABSTOR_CLIENT->DelTask(reinterpret_cast<PollTagMetadataTask *>(task));
+      HRUN_CLIENT->DelTask(reinterpret_cast<PollTagMetadataTask *>(task));
       break;
     }
   }
@@ -151,71 +151,71 @@ void Del(u32 method, Task *task) override {
 void Dup(u32 method, Task *orig_task, std::vector<LPointer<Task>> &dups) override {
   switch (method) {
     case Method::kConstruct: {
-      labstor::CALL_DUPLICATE(reinterpret_cast<ConstructTask*>(orig_task), dups);
+      hrun::CALL_DUPLICATE(reinterpret_cast<ConstructTask*>(orig_task), dups);
       break;
     }
     case Method::kDestruct: {
-      labstor::CALL_DUPLICATE(reinterpret_cast<DestructTask*>(orig_task), dups);
+      hrun::CALL_DUPLICATE(reinterpret_cast<DestructTask*>(orig_task), dups);
       break;
     }
     case Method::kGetOrCreateTag: {
-      labstor::CALL_DUPLICATE(reinterpret_cast<GetOrCreateTagTask*>(orig_task), dups);
+      hrun::CALL_DUPLICATE(reinterpret_cast<GetOrCreateTagTask*>(orig_task), dups);
       break;
     }
     case Method::kGetTagId: {
-      labstor::CALL_DUPLICATE(reinterpret_cast<GetTagIdTask*>(orig_task), dups);
+      hrun::CALL_DUPLICATE(reinterpret_cast<GetTagIdTask*>(orig_task), dups);
       break;
     }
     case Method::kGetTagName: {
-      labstor::CALL_DUPLICATE(reinterpret_cast<GetTagNameTask*>(orig_task), dups);
+      hrun::CALL_DUPLICATE(reinterpret_cast<GetTagNameTask*>(orig_task), dups);
       break;
     }
     case Method::kRenameTag: {
-      labstor::CALL_DUPLICATE(reinterpret_cast<RenameTagTask*>(orig_task), dups);
+      hrun::CALL_DUPLICATE(reinterpret_cast<RenameTagTask*>(orig_task), dups);
       break;
     }
     case Method::kDestroyTag: {
-      labstor::CALL_DUPLICATE(reinterpret_cast<DestroyTagTask*>(orig_task), dups);
+      hrun::CALL_DUPLICATE(reinterpret_cast<DestroyTagTask*>(orig_task), dups);
       break;
     }
     case Method::kTagAddBlob: {
-      labstor::CALL_DUPLICATE(reinterpret_cast<TagAddBlobTask*>(orig_task), dups);
+      hrun::CALL_DUPLICATE(reinterpret_cast<TagAddBlobTask*>(orig_task), dups);
       break;
     }
     case Method::kTagRemoveBlob: {
-      labstor::CALL_DUPLICATE(reinterpret_cast<TagRemoveBlobTask*>(orig_task), dups);
+      hrun::CALL_DUPLICATE(reinterpret_cast<TagRemoveBlobTask*>(orig_task), dups);
       break;
     }
     case Method::kTagClearBlobs: {
-      labstor::CALL_DUPLICATE(reinterpret_cast<TagClearBlobsTask*>(orig_task), dups);
+      hrun::CALL_DUPLICATE(reinterpret_cast<TagClearBlobsTask*>(orig_task), dups);
       break;
     }
     case Method::kUpdateSize: {
-      labstor::CALL_DUPLICATE(reinterpret_cast<UpdateSizeTask*>(orig_task), dups);
+      hrun::CALL_DUPLICATE(reinterpret_cast<UpdateSizeTask*>(orig_task), dups);
       break;
     }
     case Method::kAppendBlobSchema: {
-      labstor::CALL_DUPLICATE(reinterpret_cast<AppendBlobSchemaTask*>(orig_task), dups);
+      hrun::CALL_DUPLICATE(reinterpret_cast<AppendBlobSchemaTask*>(orig_task), dups);
       break;
     }
     case Method::kAppendBlob: {
-      labstor::CALL_DUPLICATE(reinterpret_cast<AppendBlobTask*>(orig_task), dups);
+      hrun::CALL_DUPLICATE(reinterpret_cast<AppendBlobTask*>(orig_task), dups);
       break;
     }
     case Method::kGetSize: {
-      labstor::CALL_DUPLICATE(reinterpret_cast<GetSizeTask*>(orig_task), dups);
+      hrun::CALL_DUPLICATE(reinterpret_cast<GetSizeTask*>(orig_task), dups);
       break;
     }
     case Method::kSetBlobMdm: {
-      labstor::CALL_DUPLICATE(reinterpret_cast<SetBlobMdmTask*>(orig_task), dups);
+      hrun::CALL_DUPLICATE(reinterpret_cast<SetBlobMdmTask*>(orig_task), dups);
       break;
     }
     case Method::kGetContainedBlobIds: {
-      labstor::CALL_DUPLICATE(reinterpret_cast<GetContainedBlobIdsTask*>(orig_task), dups);
+      hrun::CALL_DUPLICATE(reinterpret_cast<GetContainedBlobIdsTask*>(orig_task), dups);
       break;
     }
     case Method::kPollTagMetadata: {
-      labstor::CALL_DUPLICATE(reinterpret_cast<PollTagMetadataTask*>(orig_task), dups);
+      hrun::CALL_DUPLICATE(reinterpret_cast<PollTagMetadataTask*>(orig_task), dups);
       break;
     }
   }
@@ -224,71 +224,71 @@ void Dup(u32 method, Task *orig_task, std::vector<LPointer<Task>> &dups) overrid
 void DupEnd(u32 method, u32 replica, Task *orig_task, Task *dup_task) override {
   switch (method) {
     case Method::kConstruct: {
-      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<ConstructTask*>(orig_task), reinterpret_cast<ConstructTask*>(dup_task));
+      hrun::CALL_DUPLICATE_END(replica, reinterpret_cast<ConstructTask*>(orig_task), reinterpret_cast<ConstructTask*>(dup_task));
       break;
     }
     case Method::kDestruct: {
-      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<DestructTask*>(orig_task), reinterpret_cast<DestructTask*>(dup_task));
+      hrun::CALL_DUPLICATE_END(replica, reinterpret_cast<DestructTask*>(orig_task), reinterpret_cast<DestructTask*>(dup_task));
       break;
     }
     case Method::kGetOrCreateTag: {
-      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<GetOrCreateTagTask*>(orig_task), reinterpret_cast<GetOrCreateTagTask*>(dup_task));
+      hrun::CALL_DUPLICATE_END(replica, reinterpret_cast<GetOrCreateTagTask*>(orig_task), reinterpret_cast<GetOrCreateTagTask*>(dup_task));
       break;
     }
     case Method::kGetTagId: {
-      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<GetTagIdTask*>(orig_task), reinterpret_cast<GetTagIdTask*>(dup_task));
+      hrun::CALL_DUPLICATE_END(replica, reinterpret_cast<GetTagIdTask*>(orig_task), reinterpret_cast<GetTagIdTask*>(dup_task));
       break;
     }
     case Method::kGetTagName: {
-      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<GetTagNameTask*>(orig_task), reinterpret_cast<GetTagNameTask*>(dup_task));
+      hrun::CALL_DUPLICATE_END(replica, reinterpret_cast<GetTagNameTask*>(orig_task), reinterpret_cast<GetTagNameTask*>(dup_task));
       break;
     }
     case Method::kRenameTag: {
-      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<RenameTagTask*>(orig_task), reinterpret_cast<RenameTagTask*>(dup_task));
+      hrun::CALL_DUPLICATE_END(replica, reinterpret_cast<RenameTagTask*>(orig_task), reinterpret_cast<RenameTagTask*>(dup_task));
       break;
     }
     case Method::kDestroyTag: {
-      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<DestroyTagTask*>(orig_task), reinterpret_cast<DestroyTagTask*>(dup_task));
+      hrun::CALL_DUPLICATE_END(replica, reinterpret_cast<DestroyTagTask*>(orig_task), reinterpret_cast<DestroyTagTask*>(dup_task));
       break;
     }
     case Method::kTagAddBlob: {
-      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<TagAddBlobTask*>(orig_task), reinterpret_cast<TagAddBlobTask*>(dup_task));
+      hrun::CALL_DUPLICATE_END(replica, reinterpret_cast<TagAddBlobTask*>(orig_task), reinterpret_cast<TagAddBlobTask*>(dup_task));
       break;
     }
     case Method::kTagRemoveBlob: {
-      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<TagRemoveBlobTask*>(orig_task), reinterpret_cast<TagRemoveBlobTask*>(dup_task));
+      hrun::CALL_DUPLICATE_END(replica, reinterpret_cast<TagRemoveBlobTask*>(orig_task), reinterpret_cast<TagRemoveBlobTask*>(dup_task));
       break;
     }
     case Method::kTagClearBlobs: {
-      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<TagClearBlobsTask*>(orig_task), reinterpret_cast<TagClearBlobsTask*>(dup_task));
+      hrun::CALL_DUPLICATE_END(replica, reinterpret_cast<TagClearBlobsTask*>(orig_task), reinterpret_cast<TagClearBlobsTask*>(dup_task));
       break;
     }
     case Method::kUpdateSize: {
-      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<UpdateSizeTask*>(orig_task), reinterpret_cast<UpdateSizeTask*>(dup_task));
+      hrun::CALL_DUPLICATE_END(replica, reinterpret_cast<UpdateSizeTask*>(orig_task), reinterpret_cast<UpdateSizeTask*>(dup_task));
       break;
     }
     case Method::kAppendBlobSchema: {
-      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<AppendBlobSchemaTask*>(orig_task), reinterpret_cast<AppendBlobSchemaTask*>(dup_task));
+      hrun::CALL_DUPLICATE_END(replica, reinterpret_cast<AppendBlobSchemaTask*>(orig_task), reinterpret_cast<AppendBlobSchemaTask*>(dup_task));
       break;
     }
     case Method::kAppendBlob: {
-      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<AppendBlobTask*>(orig_task), reinterpret_cast<AppendBlobTask*>(dup_task));
+      hrun::CALL_DUPLICATE_END(replica, reinterpret_cast<AppendBlobTask*>(orig_task), reinterpret_cast<AppendBlobTask*>(dup_task));
       break;
     }
     case Method::kGetSize: {
-      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<GetSizeTask*>(orig_task), reinterpret_cast<GetSizeTask*>(dup_task));
+      hrun::CALL_DUPLICATE_END(replica, reinterpret_cast<GetSizeTask*>(orig_task), reinterpret_cast<GetSizeTask*>(dup_task));
       break;
     }
     case Method::kSetBlobMdm: {
-      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<SetBlobMdmTask*>(orig_task), reinterpret_cast<SetBlobMdmTask*>(dup_task));
+      hrun::CALL_DUPLICATE_END(replica, reinterpret_cast<SetBlobMdmTask*>(orig_task), reinterpret_cast<SetBlobMdmTask*>(dup_task));
       break;
     }
     case Method::kGetContainedBlobIds: {
-      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<GetContainedBlobIdsTask*>(orig_task), reinterpret_cast<GetContainedBlobIdsTask*>(dup_task));
+      hrun::CALL_DUPLICATE_END(replica, reinterpret_cast<GetContainedBlobIdsTask*>(orig_task), reinterpret_cast<GetContainedBlobIdsTask*>(dup_task));
       break;
     }
     case Method::kPollTagMetadata: {
-      labstor::CALL_DUPLICATE_END(replica, reinterpret_cast<PollTagMetadataTask*>(orig_task), reinterpret_cast<PollTagMetadataTask*>(dup_task));
+      hrun::CALL_DUPLICATE_END(replica, reinterpret_cast<PollTagMetadataTask*>(orig_task), reinterpret_cast<PollTagMetadataTask*>(dup_task));
       break;
     }
   }
@@ -297,71 +297,71 @@ void DupEnd(u32 method, u32 replica, Task *orig_task, Task *dup_task) override {
 void ReplicateStart(u32 method, u32 count, Task *task) override {
   switch (method) {
     case Method::kConstruct: {
-      labstor::CALL_REPLICA_START(count, reinterpret_cast<ConstructTask*>(task));
+      hrun::CALL_REPLICA_START(count, reinterpret_cast<ConstructTask*>(task));
       break;
     }
     case Method::kDestruct: {
-      labstor::CALL_REPLICA_START(count, reinterpret_cast<DestructTask*>(task));
+      hrun::CALL_REPLICA_START(count, reinterpret_cast<DestructTask*>(task));
       break;
     }
     case Method::kGetOrCreateTag: {
-      labstor::CALL_REPLICA_START(count, reinterpret_cast<GetOrCreateTagTask*>(task));
+      hrun::CALL_REPLICA_START(count, reinterpret_cast<GetOrCreateTagTask*>(task));
       break;
     }
     case Method::kGetTagId: {
-      labstor::CALL_REPLICA_START(count, reinterpret_cast<GetTagIdTask*>(task));
+      hrun::CALL_REPLICA_START(count, reinterpret_cast<GetTagIdTask*>(task));
       break;
     }
     case Method::kGetTagName: {
-      labstor::CALL_REPLICA_START(count, reinterpret_cast<GetTagNameTask*>(task));
+      hrun::CALL_REPLICA_START(count, reinterpret_cast<GetTagNameTask*>(task));
       break;
     }
     case Method::kRenameTag: {
-      labstor::CALL_REPLICA_START(count, reinterpret_cast<RenameTagTask*>(task));
+      hrun::CALL_REPLICA_START(count, reinterpret_cast<RenameTagTask*>(task));
       break;
     }
     case Method::kDestroyTag: {
-      labstor::CALL_REPLICA_START(count, reinterpret_cast<DestroyTagTask*>(task));
+      hrun::CALL_REPLICA_START(count, reinterpret_cast<DestroyTagTask*>(task));
       break;
     }
     case Method::kTagAddBlob: {
-      labstor::CALL_REPLICA_START(count, reinterpret_cast<TagAddBlobTask*>(task));
+      hrun::CALL_REPLICA_START(count, reinterpret_cast<TagAddBlobTask*>(task));
       break;
     }
     case Method::kTagRemoveBlob: {
-      labstor::CALL_REPLICA_START(count, reinterpret_cast<TagRemoveBlobTask*>(task));
+      hrun::CALL_REPLICA_START(count, reinterpret_cast<TagRemoveBlobTask*>(task));
       break;
     }
     case Method::kTagClearBlobs: {
-      labstor::CALL_REPLICA_START(count, reinterpret_cast<TagClearBlobsTask*>(task));
+      hrun::CALL_REPLICA_START(count, reinterpret_cast<TagClearBlobsTask*>(task));
       break;
     }
     case Method::kUpdateSize: {
-      labstor::CALL_REPLICA_START(count, reinterpret_cast<UpdateSizeTask*>(task));
+      hrun::CALL_REPLICA_START(count, reinterpret_cast<UpdateSizeTask*>(task));
       break;
     }
     case Method::kAppendBlobSchema: {
-      labstor::CALL_REPLICA_START(count, reinterpret_cast<AppendBlobSchemaTask*>(task));
+      hrun::CALL_REPLICA_START(count, reinterpret_cast<AppendBlobSchemaTask*>(task));
       break;
     }
     case Method::kAppendBlob: {
-      labstor::CALL_REPLICA_START(count, reinterpret_cast<AppendBlobTask*>(task));
+      hrun::CALL_REPLICA_START(count, reinterpret_cast<AppendBlobTask*>(task));
       break;
     }
     case Method::kGetSize: {
-      labstor::CALL_REPLICA_START(count, reinterpret_cast<GetSizeTask*>(task));
+      hrun::CALL_REPLICA_START(count, reinterpret_cast<GetSizeTask*>(task));
       break;
     }
     case Method::kSetBlobMdm: {
-      labstor::CALL_REPLICA_START(count, reinterpret_cast<SetBlobMdmTask*>(task));
+      hrun::CALL_REPLICA_START(count, reinterpret_cast<SetBlobMdmTask*>(task));
       break;
     }
     case Method::kGetContainedBlobIds: {
-      labstor::CALL_REPLICA_START(count, reinterpret_cast<GetContainedBlobIdsTask*>(task));
+      hrun::CALL_REPLICA_START(count, reinterpret_cast<GetContainedBlobIdsTask*>(task));
       break;
     }
     case Method::kPollTagMetadata: {
-      labstor::CALL_REPLICA_START(count, reinterpret_cast<PollTagMetadataTask*>(task));
+      hrun::CALL_REPLICA_START(count, reinterpret_cast<PollTagMetadataTask*>(task));
       break;
     }
   }
@@ -370,71 +370,71 @@ void ReplicateStart(u32 method, u32 count, Task *task) override {
 void ReplicateEnd(u32 method, Task *task) override {
   switch (method) {
     case Method::kConstruct: {
-      labstor::CALL_REPLICA_END(reinterpret_cast<ConstructTask*>(task));
+      hrun::CALL_REPLICA_END(reinterpret_cast<ConstructTask*>(task));
       break;
     }
     case Method::kDestruct: {
-      labstor::CALL_REPLICA_END(reinterpret_cast<DestructTask*>(task));
+      hrun::CALL_REPLICA_END(reinterpret_cast<DestructTask*>(task));
       break;
     }
     case Method::kGetOrCreateTag: {
-      labstor::CALL_REPLICA_END(reinterpret_cast<GetOrCreateTagTask*>(task));
+      hrun::CALL_REPLICA_END(reinterpret_cast<GetOrCreateTagTask*>(task));
       break;
     }
     case Method::kGetTagId: {
-      labstor::CALL_REPLICA_END(reinterpret_cast<GetTagIdTask*>(task));
+      hrun::CALL_REPLICA_END(reinterpret_cast<GetTagIdTask*>(task));
       break;
     }
     case Method::kGetTagName: {
-      labstor::CALL_REPLICA_END(reinterpret_cast<GetTagNameTask*>(task));
+      hrun::CALL_REPLICA_END(reinterpret_cast<GetTagNameTask*>(task));
       break;
     }
     case Method::kRenameTag: {
-      labstor::CALL_REPLICA_END(reinterpret_cast<RenameTagTask*>(task));
+      hrun::CALL_REPLICA_END(reinterpret_cast<RenameTagTask*>(task));
       break;
     }
     case Method::kDestroyTag: {
-      labstor::CALL_REPLICA_END(reinterpret_cast<DestroyTagTask*>(task));
+      hrun::CALL_REPLICA_END(reinterpret_cast<DestroyTagTask*>(task));
       break;
     }
     case Method::kTagAddBlob: {
-      labstor::CALL_REPLICA_END(reinterpret_cast<TagAddBlobTask*>(task));
+      hrun::CALL_REPLICA_END(reinterpret_cast<TagAddBlobTask*>(task));
       break;
     }
     case Method::kTagRemoveBlob: {
-      labstor::CALL_REPLICA_END(reinterpret_cast<TagRemoveBlobTask*>(task));
+      hrun::CALL_REPLICA_END(reinterpret_cast<TagRemoveBlobTask*>(task));
       break;
     }
     case Method::kTagClearBlobs: {
-      labstor::CALL_REPLICA_END(reinterpret_cast<TagClearBlobsTask*>(task));
+      hrun::CALL_REPLICA_END(reinterpret_cast<TagClearBlobsTask*>(task));
       break;
     }
     case Method::kUpdateSize: {
-      labstor::CALL_REPLICA_END(reinterpret_cast<UpdateSizeTask*>(task));
+      hrun::CALL_REPLICA_END(reinterpret_cast<UpdateSizeTask*>(task));
       break;
     }
     case Method::kAppendBlobSchema: {
-      labstor::CALL_REPLICA_END(reinterpret_cast<AppendBlobSchemaTask*>(task));
+      hrun::CALL_REPLICA_END(reinterpret_cast<AppendBlobSchemaTask*>(task));
       break;
     }
     case Method::kAppendBlob: {
-      labstor::CALL_REPLICA_END(reinterpret_cast<AppendBlobTask*>(task));
+      hrun::CALL_REPLICA_END(reinterpret_cast<AppendBlobTask*>(task));
       break;
     }
     case Method::kGetSize: {
-      labstor::CALL_REPLICA_END(reinterpret_cast<GetSizeTask*>(task));
+      hrun::CALL_REPLICA_END(reinterpret_cast<GetSizeTask*>(task));
       break;
     }
     case Method::kSetBlobMdm: {
-      labstor::CALL_REPLICA_END(reinterpret_cast<SetBlobMdmTask*>(task));
+      hrun::CALL_REPLICA_END(reinterpret_cast<SetBlobMdmTask*>(task));
       break;
     }
     case Method::kGetContainedBlobIds: {
-      labstor::CALL_REPLICA_END(reinterpret_cast<GetContainedBlobIdsTask*>(task));
+      hrun::CALL_REPLICA_END(reinterpret_cast<GetContainedBlobIdsTask*>(task));
       break;
     }
     case Method::kPollTagMetadata: {
-      labstor::CALL_REPLICA_END(reinterpret_cast<PollTagMetadataTask*>(task));
+      hrun::CALL_REPLICA_END(reinterpret_cast<PollTagMetadataTask*>(task));
       break;
     }
   }
@@ -518,87 +518,87 @@ TaskPointer LoadStart(u32 method, BinaryInputArchive<true> &ar) override {
   TaskPointer task_ptr;
   switch (method) {
     case Method::kConstruct: {
-      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<ConstructTask>(task_ptr.shm_);
+      task_ptr.ptr_ = HRUN_CLIENT->NewEmptyTask<ConstructTask>(task_ptr.shm_);
       ar >> *reinterpret_cast<ConstructTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kDestruct: {
-      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<DestructTask>(task_ptr.shm_);
+      task_ptr.ptr_ = HRUN_CLIENT->NewEmptyTask<DestructTask>(task_ptr.shm_);
       ar >> *reinterpret_cast<DestructTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kGetOrCreateTag: {
-      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<GetOrCreateTagTask>(task_ptr.shm_);
+      task_ptr.ptr_ = HRUN_CLIENT->NewEmptyTask<GetOrCreateTagTask>(task_ptr.shm_);
       ar >> *reinterpret_cast<GetOrCreateTagTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kGetTagId: {
-      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<GetTagIdTask>(task_ptr.shm_);
+      task_ptr.ptr_ = HRUN_CLIENT->NewEmptyTask<GetTagIdTask>(task_ptr.shm_);
       ar >> *reinterpret_cast<GetTagIdTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kGetTagName: {
-      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<GetTagNameTask>(task_ptr.shm_);
+      task_ptr.ptr_ = HRUN_CLIENT->NewEmptyTask<GetTagNameTask>(task_ptr.shm_);
       ar >> *reinterpret_cast<GetTagNameTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kRenameTag: {
-      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<RenameTagTask>(task_ptr.shm_);
+      task_ptr.ptr_ = HRUN_CLIENT->NewEmptyTask<RenameTagTask>(task_ptr.shm_);
       ar >> *reinterpret_cast<RenameTagTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kDestroyTag: {
-      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<DestroyTagTask>(task_ptr.shm_);
+      task_ptr.ptr_ = HRUN_CLIENT->NewEmptyTask<DestroyTagTask>(task_ptr.shm_);
       ar >> *reinterpret_cast<DestroyTagTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kTagAddBlob: {
-      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<TagAddBlobTask>(task_ptr.shm_);
+      task_ptr.ptr_ = HRUN_CLIENT->NewEmptyTask<TagAddBlobTask>(task_ptr.shm_);
       ar >> *reinterpret_cast<TagAddBlobTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kTagRemoveBlob: {
-      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<TagRemoveBlobTask>(task_ptr.shm_);
+      task_ptr.ptr_ = HRUN_CLIENT->NewEmptyTask<TagRemoveBlobTask>(task_ptr.shm_);
       ar >> *reinterpret_cast<TagRemoveBlobTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kTagClearBlobs: {
-      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<TagClearBlobsTask>(task_ptr.shm_);
+      task_ptr.ptr_ = HRUN_CLIENT->NewEmptyTask<TagClearBlobsTask>(task_ptr.shm_);
       ar >> *reinterpret_cast<TagClearBlobsTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kUpdateSize: {
-      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<UpdateSizeTask>(task_ptr.shm_);
+      task_ptr.ptr_ = HRUN_CLIENT->NewEmptyTask<UpdateSizeTask>(task_ptr.shm_);
       ar >> *reinterpret_cast<UpdateSizeTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kAppendBlobSchema: {
-      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<AppendBlobSchemaTask>(task_ptr.shm_);
+      task_ptr.ptr_ = HRUN_CLIENT->NewEmptyTask<AppendBlobSchemaTask>(task_ptr.shm_);
       ar >> *reinterpret_cast<AppendBlobSchemaTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kAppendBlob: {
-      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<AppendBlobTask>(task_ptr.shm_);
+      task_ptr.ptr_ = HRUN_CLIENT->NewEmptyTask<AppendBlobTask>(task_ptr.shm_);
       ar >> *reinterpret_cast<AppendBlobTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kGetSize: {
-      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<GetSizeTask>(task_ptr.shm_);
+      task_ptr.ptr_ = HRUN_CLIENT->NewEmptyTask<GetSizeTask>(task_ptr.shm_);
       ar >> *reinterpret_cast<GetSizeTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kSetBlobMdm: {
-      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<SetBlobMdmTask>(task_ptr.shm_);
+      task_ptr.ptr_ = HRUN_CLIENT->NewEmptyTask<SetBlobMdmTask>(task_ptr.shm_);
       ar >> *reinterpret_cast<SetBlobMdmTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kGetContainedBlobIds: {
-      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<GetContainedBlobIdsTask>(task_ptr.shm_);
+      task_ptr.ptr_ = HRUN_CLIENT->NewEmptyTask<GetContainedBlobIdsTask>(task_ptr.shm_);
       ar >> *reinterpret_cast<GetContainedBlobIdsTask*>(task_ptr.ptr_);
       break;
     }
     case Method::kPollTagMetadata: {
-      task_ptr.ptr_ = LABSTOR_CLIENT->NewEmptyTask<PollTagMetadataTask>(task_ptr.shm_);
+      task_ptr.ptr_ = HRUN_CLIENT->NewEmptyTask<PollTagMetadataTask>(task_ptr.shm_);
       ar >> *reinterpret_cast<PollTagMetadataTask*>(task_ptr.ptr_);
       break;
     }
@@ -810,4 +810,4 @@ u32 GetGroup(u32 method, Task *task, hshm::charbuf &group) override {
   return -1;
 }
 
-#endif  // LABSTOR_HERMES_BUCKET_MDM_METHODS_H_
+#endif  // HRUN_HERMES_BUCKET_MDM_METHODS_H_

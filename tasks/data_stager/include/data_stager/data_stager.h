@@ -2,8 +2,8 @@
 // Created by lukemartinlogan on 6/29/23.
 //
 
-#ifndef LABSTOR_data_stager_H_
-#define LABSTOR_data_stager_H_
+#ifndef HRUN_data_stager_H_
+#define HRUN_data_stager_H_
 
 #include "data_stager_tasks.h"
 
@@ -25,16 +25,16 @@ class Client : public TaskLibClient {
                                       const std::string &state_name,
                                       const TaskStateId &blob_mdm) {
     id_ = TaskStateId::GetNull();
-    QueueManagerInfo &qm = LABSTOR_CLIENT->server_config_.queue_manager_;
+    QueueManagerInfo &qm = HRUN_CLIENT->server_config_.queue_manager_;
     std::vector<PriorityInfo> queue_info = {
         {1, 1, qm.queue_depth_, 0},
         {1, 1, qm.queue_depth_, QUEUE_LONG_RUNNING},
         {qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY}
     };
-    return LABSTOR_ADMIN->AsyncCreateTaskState<ConstructTask>(
+    return HRUN_ADMIN->AsyncCreateTaskState<ConstructTask>(
         task_node, domain_id, state_name, id_, queue_info, blob_mdm);
   }
-  LABSTOR_TASK_NODE_ROOT(AsyncCreate)
+  HRUN_TASK_NODE_ROOT(AsyncCreate)
   template<typename ...Args>
   HSHM_ALWAYS_INLINE
   void CreateRoot(Args&& ...args) {
@@ -43,13 +43,13 @@ class Client : public TaskLibClient {
     task->Wait();
     id_ = task->id_;
     queue_id_ = QueueId(id_);
-    LABSTOR_CLIENT->DelTask(task);
+    HRUN_CLIENT->DelTask(task);
   }
 
   /** Destroy task state + queue */
   HSHM_ALWAYS_INLINE
   void DestroyRoot(const DomainId &domain_id) {
-    LABSTOR_ADMIN->DestroyTaskStateRoot(domain_id, id_);
+    HRUN_ADMIN->DestroyTaskStateRoot(domain_id, id_);
   }
 
   /** Register task state */
@@ -58,33 +58,33 @@ class Client : public TaskLibClient {
                                     const TaskNode &task_node,
                                     const BucketId &bkt_id,
                                     const hshm::charbuf &url) {
-    LABSTOR_CLIENT->ConstructTask<RegisterStagerTask>(
+    HRUN_CLIENT->ConstructTask<RegisterStagerTask>(
         task, task_node, id_, bkt_id, url);
   }
   HSHM_ALWAYS_INLINE
   void RegisterStagerRoot(const BucketId &bkt_id,
                           const hshm::charbuf &url) {
-    LPointer<labpq::TypedPushTask<RegisterStagerTask>> task =
+    LPointer<hrunpq::TypedPushTask<RegisterStagerTask>> task =
         AsyncRegisterStagerRoot(bkt_id, url);
     task.ptr_->Wait();
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(RegisterStager);
+  HRUN_TASK_NODE_PUSH_ROOT(RegisterStager);
 
   /** Unregister task state */
   HSHM_ALWAYS_INLINE
   void AsyncUnregisterStagerConstruct(UnregisterStagerTask *task,
                                       const TaskNode &task_node,
                                       const BucketId &bkt_id) {
-    LABSTOR_CLIENT->ConstructTask<UnregisterStagerTask>(
+    HRUN_CLIENT->ConstructTask<UnregisterStagerTask>(
         task, task_node, id_, bkt_id);
   }
   HSHM_ALWAYS_INLINE
   void UnregisterStagerRoot(const BucketId &bkt_id) {
-    LPointer<labpq::TypedPushTask<UnregisterStagerTask>> task =
+    LPointer<hrunpq::TypedPushTask<UnregisterStagerTask>> task =
         AsyncUnregisterStagerRoot(bkt_id);
     task.ptr_->Wait();
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(UnregisterStager);
+  HRUN_TASK_NODE_PUSH_ROOT(UnregisterStager);
 
   /** Stage in data from a remote source */
   HSHM_ALWAYS_INLINE
@@ -94,7 +94,7 @@ class Client : public TaskLibClient {
                             const hshm::charbuf &blob_name,
                             float score,
                             u32 node_id) {
-    LABSTOR_CLIENT->ConstructTask<StageInTask>(
+    HRUN_CLIENT->ConstructTask<StageInTask>(
         task, task_node, id_, bkt_id,
         blob_name, score, node_id);
   }
@@ -103,11 +103,11 @@ class Client : public TaskLibClient {
                const hshm::charbuf &blob_name,
                float score,
                u32 node_id) {
-    LPointer<labpq::TypedPushTask<StageInTask>> task =
+    LPointer<hrunpq::TypedPushTask<StageInTask>> task =
         AsyncStageInRoot(bkt_id, blob_name, score, node_id);
     task.ptr_->Wait();
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(StageIn);
+  HRUN_TASK_NODE_PUSH_ROOT(StageIn);
 
   /** Stage out data to a remote source */
   HSHM_ALWAYS_INLINE
@@ -118,7 +118,7 @@ class Client : public TaskLibClient {
                               const hipc::Pointer &data,
                               size_t data_size,
                               u32 task_flags) {
-    LABSTOR_CLIENT->ConstructTask<StageOutTask>(
+    HRUN_CLIENT->ConstructTask<StageOutTask>(
         task, task_node, id_, bkt_id,
         blob_name, data, data_size, task_flags);
   }
@@ -128,11 +128,11 @@ class Client : public TaskLibClient {
                     const hipc::Pointer &data,
                     size_t data_size,
                     u32 task_flags) {
-    LPointer<labpq::TypedPushTask<StageOutTask>> task =
+    LPointer<hrunpq::TypedPushTask<StageOutTask>> task =
         AsyncStageOutRoot(bkt_id, blob_name, data, data_size, task_flags);
     task.ptr_->Wait();
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(StageOut);
+  HRUN_TASK_NODE_PUSH_ROOT(StageOut);
 
   /** Parse url */
   static inline
@@ -172,6 +172,6 @@ class Client : public TaskLibClient {
   }
 };
 
-}  // namespace labstor
+}  // namespace hrun
 
-#endif  // LABSTOR_data_stager_H_
+#endif  // HRUN_data_stager_H_

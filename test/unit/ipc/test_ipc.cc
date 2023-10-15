@@ -4,12 +4,12 @@
 
 #include "basic_test.h"
 #include <mpi.h>
-#include "labstor/api/labstor_client.h"
-#include "labstor_admin/labstor_admin.h"
+#include "hrun/api/hrun_client.h"
+#include "hrun_admin/hrun_admin.h"
 
 #include "small_message/small_message.h"
 #include "hermes_shm/util/timer.h"
-#include "labstor/work_orchestrator/affinity.h"
+#include "hrun/work_orchestrator/affinity.h"
 #include "omp.h"
 
 TEST_CASE("TestIpc") {
@@ -17,9 +17,9 @@ TEST_CASE("TestIpc") {
   MPI_Barrier(MPI_COMM_WORLD);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-  labstor::small_message::Client client;
-  LABSTOR_ADMIN->RegisterTaskLibRoot(labstor::DomainId::GetGlobal(), "small_message");
-  client.CreateRoot(labstor::DomainId::GetGlobal(), "ipc_test");
+  hrun::small_message::Client client;
+  HRUN_ADMIN->RegisterTaskLibRoot(hrun::DomainId::GetGlobal(), "small_message");
+  client.CreateRoot(hrun::DomainId::GetGlobal(), "ipc_test");
   MPI_Barrier(MPI_COMM_WORLD);
   hshm::Timer t;
 
@@ -32,7 +32,7 @@ TEST_CASE("TestIpc") {
     int ret;
     HILOG(kInfo, "Sending message {}", i);
     int node_id = 1 + ((rank + 1) % nprocs);
-    ret = client.MdRoot(labstor::DomainId::GetNode(node_id));
+    ret = client.MdRoot(hrun::DomainId::GetNode(node_id));
     REQUIRE(ret == 1);
   }
   t.Pause();
@@ -45,9 +45,9 @@ TEST_CASE("TestFlush") {
   MPI_Barrier(MPI_COMM_WORLD);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-  labstor::small_message::Client client;
-  LABSTOR_ADMIN->RegisterTaskLibRoot(labstor::DomainId::GetGlobal(), "small_message");
-  client.CreateRoot(labstor::DomainId::GetGlobal(), "ipc_test");
+  hrun::small_message::Client client;
+  HRUN_ADMIN->RegisterTaskLibRoot(hrun::DomainId::GetGlobal(), "small_message");
+  client.CreateRoot(hrun::DomainId::GetGlobal(), "ipc_test");
   MPI_Barrier(MPI_COMM_WORLD);
   hshm::Timer t;
 
@@ -60,19 +60,19 @@ TEST_CASE("TestFlush") {
     int ret;
     HILOG(kInfo, "Sending message {}", i);
     int node_id = 1 + ((rank + 1) % nprocs);
-    LPointer<labstor::small_message::MdTask> task =
-        client.AsyncMdRoot(labstor::DomainId::GetNode(node_id));
+    LPointer<hrun::small_message::MdTask> task =
+        client.AsyncMdRoot(hrun::DomainId::GetNode(node_id));
   }
-  LABSTOR_ADMIN->FlushRoot(DomainId::GetGlobal());
+  HRUN_ADMIN->FlushRoot(DomainId::GetGlobal());
   t.Pause();
 
   HILOG(kInfo, "Latency: {} MOps", ops / t.GetUsec());
 }
 
 void TestIpcMultithread(int nprocs) {
-  labstor::small_message::Client client;
-  LABSTOR_ADMIN->RegisterTaskLibRoot(labstor::DomainId::GetGlobal(), "small_message");
-  client.CreateRoot(labstor::DomainId::GetGlobal(), "ipc_test");
+  hrun::small_message::Client client;
+  HRUN_ADMIN->RegisterTaskLibRoot(hrun::DomainId::GetGlobal(), "small_message");
+  client.CreateRoot(hrun::DomainId::GetGlobal(), "ipc_test");
 
 #pragma omp parallel shared(client, nprocs) num_threads(nprocs)
   {
@@ -82,7 +82,7 @@ void TestIpcMultithread(int nprocs) {
       int ret;
       HILOG(kInfo, "Sending message {}", i);
       int node_id = 1 + ((rank + 1) % nprocs);
-      ret = client.MdRoot(labstor::DomainId::GetNode(node_id));
+      ret = client.MdRoot(hrun::DomainId::GetNode(node_id));
       REQUIRE(ret == 1);
     }
   }
@@ -109,9 +109,9 @@ TEST_CASE("TestIO") {
   MPI_Barrier(MPI_COMM_WORLD);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-  labstor::small_message::Client client;
-  LABSTOR_ADMIN->RegisterTaskLibRoot(labstor::DomainId::GetGlobal(), "small_message");
-  client.CreateRoot(labstor::DomainId::GetGlobal(), "ipc_test");
+  hrun::small_message::Client client;
+  HRUN_ADMIN->RegisterTaskLibRoot(hrun::DomainId::GetGlobal(), "small_message");
+  client.CreateRoot(hrun::DomainId::GetGlobal(), "ipc_test");
   hshm::Timer t;
 
   int pid = getpid();
@@ -125,7 +125,7 @@ TEST_CASE("TestIO") {
     int ret;
     HILOG(kInfo, "Sending message {}", i);
     int node_id = 1 + ((rank + 1) % nprocs);
-    ret = client.IoRoot(labstor::DomainId::GetNode(node_id));
+    ret = client.IoRoot(hrun::DomainId::GetNode(node_id));
     REQUIRE(ret == 1);
   }
   t.Pause();
@@ -134,7 +134,7 @@ TEST_CASE("TestIO") {
 }
 
 //TEST_CASE("TestHostfile") {
-//  for (u32 node_id = 1; node_id < LABSTOR_THALLIUM->rpc_->hosts_.size() + 1; ++node_id) {
-//    HILOG(kInfo, "Node {}: {}", node_id, LABSTOR_THALLIUM->GetServerName(node_id));
+//  for (u32 node_id = 1; node_id < HRUN_THALLIUM->rpc_->hosts_.size() + 1; ++node_id) {
+//    HILOG(kInfo, "Node {}: {}", node_id, HRUN_THALLIUM->GetServerName(node_id));
 //  }
 //}

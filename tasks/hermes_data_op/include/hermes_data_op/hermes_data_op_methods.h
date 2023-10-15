@@ -1,5 +1,5 @@
-#ifndef LABSTOR_HERMES_DATA_OP_METHODS_H_
-#define LABSTOR_HERMES_DATA_OP_METHODS_H_
+#ifndef HRUN_HERMES_DATA_OP_METHODS_H_
+#define HRUN_HERMES_DATA_OP_METHODS_H_
 
 /** The set of methods in the admin task */
 struct Method : public TaskMethod {
@@ -8,4 +8,4 @@ struct Method : public TaskMethod {
   TASK_METHOD_T kRunOp = kLast + 2;
 };
 
-#endif  // LABSTOR_HERMES_DATA_OP_METHODS_H_
+#endif  // HRUN_HERMES_DATA_OP_METHODS_H_

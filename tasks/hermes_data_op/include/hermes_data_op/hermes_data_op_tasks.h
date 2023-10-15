@@ -2,13 +2,13 @@
 // Created by lukemartinlogan on 8/11/23.
 //
 
-#ifndef LABSTOR_TASKS_TASK_TEMPL_INCLUDE_hermes_data_op_hermes_data_op_TASKS_H_
-#define LABSTOR_TASKS_TASK_TEMPL_INCLUDE_hermes_data_op_hermes_data_op_TASKS_H_
+#ifndef HRUN_TASKS_TASK_TEMPL_INCLUDE_hermes_data_op_hermes_data_op_TASKS_H_
+#define HRUN_TASKS_TASK_TEMPL_INCLUDE_hermes_data_op_hermes_data_op_TASKS_H_
 
-#include "labstor/api/labstor_client.h"
-#include "labstor/task_registry/task_lib.h"
-#include "labstor_admin/labstor_admin.h"
-#include "labstor/queue_manager/queue_manager_client.h"
+#include "hrun/api/hrun_client.h"
+#include "hrun/task_registry/task_lib.h"
+#include "hrun_admin/hrun_admin.h"
+#include "hrun/queue_manager/queue_manager_client.h"
 #include "proc_queue/proc_queue.h"
 #include "hermes/hermes_types.h"
 #include "hermes_data_op/hermes_data_op.h"
@@ -17,9 +17,9 @@
 namespace hermes::data_op {
 
 #include "hermes_data_op_methods.h"
-#include "labstor/labstor_namespace.h"
-using labstor::proc_queue::TypedPushTask;
-using labstor::proc_queue::PushTask;
+#include "hrun/hrun_namespace.h"
+using hrun::proc_queue::TypedPushTask;
+using hrun::proc_queue::PushTask;
 
 /** The bucket to use for op data */
 struct OpBucketName {
@@ -66,7 +66,7 @@ struct OpGraph {
 /**
  * A task to create hermes_data_op
  * */
-using labstor::Admin::CreateTaskStateTask;
+using hrun::Admin::CreateTaskStateTask;
 struct ConstructTask : public CreateTaskStateTask {
   IN TaskStateId bkt_mdm_;
   IN TaskStateId blob_mdm_;
@@ -100,7 +100,7 @@ struct ConstructTask : public CreateTaskStateTask {
 };
 
 /** A task to destroy hermes_data_op */
-using labstor::Admin::DestroyTaskStateTask;
+using hrun::Admin::DestroyTaskStateTask;
 struct DestructTask : public DestroyTaskStateTask {
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -308,4 +308,4 @@ struct RunOpTask : public Task, TaskFlags<TF_LOCAL | TF_REPLICA> {
 
 }  // namespace hermes::data_op
 
-#endif  // LABSTOR_TASKS_TASK_TEMPL_INCLUDE_hermes_data_op_hermes_data_op_TASKS_H_
+#endif  // HRUN_TASKS_TASK_TEMPL_INCLUDE_hermes_data_op_hermes_data_op_TASKS_H_

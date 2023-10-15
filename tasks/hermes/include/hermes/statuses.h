@@ -2,8 +2,8 @@
 // Created by lukemartinlogan on 7/13/23.
 //
 
-#ifndef LABSTOR_TASKS_HERMES_INCLUDE_STATUSES_H_
-#define LABSTOR_TASKS_HERMES_INCLUDE_STATUSES_H_
+#ifndef HRUN_TASKS_HERMES_INCLUDE_STATUSES_H_
+#define HRUN_TASKS_HERMES_INCLUDE_STATUSES_H_
 
 #include "status.h"
 
@@ -18,4 +18,4 @@ STATUS_T DPE_MIN_IO_TIME_NO_SOLUTION(1, "DPE could not find solution for the min
 
 }  // namespace hermes
 
-#endif //LABSTOR_TASKS_HERMES_INCLUDE_STATUSES_H_
+#endif //HRUN_TASKS_HERMES_INCLUDE_STATUSES_H_

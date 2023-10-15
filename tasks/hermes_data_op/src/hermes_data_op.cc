@@ -2,8 +2,8 @@
 // Created by lukemartinlogan on 6/29/23.
 //
 
-#include "labstor_admin/labstor_admin.h"
-#include "labstor/api/labstor_runtime.h"
+#include "hrun_admin/hrun_admin.h"
+#include "hrun/api/hrun_runtime.h"
 #include "hermes_data_op/hermes_data_op.h"
 #include "hermes_bucket_mdm/hermes_bucket_mdm.h"
 
@@ -38,7 +38,7 @@ class Server : public TaskLib {
     op_id_map_["min"] = 0;
     op_id_map_["max"] = 1;
     run_task_ = client_.AsyncRunOp(task->task_node_ + 1);
-    op_graphs_.resize(LABSTOR_QM_RUNTIME->max_lanes_);
+    op_graphs_.resize(HRUN_QM_RUNTIME->max_lanes_);
     task->SetModuleComplete();
   }
 
@@ -79,13 +79,13 @@ class Server : public TaskLib {
         bkt_name.bkt_id_task_->Wait<TASK_YIELD_CO>(task);
         bkt_name.bkt_id_ = bkt_name.bkt_id_task_->tag_id_;
         op_data_map_.emplace(bkt_name.bkt_id_, OpPendingData());
-        LABSTOR_CLIENT->DelTask(bkt_name.bkt_id_task_);
+        HRUN_CLIENT->DelTask(bkt_name.bkt_id_task_);
       }
       // Spawn bucket ID task for the output
       op.var_name_.bkt_id_task_->Wait<TASK_YIELD_CO>(task);
       op.var_name_.bkt_id_ = op.var_name_.bkt_id_task_->tag_id_;
       op_data_map_.emplace(op.var_name_.bkt_id_, OpPendingData());
-      LABSTOR_CLIENT->DelTask(op.var_name_.bkt_id_task_);
+      HRUN_CLIENT->DelTask(op.var_name_.bkt_id_task_);
     }
 
     // Get number of operations that depend on each data object
@@ -161,7 +161,7 @@ class Server : public TaskLib {
     std::vector<DataPair> in_tasks;
     for (OpData &data : op_data) {
       // Get the input data
-      LPointer<char> data_ptr = LABSTOR_CLIENT->AllocateBuffer(data.size_);
+      LPointer<char> data_ptr = HRUN_CLIENT->AllocateBuffer(data.size_);
       LPointer<blob_mdm::GetBlobTask> in_task =
           blob_mdm_.AsyncGetBlob(task->task_node_ + 1,
                                  data.bkt_id_,
@@ -180,7 +180,7 @@ class Server : public TaskLib {
       in_task->Wait<TASK_YIELD_CO>(task);
 
       // Calaculate the minimum
-      LPointer<char> min_ptr = LABSTOR_CLIENT->AllocateBuffer(sizeof(float));
+      LPointer<char> min_ptr = HRUN_CLIENT->AllocateBuffer(sizeof(float));
       float &min = *((float*)min_ptr.ptr_);
       min = std::numeric_limits<float>::max();
       for (size_t i = 0; i < in_task->data_size_; i += sizeof(float)) {
@@ -207,4 +207,4 @@ class Server : public TaskLib {
 
 }  // namespace hermes::data_op
 
-LABSTOR_TASK_CC(hermes::data_op::Server, "hermes_data_op");
+HRUN_TASK_CC(hermes::data_op::Server, "hermes_data_op");

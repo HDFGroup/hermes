@@ -2,12 +2,12 @@
 // Created by lukemartinlogan on 7/8/23.
 //
 
-#ifndef LABSTOR_TASKS_HERMES_INCLUDE_HERMES_HERMES_TYPES_H_
-#define LABSTOR_TASKS_HERMES_INCLUDE_HERMES_HERMES_TYPES_H_
+#ifndef HRUN_TASKS_HERMES_INCLUDE_HERMES_HERMES_TYPES_H_
+#define HRUN_TASKS_HERMES_INCLUDE_HERMES_HERMES_TYPES_H_
 
-#include "labstor/labstor_types.h"
-#include "labstor/task_registry/task_registry.h"
-#include "labstor/api/labstor_client.h"
+#include "hrun/hrun_types.h"
+#include "hrun/task_registry/task_registry.h"
+#include "hrun/api/hrun_client.h"
 #include "status.h"
 #include "statuses.h"
 
@@ -15,21 +15,21 @@ namespace hapi = hermes;
 
 namespace hermes {
 
-using labstor::TaskLib;
-using labstor::TaskMethod;
-using labstor::UniqueId;
-using labstor::TaskStateId;
-using labstor::DomainId;
-using labstor::Task;
-using labstor::TaskId;
-using labstor::TaskNode;
+using hrun::TaskLib;
+using hrun::TaskMethod;
+using hrun::UniqueId;
+using hrun::TaskStateId;
+using hrun::DomainId;
+using hrun::Task;
+using hrun::TaskId;
+using hrun::TaskNode;
 using hshm::bitfield32_t;
 
 /** Queue id */
-using labstor::QueueId;
+using hrun::QueueId;
 
 /** Queue for interprocess-communication */
-using labstor::MultiQueue;
+using hrun::MultiQueue;
 
 /** Unique blob id */
 typedef UniqueId<100> BlobId;
@@ -469,4 +469,4 @@ enum LockOwners {
 
 }  // namespace hermes
 
-#endif  // LABSTOR_TASKS_HERMES_INCLUDE_HERMES_HERMES_TYPES_H_
+#endif  // HRUN_TASKS_HERMES_INCLUDE_HERMES_HERMES_TYPES_H_

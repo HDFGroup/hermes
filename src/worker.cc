@@ -2,15 +2,15 @@
 // Created by lukemartinlogan on 6/27/23.
 //
 
-#include "labstor/api/labstor_runtime.h"
-#include "labstor/work_orchestrator/worker.h"
-#include "labstor/work_orchestrator/work_orchestrator.h"
+#include "hrun/api/hrun_runtime.h"
+#include "hrun/work_orchestrator/worker.h"
+#include "hrun/work_orchestrator/work_orchestrator.h"
 
-namespace labstor {
+namespace hrun {
 
 void Worker::Loop() {
   pid_ = GetLinuxTid();
-  WorkOrchestrator *orchestrator = LABSTOR_WORK_ORCHESTRATOR;
+  WorkOrchestrator *orchestrator = HRUN_WORK_ORCHESTRATOR;
   while (orchestrator->IsAlive()) {
     try {
       flush_.pending_ = 0;
@@ -19,7 +19,7 @@ void Worker::Loop() {
         flush_.flushing_ = false;
       }
     } catch (hshm::Error &e) {
-      HELOG(kFatal, "(node {}) Worker {} caught an error: {}", LABSTOR_CLIENT->node_id_, id_, e.what());
+      HELOG(kFatal, "(node {}) Worker {} caught an error: {}", HRUN_CLIENT->node_id_, id_, e.what());
     }
     // Yield();
   }
@@ -61,43 +61,43 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
       PopTask(lane, off);
       continue;
     }
-    task = LABSTOR_CLIENT->GetPrivatePointer<Task>(entry->p_);
+    task = HRUN_CLIENT->GetPrivatePointer<Task>(entry->p_);
     RunContext &rctx = task->ctx_;
     rctx.lane_id_ = work_entry.lane_id_;
     rctx.flush_ = &flush_;
     // Get the task state
     TaskState *&exec = rctx.exec_;
-    exec = LABSTOR_TASK_REGISTRY->GetTaskState(task->task_state_);
+    exec = HRUN_TASK_REGISTRY->GetTaskState(task->task_state_);
     if (!exec) {
       HELOG(kFatal, "(node {}) Could not find the task state: {}",
-            LABSTOR_CLIENT->node_id_, task->task_state_);
+            HRUN_CLIENT->node_id_, task->task_state_);
       entry->complete_ = true;
       EndTask(lane, exec, task, off);
       continue;
     }
     // Attempt to run the task if it's ready and runnable
-    bool is_remote = task->domain_id_.IsRemote(LABSTOR_RPC->GetNumHosts(), LABSTOR_CLIENT->node_id_);
+    bool is_remote = task->domain_id_.IsRemote(HRUN_RPC->GetNumHosts(), HRUN_CLIENT->node_id_);
     if (!task->IsRunDisabled() &&
         CheckTaskGroup(task, exec, work_entry.lane_id_, task->task_node_, is_remote) &&
         task->ShouldRun(work_entry.cur_time_, flush_.flushing_)) {
 #ifdef REMOTE_DEBUG
-      if (task->task_state_ != LABSTOR_QM_CLIENT->admin_task_state_ &&
+      if (task->task_state_ != HRUN_QM_CLIENT->admin_task_state_ &&
           !task->task_flags_.Any(TASK_REMOTE_DEBUG_MARK) &&
           task->method_ != TaskMethod::kConstruct &&
-          LABSTOR_RUNTIME->remote_created_) {
+          HRUN_RUNTIME->remote_created_) {
         is_remote = true;
       }
       task->task_flags_.SetBits(TASK_REMOTE_DEBUG_MARK);
 #endif
       // Execute or schedule task
       if (is_remote) {
-        auto ids = LABSTOR_RUNTIME->ResolveDomainId(task->domain_id_);
-        LABSTOR_REMOTE_QUEUE->Disperse(task, exec, ids);
+        auto ids = HRUN_RUNTIME->ResolveDomainId(task->domain_id_);
+        HRUN_REMOTE_QUEUE->Disperse(task, exec, ids);
         task->SetDisableRun();
         task->SetUnordered();
         task->UnsetCoroutine();
       } else if (task->IsLaneAll()) {
-        LABSTOR_REMOTE_QUEUE->DisperseLocal(task, exec, work_entry.queue_, work_entry.group_);
+        HRUN_REMOTE_QUEUE->DisperseLocal(task, exec, work_entry.queue_, work_entry.group_);
         task->SetDisableRun();
         task->SetUnordered();
         task->UnsetCoroutine();
@@ -123,7 +123,7 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
         }
       } else if (task->IsPreemptive()) {
         task->SetDisableRun();
-        entry->thread_ = LABSTOR_WORK_ORCHESTRATOR->SpawnAsyncThread(&Worker::RunPreemptive, task);
+        entry->thread_ = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(&Worker::RunPreemptive, task);
       } else {
         task->SetStarted();
         exec->Run(task->method_, task, rctx);
@@ -136,7 +136,7 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
     // Cleanup on task completion
     if (task->IsModuleComplete()) {
 //      HILOG(kDebug, "(node {}) Ending task: task_node={} task_state={} lane={} queue={} worker={}",
-//            LABSTOR_CLIENT->node_id_, task->task_node_, task->task_state_, lane_id, queue->id_, id_);
+//            HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, lane_id, queue->id_, id_);
       entry->complete_ = true;
       if (task->IsCoroutine()) {
         free(rctx.stack_ptr_);
@@ -166,7 +166,7 @@ void Worker::RunCoroutine(bctx::transfer_t t) {
 
 void Worker::RunPreemptive(void *data) {
   Task *task = reinterpret_cast<Task *>(data);
-  TaskState *exec = LABSTOR_TASK_REGISTRY->GetTaskState(task->task_state_);
+  TaskState *exec = HRUN_TASK_REGISTRY->GetTaskState(task->task_state_);
   RunContext &real_rctx = task->ctx_;
   RunContext rctx(0);
   do {
@@ -183,4 +183,4 @@ void Worker::RunPreemptive(void *data) {
   } while(!task->IsModuleComplete());
 }
 
-}  // namespace labstor
+}  // namespace hrun

@@ -3,15 +3,15 @@
 //
 
 #include "basic_test.h"
-#include "labstor/network/serialize.h"
-#include "labstor/task_registry/task.h"
+#include "hrun/network/serialize.h"
+#include "hrun/task_registry/task.h"
 
-using labstor::DomainId;
-using labstor::BinaryOutputArchive;
-using labstor::BinaryInputArchive;
-using labstor::DataTransfer;
-using labstor::Task;
-using labstor::TaskFlags;
+using hrun::DomainId;
+using hrun::BinaryOutputArchive;
+using hrun::BinaryInputArchive;
+using hrun::DataTransfer;
+using hrun::Task;
+using hrun::TaskFlags;
 
 struct TestObj : public Task, TaskFlags<TF_SRL_SYM> {
   std::vector <char> data_;

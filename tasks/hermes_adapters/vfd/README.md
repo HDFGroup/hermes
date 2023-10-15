@@ -31,7 +31,7 @@ Now we must tell the HDF5 library where to find the Hermes VFD. That is done
 with the following environment variable:
 
 ```sh
-HDF5_PLUGIN_PATH=<LABSTOR_INSTALL_prefix>/lib/hermes_vfd
+HDF5_PLUGIN_PATH=<HRUN_INSTALL_prefix>/lib/hermes_vfd
 ```
 
 The Hermes VFD has two configuration options.
@@ -65,14 +65,14 @@ initialization and finalization:
 
 ```sh
 HERMES_CONF=<path_to>/hermes.yaml
-LD_PRELOAD=<LABSTOR_INSTALL_prefix>/hermes_vfd/libhdf5_hermes_vfd.so
+LD_PRELOAD=<HRUN_INSTALL_prefix>/hermes_vfd/libhdf5_hermes_vfd.so
 ```
 
 Heres is a full example of running an HDF5 app with the Hermes VFD:
 
 ```sh
 HDF5_DRIVER=hermes                                                    \
-  HDF5_PLUGIN_PATH=<LABSTOR_INSTALL_prefix/lib/hermes_vfd              \
+  HDF5_PLUGIN_PATH=<HRUN_INSTALL_prefix/lib/hermes_vfd              \
   HDF5_DRIVER_CONFIG="true 65536"                                     \
   HERMES_CONF=<path_to>/hermes.yaml                                   \
   ./my_hdf5_app

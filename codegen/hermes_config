@@ -10,10 +10,10 @@ OUTPUT:
     ${HERMES}/src/config_server_default.h (if server)
 """
 
-from codegen.labstor_config.generator import create_config
-from codegen.util.paths import LABSTOR_ROOT
+from codegen.hrun_config.generator import create_config
+from codegen.util.paths import HRUN_ROOT
 
-HERMES_ROOT = f'{LABSTOR_ROOT}/tasks/hermes'
+HERMES_ROOT = f'{HRUN_ROOT}/tasks/hermes'
 create_config(
     path=f"{HERMES_ROOT}/config/hermes_client_default.yaml",
     var_name="kHermesClientDefaultConfigStr",

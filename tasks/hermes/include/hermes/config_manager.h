@@ -2,11 +2,11 @@
 // Created by lukemartinlogan on 7/9/23.
 //
 
-#ifndef LABSTOR_TASKS_HERMES_INCLUDE_hermes_H_
-#define LABSTOR_TASKS_HERMES_INCLUDE_hermes_H_
+#ifndef HRUN_TASKS_HERMES_INCLUDE_hermes_H_
+#define HRUN_TASKS_HERMES_INCLUDE_hermes_H_
 
 #include "hermes/hermes_types.h"
-#include "labstor_admin/labstor_admin.h"
+#include "hrun_admin/hrun_admin.h"
 #include "hermes_mdm/hermes_mdm.h"
 #include "hermes_bucket_mdm/hermes_bucket_mdm.h"
 #include "hermes_blob_mdm/hermes_blob_mdm.h"
@@ -76,11 +76,11 @@ class ConfigurationManager {
 
 /** Initialize client-side Hermes transparently */
 static inline bool TRANSPARENT_HERMES() {
-  if (TRANSPARENT_LABSTOR()) {
+  if (TRANSPARENT_HRUN()) {
     HERMES_CONF->ClientInit();
     return true;
   }
   return false;
 }
 
-#endif  // LABSTOR_TASKS_HERMES_INCLUDE_hermes_H_
+#endif  // HRUN_TASKS_HERMES_INCLUDE_hermes_H_

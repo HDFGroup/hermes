@@ -2,24 +2,24 @@
 // Created by lukemartinlogan on 8/11/23.
 //
 
-#ifndef LABSTOR_TASKS_SMALL_MESSAGE_INCLUDE_SMALL_MESSAGE_SMALL_MESSAGE_TASKS_H_
-#define LABSTOR_TASKS_SMALL_MESSAGE_INCLUDE_SMALL_MESSAGE_SMALL_MESSAGE_TASKS_H_
+#ifndef HRUN_TASKS_SMALL_MESSAGE_INCLUDE_SMALL_MESSAGE_SMALL_MESSAGE_TASKS_H_
+#define HRUN_TASKS_SMALL_MESSAGE_INCLUDE_SMALL_MESSAGE_SMALL_MESSAGE_TASKS_H_
 
-#include "labstor/api/labstor_client.h"
-#include "labstor/task_registry/task_lib.h"
-#include "labstor_admin/labstor_admin.h"
-#include "labstor/queue_manager/queue_manager_client.h"
+#include "hrun/api/hrun_client.h"
+#include "hrun/task_registry/task_lib.h"
+#include "hrun_admin/hrun_admin.h"
+#include "hrun/queue_manager/queue_manager_client.h"
 #include "proc_queue/proc_queue.h"
 
-namespace labstor::small_message {
+namespace hrun::small_message {
 
 #include "small_message_methods.h"
-#include "labstor/labstor_namespace.h"
+#include "hrun/hrun_namespace.h"
 
 /**
  * A task to create small_message
  * */
-using labstor::Admin::CreateTaskStateTask;
+using hrun::Admin::CreateTaskStateTask;
 struct ConstructTask : public CreateTaskStateTask {
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -39,7 +39,7 @@ struct ConstructTask : public CreateTaskStateTask {
 };
 
 /** A task to destroy small_message */
-using labstor::Admin::DestroyTaskStateTask;
+using hrun::Admin::DestroyTaskStateTask;
 struct DestructTask : public DestroyTaskStateTask {
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -245,6 +245,6 @@ struct IoTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> {
   }
 };
 
-}  // namespace labstor
+}  // namespace hrun
 
-#endif  // LABSTOR_TASKS_SMALL_MESSAGE_INCLUDE_SMALL_MESSAGE_SMALL_MESSAGE_TASKS_H_
+#endif  // HRUN_TASKS_SMALL_MESSAGE_INCLUDE_SMALL_MESSAGE_SMALL_MESSAGE_TASKS_H_

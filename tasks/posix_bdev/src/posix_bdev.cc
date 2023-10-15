@@ -2,8 +2,8 @@
 // Created by lukemartinlogan on 6/29/23.
 //
 
-#include "labstor_admin/labstor_admin.h"
-#include "labstor/api/labstor_runtime.h"
+#include "hrun_admin/hrun_admin.h"
+#include "hrun/api/hrun_runtime.h"
 #include "posix_bdev/posix_bdev.h"
 #include "hermes/slab_allocator.h"
 
@@ -85,6 +85,6 @@ class Server : public TaskLib {
 #include "bdev/bdev_lib_exec.h"
 };
 
-}  // namespace labstor
+}  // namespace hrun
 
-LABSTOR_TASK_CC(hermes::posix_bdev::Server, "posix_bdev");
+HRUN_TASK_CC(hermes::posix_bdev::Server, "posix_bdev");

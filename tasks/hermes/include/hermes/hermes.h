@@ -2,8 +2,8 @@
 // Created by lukemartinlogan on 7/9/23.
 //
 
-#ifndef LABSTOR_TASKS_HERMES_INCLUDE_HERMES_HERMES_H_
-#define LABSTOR_TASKS_HERMES_INCLUDE_HERMES_HERMES_H_
+#ifndef HRUN_TASKS_HERMES_INCLUDE_HERMES_HERMES_H_
+#define HRUN_TASKS_HERMES_INCLUDE_HERMES_HERMES_H_
 
 #include "hermes/bucket.h"
 
@@ -64,4 +64,4 @@ class Hermes {
 
 }  // namespace hermes
 
-#endif  // LABSTOR_TASKS_HERMES_INCLUDE_HERMES_HERMES_H_
+#endif  // HRUN_TASKS_HERMES_INCLUDE_HERMES_HERMES_H_

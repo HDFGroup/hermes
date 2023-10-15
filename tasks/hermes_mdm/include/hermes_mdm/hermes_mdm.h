@@ -2,8 +2,8 @@
 // Created by lukemartinlogan on 6/29/23.
 //
 
-#ifndef LABSTOR_hermes_mdm_H_
-#define LABSTOR_hermes_mdm_H_
+#ifndef HRUN_hermes_mdm_H_
+#define HRUN_hermes_mdm_H_
 
 #include "hermes_mdm_tasks.h"
 
@@ -26,7 +26,7 @@ class Client : public TaskLibClient {
     std::vector<PriorityInfo> queue_info = {
         {1, 1, 1, 0},
     };
-    id_ = LABSTOR_ADMIN->CreateTaskStateRoot<ConstructTask>(
+    id_ = HRUN_ADMIN->CreateTaskStateRoot<ConstructTask>(
         domain_id, state_name, id_, queue_info);
     queue_id_ = QueueId(id_);
   }
@@ -34,10 +34,10 @@ class Client : public TaskLibClient {
   /** Destroy task state + queue */
   HSHM_ALWAYS_INLINE
   void DestroyRoot(const DomainId &domain_id) {
-    LABSTOR_ADMIN->DestroyTaskStateRoot(domain_id, id_);
+    HRUN_ADMIN->DestroyTaskStateRoot(domain_id, id_);
   }
 };
 
-}  // namespace labstor
+}  // namespace hrun
 
-#endif  // LABSTOR_hermes_mdm_H_
+#endif  // HRUN_hermes_mdm_H_

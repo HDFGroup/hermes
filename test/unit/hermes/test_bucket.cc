@@ -3,8 +3,8 @@
 //
 
 #include "basic_test.h"
-#include "labstor/api/labstor_client.h"
-#include "labstor_admin/labstor_admin.h"
+#include "hrun/api/hrun_client.h"
+#include "hrun_admin/hrun_admin.h"
 #include "hermes/hermes.h"
 #include "hermes/bucket.h"
 #include "data_stager/factory/binary_stager.h"
@@ -523,7 +523,7 @@ TEST_CASE("TestHermesDataOp") {
   }
   MPI_Barrier(MPI_COMM_WORLD);
 
-  // LABSTOR_ADMIN->FlushRoot(DomainId::GetGlobal());
+  // HRUN_ADMIN->FlushRoot(DomainId::GetGlobal());
   // Verify derived operator happens
   hermes::Bucket bkt_min("data_bkt_min", 0, 0);
   size_t size = bkt_min.GetSize();

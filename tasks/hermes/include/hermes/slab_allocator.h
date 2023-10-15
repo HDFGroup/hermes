@@ -2,10 +2,10 @@
 // Created by lukemartinlogan on 7/13/23.
 //
 
-#ifndef LABSTOR_TASKS_HERMES_INCLUDE_HERMES_SLAB_ALLOCATOR_H_
-#define LABSTOR_TASKS_HERMES_INCLUDE_HERMES_SLAB_ALLOCATOR_H_
+#ifndef HRUN_TASKS_HERMES_INCLUDE_HERMES_SLAB_ALLOCATOR_H_
+#define HRUN_TASKS_HERMES_INCLUDE_HERMES_SLAB_ALLOCATOR_H_
 
-#include "labstor/labstor_types.h"
+#include "hrun/hrun_types.h"
 #include "hermes/hermes_types.h"
 
 namespace hermes {
@@ -147,4 +147,4 @@ class SlabAllocator {
 
 }  // namespace hermes
 
-#endif // LABSTOR_TASKS_HERMES_INCLUDE_HERMES_SLAB_ALLOCATOR_H_
+#endif // HRUN_TASKS_HERMES_INCLUDE_HERMES_SLAB_ALLOCATOR_H_

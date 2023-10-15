@@ -8,4 +8,4 @@ def GetLabstorRoot():
     hermes_path = os.path.dirname(code_generators_path)
     return hermes_path
 
-LABSTOR_ROOT=GetLabstorRoot()
+HRUN_ROOT=GetLabstorRoot()

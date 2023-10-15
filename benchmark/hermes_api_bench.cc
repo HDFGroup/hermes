@@ -15,7 +15,7 @@
 #include <mpi.h>
 #include "hermes/hermes.h"
 #include "hermes/bucket.h"
-#include "labstor/work_orchestrator/affinity.h"
+#include "hrun/work_orchestrator/affinity.h"
 
 namespace hapi = hermes;
 using hshm::MpiTimer;
@@ -238,7 +238,7 @@ int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-  TRANSPARENT_LABSTOR();
+  TRANSPARENT_HRUN();
   HERMES->ClientInit();
 
   // Get mode

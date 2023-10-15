@@ -2,29 +2,29 @@
 // Created by lukemartinlogan on 8/14/23.
 //
 
-#ifndef LABSTOR_TASKS_HERMES_BUCKET_MDM_INCLUDE_HERMES_BUCKET_MDM_HERMES_BUCKET_MDM_TASKS_H_
-#define LABSTOR_TASKS_HERMES_BUCKET_MDM_INCLUDE_HERMES_BUCKET_MDM_HERMES_BUCKET_MDM_TASKS_H_
+#ifndef HRUN_TASKS_HERMES_BUCKET_MDM_INCLUDE_HERMES_BUCKET_MDM_HERMES_BUCKET_MDM_TASKS_H_
+#define HRUN_TASKS_HERMES_BUCKET_MDM_INCLUDE_HERMES_BUCKET_MDM_HERMES_BUCKET_MDM_TASKS_H_
 
-#include "labstor/api/labstor_client.h"
-#include "labstor/task_registry/task_lib.h"
-#include "labstor_admin/labstor_admin.h"
-#include "labstor/queue_manager/queue_manager_client.h"
+#include "hrun/api/hrun_client.h"
+#include "hrun/task_registry/task_lib.h"
+#include "hrun_admin/hrun_admin.h"
+#include "hrun/queue_manager/queue_manager_client.h"
 #include "hermes/hermes_types.h"
 #include "bdev/bdev.h"
 #include "hermes_blob_mdm/hermes_blob_mdm.h"
-#include "labstor/api/labstor_client.h"
-#include "labstor/labstor_namespace.h"
+#include "hrun/api/hrun_client.h"
+#include "hrun/hrun_namespace.h"
 #include "proc_queue/proc_queue.h"
 
 namespace hermes::bucket_mdm {
 
 #include "hermes_bucket_mdm_methods.h"
-#include "labstor/labstor_namespace.h"
+#include "hrun/hrun_namespace.h"
 
 /**
  * A task to create hermes_bucket_mdm
  * */
-using labstor::Admin::CreateTaskStateTask;
+using hrun::Admin::CreateTaskStateTask;
 struct ConstructTask : public CreateTaskStateTask {
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -44,7 +44,7 @@ struct ConstructTask : public CreateTaskStateTask {
 };
 
 /** A task to destroy hermes_bucket_mdm */
-using labstor::Admin::DestroyTaskStateTask;
+using hrun::Admin::DestroyTaskStateTask;
 struct DestructTask : public DestroyTaskStateTask {
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -189,7 +189,7 @@ struct UpdateSizeTask : public Task, TaskFlags<TF_SRL_SYM> {
    /** Create group */
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
-    labstor::LocalSerialize srl(group);
+    hrun::LocalSerialize srl(group);
     srl << tag_id_.unique_;
     srl << tag_id_.node_id_;
     return 0;
@@ -274,7 +274,7 @@ struct AppendBlobSchemaTask : public Task, TaskFlags<TF_SRL_SYM> {
    /** Create group */
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
-    labstor::LocalSerialize srl(group);
+    hrun::LocalSerialize srl(group);
     srl << tag_id_.unique_;
     srl << tag_id_.node_id_;
     return 0;
@@ -330,14 +330,14 @@ struct AppendBlobTask : public Task, TaskFlags<TF_LOCAL> {
   /** Destructor */
   ~AppendBlobTask() {
     if (IsDataOwner()) {
-      LABSTOR_CLIENT->FreeBuffer(data_);
+      HRUN_CLIENT->FreeBuffer(data_);
     }
   }
 
    /** Create group */
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
-    labstor::LocalSerialize srl(group);
+    hrun::LocalSerialize srl(group);
     srl << tag_id_.unique_;
     srl << tag_id_.node_id_;
     return 0;
@@ -519,7 +519,7 @@ struct GetTagNameTask : public Task, TaskFlags<TF_SRL_SYM> {
    /** Create group */
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
-    labstor::LocalSerialize srl(group);
+    hrun::LocalSerialize srl(group);
     srl << tag_id_.unique_;
     srl << tag_id_.node_id_;
     return 0;
@@ -578,7 +578,7 @@ struct RenameTagTask : public Task, TaskFlags<TF_SRL_SYM> {
    /** Create group */
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
-    labstor::LocalSerialize srl(group);
+    hrun::LocalSerialize srl(group);
     srl << tag_id_.unique_;
     srl << tag_id_.node_id_;
     return 0;
@@ -635,7 +635,7 @@ struct DestroyTagTask : public Task, TaskFlags<TF_SRL_SYM> {
    /** Create group */
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
-    labstor::LocalSerialize srl(group);
+    hrun::LocalSerialize srl(group);
     srl << tag_id_.unique_;
     srl << tag_id_.node_id_;
     return 0;
@@ -687,7 +687,7 @@ struct TagAddBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
    /** Create group */
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
-    labstor::LocalSerialize srl(group);
+    hrun::LocalSerialize srl(group);
     srl << tag_id_.unique_;
     srl << tag_id_.node_id_;
     return 0;
@@ -739,7 +739,7 @@ struct TagRemoveBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
    /** Create group */
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
-    labstor::LocalSerialize srl(group);
+    hrun::LocalSerialize srl(group);
     srl << tag_id_.unique_;
     srl << tag_id_.node_id_;
     return 0;
@@ -797,7 +797,7 @@ struct TagClearBlobsTask : public Task, TaskFlags<TF_SRL_SYM> {
    /** Create group */
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
-    labstor::LocalSerialize srl(group);
+    hrun::LocalSerialize srl(group);
     srl << tag_id_.unique_;
     srl << tag_id_.node_id_;
     return 0;
@@ -849,7 +849,7 @@ struct GetSizeTask : public Task, TaskFlags<TF_SRL_SYM> {
   /** Create group */
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
-    labstor::LocalSerialize srl(group);
+    hrun::LocalSerialize srl(group);
     srl << tag_id_.unique_;
     srl << tag_id_.node_id_;
     return 0;
@@ -907,7 +907,7 @@ struct GetContainedBlobIdsTask : public Task, TaskFlags<TF_SRL_SYM> {
   /** Create group */
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
-    labstor::LocalSerialize srl(group);
+    hrun::LocalSerialize srl(group);
     srl << tag_id_.unique_;
     srl << tag_id_.node_id_;
     return 0;
@@ -1028,4 +1028,4 @@ struct PollTagMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
 
 }  // namespace hermes::bucket_mdm
 
-#endif  // LABSTOR_TASKS_HERMES_BUCKET_MDM_INCLUDE_HERMES_BUCKET_MDM_HERMES_BUCKET_MDM_TASKS_H_
+#endif  // HRUN_TASKS_HERMES_BUCKET_MDM_INCLUDE_HERMES_BUCKET_MDM_HERMES_BUCKET_MDM_TASKS_H_

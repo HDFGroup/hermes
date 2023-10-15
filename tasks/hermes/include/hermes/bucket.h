@@ -2,8 +2,8 @@
 // Created by lukemartinlogan on 7/9/23.
 //
 
-#ifndef LABSTOR_TASKS_HERMES_CONF_INCLUDE_HERMES_CONF_BUCKET_H_
-#define LABSTOR_TASKS_HERMES_CONF_INCLUDE_HERMES_CONF_BUCKET_H_
+#ifndef HRUN_TASKS_HERMES_CONF_INCLUDE_HERMES_CONF_BUCKET_H_
+#define HRUN_TASKS_HERMES_CONF_INCLUDE_HERMES_CONF_BUCKET_H_
 
 #include "hermes/hermes_types.h"
 #include "hermes_mdm/hermes_mdm.h"
@@ -11,7 +11,7 @@
 
 namespace hermes {
 
-#include "labstor/labstor_namespace.h"
+#include "hrun/hrun_namespace.h"
 using hermes::blob_mdm::PutBlobTask;
 using hermes::blob_mdm::GetBlobTask;
 
@@ -217,7 +217,7 @@ class Bucket {
     BlobId blob_id = orig_blob_id;
     bitfield32_t flags, task_flags(TASK_FIRE_AND_FORGET | TASK_DATA_OWNER | TASK_LOW_LATENCY);
     // Copy data to shared memory
-    LPointer<char> p = LABSTOR_CLIENT->AllocateBuffer(blob.size());
+    LPointer<char> p = HRUN_CLIENT->AllocateBuffer(blob.size());
     char *data = p.ptr_;
     memcpy(data, blob.data(), blob.size());
     // Put to shared memory
@@ -231,7 +231,7 @@ class Bucket {
     if constexpr(!PARTIAL) {
       flags.SetBits(HERMES_BLOB_REPLACE);
     }
-    LPointer<labpq::TypedPushTask<PutBlobTask>> push_task;
+    LPointer<hrunpq::TypedPushTask<PutBlobTask>> push_task;
     push_task = blob_mdm_->AsyncPutBlobRoot(id_, blob_name_buf,
                                             blob_id, blob_off, blob.size(), p.shm_, ctx.blob_score_,
                                             flags.bits_, ctx, task_flags.bits_);
@@ -240,7 +240,7 @@ class Bucket {
         push_task->Wait();
         PutBlobTask *task = push_task->get();
         blob_id = task->blob_id_;
-        LABSTOR_CLIENT->DelTask(push_task);
+        HRUN_CLIENT->DelTask(push_task);
       }
     }
     return blob_id;
@@ -364,7 +364,7 @@ class Bucket {
    * Append \a blob_name Blob into the bucket (fully asynchronous)
    * */
   void Append(const Blob &blob, size_t page_size, Context &ctx) {
-    LPointer<char> p = LABSTOR_CLIENT->AllocateBuffer(blob.size());
+    LPointer<char> p = HRUN_CLIENT->AllocateBuffer(blob.size());
     char *data = p.ptr_;
     memcpy(data, blob.data(), blob.size());
     bkt_mdm_->AppendBlobRoot(id_, blob.size(), p.shm_, page_size, ctx.blob_score_, ctx.node_id_, ctx);
@@ -414,7 +414,7 @@ class Bucket {
   /**
    * Get \a blob_id Blob from the bucket (async)
    * */
-  LPointer<labpq::TypedPushTask<GetBlobTask>>
+  LPointer<hrunpq::TypedPushTask<GetBlobTask>>
   HSHM_ALWAYS_INLINE
   AsyncBaseGet(const std::string &blob_name,
                const BlobId &blob_id,
@@ -428,8 +428,8 @@ class Bucket {
     }
     // Get from shared memory
     size_t data_size = blob.size();
-    LPointer data_p = LABSTOR_CLIENT->AllocateBuffer(data_size);
-    LPointer<labpq::TypedPushTask<GetBlobTask>> push_task;
+    LPointer data_p = HRUN_CLIENT->AllocateBuffer(data_size);
+    LPointer<hrunpq::TypedPushTask<GetBlobTask>> push_task;
     push_task = blob_mdm_->AsyncGetBlobRoot(id_, hshm::to_charbuf(blob_name),
                                             blob_id, blob_off,
                                             data_size, data_p.shm_,
@@ -454,15 +454,15 @@ class Bucket {
     }
     HILOG(kDebug, "Getting blob of size {}", data_size);
     BlobId blob_id;
-    LPointer<labpq::TypedPushTask<GetBlobTask>> push_task;
+    LPointer<hrunpq::TypedPushTask<GetBlobTask>> push_task;
     push_task = AsyncBaseGet(blob_name, orig_blob_id, blob, blob_off, ctx);
     push_task->Wait();
     GetBlobTask *task = push_task->get();
     blob_id = task->blob_id_;
-    char *data = LABSTOR_CLIENT->GetPrivatePointer(task->data_);
+    char *data = HRUN_CLIENT->GetPrivatePointer(task->data_);
     memcpy(blob.data(), data, data_size);
-    LABSTOR_CLIENT->FreeBuffer(task->data_);
-    LABSTOR_CLIENT->DelTask(push_task);
+    HRUN_CLIENT->FreeBuffer(task->data_);
+    HRUN_CLIENT->DelTask(push_task);
     return blob_id;
   }
 
@@ -513,7 +513,7 @@ class Bucket {
   /**
    * AsyncGet \a blob_name Blob from the bucket
    * */
-  LPointer<labpq::TypedPushTask<GetBlobTask>>
+  LPointer<hrunpq::TypedPushTask<GetBlobTask>>
   AsyncGet(const std::string &blob_name,
            Blob &blob,
            Context &ctx) {
@@ -523,7 +523,7 @@ class Bucket {
   /**
    * AsyncGet \a blob_id Blob from the bucket
    * */
-  LPointer<labpq::TypedPushTask<GetBlobTask>>
+  LPointer<hrunpq::TypedPushTask<GetBlobTask>>
   AsyncGet(const BlobId &blob_id,
            Blob &blob,
            Context &ctx) {
@@ -553,7 +553,7 @@ class Bucket {
   /**
    * AsyncGet \a blob_name Blob from the bucket
    * */
-  LPointer<labpq::TypedPushTask<GetBlobTask>>
+  LPointer<hrunpq::TypedPushTask<GetBlobTask>>
   AsyncPartialGet(const std::string &blob_name,
                   Blob &blob,
                   size_t blob_off,
@@ -564,7 +564,7 @@ class Bucket {
   /**
    * AsyncGet \a blob_id Blob from the bucket
    * */
-  LPointer<labpq::TypedPushTask<GetBlobTask>>
+  LPointer<hrunpq::TypedPushTask<GetBlobTask>>
   AsyncPartialGet(const BlobId &blob_id,
                   Blob &blob,
                   size_t blob_off,
@@ -605,4 +605,4 @@ class Bucket {
 
 }  // namespace hermes
 
-#endif  // LABSTOR_TASKS_HERMES_CONF_INCLUDE_HERMES_CONF_BUCKET_H_
+#endif  // HRUN_TASKS_HERMES_CONF_INCLUDE_HERMES_CONF_BUCKET_H_

@@ -22,10 +22,10 @@ def create_config(path, var_name, config_path, macro_name):
 
     # Create the configuration
     config_lines = []
-    config_lines.append(f"#ifndef LABSTOR_SRC_CONFIG_{macro_name}_DEFAULT_H_")
-    config_lines.append(f"#define LABSTOR_SRC_CONFIG_{macro_name}_DEFAULT_H_")
+    config_lines.append(f"#ifndef HRUN_SRC_CONFIG_{macro_name}_DEFAULT_H_")
+    config_lines.append(f"#define HRUN_SRC_CONFIG_{macro_name}_DEFAULT_H_")
     config_lines += string_lines
-    config_lines.append(f"#endif  // LABSTOR_SRC_CONFIG_{macro_name}_DEFAULT_H_")
+    config_lines.append(f"#endif  // HRUN_SRC_CONFIG_{macro_name}_DEFAULT_H_")
 
     # Persist
     config = "\n".join(config_lines)

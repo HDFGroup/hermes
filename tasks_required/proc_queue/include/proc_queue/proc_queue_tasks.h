@@ -2,23 +2,23 @@
 // Created by lukemartinlogan on 8/11/23.
 //
 
-#ifndef LABSTOR_TASKS_TASK_TEMPL_INCLUDE_proc_queue_proc_queue_TASKS_H_
-#define LABSTOR_TASKS_TASK_TEMPL_INCLUDE_proc_queue_proc_queue_TASKS_H_
+#ifndef HRUN_TASKS_TASK_TEMPL_INCLUDE_proc_queue_proc_queue_TASKS_H_
+#define HRUN_TASKS_TASK_TEMPL_INCLUDE_proc_queue_proc_queue_TASKS_H_
 
-#include "labstor/api/labstor_client.h"
-#include "labstor/task_registry/task_lib.h"
-#include "labstor_admin/labstor_admin.h"
-#include "labstor/queue_manager/queue_manager_client.h"
+#include "hrun/api/hrun_client.h"
+#include "hrun/task_registry/task_lib.h"
+#include "hrun_admin/hrun_admin.h"
+#include "hrun/queue_manager/queue_manager_client.h"
 
-namespace labstor::proc_queue {
+namespace hrun::proc_queue {
 
-#include "labstor/labstor_namespace.h"
+#include "hrun/hrun_namespace.h"
 #include "proc_queue_methods.h"
 
 /**
  * A task to create proc_queue
  * */
-using labstor::Admin::CreateTaskStateTask;
+using hrun::Admin::CreateTaskStateTask;
 struct ConstructTask : public CreateTaskStateTask {
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -45,7 +45,7 @@ struct ConstructTask : public CreateTaskStateTask {
 };
 
 /** A task to destroy proc_queue */
-using labstor::Admin::DestroyTaskStateTask;
+using hrun::Admin::DestroyTaskStateTask;
 struct DestructTask : public DestroyTaskStateTask {
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -110,9 +110,9 @@ struct TypedPushTask : public Task, TaskFlags<TF_LOCAL> {
   /** Destructor */
   ~TypedPushTask() {
     if (!IsFireAndForget()) {
-      LABSTOR_CLIENT->DelTask(sub_cli_);
+      HRUN_CLIENT->DelTask(sub_cli_);
     } else {
-      LABSTOR_CLIENT->DelTask(sub_run_);
+      HRUN_CLIENT->DelTask(sub_run_);
     }
   }
 
@@ -131,10 +131,10 @@ struct TypedPushTask : public Task, TaskFlags<TF_LOCAL> {
   }
 };
 
-using PushTask = labstor::proc_queue::TypedPushTask<Task>;
+using PushTask = hrun::proc_queue::TypedPushTask<Task>;
 
-}  // namespace labstor::proc_queue
+}  // namespace hrun::proc_queue
 
-namespace labpq = labstor::proc_queue;
+namespace hrunpq = hrun::proc_queue;
 
-#endif  // LABSTOR_TASKS_TASK_TEMPL_INCLUDE_proc_queue_proc_queue_TASKS_H_
+#endif  // HRUN_TASKS_TASK_TEMPL_INCLUDE_proc_queue_proc_queue_TASKS_H_

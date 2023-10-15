@@ -39,7 +39,7 @@ add_compile_options(-march=native -fomit-frame-pointer)
 # by other projects.
 #-----------------------------------------------------------------------------
 if(NOT HERMES_EXPORTED_TARGETS)
-    set(HERMES_EXPORTED_TARGETS "labstor-targets")
+    set(HERMES_EXPORTED_TARGETS "hrun-targets")
 endif()
 
 #-----------------------------------------------------------------------------
@@ -137,7 +137,7 @@ include_directories(${CMAKE_SOURCE_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/include)
 # Task includes
 include_directories(${CMAKE_SOURCE_DIR}/tasks_required)
-include_directories(${CMAKE_SOURCE_DIR}/tasks_required/labstor_admin/include)
+include_directories(${CMAKE_SOURCE_DIR}/tasks_required/hrun_admin/include)
 include_directories(${CMAKE_SOURCE_DIR}/tasks_required/small_message/include)
 include_directories(${CMAKE_SOURCE_DIR}/tasks_required/remote_queue/include)
 include_directories(${CMAKE_SOURCE_DIR}/tasks_required/worch_proc_round_robin/include)
@@ -163,15 +163,15 @@ set(Hermes_CLIENT_LIBRARIES
         ${HermesShm_LIBRARIES}
         yaml-cpp
         cereal::cereal
-        -ldl -lrt -lc -pthread labstor_client)
+        -ldl -lrt -lc -pthread hrun_client)
 set(Hermes_CLIENT_DEPS
-        labstor_client)
+        hrun_client)
 set(Hermes_RUNTIME_LIBRARIES
         ${Hermes_CLIENT_LIBRARIES}
-        labstor_runtime
+        hrun_runtime
         ${Boost_LIBRARIES})
 set(Hermes_RUNTIME_DEPS
-        labstor_client labstor_runtime)
+        hrun_client hrun_runtime)
 
 set(TEST_MAIN ${CMAKE_SOURCE_DIR}/test/unit)
 add_subdirectory(src)

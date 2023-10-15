@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef LABSTOR_TEST_UNIT_BASIC_TEST_H_
-#define LABSTOR_TEST_UNIT_BASIC_TEST_H_
+#ifndef HRUN_TEST_UNIT_BASIC_TEST_H_
+#define HRUN_TEST_UNIT_BASIC_TEST_H_
 
 #define CATCH_CONFIG_RUNNER
 #include <catch2/catch_all.hpp>
@@ -51,4 +51,4 @@ void MainPosttest();
 
 #define PAGE_DIVIDE(TEXT)
 
-#endif  // LABSTOR_TEST_UNIT_BASIC_TEST_H_
+#endif  // HRUN_TEST_UNIT_BASIC_TEST_H_

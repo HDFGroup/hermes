@@ -2,12 +2,12 @@
 // Created by lukemartinlogan on 6/29/23.
 //
 
-#ifndef LABSTOR_remote_queue_H_
-#define LABSTOR_remote_queue_H_
+#ifndef HRUN_remote_queue_H_
+#define HRUN_remote_queue_H_
 
 #include "remote_queue_tasks.h"
 
-namespace labstor::remote_queue {
+namespace hrun::remote_queue {
 
 /**
  * Create remote_queue requests
@@ -31,17 +31,17 @@ class Client : public TaskLibClient {
                                       const std::string &state_name,
                                       const TaskStateId &state_id) {
     id_ = state_id;
-    QueueManagerInfo &qm = LABSTOR_CLIENT->server_config_.queue_manager_;
+    QueueManagerInfo &qm = HRUN_CLIENT->server_config_.queue_manager_;
     std::vector<PriorityInfo> queue_info = {
         {1, 1, qm.queue_depth_, 0},
         {1, 1, qm.queue_depth_, QUEUE_LONG_RUNNING},
         // {qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY}
         {1, 1, qm.queue_depth_, QUEUE_LOW_LATENCY}
     };
-    return LABSTOR_ADMIN->AsyncCreateTaskState<ConstructTask>(
+    return HRUN_ADMIN->AsyncCreateTaskState<ConstructTask>(
         task_node, domain_id, state_name, id_, queue_info);
   }
-  LABSTOR_TASK_NODE_ROOT(AsyncCreate);
+  HRUN_TASK_NODE_ROOT(AsyncCreate);
   template<typename ...Args>
   HSHM_ALWAYS_INLINE
   void CreateRoot(Args&& ...args) {
@@ -50,13 +50,13 @@ class Client : public TaskLibClient {
     task->Wait();
     id_ = task->id_;
     queue_id_ = QueueId(id_);
-    LABSTOR_CLIENT->DelTask(task);
+    HRUN_CLIENT->DelTask(task);
   }
 
   /** Destroy task state + queue */
   HSHM_ALWAYS_INLINE
   void DestroyRoot(const DomainId &domain_id) {
-    LABSTOR_ADMIN->DestroyTaskStateRoot(domain_id, id_);
+    HRUN_ADMIN->DestroyTaskStateRoot(domain_id, id_);
   }
 
   /** Disperse a task among a domain of nodes */
@@ -67,16 +67,16 @@ class Client : public TaskLibClient {
     // Serialize task + create the wait task
     HILOG(kDebug, "Beginning dispersion for (task_node={}, task_state={}, method={})",
           orig_task->task_node_ + 1, orig_task->task_state_, orig_task->method_)
-    BinaryOutputArchive<true> ar(DomainId::GetNode(LABSTOR_CLIENT->node_id_));
+    BinaryOutputArchive<true> ar(DomainId::GetNode(HRUN_CLIENT->node_id_));
     std::vector<DataTransfer> xfer =
         exec->SaveStart(orig_task->method_, ar, orig_task);
 
     // Create subtasks
     exec->ReplicateStart(orig_task->method_, domain_ids.size(), orig_task);
-    LPointer<PushTask> push_task = LABSTOR_CLIENT->NewTask<PushTask>(
+    LPointer<PushTask> push_task = HRUN_CLIENT->NewTask<PushTask>(
         orig_task->task_node_ + 1, DomainId::GetLocal(), id_,
         domain_ids, orig_task, exec, orig_task->method_, xfer);
-    MultiQueue *queue = LABSTOR_CLIENT->GetQueue(queue_id_);
+    MultiQueue *queue = HRUN_CLIENT->GetQueue(queue_id_);
     queue->Emplace(TaskPrio::kLowLatency, orig_task->lane_hash_, push_task.shm_);
   }
 
@@ -99,10 +99,10 @@ class Client : public TaskLibClient {
 
     // Create duplicate task
     exec->ReplicateStart(orig_task->method_, lane_group->num_lanes_, orig_task);
-    LPointer<DupTask> dup_task = LABSTOR_CLIENT->NewTask<DupTask>(
+    LPointer<DupTask> dup_task = HRUN_CLIENT->NewTask<DupTask>(
         orig_task->task_node_ + 1, id_,
         orig_task, exec, orig_task->method_, dups);
-    MultiQueue *queue = LABSTOR_CLIENT->GetQueue(queue_id_);
+    MultiQueue *queue = HRUN_CLIENT->GetQueue(queue_id_);
     queue->Emplace(orig_task->prio_, orig_task->lane_hash_, dup_task.shm_);
   }
 
@@ -110,14 +110,14 @@ class Client : public TaskLibClient {
 //  HSHM_ALWAYS_INLINE
 //  AcceptTask* AsyncAcceptThread() {
 //    hipc::Pointer p;
-//    MultiQueue *queue = LABSTOR_CLIENT->GetQueue(queue_id_);
-//    auto *task = LABSTOR_CLIENT->NewTask<AcceptTask>(
+//    MultiQueue *queue = HRUN_CLIENT->GetQueue(queue_id_);
+//    auto *task = HRUN_CLIENT->NewTask<AcceptTask>(
 //        p, TaskNode::GetNull(), DomainId::GetLocal(), id_);
 //    queue->Emplace(0, 0, p);
 //    return task;
 //  }
 };
 
-}  // namespace labstor
+}  // namespace hrun
 
-#endif  // LABSTOR_remote_queue_H_
+#endif  // HRUN_remote_queue_H_

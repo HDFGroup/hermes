@@ -2,13 +2,13 @@
 // Created by lukemartinlogan on 8/14/23.
 //
 
-#ifndef LABSTOR_TASKS_REMOTE_QUEUE_INCLUDE_REMOTE_QUEUE_REMOTE_QUEUE_TASKS_H_
-#define LABSTOR_TASKS_REMOTE_QUEUE_INCLUDE_REMOTE_QUEUE_REMOTE_QUEUE_TASKS_H_
+#ifndef HRUN_TASKS_REMOTE_QUEUE_INCLUDE_REMOTE_QUEUE_REMOTE_QUEUE_TASKS_H_
+#define HRUN_TASKS_REMOTE_QUEUE_INCLUDE_REMOTE_QUEUE_REMOTE_QUEUE_TASKS_H_
 
-#include "labstor/api/labstor_client.h"
-#include "labstor/task_registry/task_lib.h"
-#include "labstor_admin/labstor_admin.h"
-#include "labstor/queue_manager/queue_manager_client.h"
+#include "hrun/api/hrun_client.h"
+#include "hrun/task_registry/task_lib.h"
+#include "hrun_admin/hrun_admin.h"
+#include "hrun/queue_manager/queue_manager_client.h"
 #include "proc_queue/proc_queue.h"
 
 #include <thallium.hpp>
@@ -19,15 +19,15 @@
 
 namespace tl = thallium;
 
-namespace labstor::remote_queue {
+namespace hrun::remote_queue {
 
-#include "labstor/labstor_namespace.h"
+#include "hrun/hrun_namespace.h"
 #include "remote_queue_methods.h"
 
 /**
  * A task to create remote_queue
  * */
-using labstor::Admin::CreateTaskStateTask;
+using hrun::Admin::CreateTaskStateTask;
 struct ConstructTask : public CreateTaskStateTask {
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -48,7 +48,7 @@ struct ConstructTask : public CreateTaskStateTask {
 };
 
 /** A task to destroy remote_queue */
-using labstor::Admin::DestroyTaskStateTask;
+using hrun::Admin::DestroyTaskStateTask;
 struct DestructTask : public DestroyTaskStateTask {
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -194,6 +194,6 @@ struct DupTask : public Task, TaskFlags<TF_LOCAL> {
 //  }
 //};
 
-} // namespace labstor::remote_queue
+} // namespace hrun::remote_queue
 
-#endif //LABSTOR_TASKS_REMOTE_QUEUE_INCLUDE_REMOTE_QUEUE_REMOTE_QUEUE_TASKS_H_
+#endif //HRUN_TASKS_REMOTE_QUEUE_INCLUDE_REMOTE_QUEUE_REMOTE_QUEUE_TASKS_H_

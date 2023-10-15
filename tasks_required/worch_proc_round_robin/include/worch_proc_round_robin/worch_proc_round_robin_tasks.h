@@ -2,19 +2,19 @@
 // Created by lukemartinlogan on 8/14/23.
 //
 
-#ifndef LABSTOR_WORCH_PROC_ROUND_ROBIN_TASKS_H__
-#define LABSTOR_WORCH_PROC_ROUND_ROBIN_TASKS_H__
+#ifndef HRUN_WORCH_PROC_ROUND_ROBIN_TASKS_H__
+#define HRUN_WORCH_PROC_ROUND_ROBIN_TASKS_H__
 
-#include "labstor/api/labstor_client.h"
-#include "labstor/task_registry/task_lib.h"
-#include "labstor/work_orchestrator/scheduler.h"
-#include "labstor_admin/labstor_admin.h"
-#include "labstor/queue_manager/queue_manager_client.h"
+#include "hrun/api/hrun_client.h"
+#include "hrun/task_registry/task_lib.h"
+#include "hrun/work_orchestrator/scheduler.h"
+#include "hrun_admin/hrun_admin.h"
+#include "hrun/queue_manager/queue_manager_client.h"
 #include "proc_queue/proc_queue.h"
 
-namespace labstor::worch_proc_round_robin {
+namespace hrun::worch_proc_round_robin {
 
-#include "labstor/labstor_namespace.h"
+#include "hrun/hrun_namespace.h"
 
 /** The set of methods in the worch task */
 typedef SchedulerMethod Method;
@@ -22,7 +22,7 @@ typedef SchedulerMethod Method;
 /**
  * A task to create worch_proc_round_robin
  * */
-using labstor::Admin::CreateTaskStateTask;
+using hrun::Admin::CreateTaskStateTask;
 struct ConstructTask : public CreateTaskStateTask {
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -42,7 +42,7 @@ struct ConstructTask : public CreateTaskStateTask {
 };
 
 /** A task to destroy worch_proc_round_robin */
-using labstor::Admin::DestroyTaskStateTask;
+using hrun::Admin::DestroyTaskStateTask;
 struct DestructTask : public DestroyTaskStateTask {
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -63,6 +63,6 @@ struct DestructTask : public DestroyTaskStateTask {
   }
 };
 
-}  // namespace labstor::worch_proc_round_robin
+}  // namespace hrun::worch_proc_round_robin
 
-#endif  // LABSTOR_WORCH_PROC_ROUND_ROBIN_TASKS_H__
+#endif  // HRUN_WORCH_PROC_ROUND_ROBIN_TASKS_H__
