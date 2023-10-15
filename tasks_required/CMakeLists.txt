@@ -1,7 +1,0 @@
-add_subdirectory(TASK_NAME)
-add_subdirectory(small_message)
-add_subdirectory(labstor_admin)
-add_subdirectory(remote_queue)
-add_subdirectory(worch_proc_round_robin)
-add_subdirectory(worch_queue_round_robin)
-add_subdirectory(proc_queue)

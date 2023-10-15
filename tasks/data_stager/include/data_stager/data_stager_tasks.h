@@ -2,27 +2,27 @@
 // Created by lukemartinlogan on 8/11/23.
 //
 
-#ifndef LABSTOR_TASKS_TASK_TEMPL_INCLUDE_data_stager_data_stager_TASKS_H_
-#define LABSTOR_TASKS_TASK_TEMPL_INCLUDE_data_stager_data_stager_TASKS_H_
+#ifndef HRUN_TASKS_TASK_TEMPL_INCLUDE_data_stager_data_stager_TASKS_H_
+#define HRUN_TASKS_TASK_TEMPL_INCLUDE_data_stager_data_stager_TASKS_H_
 
-#include "labstor/api/labstor_client.h"
-#include "labstor/task_registry/task_lib.h"
-#include "labstor_admin/labstor_admin.h"
-#include "labstor/queue_manager/queue_manager_client.h"
+#include "hrun/api/hrun_client.h"
+#include "hrun/task_registry/task_lib.h"
+#include "hrun_admin/hrun_admin.h"
+#include "hrun/queue_manager/queue_manager_client.h"
 #include "proc_queue/proc_queue.h"
 #include "hermes/hermes_types.h"
 
 namespace hermes::data_stager {
 
 #include "data_stager_methods.h"
-#include "labstor/labstor_namespace.h"
-using labstor::proc_queue::TypedPushTask;
-using labstor::proc_queue::PushTask;
+#include "hrun/hrun_namespace.h"
+using hrun::proc_queue::TypedPushTask;
+using hrun::proc_queue::PushTask;
 
 /**
  * A task to create data_stager
  * */
-using labstor::Admin::CreateTaskStateTask;
+using hrun::Admin::CreateTaskStateTask;
 struct ConstructTask : public CreateTaskStateTask {
   TaskStateId blob_mdm_;
 
@@ -53,7 +53,7 @@ struct ConstructTask : public CreateTaskStateTask {
 };
 
 /** A task to destroy data_stager */
-using labstor::Admin::DestroyTaskStateTask;
+using hrun::Admin::DestroyTaskStateTask;
 struct DestructTask : public DestroyTaskStateTask {
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -90,22 +90,30 @@ struct RegisterStagerTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   HSHM_ALWAYS_INLINE explicit
   RegisterStagerTask(hipc::Allocator *alloc,
                      const TaskNode &task_node,
-                     const DomainId &domain_id,
                      const TaskStateId &state_id,
                      hermes::BucketId bkt_id,
-                     hshm::charbuf &url) : Task(alloc) {
+                     const hshm::charbuf &url) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = bkt_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kRegisterStager;
-    task_flags_.SetBits(TASK_FIRE_AND_FORGET);
-    domain_id_ = domain_id;
+    task_flags_.SetBits(TASK_LOW_LATENCY | TASK_FIRE_AND_FORGET);
+    domain_id_ = DomainId::GetGlobal();
 
     // Custom params
     bkt_id_ = bkt_id;
     HSHM_MAKE_AR(url_, alloc, url);
+  }
+
+  /** Duplicate message */
+  void Dup(hipc::Allocator *alloc, RegisterStagerTask &other) {
+    task_dup(other);
+  }
+
+  /** Process duplicate message output */
+  void DupEnd(u32 replica, RegisterStagerTask &dup_task) {
   }
 
   /** (De)serialize message call */
@@ -147,9 +155,8 @@ struct UnregisterStagerTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   HSHM_ALWAYS_INLINE explicit
   UnregisterStagerTask(hipc::Allocator *alloc,
                        const TaskNode &task_node,
-                       const DomainId &domain_id,
                        const TaskStateId &state_id,
-                       hermes::BucketId bkt_id) : Task(alloc) {
+                       const hermes::BucketId &bkt_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = bkt_id.hash_;
@@ -157,10 +164,19 @@ struct UnregisterStagerTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
     task_state_ = state_id;
     method_ = Method::kUnregisterStager;
     task_flags_.SetBits(TASK_FIRE_AND_FORGET);
-    domain_id_ = domain_id;
+    domain_id_ = DomainId::GetGlobal();
 
     // Custom params
     bkt_id_ = bkt_id;
+  }
+
+  /** Duplicate message */
+  void Dup(hipc::Allocator *alloc, UnregisterStagerTask &other) {
+    task_dup(other);
+  }
+
+  /** Process duplicate message output */
+  void DupEnd(u32 replica, UnregisterStagerTask &dup_task) {
   }
 
   /** (De)serialize message call */
@@ -212,7 +228,7 @@ struct StageInTask : public Task, TaskFlags<TF_LOCAL> {
               u32 node_id) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = 0;
+    lane_hash_ = bkt_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kStageIn;
@@ -260,14 +276,15 @@ struct StageOutTask : public Task, TaskFlags<TF_LOCAL> {
                const BucketId &bkt_id,
                const hshm::charbuf &blob_name,
                const hipc::Pointer &data,
-               size_t data_size) : Task(alloc) {
+               size_t data_size,
+               u32 task_flags): Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = bkt_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kStageOut;
-    task_flags_.SetBits(TASK_COROUTINE | TASK_LOW_LATENCY | TASK_REMOTE_DEBUG_MARK);
+    task_flags_.SetBits(task_flags | TASK_COROUTINE | TASK_LOW_LATENCY | TASK_REMOTE_DEBUG_MARK);
     domain_id_ = DomainId::GetLocal();
 
     // Custom params
@@ -281,6 +298,9 @@ struct StageOutTask : public Task, TaskFlags<TF_LOCAL> {
   HSHM_ALWAYS_INLINE
   ~StageOutTask() {
     HSHM_DESTROY_AR(blob_name_)
+    if (IsDataOwner()) {
+      HRUN_CLIENT->FreeBuffer(data_);
+    }
   }
 
   /** Create group */
@@ -290,6 +310,6 @@ struct StageOutTask : public Task, TaskFlags<TF_LOCAL> {
   }
 };
 
-}  // namespace labstor::data_stager
+}  // namespace hrun::data_stager
 
-#endif  // LABSTOR_TASKS_TASK_TEMPL_INCLUDE_data_stager_data_stager_TASKS_H_
+#endif  // HRUN_TASKS_TASK_TEMPL_INCLUDE_data_stager_data_stager_TASKS_H_

@@ -11,35 +11,30 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <iostream>
-#include <hermes_shm/util/timer.h>
+#include <hermes_shm/util/timer_mpi.h>
 #include <mpi.h>
 #include "hermes/hermes.h"
 #include "hermes/bucket.h"
-#include "labstor/work_orchestrator/affinity.h"
+#include "hrun/work_orchestrator/affinity.h"
 
 namespace hapi = hermes;
-using Timer = hshm::HighResMonotonicTimer;
+using hshm::MpiTimer;
 
 /** Gather times per-process */
-void GatherTimes(std::string test_name, size_t io_size, Timer &t) {
-  MPI_Barrier(MPI_COMM_WORLD);
-  int rank, nprocs;
-  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  double time = t.GetSec(), max;
-  MPI_Reduce(&time, &max,
-             1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-  if (rank == 0) {
-    double mbps = io_size / (max * 1000000);
+void GatherTimes(std::string test_name, size_t io_size, MpiTimer &t) {
+  t.Collect();
+  if (t.rank_ == 0) {
+    double max = t.GetSec();
+    double mbps = io_size / t.GetUsec();
     HIPRINT("{}: Time: {} sec, MBps (or MOps): {}, Count: {}, Nprocs: {}\n",
-            test_name, max, mbps, io_size, nprocs);
+            test_name, max, mbps, io_size, t.nprocs_);
   }
 }
 
 /** Each process PUTS into the same bucket, but with different blob names */
 void PutTest(int nprocs, int rank,
              int repeat, size_t blobs_per_rank, size_t blob_size) {
-  Timer t;
+  MpiTimer t(MPI_COMM_WORLD);
   hermes::Context ctx;
   hermes::Bucket bkt("hello", ctx);
   hermes::Blob blob(blob_size);
@@ -62,7 +57,7 @@ void PutTest(int nprocs, int rank,
  * */
 void GetTest(int nprocs, int rank,
              int repeat, size_t blobs_per_rank, size_t blob_size) {
-  Timer t;
+  MpiTimer t(MPI_COMM_WORLD);
   hermes::Context ctx;
   hermes::Bucket bkt("hello", ctx);
   t.Resume();
@@ -90,7 +85,7 @@ void PutGetTest(int nprocs, int rank, int repeat,
 void PartialPutTest(int nprocs, int rank,
                     int repeat, size_t blobs_per_rank,
                     size_t blob_size, size_t part_size) {
-  Timer t;
+  MpiTimer t(MPI_COMM_WORLD);
   hermes::Context ctx;
   hermes::Bucket bkt("hello", ctx);
   hermes::Blob blob(blob_size);
@@ -115,7 +110,7 @@ void PartialPutTest(int nprocs, int rank,
 void PartialGetTest(int nprocs, int rank,
                     int repeat, size_t blobs_per_rank,
                     size_t blob_size, size_t part_size) {
-  Timer t;
+  MpiTimer t(MPI_COMM_WORLD);
   hermes::Context ctx;
   hermes::Bucket bkt("hello", ctx);
   t.Resume();
@@ -145,7 +140,7 @@ void PartialPutGetTest(int nprocs, int rank, int repeat,
 /** Each process creates a set of buckets */
 void CreateBucketTest(int nprocs, int rank,
                       size_t bkts_per_rank) {
-  Timer t;
+  MpiTimer t(MPI_COMM_WORLD);
   t.Resume();
   hapi::Context ctx;
   std::unordered_map<std::string, std::string> mdm_;
@@ -169,7 +164,7 @@ void GetBucketTest(int nprocs, int rank,
   }
 
   // Get existing buckets
-  Timer t;
+  MpiTimer t(MPI_COMM_WORLD);
   t.Resume();
   for (size_t i = 0; i < bkts_per_rank; ++i) {
     int bkt_name = rank * bkts_per_rank + i;
@@ -183,7 +178,7 @@ void GetBucketTest(int nprocs, int rank,
 void DeleteBucketTest(int nprocs, int rank,
                       size_t bkt_per_rank,
                       size_t blobs_per_bucket) {
-  Timer t;
+  MpiTimer t(MPI_COMM_WORLD);
   hapi::Context ctx;
 
   // Create the buckets
@@ -243,7 +238,7 @@ int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-  TRANSPARENT_LABSTOR();
+  TRANSPARENT_HRUN();
   HERMES->ClientInit();
 
   // Get mode

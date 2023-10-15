@@ -15,3 +15,4 @@ kAppendBlob: 13
 kGetSize: 14
 kSetBlobMdm: 15
 kGetContainedBlobIds: 16
+kPollTagMetadata: 17

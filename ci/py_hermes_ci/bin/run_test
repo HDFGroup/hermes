@@ -33,7 +33,7 @@ if __name__ == '__main__':
     elif test_type == 'native':
         pkg_dir = f"{HERMES_ROOT}/test"
     elif test_type == 'data_stager':
-        pkg_dir = f"{HERMES_ROOT}/data_stager/test"
+        pkg_dir = f"{HERMES_ROOT}data_stager/test"
     elif test_type == 'kvstore':
         pkg_dir = f"{HERMES_ROOT}/hermes_adapters/kvstore"
     elif test_type == 'java_wrapper':

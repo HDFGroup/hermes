@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+
+"""
+USAGE:
+    cd codegen/bin
+    python3 hrun_config.py
+
+OUTPUT:
+    ${HRUN}/src/config_client_default.h (if client)
+    ${HRUN}/src/config_server_default.h (if server)
+"""
+
+from codegen.hrun_config.generator import create_config
+from codegen.util.paths import HRUN_ROOT
+
+create_config(
+    path=f"{HRUN_ROOT}/config/hrun_client_default.yaml",
+    var_name="kHrunClientDefaultConfigStr",
+    config_path=f"{HRUN_ROOT}/include/hrun/config/config_client_default.h",
+    macro_name="HRUN_CLIENT"
+)
+
+create_config(
+    path=f"{HRUN_ROOT}/config/hrun_server_default.yaml",
+    var_name="kHrunServerDefaultConfigStr",
+    config_path=f"{HRUN_ROOT}/include/hrun/config/config_server_default.h",
+    macro_name="HRUN_SERVER"
+)

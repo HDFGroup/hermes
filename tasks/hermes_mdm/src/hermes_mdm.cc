@@ -2,8 +2,8 @@
 // Created by lukemartinlogan on 6/29/23.
 //
 
-#include "labstor_admin/labstor_admin.h"
-#include "labstor/api/labstor_runtime.h"
+#include "hrun_admin/hrun_admin.h"
+#include "hrun/api/hrun_runtime.h"
 #include "hermes/config_server.h"
 #include "hermes_mdm/hermes_mdm.h"
 #include "hermes_blob_mdm/hermes_blob_mdm.h"
@@ -29,7 +29,7 @@ class Server : public TaskLib {
     HILOG(kDebug, "ConstructTaskPhase::kLoadConfig")
     std::string config_path = task->server_config_path_->str();
     HERMES_CONF->LoadServerConfig(config_path);
-    node_id_ = LABSTOR_CLIENT->node_id_;
+    node_id_ = HRUN_CLIENT->node_id_;
     task->SetModuleComplete();
   }
 
@@ -41,6 +41,6 @@ class Server : public TaskLib {
 #include "hermes_mdm/hermes_mdm_lib_exec.h"
 };
 
-}  // namespace labstor
+}  // namespace hrun
 
-LABSTOR_TASK_CC(hermes::mdm::Server, "hermes_mdm");
+HRUN_TASK_CC(hermes::mdm::Server, "hermes_mdm");

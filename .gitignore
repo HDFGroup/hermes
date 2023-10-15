@@ -29,7 +29,7 @@ cmake-build-*
 .idea
 .clang-format
 __pycache__/
-/src/hermes_adapters/posix/cmake-build-debug-system/CMakeFiles/clion-log.txt
+/hrun/src/hermes_adapters/posix/cmake-build-debug-system/CMakeFiles/clion-log.txt
 /hermes_adapters/test/posix/Testing/Temporary/LastTest.log
 .cache
 
@@ -39,7 +39,7 @@ Testing
 
 .gradle
 **/build/
-!src/**/build/
+!hrun/src/**/build/
 
 # Ignore Gradle GUI config
 gradle-app.setting

@@ -2,8 +2,8 @@
 // Created by lukemartinlogan on 6/29/23.
 //
 
-#ifndef LABSTOR_hermes_blob_mdm_H_
-#define LABSTOR_hermes_blob_mdm_H_
+#ifndef HRUN_hermes_blob_mdm_H_
+#define HRUN_hermes_blob_mdm_H_
 
 #include "hermes_blob_mdm_tasks.h"
 
@@ -31,23 +31,23 @@ class Client : public TaskLibClient {
                                       const DomainId &domain_id,
                                       const std::string &state_name) {
     id_ = TaskStateId::GetNull();
-    QueueManagerInfo &qm = LABSTOR_CLIENT->server_config_.queue_manager_;
+    QueueManagerInfo &qm = HRUN_CLIENT->server_config_.queue_manager_;
     std::vector<PriorityInfo> queue_info = {
         {1, 1, qm.queue_depth_, 0},
         {1, 1, qm.queue_depth_, QUEUE_LONG_RUNNING},
         {qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY}
     };
-    return LABSTOR_ADMIN->AsyncCreateTaskState<ConstructTask>(
+    return HRUN_ADMIN->AsyncCreateTaskState<ConstructTask>(
         task_node, domain_id, state_name, id_, queue_info);
   }
   void AsyncCreateComplete(ConstructTask *task) {
     if (task->IsComplete()) {
       id_ = task->id_;
       queue_id_ = QueueId(id_);
-      LABSTOR_CLIENT->DelTask(task);
+      HRUN_CLIENT->DelTask(task);
     }
   }
-  LABSTOR_TASK_NODE_ROOT(AsyncCreate);
+  HRUN_TASK_NODE_ROOT(AsyncCreate);
   template<typename ...Args>
   HSHM_ALWAYS_INLINE
   void CreateRoot(Args&& ...args) {
@@ -59,7 +59,7 @@ class Client : public TaskLibClient {
   /** Destroy task state + queue */
   HSHM_ALWAYS_INLINE
   void DestroyRoot(const DomainId &domain_id) {
-    LABSTOR_ADMIN->DestroyTaskStateRoot(domain_id, id_);
+    HRUN_ADMIN->DestroyTaskStateRoot(domain_id, id_);
   }
 
   /**====================================
@@ -70,18 +70,22 @@ class Client : public TaskLibClient {
   void AsyncSetBucketMdmConstruct(SetBucketMdmTask *task,
                                   const TaskNode &task_node,
                                   const DomainId &domain_id,
-                                  const TaskStateId &blob_mdm_id) {
-    LABSTOR_CLIENT->ConstructTask<SetBucketMdmTask>(
-        task, task_node, domain_id, id_, blob_mdm_id);
+                                  const TaskStateId &blob_mdm,
+                                  const TaskStateId &stager_mdm,
+                                  const TaskStateId &op_mdm) {
+    HRUN_CLIENT->ConstructTask<SetBucketMdmTask>(
+        task, task_node, domain_id, id_, blob_mdm, stager_mdm, op_mdm);
   }
   void SetBucketMdmRoot(const DomainId &domain_id,
-                        const TaskStateId &blob_mdm_id) {
-    LPointer<labpq::TypedPushTask<SetBucketMdmTask>> push_task =
-        AsyncSetBucketMdmRoot(domain_id, blob_mdm_id);
+                        const TaskStateId &blob_mdm,
+                        const TaskStateId &stager_mdm,
+                        const TaskStateId &op_mdm) {
+    LPointer<hrunpq::TypedPushTask<SetBucketMdmTask>> push_task =
+        AsyncSetBucketMdmRoot(domain_id, blob_mdm, stager_mdm, op_mdm);
     push_task->Wait();
-    LABSTOR_CLIENT->DelTask(push_task);
+    HRUN_CLIENT->DelTask(push_task);
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(SetBucketMdm);
+  HRUN_TASK_NODE_PUSH_ROOT(SetBucketMdm);
 
   /**
    * Get \a blob_name BLOB from \a bkt_id bucket
@@ -91,20 +95,20 @@ class Client : public TaskLibClient {
                                        TagId tag_id,
                                        const hshm::charbuf &blob_name) {
     u32 hash = std::hash<hshm::charbuf>{}(blob_name);
-    LABSTOR_CLIENT->ConstructTask<GetOrCreateBlobIdTask>(
+    HRUN_CLIENT->ConstructTask<GetOrCreateBlobIdTask>(
         task, task_node, DomainId::GetNode(HASH_TO_NODE_ID(hash)), id_,
         tag_id, blob_name);
   }
   BlobId GetOrCreateBlobIdRoot(TagId tag_id, const hshm::charbuf &blob_name) {
-    LPointer<labpq::TypedPushTask<GetOrCreateBlobIdTask>> push_task =
+    LPointer<hrunpq::TypedPushTask<GetOrCreateBlobIdTask>> push_task =
         AsyncGetOrCreateBlobIdRoot(tag_id, blob_name);
     push_task->Wait();
     GetOrCreateBlobIdTask *task = push_task->get();
     BlobId blob_id = task->blob_id_;
-    LABSTOR_CLIENT->DelTask(push_task);
+    HRUN_CLIENT->DelTask(push_task);
     return blob_id;
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(GetOrCreateBlobId);
+  HRUN_TASK_NODE_PUSH_ROOT(GetOrCreateBlobId);
 
   /**
   * Create a blob's metadata
@@ -125,16 +129,16 @@ class Client : public TaskLibClient {
       TagId tag_id, const hshm::charbuf &blob_name,
       const BlobId &blob_id, size_t blob_off, size_t blob_size,
       const hipc::Pointer &blob, float score,
-      bitfield32_t flags,
+      u32 flags,
       Context ctx = Context(),
-      bitfield32_t task_flags = bitfield32_t(TASK_FIRE_AND_FORGET | TASK_DATA_OWNER | TASK_LOW_LATENCY)) {
-    LABSTOR_CLIENT->ConstructTask<PutBlobTask>(
+      u32 task_flags = TASK_FIRE_AND_FORGET | TASK_DATA_OWNER | TASK_LOW_LATENCY) {
+    HRUN_CLIENT->ConstructTask<PutBlobTask>(
         task, task_node, DomainId::GetNode(blob_id.node_id_), id_,
         tag_id, blob_name, blob_id,
         blob_off, blob_size,
         blob, score, flags, ctx, task_flags);
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(PutBlob);
+  HRUN_TASK_NODE_PUSH_ROOT(PutBlob);
 
   /** Get a blob's data */
   void AsyncGetBlobConstruct(GetBlobTask *task,
@@ -146,9 +150,9 @@ class Client : public TaskLibClient {
                              ssize_t data_size,
                              hipc::Pointer &data,
                              Context ctx = Context(),
-                             bitfield32_t flags = bitfield32_t(0)) {
-    HILOG(kDebug, "Beginning GET (task_node={})", task_node);
-    LABSTOR_CLIENT->ConstructTask<GetBlobTask>(
+                             u32 flags = 0) {
+    // HILOG(kDebug, "Beginning GET (task_node={})", task_node);
+    HRUN_CLIENT->ConstructTask<GetBlobTask>(
         task, task_node, DomainId::GetNode(blob_id.node_id_), id_,
         tag_id, blob_name, blob_id, off, data_size, data, ctx, flags);
   }
@@ -158,17 +162,17 @@ class Client : public TaskLibClient {
                      ssize_t data_size,
                      hipc::Pointer &data,
                      Context ctx = Context(),
-                     bitfield32_t flags = bitfield32_t(0)) {
-    LPointer<labpq::TypedPushTask<GetBlobTask>> push_task =
+                     u32 flags = 0) {
+    LPointer<hrunpq::TypedPushTask<GetBlobTask>> push_task =
         AsyncGetBlobRoot(tag_id, hshm::charbuf(""), blob_id, off, data_size, data, ctx, flags);
     push_task->Wait();
     GetBlobTask *task = push_task->get();
     data = task->data_;
     size_t true_size = task->data_size_;
-    LABSTOR_CLIENT->DelTask(push_task);
+    HRUN_CLIENT->DelTask(push_task);
     return true_size;
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(GetBlob);
+  HRUN_TASK_NODE_PUSH_ROOT(GetBlob);
 
   /**
    * Reorganize a blob
@@ -183,12 +187,12 @@ class Client : public TaskLibClient {
                                     const BlobId &blob_id,
                                     float score,
                                     u32 node_id) {
-    HILOG(kDebug, "Beginning REORGANIZE (task_node={})", task_node);
-    LABSTOR_CLIENT->ConstructTask<ReorganizeBlobTask>(
+    // HILOG(kDebug, "Beginning REORGANIZE (task_node={})", task_node);
+    HRUN_CLIENT->ConstructTask<ReorganizeBlobTask>(
         task, task_node, DomainId::GetNode(blob_id.node_id_), id_,
         tag_id, blob_id, score, node_id);
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(ReorganizeBlob);
+  HRUN_TASK_NODE_PUSH_ROOT(ReorganizeBlob);
 
   /**
    * Tag a blob
@@ -201,19 +205,19 @@ class Client : public TaskLibClient {
                              const TagId &tag_id,
                              const BlobId &blob_id,
                              const TagId &tag) {
-    LABSTOR_CLIENT->ConstructTask<TagBlobTask>(
+    HRUN_CLIENT->ConstructTask<TagBlobTask>(
         task, task_node, DomainId::GetNode(blob_id.node_id_), id_,
         tag_id, blob_id, tag);
   }
   void TagBlobRoot(const TagId &tag_id,
                    const BlobId &blob_id,
                    const TagId &tag) {
-    LPointer<labpq::TypedPushTask<TagBlobTask>> push_task =
+    LPointer<hrunpq::TypedPushTask<TagBlobTask>> push_task =
        AsyncTagBlobRoot(tag_id, blob_id, tag);
     push_task->Wait();
-    LABSTOR_CLIENT->DelTask(push_task);
+    HRUN_CLIENT->DelTask(push_task);
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(TagBlob);
+  HRUN_TASK_NODE_PUSH_ROOT(TagBlob);
 
   /**
    * Check if blob has a tag
@@ -223,22 +227,22 @@ class Client : public TaskLibClient {
                                 const TagId &tag_id,
                                 const BlobId &blob_id,
                                 const TagId &tag) {
-    LABSTOR_CLIENT->ConstructTask<BlobHasTagTask>(
+    HRUN_CLIENT->ConstructTask<BlobHasTagTask>(
         task, task_node, DomainId::GetNode(blob_id.node_id_), id_,
         tag_id, blob_id, tag);
   }
   bool BlobHasTagRoot(const TagId &tag_id,
                       const BlobId &blob_id,
                       const TagId &tag) {
-    LPointer<labpq::TypedPushTask<BlobHasTagTask>> push_task =
+    LPointer<hrunpq::TypedPushTask<BlobHasTagTask>> push_task =
         AsyncBlobHasTagRoot(tag_id, blob_id, tag);
     push_task->Wait();
     BlobHasTagTask *task = push_task->get();
     bool has_tag = task->has_tag_;
-    LABSTOR_CLIENT->DelTask(push_task);
+    HRUN_CLIENT->DelTask(push_task);
     return has_tag;
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(BlobHasTag);
+  HRUN_TASK_NODE_PUSH_ROOT(BlobHasTag);
 
   /**
    * Get \a blob_name BLOB from \a bkt_id bucket
@@ -248,21 +252,21 @@ class Client : public TaskLibClient {
                                const TagId &tag_id,
                                const hshm::charbuf &blob_name) {
     u32 hash = std::hash<hshm::charbuf>{}(blob_name);
-    LABSTOR_CLIENT->ConstructTask<GetBlobIdTask>(
+    HRUN_CLIENT->ConstructTask<GetBlobIdTask>(
         task, task_node, DomainId::GetNode(HASH_TO_NODE_ID(hash)), id_,
         tag_id, blob_name);
   }
   BlobId GetBlobIdRoot(const TagId &tag_id,
                        const hshm::charbuf &blob_name) {
-    LPointer<labpq::TypedPushTask<GetBlobIdTask>> push_task =
+    LPointer<hrunpq::TypedPushTask<GetBlobIdTask>> push_task =
         AsyncGetBlobIdRoot(tag_id, blob_name);
     push_task->Wait();
     GetBlobIdTask *task = push_task->get();
     BlobId blob_id = task->blob_id_;
-    LABSTOR_CLIENT->DelTask(push_task);
+    HRUN_CLIENT->DelTask(push_task);
     return blob_id;
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(GetBlobId);
+  HRUN_TASK_NODE_PUSH_ROOT(GetBlobId);
 
   /**
    * Get \a blob_name BLOB name from \a blob_id BLOB id
@@ -271,21 +275,21 @@ class Client : public TaskLibClient {
                                  const TaskNode &task_node,
                                  const TagId &tag_id,
                                  const BlobId &blob_id) {
-    LABSTOR_CLIENT->ConstructTask<GetBlobNameTask>(
+    HRUN_CLIENT->ConstructTask<GetBlobNameTask>(
         task, task_node, DomainId::GetNode(blob_id.node_id_), id_,
         tag_id, blob_id);
   }
   std::string GetBlobNameRoot(const TagId &tag_id,
                               const BlobId &blob_id) {
-    LPointer<labpq::TypedPushTask<GetBlobNameTask>> push_task =
+    LPointer<hrunpq::TypedPushTask<GetBlobNameTask>> push_task =
         AsyncGetBlobNameRoot(tag_id, blob_id);
     push_task->Wait();
     GetBlobNameTask *task = push_task->get();
     std::string blob_name = task->blob_name_->str();
-    LABSTOR_CLIENT->DelTask(push_task);
+    HRUN_CLIENT->DelTask(push_task);
     return blob_name;
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(GetBlobName);
+  HRUN_TASK_NODE_PUSH_ROOT(GetBlobName);
 
   /**
    * Get \a size from \a blob_id BLOB id
@@ -295,23 +299,23 @@ class Client : public TaskLibClient {
                                  const TagId &tag_id,
                                  const hshm::charbuf &blob_name,
                                  const BlobId &blob_id) {
-    HILOG(kDebug, "Getting blob size {}", task_node);
-    LABSTOR_CLIENT->ConstructTask<GetBlobSizeTask>(
+    // HILOG(kDebug, "Getting blob size {}", task_node);
+    HRUN_CLIENT->ConstructTask<GetBlobSizeTask>(
         task, task_node, DomainId::GetNode(blob_id.node_id_), id_,
         tag_id, blob_name, blob_id);
   }
   size_t GetBlobSizeRoot(const TagId &tag_id,
                          const hshm::charbuf &blob_name,
                          const BlobId &blob_id) {
-    LPointer<labpq::TypedPushTask<GetBlobSizeTask>> push_task =
+    LPointer<hrunpq::TypedPushTask<GetBlobSizeTask>> push_task =
         AsyncGetBlobSizeRoot(tag_id, blob_name, blob_id);
     push_task->Wait();
     GetBlobSizeTask *task = push_task->get();
     size_t size = task->size_;
-    LABSTOR_CLIENT->DelTask(push_task);
+    HRUN_CLIENT->DelTask(push_task);
     return size;
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(GetBlobSize);
+  HRUN_TASK_NODE_PUSH_ROOT(GetBlobSize);
 
   /**
    * Get \a score from \a blob_id BLOB id
@@ -320,21 +324,21 @@ class Client : public TaskLibClient {
                                   const TaskNode &task_node,
                                   const TagId &tag_id,
                                   const BlobId &blob_id) {
-    LABSTOR_CLIENT->ConstructTask<GetBlobScoreTask>(
+    HRUN_CLIENT->ConstructTask<GetBlobScoreTask>(
         task, task_node, DomainId::GetNode(blob_id.node_id_), id_,
         tag_id, blob_id);
   }
   float GetBlobScoreRoot(const TagId &tag_id,
                          const BlobId &blob_id) {
-    LPointer<labpq::TypedPushTask<GetBlobScoreTask>> push_task =
+    LPointer<hrunpq::TypedPushTask<GetBlobScoreTask>> push_task =
         AsyncGetBlobScoreRoot(tag_id, blob_id);
     push_task->Wait();
     GetBlobScoreTask *task = push_task->get();
     float score = task->score_;
-    LABSTOR_CLIENT->DelTask(push_task);
+    HRUN_CLIENT->DelTask(push_task);
     return score;
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(GetBlobScore);
+  HRUN_TASK_NODE_PUSH_ROOT(GetBlobScore);
 
   /**
    * Get \a blob_id blob's buffers
@@ -343,21 +347,21 @@ class Client : public TaskLibClient {
                                     const TaskNode &task_node,
                                     const TagId &tag_id,
                                     const BlobId &blob_id) {
-    LABSTOR_CLIENT->ConstructTask<GetBlobBuffersTask>(
+    HRUN_CLIENT->ConstructTask<GetBlobBuffersTask>(
         task, task_node, DomainId::GetNode(blob_id.node_id_), id_,
         tag_id, blob_id);
   }
   std::vector<BufferInfo> GetBlobBuffersRoot(const TagId &tag_id,
                                              const BlobId &blob_id) {
-    LPointer<labpq::TypedPushTask<GetBlobBuffersTask>> push_task = AsyncGetBlobBuffersRoot(tag_id, blob_id);
+    LPointer<hrunpq::TypedPushTask<GetBlobBuffersTask>> push_task = AsyncGetBlobBuffersRoot(tag_id, blob_id);
     push_task->Wait();
     GetBlobBuffersTask *task = push_task->get();
     std::vector<BufferInfo> buffers =
         hshm::to_stl_vector<BufferInfo>(*task->buffers_);
-    LABSTOR_CLIENT->DelTask(push_task);
+    HRUN_CLIENT->DelTask(push_task);
     return buffers;
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(GetBlobBuffers)
+  HRUN_TASK_NODE_PUSH_ROOT(GetBlobBuffers)
 
   /**
    * Rename \a blob_id blob to \a new_blob_name new blob name
@@ -368,19 +372,19 @@ class Client : public TaskLibClient {
                                 const TagId &tag_id,
                                 const BlobId &blob_id,
                                 const hshm::charbuf &new_blob_name) {
-    LABSTOR_CLIENT->ConstructTask<RenameBlobTask>(
+    HRUN_CLIENT->ConstructTask<RenameBlobTask>(
         task, task_node, DomainId::GetNode(blob_id.node_id_), id_,
         tag_id, blob_id, new_blob_name);
   }
   void RenameBlobRoot(const TagId &tag_id,
                       const BlobId &blob_id,
                       const hshm::charbuf &new_blob_name) {
-    LPointer<labpq::TypedPushTask<RenameBlobTask>> push_task =
+    LPointer<hrunpq::TypedPushTask<RenameBlobTask>> push_task =
         AsyncRenameBlobRoot(tag_id, blob_id, new_blob_name);
     push_task->Wait();
-    LABSTOR_CLIENT->DelTask(push_task);
+    HRUN_CLIENT->DelTask(push_task);
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(RenameBlob);
+  HRUN_TASK_NODE_PUSH_ROOT(RenameBlob);
 
   /**
    * Truncate a blob to a new size
@@ -390,19 +394,19 @@ class Client : public TaskLibClient {
                                   const TagId &tag_id,
                                   const BlobId &blob_id,
                                   size_t new_size) {
-    LABSTOR_CLIENT->ConstructTask<TruncateBlobTask>(
+    HRUN_CLIENT->ConstructTask<TruncateBlobTask>(
         task, task_node, DomainId::GetNode(blob_id.node_id_), id_,
         tag_id, blob_id, new_size);
   }
   void TruncateBlobRoot(const TagId &tag_id,
                         const BlobId &blob_id,
                         size_t new_size) {
-    LPointer<labpq::TypedPushTask<TruncateBlobTask>> push_task =
+    LPointer<hrunpq::TypedPushTask<TruncateBlobTask>> push_task =
         AsyncTruncateBlobRoot(tag_id, blob_id, new_size);
     push_task->Wait();
-    LABSTOR_CLIENT->DelTask(push_task);
+    HRUN_CLIENT->DelTask(push_task);
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(TruncateBlob);
+  HRUN_TASK_NODE_PUSH_ROOT(TruncateBlob);
 
   /**
    * Destroy \a blob_id blob in \a bkt_id bucket
@@ -411,20 +415,68 @@ class Client : public TaskLibClient {
                                  const TaskNode &task_node,
                                  const TagId &tag_id,
                                  const BlobId &blob_id) {
-    LABSTOR_CLIENT->ConstructTask<DestroyBlobTask>(
+    HRUN_CLIENT->ConstructTask<DestroyBlobTask>(
         task, task_node, DomainId::GetNode(blob_id.node_id_),
         id_, tag_id, blob_id);
   }
   void DestroyBlobRoot(const TagId &tag_id,
                        const BlobId &blob_id) {
-    LPointer<labpq::TypedPushTask<DestroyBlobTask>> push_task =
+    LPointer<hrunpq::TypedPushTask<DestroyBlobTask>> push_task =
         AsyncDestroyBlobRoot(tag_id, blob_id);
     push_task->Wait();
-    LABSTOR_CLIENT->DelTask(push_task);
+    HRUN_CLIENT->DelTask(push_task);
   }
-  LABSTOR_TASK_NODE_PUSH_ROOT(DestroyBlob);
+  HRUN_TASK_NODE_PUSH_ROOT(DestroyBlob);
+
+  /** Initialize automatic flushing */
+  void AsyncFlushDataConstruct(FlushDataTask *task,
+                               const TaskNode &task_node) {
+    HRUN_CLIENT->ConstructTask<FlushDataTask>(
+        task, task_node, id_);
+  }
+  HRUN_TASK_NODE_PUSH_ROOT(FlushData);
+
+  /**
+   * Get all blob metadata
+   * */
+  void AsyncPollBlobMetadataConstruct(PollBlobMetadataTask *task,
+                                  const TaskNode &task_node) {
+    HRUN_CLIENT->ConstructTask<PollBlobMetadataTask>(
+        task, task_node, id_);
+  }
+  std::vector<BlobInfo> PollBlobMetadataRoot() {
+    LPointer<hrunpq::TypedPushTask<PollBlobMetadataTask>> push_task =
+        AsyncPollBlobMetadataRoot();
+    push_task->Wait();
+    PollBlobMetadataTask *task = push_task->get();
+    std::vector<BlobInfo> blob_mdms =
+        task->DeserializeBlobMetadata();
+    HRUN_CLIENT->DelTask(push_task);
+    return blob_mdms;
+  }
+  HRUN_TASK_NODE_PUSH_ROOT(PollBlobMetadata);
+
+  /**
+  * Get all target metadata
+  * */
+  void AsyncPollTargetMetadataConstruct(PollTargetMetadataTask *task,
+                                        const TaskNode &task_node) {
+    HRUN_CLIENT->ConstructTask<PollTargetMetadataTask>(
+        task, task_node, id_);
+  }
+  std::vector<TargetStats> PollTargetMetadataRoot() {
+    LPointer<hrunpq::TypedPushTask<PollTargetMetadataTask>> push_task =
+        AsyncPollTargetMetadataRoot();
+    push_task->Wait();
+    PollTargetMetadataTask *task = push_task->get();
+    std::vector<TargetStats> target_mdms =
+        task->DeserializeTargetMetadata();
+    HRUN_CLIENT->DelTask(push_task);
+    return target_mdms;
+  }
+  HRUN_TASK_NODE_PUSH_ROOT(PollTargetMetadata);
 };
 
-}  // namespace labstor
+}  // namespace hrun
 
-#endif  // LABSTOR_hermes_blob_mdm_H_
+#endif  // HRUN_hermes_blob_mdm_H_

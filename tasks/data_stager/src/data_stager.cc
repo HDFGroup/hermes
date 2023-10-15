@@ -2,13 +2,13 @@
 // Created by lukemartinlogan on 6/29/23.
 //
 
-#include "labstor_admin/labstor_admin.h"
-#include "labstor/api/labstor_runtime.h"
+#include "hrun_admin/hrun_admin.h"
+#include "hrun/api/hrun_runtime.h"
 #include "data_stager/data_stager.h"
 #include "hermes_adapters/mapper/abstract_mapper.h"
 #include "hermes_adapters/posix/posix_api.h"
 #include "hermes_blob_mdm/hermes_blob_mdm.h"
-#include "stager_factory.h"
+#include "data_stager/factory/stager_factory.h"
 
 namespace hermes::data_stager {
 
@@ -21,7 +21,7 @@ class Server : public TaskLib {
   Server() = default;
 
   void Construct(ConstructTask *task, RunContext &rctx) {
-    url_map_.resize(LABSTOR_QM_RUNTIME->max_lanes_);
+    url_map_.resize(HRUN_QM_RUNTIME->max_lanes_);
     blob_mdm_.Init(task->blob_mdm_);
     task->SetModuleComplete();
   }
@@ -58,6 +58,6 @@ class Server : public TaskLib {
 #include "data_stager/data_stager_lib_exec.h"
 };
 
-}  // namespace labstor::data_stager
+}  // namespace hrun::data_stager
 
-LABSTOR_TASK_CC(hermes::data_stager::Server, "data_stager");
+HRUN_TASK_CC(hermes::data_stager::Server, "data_stager");

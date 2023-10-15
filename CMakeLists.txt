@@ -12,7 +12,7 @@ option(HERMES_ENABLE_DOXYGEN "Check how well the code is documented" OFF)
 
 option(HERMES_ENABLE_POSIX_ADAPTER "Build the Hermes POSIX adapter." ON)
 option(HERMES_ENABLE_STDIO_ADAPTER "Build the Hermes stdio adapter." ON)
-option(HERMES_ENABLE_MPIIO_ADAPTER "Build the Hermes MPI-IO adapter." OFF)
+option(HERMES_ENABLE_MPIIO_ADAPTER "Build the Hermes MPI-IO adapter." ON)
 option(HERMES_ENABLE_PUBSUB_ADAPTER "Build the Hermes pub/sub adapter." OFF)
 option(HERMES_ENABLE_KVSTORE "Build the Hermes KVStore adapter." OFF)
 option(HERMES_ENABLE_VFD "Build the Hermes HDF5 Virtual File Driver" OFF)
@@ -39,7 +39,7 @@ add_compile_options(-march=native -fomit-frame-pointer)
 # by other projects.
 #-----------------------------------------------------------------------------
 if(NOT HERMES_EXPORTED_TARGETS)
-    set(HERMES_EXPORTED_TARGETS "labstor-targets")
+    set(HERMES_EXPORTED_TARGETS "hrun-targets")
 endif()
 
 #-----------------------------------------------------------------------------
@@ -135,15 +135,16 @@ endif()
 include_directories(${HermesShm_INCLUDE_DIRS})
 include_directories(${CMAKE_SOURCE_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/include)
+# Required Task includes
+include_directories(${CMAKE_SOURCE_DIR}/hrun/include)
+include_directories(${CMAKE_SOURCE_DIR}/hrun/tasks_required)
+include_directories(${CMAKE_SOURCE_DIR}/hrun/tasks_required/hrun_admin/include)
+include_directories(${CMAKE_SOURCE_DIR}/hrun/tasks_required/small_message/include)
+include_directories(${CMAKE_SOURCE_DIR}/hrun/tasks_required/remote_queue/include)
+include_directories(${CMAKE_SOURCE_DIR}/hrun/tasks_required/worch_proc_round_robin/include)
+include_directories(${CMAKE_SOURCE_DIR}/hrun/tasks_required/worch_queue_round_robin/include)
+include_directories(${CMAKE_SOURCE_DIR}/hrun/tasks_required/proc_queue/include)
 # Task includes
-include_directories(${CMAKE_SOURCE_DIR}/tasks_required)
-include_directories(${CMAKE_SOURCE_DIR}/tasks_required/labstor_admin/include)
-include_directories(${CMAKE_SOURCE_DIR}/tasks_required/small_message/include)
-include_directories(${CMAKE_SOURCE_DIR}/tasks_required/remote_queue/include)
-include_directories(${CMAKE_SOURCE_DIR}/tasks_required/worch_proc_round_robin/include)
-include_directories(${CMAKE_SOURCE_DIR}/tasks_required/worch_queue_round_robin/include)
-include_directories(${CMAKE_SOURCE_DIR}/tasks_required/proc_queue/include)
-
 include_directories(${CMAKE_SOURCE_DIR}/tasks)
 include_directories(${CMAKE_SOURCE_DIR}/tasks/hermes/include)
 include_directories(${CMAKE_SOURCE_DIR}/tasks/bdev/include)
@@ -153,7 +154,8 @@ include_directories(${CMAKE_SOURCE_DIR}/tasks/hermes_mdm/include)
 include_directories(${CMAKE_SOURCE_DIR}/tasks/hermes_blob_mdm/include)
 include_directories(${CMAKE_SOURCE_DIR}/tasks/hermes_bucket_mdm/include)
 include_directories(${CMAKE_SOURCE_DIR}/tasks/hermes_adapters/include)
-
+include_directories(${CMAKE_SOURCE_DIR}/tasks/data_stager/include)
+include_directories(${CMAKE_SOURCE_DIR}/tasks/hermes_data_op/include)
 # Test includes
 include_directories(${CMAKE_SOURCE_DIR}/test/unit)
 
@@ -161,19 +163,20 @@ set(Hermes_CLIENT_LIBRARIES
         ${HermesShm_LIBRARIES}
         yaml-cpp
         cereal::cereal
-        -ldl -lrt -lc -pthread labstor_client)
+        -ldl -lrt -lc -pthread hrun_client)
 set(Hermes_CLIENT_DEPS
-        labstor_client)
+        hrun_client)
 set(Hermes_RUNTIME_LIBRARIES
         ${Hermes_CLIENT_LIBRARIES}
-        labstor_runtime
+        hrun_runtime
         ${Boost_LIBRARIES})
 set(Hermes_RUNTIME_DEPS
-        labstor_client labstor_runtime)
+        hrun_client hrun_runtime)
 
 set(TEST_MAIN ${CMAKE_SOURCE_DIR}/test/unit)
+add_subdirectory(hrun)
 add_subdirectory(src)
-add_subdirectory(tasks_required)
+add_subdirectory(hermes_adapters)
 add_subdirectory(tasks)
 add_subdirectory(benchmark)
 add_custom_target(lint COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/lint.sh ${CMAKE_SOURCE_DIR})
@@ -192,10 +195,8 @@ enable_testing()
 add_subdirectory(test)
 
 #-----------------------------------------------------------------------------
-# Install LabStor Headers
+# Install Hermes Headers
 #-----------------------------------------------------------------------------
-install(DIRECTORY include DESTINATION ${CMAKE_INSTALL_PREFIX})
-
 configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/CMake/HermesConfig.cmake
         ${PROJECT_BINARY_DIR}/CMakeFiles/HermesConfig.cmake @ONLY
@@ -207,3 +208,5 @@ install(
         DESTINATION
         ${CMAKE_INSTALL_PREFIX}/cmake
 )
+
+install(DIRECTORY include DESTINATION ${CMAKE_INSTALL_PREFIX})

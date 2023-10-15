@@ -11,12 +11,12 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
-#include "labstor/api/labstor_client.h"
+#include "hrun/api/hrun_client.h"
 #include "basic_test.h"
 #include "test_init.h"
 
 void MainPretest() {
-  TRANSPARENT_LABSTOR();
+  TRANSPARENT_HRUN();
 }
 
 void MainPosttest() {

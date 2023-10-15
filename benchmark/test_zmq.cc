@@ -4,11 +4,11 @@
 
 #include <zmq.hpp>
 #include "basic_test.h"
-#include "labstor/api/labstor_client.h"
-#include "labstor_admin/labstor_admin.h"
+#include "hrun/api/hrun_client.h"
+#include "hrun_admin/hrun_admin.h"
 #include "small_message/small_message.h"
 #include "hermes_shm/util/timer.h"
-#include "labstor/work_orchestrator/affinity.h"
+#include "hrun/work_orchestrator/affinity.h"
 
 /** ZeroMQ allocate + free request */
 TEST_CASE("TestZeromqAllocateFree") {
@@ -30,7 +30,7 @@ TEST_CASE("TestZeromqAllocateFree") {
   t.Resume();
   size_t ops = (1 << 20);
   for (size_t i = 0; i < ops; ++i) {
-    zmq::message_t message(sizeof(labstor::Task));
+    zmq::message_t message(sizeof(hrun::Task));
   }
   t.Pause();
 
@@ -58,13 +58,13 @@ TEST_CASE("TestZeromqAllocateEmplacePop") {
   size_t ops = (1 << 20);
   for (size_t i = 0; i < ops; ++i) {
     // Send a request
-    zmq::message_t message(sizeof(labstor::Task));
+    zmq::message_t message(sizeof(hrun::Task));
     pushSocket.send(message, zmq::send_flags::none);
 
     // Receive the request
     zmq::message_t receivedMessage;
     zmq::recv_result_t result = pullSocket.recv(receivedMessage);
-    REQUIRE(receivedMessage.size() == sizeof(labstor::Task));
+    REQUIRE(receivedMessage.size() == sizeof(hrun::Task));
   }
   t.Pause();
 

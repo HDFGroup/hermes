@@ -2,13 +2,13 @@
 // Created by lukemartinlogan on 8/14/23.
 //
 
-#ifndef LABSTOR_TASKS_BDEV_INCLUDE_BDEV_BDEV_TASKS_H_
-#define LABSTOR_TASKS_BDEV_INCLUDE_BDEV_BDEV_TASKS_H_
+#ifndef HRUN_TASKS_BDEV_INCLUDE_BDEV_BDEV_TASKS_H_
+#define HRUN_TASKS_BDEV_INCLUDE_BDEV_BDEV_TASKS_H_
 
-#include "labstor/api/labstor_client.h"
-#include "labstor/task_registry/task_lib.h"
-#include "labstor_admin/labstor_admin.h"
-#include "labstor/queue_manager/queue_manager_client.h"
+#include "hrun/api/hrun_client.h"
+#include "hrun/task_registry/task_lib.h"
+#include "hrun_admin/hrun_admin.h"
+#include "hrun/queue_manager/queue_manager_client.h"
 #include "hermes/hermes_types.h"
 #include "hermes/config_server.h"
 #include "proc_queue/proc_queue.h"
@@ -16,12 +16,12 @@
 namespace hermes::bdev {
 
 #include "bdev_methods.h"
-#include "labstor/labstor_namespace.h"
+#include "hrun/hrun_namespace.h"
 
 /**
  * A task to create hermes_mdm
  * */
-using labstor::Admin::CreateTaskStateTask;
+using hrun::Admin::CreateTaskStateTask;
 struct ConstructTask : public CreateTaskStateTask {
   IN DeviceInfo info_;
 
@@ -47,7 +47,7 @@ struct ConstructTask : public CreateTaskStateTask {
 };
 
 /** A task to destroy hermes_mdm */
-using labstor::Admin::DestroyTaskStateTask;
+using hrun::Admin::DestroyTaskStateTask;
 struct DestructTask : public DestroyTaskStateTask {
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -238,7 +238,6 @@ struct ReadTask : public Task, TaskFlags<TF_LOCAL> {
 
 /** A task to monitor bdev statistics */
 struct MonitorTask : public Task, TaskFlags<TF_LOCAL> {
-  IN size_t freq_ms_;  /**< Frequency in ms */
   OUT size_t rem_cap_; /**< Remaining capacity of the target */
 
   /** SHM default constructor */
@@ -260,10 +259,10 @@ struct MonitorTask : public Task, TaskFlags<TF_LOCAL> {
     task_state_ = state_id;
     method_ = Method::kMonitor;
     task_flags_.SetBits(TASK_LONG_RUNNING | TASK_REMOTE_DEBUG_MARK);
+    SetPeriodMs(freq_ms);
     domain_id_ = domain_id;
 
     // Custom
-    freq_ms_ = freq_ms;
     rem_cap_ = rem_cap;
   }
 
@@ -310,4 +309,4 @@ struct UpdateCapacityTask : public Task, TaskFlags<TF_LOCAL> {
 
 }  // namespace hermes::bdev
 
-#endif  // LABSTOR_TASKS_BDEV_INCLUDE_BDEV_BDEV_TASKS_H_
+#endif  // HRUN_TASKS_BDEV_INCLUDE_BDEV_BDEV_TASKS_H_

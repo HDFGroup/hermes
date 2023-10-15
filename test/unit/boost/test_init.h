@@ -11,9 +11,9 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
-#ifndef LABSTOR_TEST_UNIT_IPC_TEST_INIT_H_
-#define LABSTOR_TEST_UNIT_IPC_TEST_INIT_H_
+#ifndef HRUN_TEST_UNIT_IPC_TEST_INIT_H_
+#define HRUN_TEST_UNIT_IPC_TEST_INIT_H_
 
-#include "labstor/labstor_types.h"
+#include "hrun/hrun_types.h"
 
-#endif  // LABSTOR_TEST_UNIT_IPC_TEST_INIT_H_
+#endif  // HRUN_TEST_UNIT_IPC_TEST_INIT_H_

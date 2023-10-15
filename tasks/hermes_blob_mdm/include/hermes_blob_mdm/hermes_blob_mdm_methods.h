@@ -1,5 +1,5 @@
-#ifndef LABSTOR_HERMES_BLOB_MDM_METHODS_H_
-#define LABSTOR_HERMES_BLOB_MDM_METHODS_H_
+#ifndef HRUN_HERMES_BLOB_MDM_METHODS_H_
+#define HRUN_HERMES_BLOB_MDM_METHODS_H_
 
 /** The set of methods in the admin task */
 struct Method : public TaskMethod {
@@ -18,6 +18,9 @@ struct Method : public TaskMethod {
   TASK_METHOD_T kRenameBlob = kLast + 14;
   TASK_METHOD_T kReorganizeBlob = kLast + 15;
   TASK_METHOD_T kSetBucketMdm = kLast + 16;
+  TASK_METHOD_T kFlushData = kLast + 17;
+  TASK_METHOD_T kPollBlobMetadata = kLast + 18;
+  TASK_METHOD_T kPollTargetMetadata = kLast + 19;
 };
 
-#endif  // LABSTOR_HERMES_BLOB_MDM_METHODS_H_
+#endif  // HRUN_HERMES_BLOB_MDM_METHODS_H_

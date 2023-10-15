@@ -2,13 +2,14 @@
 // Created by lukemartinlogan on 6/29/23.
 //
 
-#include "labstor_admin/labstor_admin.h"
-#include "labstor/api/labstor_runtime.h"
+#include "hrun_admin/hrun_admin.h"
+#include "hrun/api/hrun_runtime.h"
 #include "hermes/config_server.h"
 #include "hermes_bucket_mdm/hermes_bucket_mdm.h"
 #include "hermes_adapters/mapper/abstract_mapper.h"
 #include "hermes/dpe/dpe_factory.h"
 #include "bdev/bdev.h"
+#include "data_stager/data_stager.h"
 
 namespace hermes::bucket_mdm {
 
@@ -23,16 +24,17 @@ class Server : public TaskLib {
   std::atomic<u64> id_alloc_;
   Client bkt_mdm_;
   blob_mdm::Client blob_mdm_;
+  data_stager::Client stager_mdm_;
 
  public:
   Server() = default;
 
   void Construct(ConstructTask *task, RunContext &rctx) {
     id_alloc_ = 0;
-    node_id_ = LABSTOR_CLIENT->node_id_;
+    node_id_ = HRUN_CLIENT->node_id_;
     bkt_mdm_.Init(id_);
-    tag_id_map_.resize(LABSTOR_QM_RUNTIME->max_lanes_);
-    tag_map_.resize(LABSTOR_QM_RUNTIME->max_lanes_);
+    tag_id_map_.resize(HRUN_QM_RUNTIME->max_lanes_);
+    tag_map_.resize(HRUN_QM_RUNTIME->max_lanes_);
     task->SetModuleComplete();
   }
 
@@ -45,6 +47,7 @@ class Server : public TaskLib {
    * */
   void SetBlobMdm(SetBlobMdmTask *task, RunContext &rctx) {
     blob_mdm_.Init(task->blob_mdm_);
+    stager_mdm_.Init(task->stager_mdm_);
     task->SetModuleComplete();
   }
 
@@ -71,7 +74,7 @@ class Server : public TaskLib {
     switch (task->phase_) {
       case AppendBlobPhase::kGetBlobIds: {
         HILOG(kDebug, "(node {}) Getting blob IDs for tag {} (task_node={})",
-              LABSTOR_CLIENT->node_id_, task->tag_id_, task->task_node_)
+              HRUN_CLIENT->node_id_, task->tag_id_, task->task_node_)
         TAG_MAP_T &tag_map = tag_map_[rctx.lane_id_];
         TagInfo &tag_info = tag_map[task->tag_id_];
         size_t bucket_size = tag_info.internal_size_;
@@ -81,7 +84,7 @@ class Server : public TaskLib {
         size_t max_pages = task->data_size_ / task->page_size_ + 1;
         size_t cur_size = 0;
         HILOG(kDebug, "(node {}) Bucket size {}, page_size {}, cur_page {} (task_node={})",
-              LABSTOR_CLIENT->node_id_, bucket_size, task->page_size_, cur_page, task->task_node_)
+              HRUN_CLIENT->node_id_, bucket_size, task->page_size_, cur_page, task->task_node_)
         HSHM_MAKE_AR0(task->append_info_, nullptr);
         std::vector<AppendInfo> &append_info = *task->append_info_;
         append_info.reserve(max_pages);
@@ -112,10 +115,10 @@ class Server : public TaskLib {
           }
         }
         HILOG(kDebug, "(node {}) Finished blob IDs for tag {} (task_node={})",
-              LABSTOR_CLIENT->node_id_, task->tag_id_, task->task_node_)
+              HRUN_CLIENT->node_id_, task->tag_id_, task->task_node_)
         for (AppendInfo &append : append_info) {
           append.blob_id_ = append.blob_id_task_->blob_id_;
-          LABSTOR_CLIENT->DelTask(append.blob_id_task_);
+          HRUN_CLIENT->DelTask(append.blob_id_task_);
         }
         task->SetModuleComplete();
       }
@@ -131,7 +134,7 @@ class Server : public TaskLib {
     switch (task->phase_) {
       case AppendBlobPhase::kGetBlobIds: {
         HILOG(kDebug, "(node {}) Appending {} bytes to bucket {} (task_node={})",
-              LABSTOR_CLIENT->node_id_, task->data_size_, task->tag_id_, task->task_node_);
+              HRUN_CLIENT->node_id_, task->data_size_, task->tag_id_, task->task_node_);
         task->schema_ = bkt_mdm_.AsyncAppendBlobSchema(task->task_node_ + 1,
                                                        task->tag_id_,
                                                        task->data_size_,
@@ -145,10 +148,10 @@ class Server : public TaskLib {
         std::vector<AppendInfo> &append_info = *task->schema_->append_info_;
         size_t buf_off = 0;
         HILOG(kDebug, "(node {}) Got blob schema of size {} for tag {} (task_node={})",
-              LABSTOR_CLIENT->node_id_, append_info.size(), task->tag_id_, task->task_node_)
+              HRUN_CLIENT->node_id_, append_info.size(), task->tag_id_, task->task_node_)
         for (AppendInfo &append : append_info) {
           HILOG(kDebug, "(node {}) Spawning blob {} of size {} for tag {} (task_node={} blob_mdm={})",
-                LABSTOR_CLIENT->node_id_, append.blob_name_.str(), append.data_size_,
+                HRUN_CLIENT->node_id_, append.blob_name_.str(), append.data_size_,
                 task->tag_id_, task->task_node_, blob_mdm_.id_);
           append.put_task_ = blob_mdm_.AsyncPutBlob(task->task_node_ + 1,
                                                     task->tag_id_,
@@ -157,12 +160,10 @@ class Server : public TaskLib {
                                                     append.blob_off_,
                                                     append.data_size_,
                                                     task->data_ + buf_off,
-                                                    task->score_,
-                                                    bitfield32_t(0),
-                                                    Context(),
-                                                    bitfield32_t(0)).ptr_;
+                                                    task->score_, 0,
+                                                    Context(), 0).ptr_;
           HILOG(kDebug, "(node {}) Finished spawning blob {} of size {} for tag {} (task_node={} blob_mdm={})",
-                LABSTOR_CLIENT->node_id_, append.blob_name_.str(), append.data_size_,
+                HRUN_CLIENT->node_id_, append.blob_name_.str(), append.data_size_,
                 task->tag_id_, task->task_node_, blob_mdm_.id_);
           buf_off += append.data_size_;
         }
@@ -176,12 +177,12 @@ class Server : public TaskLib {
           }
         }
         HILOG(kDebug, "(node {}) PUT blobs for tag {} (task_node={})",
-              LABSTOR_CLIENT->node_id_, task->tag_id_, task->task_node_)
+              HRUN_CLIENT->node_id_, task->tag_id_, task->task_node_)
         for (AppendInfo &append : append_info) {
-          LABSTOR_CLIENT->DelTask(append.put_task_);
+          HRUN_CLIENT->DelTask(append.put_task_);
         }
         HSHM_DESTROY_AR(task->schema_->append_info_);
-        LABSTOR_CLIENT->DelTask(task->schema_);
+        HRUN_CLIENT->DelTask(task->schema_);
         task->SetModuleComplete();
       }
     }
@@ -194,7 +195,8 @@ class Server : public TaskLib {
 
     // Check if the tag exists
     TAG_ID_MAP_T &tag_id_map = tag_id_map_[rctx.lane_id_];
-    hshm::charbuf tag_name = hshm::to_charbuf(*task->tag_name_);
+    hshm::string url = hshm::to_charbuf(*task->tag_name_);
+    hshm::charbuf tag_name = data_stager::Client::GetTagNameFromUrl(url);
     bool did_create = false;
     if (tag_name.size() > 0) {
       did_create = tag_id_map.find(tag_name) == tag_id_map.end();
@@ -205,7 +207,7 @@ class Server : public TaskLib {
       TAG_MAP_T &tag_map = tag_map_[rctx.lane_id_];
       tag_id.unique_ = id_alloc_.fetch_add(1);
       tag_id.hash_ = task->lane_hash_;
-      tag_id.node_id_ = LABSTOR_RUNTIME->rpc_.node_id_;
+      tag_id.node_id_ = HRUN_RUNTIME->rpc_.node_id_;
       HILOG(kDebug, "Creating tag for the first time: {} {}", tag_name.str(), tag_id)
       tag_id_map.emplace(tag_name, tag_id);
       tag_map.emplace(tag_id, TagInfo());
@@ -214,6 +216,11 @@ class Server : public TaskLib {
       tag_info.tag_id_ = tag_id;
       tag_info.owner_ = task->blob_owner_;
       tag_info.internal_size_ = task->backend_size_;
+      if (task->flags_.Any(HERMES_IS_FILE)) {
+        stager_mdm_.AsyncRegisterStager(task->task_node_ + 1,
+                                        tag_id,
+                                        hshm::charbuf(task->tag_name_->str()));
+      }
     } else {
       if (tag_name.size()) {
         HILOG(kDebug, "Found existing tag: {}", tag_name.str())
@@ -283,6 +290,8 @@ class Server : public TaskLib {
               blob_mdm_.AsyncDestroyBlob(task->task_node_ + 1, task->tag_id_, blob_id).ptr_;
           blob_tasks.emplace_back(blob_task);
         }
+        stager_mdm_.AsyncUnregisterStager(task->task_node_ + 1,
+                                          task->tag_id_);
         task->phase_ = DestroyTagPhase::kWaitDestroyBlobs;
         return;
       }
@@ -294,7 +303,7 @@ class Server : public TaskLib {
           }
         }
         for (blob_mdm::DestroyBlobTask *&blob_task : blob_tasks) {
-          LABSTOR_CLIENT->DelTask(blob_task);
+          HRUN_CLIENT->DelTask(blob_task);
         }
         HSHM_DESTROY_AR(task->destroy_blob_tasks_);
         TAG_MAP_T &tag_map = tag_map_[rctx.lane_id_];
@@ -376,10 +385,26 @@ class Server : public TaskLib {
     task->SetModuleComplete();
   }
 
+  /**
+  * Get all metadata about a blob
+  * */
+  HSHM_ALWAYS_INLINE
+  void PollTagMetadata(PollTagMetadataTask *task, RunContext &rctx) {
+    TAG_MAP_T &blob_map = tag_map_[rctx.lane_id_];
+    std::vector<TagInfo> tag_mdms;
+    tag_mdms.reserve(blob_map.size());
+    for (const std::pair<TagId, TagInfo> &tag_part : blob_map) {
+      const TagInfo &tag_info = tag_part.second;
+      tag_mdms.emplace_back(tag_info);
+    }
+    task->SerializeTagMetadata(tag_mdms);
+    task->SetModuleComplete();
+  }
+
  public:
 #include "hermes_bucket_mdm/hermes_bucket_mdm_lib_exec.h"
 };
 
-}  // namespace labstor
+}  // namespace hrun
 
-LABSTOR_TASK_CC(hermes::bucket_mdm::Server, "hermes_bucket_mdm");
+HRUN_TASK_CC(hermes::bucket_mdm::Server, "hermes_bucket_mdm");

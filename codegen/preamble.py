@@ -2,7 +2,7 @@
 Prepends the preabmle to all files in the repo
 
 USAGE:
-    python3 scripts/preamble.py ${LABSTOR_ROOT}
+    python3 scripts/preamble.py ${HRUN_ROOT}
 """
 
 import sys,os,re
@@ -36,7 +36,7 @@ preamble2 = """
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 """.strip()
 
-labstor_preamble = """
+hrun_preamble = """
 /*
  * Copyright (C) 2022  SCS Lab <scslab@iit.edu>,
  * Luke Logan <llogan@hawk.iit.edu>,
@@ -69,7 +69,7 @@ def PrependPreamble(path):
         text = fp.read()
         text = text.replace(hermes_preamble, "")
         text = text.replace(preamble2, "")
-        text = text.replace(labstor_preamble, "")
+        text = text.replace(hrun_preamble, "")
         text = re.sub("//\n// Created by [^\n]*\n//\n", "", text)
         text = text.strip()
         text = hermes_preamble + "\n\n" + text + "\n"
