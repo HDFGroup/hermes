@@ -175,7 +175,9 @@ set(Hermes_RUNTIME_DEPS
         hrun_client hrun_runtime)
 
 set(TEST_MAIN ${CMAKE_SOURCE_DIR}/test/unit)
+if (HERMES_ENABLE_PYTHON)
 add_subdirectory(external/pybind11)
+endif()
 add_subdirectory(hrun)
 add_subdirectory(src)
 add_subdirectory(hermes_adapters)
