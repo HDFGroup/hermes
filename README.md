@@ -26,10 +26,8 @@ Hermes is a heterogeneous-aware, multi-tiered, dynamic, and distributed I/O buff
 # set location of hermes_file_staging
 git clone https://github.com/HDFGroup/hermes
 spack repo add ${HERMES_REPO}/ci/hermes
-# The stable 1.1. development branch
-spack install hermes@hdf-1.1
-# The unstable 1.1. development branch
-spack install hermes@dev-1.1
+# Master should include all stable updates
+spack install hermes@master
 ```
 
 ### CMake
