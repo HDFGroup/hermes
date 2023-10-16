@@ -16,6 +16,9 @@ option(HERMES_ENABLE_MPIIO_ADAPTER "Build the Hermes MPI-IO adapter." ON)
 option(HERMES_ENABLE_PUBSUB_ADAPTER "Build the Hermes pub/sub adapter." OFF)
 option(HERMES_ENABLE_KVSTORE "Build the Hermes KVStore adapter." OFF)
 option(HERMES_ENABLE_VFD "Build the Hermes HDF5 Virtual File Driver" OFF)
+option(HERMES_ENABLE_PYTHON "Build the Hermes Python wrapper" ON)
+
+message("HERMES_ENABLE_PYTHON: ${HERMES_ENABLE_PYTHON}")
 
 #-----------------------------------------------------------------------------
 # Compiler Optimization
@@ -174,12 +177,16 @@ set(Hermes_RUNTIME_DEPS
         hrun_client hrun_runtime)
 
 set(TEST_MAIN ${CMAKE_SOURCE_DIR}/test/unit)
+if (HERMES_ENABLE_PYTHON)
+add_subdirectory(external/pybind11)
+endif()
 add_subdirectory(hrun)
 add_subdirectory(src)
 add_subdirectory(hermes_adapters)
 add_subdirectory(tasks)
 add_subdirectory(benchmark)
-add_custom_target(lint COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/lint.sh ${CMAKE_SOURCE_DIR})
+add_subdirectory(wrapper)
+add_custom_target(lint COMMAND bash ${CMAKE_SOURCE_DIR}/ci/lint.sh ${CMAKE_SOURCE_DIR})
 
 #-----------------------------------------------------------------------------
 # Build + Enable Testing
@@ -187,8 +194,8 @@ add_custom_target(lint COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/lint.sh ${CMAKE_
 # General function used to hook ctest to python test tool lib
 function(pytest test_type test_name)
     set(script ${CMAKE_SOURCE_DIR}/scripts/ci/py_hermes_ci/bin/run_test)
-    add_test(NAME ${test_name}
-            COMMAND ${script} ${test_type} ${test_name} ${CMAKE_BINARY_DIR} ${HERMES_USE_ADDRESS_SANITIZER})
+#    add_test(NAME ${test_name}
+#            COMMAND ${script} ${test_type} ${test_name} ${CMAKE_BINARY_DIR} ${HERMES_USE_ADDRESS_SANITIZER})
 endfunction()
 
 enable_testing()

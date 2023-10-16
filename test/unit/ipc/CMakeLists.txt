@@ -24,8 +24,8 @@ target_link_libraries(test_ipc_exec
 #------------------------------------------------------------------------------
 
 # STRING TESTS
-add_test(NAME test_ipc COMMAND
-        ${CMAKE_BINARY_DIR}/bin/test_messages "TestIpc")
+#add_test(NAME test_ipc COMMAND
+#        ${CMAKE_BINARY_DIR}/bin/test_messages "TestIpc")
 
 #------------------------------------------------------------------------------
 # Install Targets

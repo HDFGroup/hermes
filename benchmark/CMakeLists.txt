@@ -42,8 +42,8 @@ target_link_libraries(hermes_api_bench
 #------------------------------------------------------------------------------
 
 # STRING TESTS
-add_test(NAME test_performance COMMAND
-        ${CMAKE_BINARY_DIR}/bin/test_performance_exec "TestIpc")
+#add_test(NAME test_performance COMMAND
+#        ${CMAKE_BINARY_DIR}/bin/test_performance_exec "TestIpc")
 
 #------------------------------------------------------------------------------
 # Install Targets

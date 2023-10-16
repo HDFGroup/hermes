@@ -1,6 +1,14 @@
-//
-// Created by llogan on 7/1/23.
-//
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "basic_test.h"
 #include <boost/context/fiber_fcontext.hpp>
@@ -30,37 +38,35 @@ TEST_CASE("TestBoostFiber") {
 }
 
 template< std::size_t Max, std::size_t Default, std::size_t Min >
-class simple_stack_allocator
-{
+class simple_stack_allocator {
  public:
-  static std::size_t maximum_stacksize()
-  { return Max; }
-
-  static std::size_t default_stacksize()
-  { return Default; }
-
-  static std::size_t minimum_stacksize()
-  { return Min; }
-
-  void * allocate( std::size_t size) const
-  {
-    BOOST_ASSERT( minimum_stacksize() <= size);
-    BOOST_ASSERT( maximum_stacksize() >= size);
-
-    void * limit = malloc( size);
-    if ( ! limit) throw std::bad_alloc();
-
-    return static_cast< char * >( limit) + size;
+  static std::size_t maximum_stacksize() {
+    return Max;
   }
 
-  void deallocate( void * vp, std::size_t size) const
-  {
-    BOOST_ASSERT( vp);
-    BOOST_ASSERT( minimum_stacksize() <= size);
-    BOOST_ASSERT( maximum_stacksize() >= size);
+  static std::size_t default_stacksize() {
+    return Default;
+  }
 
-    void * limit = static_cast< char * >( vp) - size;
-    free( limit);
+  static std::size_t minimum_stacksize() {
+    return Min;
+  }
+
+  void *allocate(std::size_t size) const {
+    BOOST_ASSERT(minimum_stacksize() <= size);
+    BOOST_ASSERT(maximum_stacksize() >= size);
+    void *limit = malloc(size);
+    if (!limit) throw std::bad_alloc();
+    return static_cast<char *>(limit) + size;
+  }
+
+  void deallocate(void * vp, std::size_t size) const {
+    BOOST_ASSERT(vp);
+    BOOST_ASSERT(minimum_stacksize() <= size);
+    BOOST_ASSERT(maximum_stacksize() >= size);
+
+    void *limit = static_cast<char *>(vp) - size;
+    free(limit);
   }
 };
 
@@ -74,12 +80,12 @@ namespace bctx = boost::context::detail;
 
 bctx::transfer_t shared_xfer;
 
-void f3( bctx::transfer_t t) {
+void f3(bctx::transfer_t t) {
   ++value1;
   shared_xfer = t;
   shared_xfer = bctx::jump_fcontext(shared_xfer.fctx, 0);
   ++value1;
-  shared_xfer = bctx::jump_fcontext( shared_xfer.fctx, shared_xfer.data);
+  shared_xfer = bctx::jump_fcontext(shared_xfer.fctx, shared_xfer.data);
 }
 
 
@@ -104,9 +110,9 @@ TEST_CASE("TestBoostFcontext") {
   HILOG(kInfo, "Latency: {} MOps", ops / t.GetUsec());
 }
 
-using namespace boost::coroutines2;
+namespace co = boost::coroutines2;
 
-void myCoroutine(coroutine<void>::push_type& yield) {
+void myCoroutine(co::coroutine<void>::push_type& yield) {
   for (int i = 1; i <= 5; ++i) {
     yield();
   }
@@ -118,7 +124,7 @@ TEST_CASE("TestBoostCoroutine") {
   size_t ops = (1 << 20);
 
   for (size_t i = 0; i < ops; ++i) {
-    coroutine<void>::pull_type myCoroutineInstance(myCoroutine);
+    co::coroutine<void>::pull_type myCoroutineInstance(myCoroutine);
     myCoroutineInstance();
   }
 

@@ -1,7 +1,3 @@
-//
-// Created by lukemartinlogan on 6/29/23.
-//
-
 #ifndef HRUN_TASKS_HRUN_ADMIN_HRUN_ADMIN_H_
 #define HRUN_TASKS_HRUN_ADMIN_HRUN_ADMIN_H_
 

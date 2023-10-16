@@ -1,6 +1,14 @@
-//
-// Created by lukemartinlogan on 7/13/23.
-//
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef HRUN_TASKS_HERMES_INCLUDE_HERMES_SLAB_ALLOCATOR_H_
 #define HRUN_TASKS_HERMES_INCLUDE_HERMES_SLAB_ALLOCATOR_H_
@@ -37,12 +45,14 @@ class SlabAllocator {
   ~SlabAllocator() = default;
 
   /** Initialize slab allocator */
-  void Init(TargetId target_id, size_t dev_size, std::vector<size_t> &slab_sizes_) {
+  void Init(TargetId target_id,
+            size_t dev_size,
+            std::vector<size_t> &slab_sizes) {
     heap_ = 0;
     dev_size_ = dev_size;
     target_id_ = target_id;
-    slab_lists_.reserve(slab_sizes_.size());
-    for (auto &slab_size : slab_sizes_) {
+    slab_lists_.reserve(slab_sizes.size());
+    for (auto &slab_size : slab_sizes) {
       slab_lists_.emplace_back();
       auto &slab = slab_lists_.back();
       slab.slab_size_ = slab_size;
@@ -147,4 +157,4 @@ class SlabAllocator {
 
 }  // namespace hermes
 
-#endif // HRUN_TASKS_HERMES_INCLUDE_HERMES_SLAB_ALLOCATOR_H_
+#endif  // HRUN_TASKS_HERMES_INCLUDE_HERMES_SLAB_ALLOCATOR_H_

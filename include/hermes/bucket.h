@@ -1,6 +1,14 @@
-//
-// Created by lukemartinlogan on 7/9/23.
-//
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef HRUN_TASKS_HERMES_CONF_INCLUDE_HERMES_CONF_BUCKET_H_
 #define HRUN_TASKS_HERMES_CONF_INCLUDE_HERMES_CONF_BUCKET_H_
@@ -44,8 +52,9 @@ class Bucket {
     mdm_ = &HERMES_CONF->mdm_;
     blob_mdm_ = &HERMES_CONF->blob_mdm_;
     bkt_mdm_ = &HERMES_CONF->bkt_mdm_;
-    id_ = bkt_mdm_->GetOrCreateTagRoot(hshm::charbuf(bkt_name), true,
-                                       std::vector<TraitId>(), backend_size, flags);
+    id_ = bkt_mdm_->GetOrCreateTagRoot(
+        hshm::charbuf(bkt_name), true,
+        std::vector<TraitId>(), backend_size, flags);
     name_ = bkt_name;
   }
 
@@ -62,8 +71,9 @@ class Bucket {
     mdm_ = &HERMES_CONF->mdm_;
     blob_mdm_ = &HERMES_CONF->blob_mdm_;
     bkt_mdm_ = &HERMES_CONF->bkt_mdm_;
-    id_ = bkt_mdm_->GetOrCreateTagRoot(hshm::charbuf(bkt_name), true,
-                                       std::vector<TraitId>(), backend_size, flags);
+    id_ = bkt_mdm_->GetOrCreateTagRoot(
+        hshm::charbuf(bkt_name), true,
+        std::vector<TraitId>(), backend_size, flags);
     name_ = bkt_name;
   }
 
@@ -215,7 +225,8 @@ class Bucket {
                  size_t blob_off,
                  Context &ctx) {
     BlobId blob_id = orig_blob_id;
-    bitfield32_t flags, task_flags(TASK_FIRE_AND_FORGET | TASK_DATA_OWNER | TASK_LOW_LATENCY);
+    bitfield32_t flags, task_flags(
+        TASK_FIRE_AND_FORGET | TASK_DATA_OWNER | TASK_LOW_LATENCY);
     // Copy data to shared memory
     LPointer<char> p = HRUN_CLIENT->AllocateBuffer(blob.size());
     char *data = p.ptr_;
@@ -233,7 +244,8 @@ class Bucket {
     }
     LPointer<hrunpq::TypedPushTask<PutBlobTask>> push_task;
     push_task = blob_mdm_->AsyncPutBlobRoot(id_, blob_name_buf,
-                                            blob_id, blob_off, blob.size(), p.shm_, ctx.blob_score_,
+                                            blob_id, blob_off, blob.size(),
+                                            p.shm_, ctx.blob_score_,
                                             flags.bits_, ctx, task_flags.bits_);
     if constexpr (!ASYNC) {
       if (flags.Any(HERMES_GET_BLOB_ID)) {
@@ -270,9 +282,11 @@ class Bucket {
              const T &blob,
              Context &ctx) {
     if constexpr(std::is_same_v<T, Blob>) {
-      return BasePut<false, false>(blob_name, BlobId::GetNull(), blob, 0, ctx);
+      return BasePut<false, false>(
+          blob_name, BlobId::GetNull(), blob, 0, ctx);
     } else {
-      return SrlBasePut<T, false, false>(blob_name, BlobId::GetNull(), blob, ctx);
+      return SrlBasePut<T, false, false>(
+          blob_name, BlobId::GetNull(), blob, ctx);
     }
   }
 
@@ -327,7 +341,9 @@ class Bucket {
                     const Blob &blob,
                     size_t blob_off,
                     Context &ctx) {
-    return BasePut<true, false>(blob_name, BlobId::GetNull(), blob, blob_off, ctx);
+    return BasePut<true, false>(blob_name,
+                                BlobId::GetNull(),
+                                blob, blob_off, ctx);
   }
 
   /**
@@ -367,7 +383,9 @@ class Bucket {
     LPointer<char> p = HRUN_CLIENT->AllocateBuffer(blob.size());
     char *data = p.ptr_;
     memcpy(data, blob.data(), blob.size());
-    bkt_mdm_->AppendBlobRoot(id_, blob.size(), p.shm_, page_size, ctx.blob_score_, ctx.node_id_, ctx);
+    bkt_mdm_->AppendBlobRoot(
+        id_, blob.size(), p.shm_, page_size,
+        ctx.blob_score_, ctx.node_id_, ctx);
   }
 
   /**
@@ -408,7 +426,8 @@ class Bucket {
    * Get the current size of the blob in the bucket
    * */
   size_t GetBlobSize(const std::string &name) {
-    return blob_mdm_->GetBlobSizeRoot(id_, hshm::charbuf(name), BlobId::GetNull());
+    return blob_mdm_->GetBlobSizeRoot(
+        id_, hshm::charbuf(name), BlobId::GetNull());
   }
 
   /**
@@ -449,7 +468,8 @@ class Bucket {
     // TODO(llogan): make GetBlobSize work with blob_name
     size_t data_size = blob.size();
     if (blob.size() == 0) {
-      data_size = blob_mdm_->GetBlobSizeRoot(id_, hshm::charbuf(blob_name), orig_blob_id);
+      data_size = blob_mdm_->GetBlobSizeRoot(
+          id_, hshm::charbuf(blob_name), orig_blob_id);
       blob.resize(data_size);
     }
     HILOG(kDebug, "Getting blob of size {}", data_size);
@@ -576,14 +596,17 @@ class Bucket {
    * Determine if the bucket contains \a blob_id BLOB
    * */
   bool ContainsBlob(const std::string &blob_name) {
-    BlobId new_blob_id = blob_mdm_->GetBlobIdRoot(id_, hshm::to_charbuf(blob_name));
+    BlobId new_blob_id = blob_mdm_->GetBlobIdRoot(
+        id_, hshm::to_charbuf(blob_name));
     return !new_blob_id.IsNull();
   }
 
   /**
    * Rename \a blob_id blob to \a new_blob_name new name
    * */
-  void RenameBlob(const BlobId &blob_id, std::string new_blob_name, Context &ctx) {
+  void RenameBlob(const BlobId &blob_id,
+                  std::string new_blob_name,
+                  Context &ctx) {
     blob_mdm_->RenameBlobRoot(id_, blob_id, hshm::to_charbuf(new_blob_name));
   }
 

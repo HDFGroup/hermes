@@ -1,6 +1,14 @@
-//
-// Created by llogan on 7/1/23.
-//
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "basic_test.h"
 #include "hrun/api/hrun_client.h"
@@ -42,7 +50,8 @@ TEST_CASE("TestHermesPut1n") {
       // Put a blob
       hermes::Blob blob(KILOBYTES(4));
       memset(blob.data(), i % 256, blob.size());
-      hermes::BlobId blob_id = bkt.Put(std::to_string(i % max_blobs), blob, ctx);
+      hermes::BlobId blob_id =
+          bkt.Put(std::to_string(i % max_blobs), blob, ctx);
 
       // Get a blob
       HILOG(kInfo, "Put {} returned successfully", i);
@@ -147,8 +156,10 @@ TEST_CASE("TestHermesPartialPutGet") {
     memset(rblob.data(), (i + 1) % 256, rblob.size());
 
     // PartialPut a blob
-    hermes::BlobId lblob_id = bkt.PartialPut(std::to_string(i), lblob, 0, ctx);
-    hermes::BlobId rblob_id = bkt.PartialPut(std::to_string(i), rblob, half_blob, ctx);
+    hermes::BlobId lblob_id =
+        bkt.PartialPut(std::to_string(i), lblob, 0, ctx);
+    hermes::BlobId rblob_id =
+        bkt.PartialPut(std::to_string(i), rblob, half_blob, ctx);
     REQUIRE(lblob_id == rblob_id);
 
     // PartialGet a blob
@@ -453,7 +464,8 @@ TEST_CASE("TestHermesDataStager") {
   using hermes::data_stager::BinaryFileStager;
   hermes::Context ctx;
   ctx.flags_.SetBits(HERMES_IS_FILE);
-  hshm::charbuf url = BinaryFileStager::BuildFileUrl("/tmp/test.txt", page_size);
+  hshm::charbuf url =
+      BinaryFileStager::BuildFileUrl("/tmp/test.txt", page_size);
   hermes::Bucket bkt(url.str(), file_size, HERMES_IS_FILE);
 
   // Put a few blobs in the bucket

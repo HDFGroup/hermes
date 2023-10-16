@@ -1,6 +1,14 @@
-//
-// Created by lukemartinlogan on 7/8/23.
-//
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef HRUN_TASKS_HERMES_INCLUDE_HERMES_HERMES_TYPES_H_
 #define HRUN_TASKS_HERMES_INCLUDE_HERMES_HERMES_TYPES_H_
@@ -186,7 +194,7 @@ class FlushingModeConv {
 };
 
 /** A class with static constants */
-#define CONST_T inline const static
+#define CONST_T static inline const
 class Constant {
  public:
   /** Hermes server environment variable */
