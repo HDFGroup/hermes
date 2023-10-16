@@ -186,7 +186,7 @@ add_subdirectory(hermes_adapters)
 add_subdirectory(tasks)
 add_subdirectory(benchmark)
 add_subdirectory(wrapper)
-add_custom_target(lint COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/lint.sh ${CMAKE_SOURCE_DIR})
+add_custom_target(lint COMMAND bash ${CMAKE_SOURCE_DIR}/ci/lint.sh ${CMAKE_SOURCE_DIR})
 
 #-----------------------------------------------------------------------------
 # Build + Enable Testing
