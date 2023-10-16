@@ -15,15 +15,12 @@ SPACK_DIR=${INSTALL_DIR}/spack
 mkdir -p "${HOME}/install"
 mkdir build
 cd build
-spack load --only dependencies hermes_shm
+spack load hermes_shm
 cmake ../ \
 -DCMAKE_BUILD_TYPE=Debug \
--DHERMES_ENABLE_COVERAGE=ON \
--DHERMES_ENABLE_DOXYGEN=ON \
--DBUILD_HSHM_BENCHMARKS=ON \
--DBUILD_HSHM_TESTS=ON \
--DCMAKE_INSTALL_PREFIX=${HOME}/install
+-DCMAKE_INSTALL_PREFIX="${HOME}/install"
 make -j8
+make install
 
 export CXXFLAGS=-Wall
 ctest -VV
@@ -39,7 +36,7 @@ export CMAKE_PREFIX_PATH="${INSTALL_PREFIX}:${CMAKE_PREFIX_PATH}"
 export CXXFLAGS="-I${INSTALL_PREFIX}/include:${CXXFLAGS}"
 
 # Run make install unit test
-cd ci/external
+cd test/unit/external
 mkdir build
 cd build
 cmake ../

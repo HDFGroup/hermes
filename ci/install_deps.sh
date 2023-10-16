@@ -37,5 +37,5 @@ cp scripts/ci/packages.yaml ${SPACK_DIR}/etc/spack/packages.yaml
 
 # Install hermes_shm (needed for dependencies)
 #
-spack repo add scripts/hermes_shm
+spack repo add ci/hermes
 spack install hermes_shm
