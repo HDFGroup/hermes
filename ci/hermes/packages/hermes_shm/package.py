@@ -3,24 +3,30 @@ from spack import *
 class HermesShm(CMakePackage):
     homepage = "https://github.com/lukemartinlogan/hermes_shm/wiki"
     git = "https://github.com/lukemartinlogan/hermes_shm.git"
+    url = "https://github.com/lukemartinlogan/hermes_shm/archive/refs/tags/v1.0.0.tar.gz"
+
     version('master', branch='master')
+    version("1.0.0", sha256="a79f01d531ce89985ad59a2f62b41d74c2385e48d929e2f4ad895ae34137573b")
+
     variant('ares', default=False, description='Enable full libfabric install')
     variant('only_verbs', default=False, description='Only verbs')
+    variant('vfd', default=False, description='Enable HDF5 VFD')
+    variant('debug', default=False, description='Build shared libraries')
+    variant('zmq', default=False, description='Build ZeroMQ tests')
 
     depends_on('mochi-thallium~cereal@0.10.1')
     depends_on('catch2@3.0.1')
-    # depends_on('mpi')
     depends_on('mpich@3.3.2')
-    depends_on('boost@1.7: +context +fiber')
     depends_on('cereal')
     depends_on('yaml-cpp')
     depends_on('doxygen@1.9.3')
+    depends_on('boost@1.7: +context +fiber')
     depends_on('libfabric fabrics=sockets,tcp,udp,rxm,rxd,verbs',
                when='+ares')
     depends_on('libfabric fabrics=verbs',
                when='+only_verbs')
-
-    variant('debug', default=False, description='Build shared libraries')
+    depends_on('libzmq', '+zmq')
+    depends_on('hdf5@1.14.0', when='+vfd')
 
     def cmake_args(self):
         args = []
