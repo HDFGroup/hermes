@@ -34,6 +34,13 @@ spack install hermes@master
 
 Hermes makes use of the CMake build system and requires an out of source build.
 
+Hermes has a corresponding package, hermes_shm, which has all the same dependencies as Hermes.
+```
+spack install hermes_shm
+spack load hermes_shm
+```
+
+You can then build Hermes with CMake:
 ```
 cd /path/to/hermes
 mkdir build
