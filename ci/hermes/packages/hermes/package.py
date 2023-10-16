@@ -7,6 +7,10 @@ class Hermes(CMakePackage):
 
     version('master',
             branch='master', submodules=True)
+    version('dev', git='https://github.com/lukemartinlogan/hermes.git',
+            branch='dev', submodules=True)
+    version('dev-priv', git='https://github.com/lukemartinlogan/hermes.git',
+            branch='dev', submodules=True)
     version("1.0.5-beta", sha256="1f3ba51a8beda4bc1314d6541b800de1525f5e233a6f498fcde6dc43562ddcb7")
     version("1.0.0-beta", sha256="301084cced32aa00532ab4bebd638c31b0512c881ffab20bf5da4b7739defac2")
     version("0.9.9-beta", sha256="d2e0025a9bd7a3f05d3ab608c727ed15d86ed30cf582549fe996875daf6cb649")
@@ -25,29 +29,26 @@ class Hermes(CMakePackage):
     version("0.4.0-beta", sha256="06020836e203b2f680bea24007dc73760dfb977eb61e442b795b264f0267c16b")
     version("0.3.0-beta...v0.4.0-beta", sha256="7729b115598277adcab019dee24e5276698fb595066bca758bfa59dc8d51c5a4")
 
-    version('pnnl',
-            branch='pnnl', submodules=True)
-    version('dev-priv', git='https://github.com/lukemartinlogan/hermes.git',
-            branch='dev', submodules=True)
-    version('dev-1.1', git='https://github.com/lukemartinlogan/hermes.git',
-            branch='hermes-1.1', submodules=True)
-    version('hdf-1.1', git='https://github.com/HDFGroup/hermes.git',
-            branch='hermes-1.1', submodules=True)
-
-    variant('vfd', default=False, description='Enable HDF5 VFD')
     variant('ares', default=False, description='Enable full libfabric install')
-    variant('debug', default=False, description='Enable debug mode')
+    variant('only_verbs', default=False, description='Only verbs')
+    variant('vfd', default=False, description='Enable HDF5 VFD')
+    variant('debug', default=False, description='Build shared libraries')
     variant('zmq', default=False, description='Build ZeroMQ tests')
 
-    depends_on('mochi-thallium~cereal@0.10.1')
-    depends_on('cereal')
-    # depends_on('catch2@3.0.1')
-    depends_on('catch2')
-    depends_on('mpich@3.3.2')
-    depends_on('yaml-cpp')
-    depends_on('boost@1.7:')
     depends_on('hermes_shm')
+    depends_on('mochi-thallium~cereal@0.10.1')
+    depends_on('catch2@3.0.1')
+    depends_on('mpich@3.3.2')
+    depends_on('cereal')
+    depends_on('yaml-cpp')
+    depends_on('doxygen@1.9.3')
+    depends_on('boost@1.7: +context +fiber')
+    depends_on('libfabric fabrics=sockets,tcp,udp,rxm,rxd,verbs',
+               when='+ares')
+    depends_on('libfabric fabrics=verbs',
+               when='+only_verbs')
     depends_on('libzmq', '+zmq')
+    depends_on('hdf5@1.14.0', when='+vfd')
 
     def cmake_args(self):
         args = ['-DCMAKE_INSTALL_PREFIX={}'.format(self.prefix)]
