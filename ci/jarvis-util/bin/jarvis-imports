@@ -1,8 +1,0 @@
-#!/usr/bin/env python3
-
-from jarvis_util.util.import_all import *
-import pathlib
-import os
-
-
-build_global_import_from_bin('jarvis_util')

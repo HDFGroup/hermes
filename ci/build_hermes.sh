@@ -1,47 +1,43 @@
 #!/bin/bash
 
+# CD into git workspace
+cd ${GITHUB_WORKSPACE}
+
 set -x
 set -e
 set -o pipefail
 
+# Set spack env
 INSTALL_DIR="${HOME}"
-INSTALL_PREFIX="${HOME}/install"
-mkdir -p "${INSTALL_PREFIX}"
-
-# This will build our small python library for running unit tests
-pushd ci/jarvis-util
-python3 -m pip install -r requirements.txt
-python3 -m pip install -e .
-popd
-
-mkdir build
-pushd build
-
-# Load hermes dependencies via spack
-# Copy from install_deps.sh
 SPACK_DIR=${INSTALL_DIR}/spack
-set +x
 . ${SPACK_DIR}/share/spack/setup-env.sh
-set -x
-spack load --only dependencies hermes
 
-# Build hermes
-# export CXXFLAGS="${CXXFLAGS} -std=c++17 -Werror -Wall -Wextra"
-cmake                                                      \
-    -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX}               \
-    -DCMAKE_BUILD_TYPE=RelWithDebInfo                      \
-    -DBUILD_SHARED_LIBS=ON                                 \
-    -DHERMES_ENABLE_COVERAGE=ON                            \
-    -DHERMES_BUILD_BENCHMARKS=OFF                          \
-    -DHERMES_BUILD_BUFFER_POOL_VISUALIZER=OFF              \
-    -DHERMES_USE_ADDRESS_SANITIZER=OFF                     \
-    -DHERMES_USE_THREAD_SANITIZER=OFF                      \
-    -DHERMES_RPC_THALLIUM=ON                               \
-    -DBUILD_TESTING=ON                                     \
-    -DHERMES_ENABLE_VFD=ON                                 \
-    -DHERMES_DEBUG_LOCK=OFF                                \
-    ..
+mkdir -p "${HOME}/install"
+mkdir build
+cd build
+spack load hermes_shm
+cmake ../ \
+-DCMAKE_BUILD_TYPE=Debug \
+-DCMAKE_INSTALL_PREFIX="${HOME}/install"
 make -j8
 make install
 
-popd
+export CXXFLAGS=-Wall
+ctest -VV
+
+# Set proper flags for cmake to find Hermes
+INSTALL_PREFIX="${HOME}/install"
+export LIBRARY_PATH="${INSTALL_PREFIX}/lib:${LIBRARY_PATH}"
+export LD_LIBRARY_PATH="${INSTALL_PREFIX}/lib:${LD_LIBRARY_PATH}"
+export LDFLAGS="-L${INSTALL_PREFIX}/lib:${LDFLAGS}"
+export CFLAGS="-I${INSTALL_PREFIX}/include:${CFLAGS}"
+export CPATH="${INSTALL_PREFIX}/include:${CPATH}"
+export CMAKE_PREFIX_PATH="${INSTALL_PREFIX}:${CMAKE_PREFIX_PATH}"
+export CXXFLAGS="-I${INSTALL_PREFIX}/include:${CXXFLAGS}"
+
+# Run make install unit test
+cd test/unit/external
+mkdir build
+cd build
+cmake ../
+make -j8

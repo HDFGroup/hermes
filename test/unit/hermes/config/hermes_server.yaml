@@ -1,0 +1,114 @@
+# Example Hermes configuration file
+
+### Define properties of the storage devices
+devices:
+  ram:
+    mount_point: ""
+    capacity: 4GB
+    block_size: 4KB
+    slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
+    bandwidth: 6000MBps
+    latency: 15us
+    is_shared_device: false
+    borg_capacity_thresh: [0.0, 1.0]
+
+  nvme:
+    mount_point: "./"
+    capacity: 100MB
+    block_size: 4KB
+    slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
+    bandwidth: 1GBps
+    latency: 600us
+    is_shared_device: false
+    borg_capacity_thresh: [ 0.0, 1.0 ]
+
+  ssd:
+    mount_point: "./"
+    capacity: 100MB
+    block_size: 4KB
+    slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
+    bandwidth: 500MBps
+    latency: 1200us
+    is_shared_device: false
+    borg_capacity_thresh: [ 0.0, 1.0 ]
+
+  pfs:
+    mount_point: "./"
+    capacity: 100MB
+    block_size: 64KB # The stripe size of PFS
+    slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
+    bandwidth: 100MBps # Per-device bandwidth
+    latency: 200ms
+    is_shared_device: true
+    borg_capacity_thresh: [ 0.0, 1.0 ]
+
+### Define properties of RPCs
+rpc:
+  host_file: ""
+  host_names: ["localhost"]
+  protocol: "ofi+sockets"
+  domain: ""
+  port: 8080
+  num_threads: 4
+
+### Define properties of the BORG
+buffer_organizer:
+  num_threads: 1
+  flush_period: 1024
+  blob_reorg_period: 1024
+  recency_min: 0
+  recency_max: 60
+  freq_max: 15
+  freq_min: 0
+
+### Define the default data placement policy
+dpe:
+  default_placement_policy: "MinimizeIoTime"
+  default_rr_split: 0
+
+### Define I/O tracing properties
+tracing:
+  enabled: false
+  output: ""
+
+### Define prefetcher properties
+prefetch:
+  enabled: false
+  io_trace_path: ""
+  apriori_schema_path: ""
+  epoch_ms: 50
+  is_mpi: false
+
+### Define mdm properties
+mdm:
+  est_blob_count: 100000
+  est_bucket_count: 100000
+  est_num_traits: 256
+
+# The interval in milliseconds at which to update the global system view.
+system_view_state_update_interval_ms: 1000
+
+### Runtime orchestration settings
+work_orchestrator:
+  # The number of worker threads to spawn
+  max_workers: 4
+
+### Queue Manager settings
+queue_manager:
+  queue_depth: 256
+  max_lanes: 16
+  max_queues: 1024
+  shm_allocator: kScalablePageAllocator
+  shm_name: "hrun_shm"
+  shm_size: 0g
+
+### Task Registry
+task_registry: [
+  'hermes_mdm',
+  'hermes_blob_mdm',
+  'hermes_bucket_mdm',
+  'hermes_data_op',
+  'data_stager',
+  'posix_bdev',
+  'ram_bdev'
+]

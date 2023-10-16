@@ -1,0 +1,18 @@
+kGetOrCreateTag: 0
+kGetTagId: 1
+kGetTagName: 2
+kRenameTag: 3
+kDestroyTag: 4
+kTagAddBlob: 5
+kTagRemoveBlob: 6
+# kTagGroupBy: 7
+# kTagAddTrait: 8
+# kTagRemoveTrait: 9
+kTagClearBlobs: 10
+kUpdateSize: 11
+kAppendBlobSchema: 12
+kAppendBlob: 13
+kGetSize: 14
+kSetBlobMdm: 15
+kGetContainedBlobIds: 16
+kPollTagMetadata: 17

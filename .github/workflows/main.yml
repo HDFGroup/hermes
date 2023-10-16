@@ -52,7 +52,7 @@ jobs:
         with:
           path: |
             ~/build
-          key: ${{ runner.os }}-${{ hashFiles('wrapper', 'traits', 'test', 'src', 'hermes_shm', 'benchmarks', 'adapter') }}
+          key: ${{ runner.os }}-${{ hashFiles('wrapper', 'test', 'tasks', 'src', 'include', 'hrun', 'hermes_adapters', 'benchmark') }}
 
       - name: Install APT Dependencies
         run: |
@@ -71,9 +71,9 @@ jobs:
         if: steps.spack-cache.outputs.cache-hit != 'true'
         run: ci/install_deps.sh
 
-      - name: Build
-        if: steps.hermes-cache.outputs.cache-hit != 'true'
-        run: ci/build_hermes.sh
+#      - name: Build
+#        if: steps.hermes-cache.outputs.cache-hit != 'true'
+#        run: ci/build_hermes.sh
 #
 #      - name: Test
 #        run: bash ci/test_hermes.sh

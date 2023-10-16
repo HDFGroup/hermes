@@ -1,12 +1,8 @@
 #!/bin/bash
-HERMES_ROOT=$1
-ADAPTER=${HERMES_ROOT}/adapter
 
+HRUN_ROOT=$1
+
+echo "RUNNING CPPLINT"
 cpplint --recursive \
---exclude="${HERMES_ROOT}/src/config_server_default.h" \
---exclude="${HERMES_ROOT}/src/config_client_default.h" \
---exclude="${ADAPTER}/posix/posix_api.h" \
---exclude="${ADAPTER}/stdio/stdio_api.h" \
---exclude="${ADAPTER}/mpiio/mpiio_api.h" \
-"${HERMES_ROOT}/adapter" "${HERMES_ROOT}/benchmarks" "${HERMES_ROOT}/data_stager" \
-"${HERMES_ROOT}/src" "${HERMES_ROOT}/test"
+"${HRUN_ROOT}/src" "${HRUN_ROOT}/include" "${HRUN_ROOT}/test" \
+--exclude="${HRUN_ROOT}/test/unit/external"

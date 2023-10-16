@@ -1,3 +1,17 @@
+cmake*
+.idea
+*.cmd
+*.symvers
+*.cmd
+*.mod
+*.mod.c
+*.ko
+*.order
+*.o
+*.o.cmd
+*.o.d
+build
+
 build/
 benchmarks/HermesVFD
 
@@ -15,8 +29,8 @@ cmake-build-*
 .idea
 .clang-format
 __pycache__/
-/src/adapter/posix/cmake-build-debug-system/CMakeFiles/clion-log.txt
-/adapter/test/posix/Testing/Temporary/LastTest.log
+/hrun/src/hermes_adapters/posix/cmake-build-debug-system/CMakeFiles/clion-log.txt
+/hermes_adapters/test/posix/Testing/Temporary/LastTest.log
 .cache
 
 wrapper/java/out
@@ -25,7 +39,7 @@ Testing
 
 .gradle
 **/build/
-!src/**/build/
+!hrun/src/**/build/
 
 # Ignore Gradle GUI config
 gradle-app.setting

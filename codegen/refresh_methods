@@ -1,0 +1,229 @@
+#!/usr/bin/env python3
+
+"""
+USAGE: ./referesh_methods [TASK_DIR]
+"""
+
+import yaml
+import os
+import sys
+from codegen.util.paths import HRUN_ROOT
+
+def refresh_methods(TASK_ROOT):
+    if not os.path.exists(f'{TASK_ROOT}/include'):
+        return
+    TASK_NAME = os.path.basename(TASK_ROOT)
+    METHODS_H = f'{TASK_ROOT}/include/{TASK_NAME}/{TASK_NAME}_methods.h'
+    METHODS_YAML = f'{TASK_ROOT}/include/{TASK_NAME}/{TASK_NAME}_methods.yaml'
+    LIB_EXEC_H = f'{TASK_ROOT}/include/{TASK_NAME}/{TASK_NAME}_lib_exec.h'
+    METHOD_MACRO = f'HRUN_{TASK_NAME.upper()}_METHODS_H_'
+    LIB_EXEC_MACRO = f'HRUN_{TASK_NAME.upper()}_LIB_EXEC_H_'
+
+    with open(METHODS_YAML) as fp:
+        methods = yaml.load(fp, Loader=yaml.FullLoader)
+    if methods is None:
+        methods = {}
+    if 'kLast' in methods:
+        del methods['kLast']
+    methods = sorted(methods.items(), key=lambda x: x[1])
+    if TASK_NAME != 'hrun_admin':
+        methods.insert(0, ('kConstruct', -2))
+        methods.insert(1, ('kDestruct', -1))
+
+    # Produce the TASK_NAME_methods.h file
+    lines = []
+    lines += [f'#ifndef {METHOD_MACRO}',
+              f'#define {METHOD_MACRO}',
+              '',
+              '/** The set of methods in the admin task */',
+              'struct Method : public TaskMethod {']
+    for method_enum_name, method_off in methods:
+        if method_enum_name == 'kConstruct':
+            continue
+        if method_enum_name == 'kDestruct':
+            continue
+        lines += f'  TASK_METHOD_T {method_enum_name} = kLast + {method_off};',
+    lines += ['};', '', f'#endif  // {METHOD_MACRO}']
+    with open(METHODS_H, 'w') as fp:
+        fp.write('\n'.join(lines))
+
+
+    # Produce the TASK_NAME_lib_exec.h file
+    lines = []
+    lines += [f'#ifndef {LIB_EXEC_MACRO}',
+              f'#define {LIB_EXEC_MACRO}',
+              '']
+    ## Create the Run method
+    lines += ['/** Execute a task */',
+              'void Run(u32 method, Task *task, RunContext &rctx) override {',
+              '  switch (method) {']
+    for method_enum_name, method_off in methods:
+        method_name = method_enum_name.replace('k', '', 1)
+        task_name = method_name + "Task"
+        lines += [f'    case Method::{method_enum_name}: {{',
+                  f'      {method_name}(reinterpret_cast<{task_name} *>(task), rctx);',
+                  f'      break;',
+                  f'    }}']
+    lines += ['  }']
+    lines += ['}']
+
+    ## Create the Del method
+    lines += ['/** Delete a task */',
+              'void Del(u32 method, Task *task) override {',
+              '  switch (method) {']
+    for method_enum_name, method_off in methods:
+        method_name = method_enum_name.replace('k', '', 1)
+        task_name = method_name + "Task"
+        lines += [f'    case Method::{method_enum_name}: {{',
+                  f'      HRUN_CLIENT->DelTask(reinterpret_cast<{task_name} *>(task));',
+                  f'      break;',
+                  f'    }}']
+    lines += ['  }']
+    lines += ['}']
+
+    ## Create the Dup method
+    lines += ['/** Duplicate a task */',
+              'void Dup(u32 method, Task *orig_task, std::vector<LPointer<Task>> &dups) override {',
+              '  switch (method) {']
+    for method_enum_name, method_off in methods:
+        method_name = method_enum_name.replace('k', '', 1)
+        task_name = method_name + "Task"
+        lines += [f'    case Method::{method_enum_name}: {{',
+                  f'      hrun::CALL_DUPLICATE(reinterpret_cast<{task_name}*>(orig_task), dups);',
+                  f'      break;',
+                  f'    }}']
+    lines += ['  }']
+    lines += ['}']
+
+    ## Register a duplicate's output
+    lines += ['/** Register the duplicate output with the origin task */',
+              'void DupEnd(u32 method, u32 replica, Task *orig_task, Task *dup_task) override {',
+              '  switch (method) {']
+    for method_enum_name, method_off in methods:
+        method_name = method_enum_name.replace('k', '', 1)
+        task_name = method_name + "Task"
+        task_cast = f'reinterpret_cast<{task_name}*>'
+        lines += [f'    case Method::{method_enum_name}: {{',
+                  f'      hrun::CALL_DUPLICATE_END(replica, {task_cast}(orig_task), {task_cast}(dup_task));',
+                  f'      break;',
+                  f'    }}']
+    lines += ['  }']
+    lines += ['}']
+
+    ## Create the ReplicateStart method
+    lines += ['/** Ensure there is space to store replicated outputs */',
+              'void ReplicateStart(u32 method, u32 count, Task *task) override {',
+              '  switch (method) {']
+    for method_enum_name, method_off in methods:
+        method_name = method_enum_name.replace('k', '', 1)
+        task_name = method_name + "Task"
+        lines += [f'    case Method::{method_enum_name}: {{',
+                  f'      hrun::CALL_REPLICA_START(count, reinterpret_cast<{task_name}*>(task));',
+                  f'      break;',
+                  f'    }}']
+    lines += ['  }']
+    lines += ['}']
+
+    ## Create the ReplicateEnd method
+    lines += ['/** Determine success and handle failures */',
+              'void ReplicateEnd(u32 method, Task *task) override {',
+              '  switch (method) {']
+    for method_enum_name, method_off in methods:
+        method_name = method_enum_name.replace('k', '', 1)
+        task_name = method_name + "Task"
+        lines += [f'    case Method::{method_enum_name}: {{',
+                  f'      hrun::CALL_REPLICA_END(reinterpret_cast<{task_name}*>(task));',
+                  f'      break;',
+                  f'    }}']
+    lines += ['  }']
+    lines += ['}']
+
+    ## Create the SaveStart Method
+    lines += ['/** Serialize a task when initially pushing into remote */',
+              'std::vector<DataTransfer> SaveStart(u32 method, BinaryOutputArchive<true> &ar, Task *task) override {',
+              '  switch (method) {']
+    for method_enum_name, method_off in methods:
+        method_name = method_enum_name.replace('k', '', 1)
+        task_name = method_name + "Task"
+        lines += [f'    case Method::{method_enum_name}: {{',
+                  f'      ar << *reinterpret_cast<{task_name}*>(task);',
+                  f'      break;',
+                  f'    }}']
+    lines += ['  }']
+    lines += ['  return ar.Get();']
+    lines += ['}']
+
+    ## Create the LoadStart Method
+    lines += ['/** Deserialize a task when popping from remote queue */',
+              'TaskPointer LoadStart(u32 method, BinaryInputArchive<true> &ar) override {',
+              '  TaskPointer task_ptr;',
+              '  switch (method) {']
+    for method_enum_name, method_off in methods:
+        method_name = method_enum_name.replace('k', '', 1)
+        task_name = method_name + "Task"
+        lines += [f'    case Method::{method_enum_name}: {{',
+                  f'      task_ptr.ptr_ = HRUN_CLIENT->NewEmptyTask<{task_name}>(task_ptr.shm_);',
+                  f'      ar >> *reinterpret_cast<{task_name}*>(task_ptr.ptr_);',
+                  f'      break;',
+                  f'    }}']
+    lines += ['  }']
+    lines += ['  return task_ptr;']
+    lines += ['}']
+
+    ## Create the SaveEnd Method
+    lines += ['/** Serialize a task when returning from remote queue */',
+              'std::vector<DataTransfer> SaveEnd(u32 method, BinaryOutputArchive<false> &ar, Task *task) override {',
+              '  switch (method) {']
+    for method_enum_name, method_off in methods:
+        method_name = method_enum_name.replace('k', '', 1)
+        task_name = method_name + "Task"
+        lines += [f'    case Method::{method_enum_name}: {{',
+                  f'      ar << *reinterpret_cast<{task_name}*>(task);',
+                  f'      break;',
+                  f'    }}']
+    lines += ['  }']
+    lines += ['  return ar.Get();']
+    lines += ['}']
+
+    ## Create the LoadEnd Method
+    lines += ['/** Deserialize a task when returning from remote queue */',
+              'void LoadEnd(u32 replica, u32 method, BinaryInputArchive<false> &ar, Task *task) override {',
+              '  switch (method) {']
+    for method_enum_name, method_off in methods:
+        method_name = method_enum_name.replace('k', '', 1)
+        task_name = method_name + "Task"
+        lines += [f'    case Method::{method_enum_name}: {{',
+                  f'      ar.Deserialize(replica, *reinterpret_cast<{task_name}*>(task));',
+                  f'      break;',
+                  f'    }}']
+    lines += ['  }']
+    lines += ['}']
+
+    ## Create the CheckIfConcurrent Method
+    lines += ['/** Get the grouping of the task */',
+              'u32 GetGroup(u32 method, Task *task, hshm::charbuf &group) override {',
+              '  switch (method) {']
+    for method_enum_name, method_off in methods:
+        method_name = method_enum_name.replace('k', '', 1)
+        task_name = method_name + "Task"
+        lines += [f'    case Method::{method_enum_name}: {{',
+                  f'      return reinterpret_cast<{task_name}*>(task)->GetGroup(group);',
+                  f'    }}']
+    lines += ['  }']
+    lines += ['  return -1;']
+    lines += ['}']
+
+    ## Finish the file
+    lines += ['', f'#endif  // {METHOD_MACRO}']
+
+    ## Write TASK_NAME_lib_exec.h
+    with open(LIB_EXEC_H, 'w') as fp:
+        fp.write('\n'.join(lines))
+
+TASK_DIR = sys.argv[1]
+TASK_ROOTS = [os.path.join(TASK_DIR, item) for item in os.listdir(TASK_DIR)]
+for TASK_ROOT in TASK_ROOTS:
+    try:
+        refresh_methods(TASK_ROOT)
+    except:
+        pass

@@ -1,0 +1,10 @@
+kCreateTaskState: 0
+kDestroyTaskState: 1
+kRegisterTaskLib: 2
+kDestroyTaskLib: 3
+kGetOrCreateTaskStateId: 4
+kGetTaskStateId: 5
+kStopRuntime: 6
+kSetWorkOrchQueuePolicy: 7
+kSetWorkOrchProcPolicy: 8
+kFlush: 9
