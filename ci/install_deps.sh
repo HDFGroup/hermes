@@ -33,9 +33,9 @@ set -x
 # available from the system. For example, autoconf, cmake, m4, etc.
 # Modify ci/pckages.yaml to skip building compilers or build tools via Spack.
 cd ${GITHUB_WORKSPACE}
-cp scripts/ci/packages.yaml ${SPACK_DIR}/etc/spack/packages.yaml
+cp ci/packages.yaml ${SPACK_DIR}/etc/spack/packages.yaml
 
 # Install hermes_shm (needed for dependencies)
 #
-spack repo add scripts/hermes_shm
+spack repo add ci/hermes
 spack install hermes_shm
