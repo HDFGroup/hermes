@@ -196,11 +196,12 @@ TEST_CASE("TestHermesSerializedPutGet") {
       HILOG(kInfo, "Iteration: {} with blob name {}", i, std::to_string(i));
       // Put a blob
       std::vector<int> data(1024, i);
-      hermes::BlobId blob_id = bkt.Put(std::to_string(i), data, ctx);
+      hermes::BlobId blob_id = bkt.Put<std::vector<int>>(
+          std::to_string(i), data, ctx);
       HILOG(kInfo, "(iteration {}) Using BlobID: {}", i, blob_id);
       // Get a blob
       std::vector<int> data2(1024, i);
-      bkt.Get(blob_id, data2, ctx);
+      bkt.Get<std::vector<int>>(blob_id, data2, ctx);
       REQUIRE(data == data2);
     }
   }
