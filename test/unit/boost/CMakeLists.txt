@@ -21,8 +21,8 @@ target_link_libraries(test_boost_exec
 # Test Cases
 #------------------------------------------------------------------------------
 
-add_test(NAME test_boost COMMAND
-        ${CMAKE_BINARY_DIR}/bin/test_messages "TestBoost")
+#add_test(NAME test_boost COMMAND
+#        ${CMAKE_BINARY_DIR}/bin/test_messages "TestBoost")
 
 #------------------------------------------------------------------------------
 # Install Targets

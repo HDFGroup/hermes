@@ -47,5 +47,5 @@ class Status {
   }
 };
 
-}  // namespace hermes::api
+}  // namespace hermes
 #endif  // HERMES_STATUS_H_

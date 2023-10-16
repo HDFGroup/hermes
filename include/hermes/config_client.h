@@ -168,7 +168,8 @@ class ClientConfig : public BaseConfig {
     }
     if (yaml_conf["flushing_mode"]) {
       flushing_mode_ =
-          FlushingModeConv::GetEnum(yaml_conf["flushing_mode"].as<std::string>());
+          FlushingModeConv::GetEnum(
+              yaml_conf["flushing_mode"].as<std::string>());
       auto flush_mode_env = getenv("HERMES_FLUSH_MODE");
       if (flush_mode_env) {
         flushing_mode_ = FlushingModeConv::GetEnum(flush_mode_env);
@@ -188,7 +189,8 @@ class ClientConfig : public BaseConfig {
     path = hshm::ConfigParse::ExpandPath(path);
     path = stdfs::absolute(path).string();
     if (yaml_conf["mode"]) {
-      conf.mode_ = AdapterModeConv::to_enum(yaml_conf["mode"].as<std::string>());
+      conf.mode_ = AdapterModeConv::to_enum(
+          yaml_conf["mode"].as<std::string>());
     }
     if (yaml_conf["page_size"]) {
       conf.page_size_ = hshm::ConfigParse::ParseSize(

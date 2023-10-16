@@ -225,19 +225,24 @@ class ServerConfig : public BaseConfig {
       dev.is_shared_ =
           dev_info["is_shared_device"].as<bool>();
       dev.block_size_ =
-          hshm::ConfigParse::ParseSize(dev_info["block_size"].as<std::string>());
+          hshm::ConfigParse::ParseSize(
+              dev_info["block_size"].as<std::string>());
       dev.capacity_ =
-          hshm::ConfigParse::ParseSize(dev_info["capacity"].as<std::string>());
+          hshm::ConfigParse::ParseSize(
+              dev_info["capacity"].as<std::string>());
       dev.bandwidth_ =
-          hshm::ConfigParse::ParseSize(dev_info["bandwidth"].as<std::string>());
+          hshm::ConfigParse::ParseSize(
+              dev_info["bandwidth"].as<std::string>());
       dev.latency_ =
-          hshm::ConfigParse::ParseLatency(dev_info["latency"].as<std::string>());
+          hshm::ConfigParse::ParseLatency(
+              dev_info["latency"].as<std::string>());
       std::vector<std::string> size_vec;
       ParseVector<std::string, std::vector<std::string>>(
           dev_info["slab_sizes"], size_vec);
       dev.slab_sizes_.reserve(size_vec.size());
       for (const std::string &size_str : size_vec) {
-        dev.slab_sizes_.emplace_back(hshm::ConfigParse::ParseSize(size_str));
+        dev.slab_sizes_.emplace_back(
+            hshm::ConfigParse::ParseSize(size_str));
       }
     }
   }

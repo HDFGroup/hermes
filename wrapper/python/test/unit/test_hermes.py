@@ -1,9 +1,12 @@
 from unittest import TestCase
-import py_hermes
-# from py_hermes import Hermes, MetadataTable
+from py_hermes import Hermes, TRANSPARENT_HERMES
 import pathlib
 import os
 
 class TestHermes(TestCase):
     def test_metadata_query(self):
-        print("HERE?")
+        TRANSPARENT_HERMES()
+        hermes = Hermes()
+        mdm = hermes.CollectMetadataSnapshot()
+        print(mdm.blob_info)
+        print("Done")
