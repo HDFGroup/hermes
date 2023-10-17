@@ -3,5 +3,4 @@ kRead: 1
 kAllocate: 2
 kFree: 3
 kMonitor: 4
-kUpdateCapacity: 5
-kLast: 6
+kLast: 5

@@ -529,8 +529,13 @@ TEST_CASE("TestHermesDataOp") {
   for (size_t i = off; i < proc_count; ++i) {
     HILOG(kInfo, "Iteration: {}", i);
     // Put a blob
+    float val = 5 + i % 256;
     hermes::Blob blob(page_size);
-    memset(blob.data(), i % 256, blob.size());
+    float *data = (float*)blob.data();
+    for (size_t j = 0; j < page_size / sizeof(float); ++j) {
+      data[j] = val;
+    }
+    memcpy(blob.data(), data, blob.size());
     std::string blob_name = std::to_string(i);
     bkt.Put(blob_name, blob, ctx);
   }
@@ -540,7 +545,12 @@ TEST_CASE("TestHermesDataOp") {
   // Verify derived operator happens
   hermes::Bucket bkt_min("data_bkt_min", 0, 0);
   size_t size = bkt_min.GetSize();
+
+  hermes::Blob blob2;
+  bkt_min.Get(std::to_string(0), blob2, ctx);
+  float min = *(float *)blob2.data();
   REQUIRE(size == sizeof(float) * count_per_proc * nprocs);
+  REQUIRE(min == 5);
 }
 
 TEST_CASE("TestHermesCollectMetadata") {

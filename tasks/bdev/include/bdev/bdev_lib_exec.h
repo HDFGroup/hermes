@@ -32,10 +32,6 @@ void Run(u32 method, Task *task, RunContext &rctx) override {
       Monitor(reinterpret_cast<MonitorTask *>(task), rctx);
       break;
     }
-    case Method::kUpdateCapacity: {
-      UpdateCapacity(reinterpret_cast<UpdateCapacityTask *>(task), rctx);
-      break;
-    }
   }
 }
 /** Delete a task */
@@ -67,10 +63,6 @@ void Del(u32 method, Task *task) override {
     }
     case Method::kMonitor: {
       HRUN_CLIENT->DelTask(reinterpret_cast<MonitorTask *>(task));
-      break;
-    }
-    case Method::kUpdateCapacity: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<UpdateCapacityTask *>(task));
       break;
     }
   }
@@ -106,10 +98,6 @@ void Dup(u32 method, Task *orig_task, std::vector<LPointer<Task>> &dups) overrid
       hrun::CALL_DUPLICATE(reinterpret_cast<MonitorTask*>(orig_task), dups);
       break;
     }
-    case Method::kUpdateCapacity: {
-      hrun::CALL_DUPLICATE(reinterpret_cast<UpdateCapacityTask*>(orig_task), dups);
-      break;
-    }
   }
 }
 /** Register the duplicate output with the origin task */
@@ -141,10 +129,6 @@ void DupEnd(u32 method, u32 replica, Task *orig_task, Task *dup_task) override {
     }
     case Method::kMonitor: {
       hrun::CALL_DUPLICATE_END(replica, reinterpret_cast<MonitorTask*>(orig_task), reinterpret_cast<MonitorTask*>(dup_task));
-      break;
-    }
-    case Method::kUpdateCapacity: {
-      hrun::CALL_DUPLICATE_END(replica, reinterpret_cast<UpdateCapacityTask*>(orig_task), reinterpret_cast<UpdateCapacityTask*>(dup_task));
       break;
     }
   }
@@ -180,10 +164,6 @@ void ReplicateStart(u32 method, u32 count, Task *task) override {
       hrun::CALL_REPLICA_START(count, reinterpret_cast<MonitorTask*>(task));
       break;
     }
-    case Method::kUpdateCapacity: {
-      hrun::CALL_REPLICA_START(count, reinterpret_cast<UpdateCapacityTask*>(task));
-      break;
-    }
   }
 }
 /** Determine success and handle failures */
@@ -217,10 +197,6 @@ void ReplicateEnd(u32 method, Task *task) override {
       hrun::CALL_REPLICA_END(reinterpret_cast<MonitorTask*>(task));
       break;
     }
-    case Method::kUpdateCapacity: {
-      hrun::CALL_REPLICA_END(reinterpret_cast<UpdateCapacityTask*>(task));
-      break;
-    }
   }
 }
 /** Serialize a task when initially pushing into remote */
@@ -252,10 +228,6 @@ std::vector<DataTransfer> SaveStart(u32 method, BinaryOutputArchive<true> &ar, T
     }
     case Method::kMonitor: {
       ar << *reinterpret_cast<MonitorTask*>(task);
-      break;
-    }
-    case Method::kUpdateCapacity: {
-      ar << *reinterpret_cast<UpdateCapacityTask*>(task);
       break;
     }
   }
@@ -300,11 +272,6 @@ TaskPointer LoadStart(u32 method, BinaryInputArchive<true> &ar) override {
       ar >> *reinterpret_cast<MonitorTask*>(task_ptr.ptr_);
       break;
     }
-    case Method::kUpdateCapacity: {
-      task_ptr.ptr_ = HRUN_CLIENT->NewEmptyTask<UpdateCapacityTask>(task_ptr.shm_);
-      ar >> *reinterpret_cast<UpdateCapacityTask*>(task_ptr.ptr_);
-      break;
-    }
   }
   return task_ptr;
 }
@@ -337,10 +304,6 @@ std::vector<DataTransfer> SaveEnd(u32 method, BinaryOutputArchive<false> &ar, Ta
     }
     case Method::kMonitor: {
       ar << *reinterpret_cast<MonitorTask*>(task);
-      break;
-    }
-    case Method::kUpdateCapacity: {
-      ar << *reinterpret_cast<UpdateCapacityTask*>(task);
       break;
     }
   }
@@ -377,10 +340,6 @@ void LoadEnd(u32 replica, u32 method, BinaryInputArchive<false> &ar, Task *task)
       ar.Deserialize(replica, *reinterpret_cast<MonitorTask*>(task));
       break;
     }
-    case Method::kUpdateCapacity: {
-      ar.Deserialize(replica, *reinterpret_cast<UpdateCapacityTask*>(task));
-      break;
-    }
   }
 }
 /** Get the grouping of the task */
@@ -406,9 +365,6 @@ u32 GetGroup(u32 method, Task *task, hshm::charbuf &group) override {
     }
     case Method::kMonitor: {
       return reinterpret_cast<MonitorTask*>(task)->GetGroup(group);
-    }
-    case Method::kUpdateCapacity: {
-      return reinterpret_cast<UpdateCapacityTask*>(task)->GetGroup(group);
     }
   }
   return -1;

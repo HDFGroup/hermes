@@ -9,7 +9,7 @@
 
 namespace hermes::ram_bdev {
 
-class Server : public TaskLib {
+class Server : public TaskLib, public bdev::Server {
  public:
   SlabAllocator alloc_;
   char *mem_ptr_;
@@ -17,6 +17,7 @@ class Server : public TaskLib {
  public:
   void Construct(ConstructTask *task, RunContext &rctx) {
     DeviceInfo &dev_info = task->info_;
+    rem_cap_ = dev_info.capacity_;
     alloc_.Init(id_, dev_info.capacity_, dev_info.slab_sizes_);
     mem_ptr_ = (char*)malloc(dev_info.capacity_);
     HILOG(kDebug, "Created {} at {} of size {}",
@@ -32,12 +33,13 @@ class Server : public TaskLib {
   void Allocate(AllocateTask *task, RunContext &rctx) {
     HILOG(kDebug, "Allocating {} bytes (RAM)", task->size_);
     alloc_.Allocate(task->size_, *task->buffers_, task->alloc_size_);
+    rem_cap_ -= task->alloc_size_;
     HILOG(kDebug, "Allocated {} bytes (RAM)", task->alloc_size_);
     task->SetModuleComplete();
   }
 
   void Free(FreeTask *task, RunContext &rctx) {
-    alloc_.Free(task->buffers_);
+    rem_cap_ += alloc_.Free(task->buffers_);
     task->SetModuleComplete();
   }
 
@@ -52,14 +54,6 @@ class Server : public TaskLib {
     memcpy(task->buf_, mem_ptr_ + task->disk_off_, task->size_);
     task->SetModuleComplete();
   }
-
-  void Monitor(MonitorTask *task, RunContext &rctx) {
-  }
-
-  void UpdateCapacity(UpdateCapacityTask *task, RunContext &rctx) {
-    task->SetModuleComplete();
-  }
-
  public:
 #include "bdev/bdev_lib_exec.h"
 };

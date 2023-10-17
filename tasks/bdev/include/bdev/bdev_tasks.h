@@ -273,40 +273,6 @@ struct MonitorTask : public Task, TaskFlags<TF_LOCAL> {
   }
 };
 
-/** A task to update bdev capacity */
-struct UpdateCapacityTask : public Task, TaskFlags<TF_LOCAL> {
-  IN ssize_t diff_;
-
-  /** SHM default constructor */
-  HSHM_ALWAYS_INLINE explicit
-  UpdateCapacityTask(hipc::Allocator *alloc) : Task(alloc) {}
-
-  /** Emplace constructor */
-  HSHM_ALWAYS_INLINE explicit
-  UpdateCapacityTask(hipc::Allocator *alloc,
-                     const TaskNode &task_node,
-                     const DomainId &domain_id,
-                     const TaskStateId &state_id,
-                     ssize_t diff) : Task(alloc) {
-    // Initialize task
-    task_node_ = task_node;
-    prio_ = TaskPrio::kLowLatency;
-    task_state_ = state_id;
-    method_ = Method::kUpdateCapacity;
-    task_flags_.SetBits(TASK_FIRE_AND_FORGET | TASK_UNORDERED | TASK_REMOTE_DEBUG_MARK);
-    domain_id_ = domain_id;
-
-    // Custom
-    diff_ = diff;
-  }
-
-  /** Create group */
-  HSHM_ALWAYS_INLINE
-  u32 GetGroup(hshm::charbuf &group) {
-    return TASK_UNORDERED;
-  }
-};
-
 }  // namespace hermes::bdev
 
 #endif  // HRUN_TASKS_BDEV_INCLUDE_BDEV_BDEV_TASKS_H_

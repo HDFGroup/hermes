@@ -85,15 +85,6 @@ class Client : public TaskLibClient {
   }
   HRUN_TASK_NODE_PUSH_ROOT(Monitor);
 
-  /** Update bdev capacity */
-  void AsyncUpdateCapacityConstruct(UpdateCapacityTask *task,
-                                    const TaskNode &task_node,
-                                    ssize_t size) {
-    HRUN_CLIENT->ConstructTask<UpdateCapacityTask>(
-        task, task_node, domain_id_, id_, size);
-  }
-  HRUN_TASK_NODE_PUSH_ROOT(UpdateCapacity);
-
   /** Get bdev remaining capacity */
   HSHM_ALWAYS_INLINE
   size_t GetRemCap() const {
@@ -148,11 +139,7 @@ class Server {
   ssize_t rem_cap_;
 
  public:
-  void UpdateCapacity(UpdateCapacityTask *task) {
-    rem_cap_ += task->diff_;
-  }
-
-  void Monitor(MonitorTask *task) {
+  void Monitor(MonitorTask *task, RunContext &ctx) {
     task->rem_cap_ = rem_cap_;
   }
 };
