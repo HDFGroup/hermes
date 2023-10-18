@@ -20,6 +20,7 @@ class Server : public TaskLib, public bdev::Server {
     rem_cap_ = dev_info.capacity_;
     alloc_.Init(id_, dev_info.capacity_, dev_info.slab_sizes_);
     mem_ptr_ = (char*)malloc(dev_info.capacity_);
+    score_hist_.Resize(10);
     HILOG(kDebug, "Created {} at {} of size {}",
           dev_info.dev_name_, dev_info.mount_point_, dev_info.capacity_);
     task->SetModuleComplete();
