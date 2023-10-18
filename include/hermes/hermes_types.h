@@ -312,6 +312,7 @@ struct BlobInfo {
   /** Update modify stats */
   void UpdateWriteStats() {
     mod_count_.fetch_add(1);
+    access_freq_.fetch_add(1);
     UpdateReadStats();
   }
 

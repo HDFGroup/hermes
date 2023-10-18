@@ -73,6 +73,7 @@ struct DestructTask : public DestroyTaskStateTask {
  * */
 struct AllocateTask : public Task, TaskFlags<TF_LOCAL> {
   IN size_t size_;  /**< Size in buf */
+  IN float score_;  /**< Score of the blob allocating stuff */
   OUT std::vector<BufferInfo> *buffers_;
   OUT size_t alloc_size_;
 
@@ -87,6 +88,7 @@ struct AllocateTask : public Task, TaskFlags<TF_LOCAL> {
             const DomainId &domain_id,
             const TaskStateId &state_id,
             size_t size,
+            float score,
             std::vector<BufferInfo> *buffers) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
@@ -99,6 +101,7 @@ struct AllocateTask : public Task, TaskFlags<TF_LOCAL> {
 
     // Free params
     size_ = size;
+    score_ = score;
     buffers_ = buffers;
   }
 
@@ -114,6 +117,7 @@ struct AllocateTask : public Task, TaskFlags<TF_LOCAL> {
  * */
 struct FreeTask : public Task, TaskFlags<TF_LOCAL> {
   IN std::vector<BufferInfo> buffers_;
+  IN float score_;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -125,6 +129,7 @@ struct FreeTask : public Task, TaskFlags<TF_LOCAL> {
            const TaskNode &task_node,
            const DomainId &domain_id,
            const TaskStateId &state_id,
+           float score,
            const std::vector<BufferInfo> &buffers,
            bool fire_and_forget) : Task(alloc) {
     // Initialize task
@@ -141,6 +146,7 @@ struct FreeTask : public Task, TaskFlags<TF_LOCAL> {
 
     // Free params
     buffers_ = buffers;
+    score_ = score;
   }
 
   /** Create group */

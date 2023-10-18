@@ -48,11 +48,13 @@ namespace hermes::posix_bdev {
     alloc_.Allocate(task->size_, *task->buffers_, task->alloc_size_);
     HILOG(kDebug, "Allocated {}/{} bytes ({})", task->alloc_size_, task->size_, path_);
     rem_cap_ -= task->alloc_size_;
+    score_hist_.Increment(task->score_);
     task->SetModuleComplete();
   }
 
   void Free(FreeTask *task, RunContext &rctx) {
     rem_cap_ += alloc_.Free(task->buffers_);
+    score_hist_.Decrement(task->score_);
     task->SetModuleComplete();
   }
 

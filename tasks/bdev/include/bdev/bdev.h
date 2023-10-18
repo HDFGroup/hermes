@@ -6,6 +6,7 @@
 #define HRUN_bdev_H_
 
 #include "bdev_tasks.h"
+#include "hermes/score_histogram.h"
 
 namespace hermes::bdev {
 
@@ -96,9 +97,10 @@ class Client : public TaskLibClient {
   void AsyncAllocateConstruct(AllocateTask *task,
                               const TaskNode &task_node,
                               size_t size,
+                              float score,
                               std::vector<BufferInfo> &buffers) {
     HRUN_CLIENT->ConstructTask<AllocateTask>(
-        task, task_node, domain_id_, id_, size, &buffers);
+        task, task_node, domain_id_, id_, score, size, &buffers);
   }
   HRUN_TASK_NODE_PUSH_ROOT(Allocate);
 
@@ -106,10 +108,11 @@ class Client : public TaskLibClient {
   HSHM_ALWAYS_INLINE
   void AsyncFreeConstruct(FreeTask *task,
                           const TaskNode &task_node,
+                          float score,
                           const std::vector<BufferInfo> &buffers,
                           bool fire_and_forget) {
     HRUN_CLIENT->ConstructTask<FreeTask>(
-        task, task_node, domain_id_, id_, buffers, fire_and_forget);
+        task, task_node, domain_id_, id_, score, buffers, fire_and_forget);
   }
   HRUN_TASK_NODE_PUSH_ROOT(Free);
 
@@ -136,7 +139,8 @@ class Client : public TaskLibClient {
 
 class Server {
  public:
-  ssize_t rem_cap_;
+  ssize_t rem_cap_;       /**< Remaining capacity */
+  Histogram score_hist_;  /**< Score distribution */
 
  public:
   void Monitor(MonitorTask *task, RunContext &ctx) {

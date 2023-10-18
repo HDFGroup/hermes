@@ -34,12 +34,14 @@ class Server : public TaskLib, public bdev::Server {
     HILOG(kDebug, "Allocating {} bytes (RAM)", task->size_);
     alloc_.Allocate(task->size_, *task->buffers_, task->alloc_size_);
     rem_cap_ -= task->alloc_size_;
+    score_hist_.Increment(task->score_);
     HILOG(kDebug, "Allocated {} bytes (RAM)", task->alloc_size_);
     task->SetModuleComplete();
   }
 
   void Free(FreeTask *task, RunContext &rctx) {
     rem_cap_ += alloc_.Free(task->buffers_);
+    score_hist_.Decrement(task->score_);
     task->SetModuleComplete();
   }
 
