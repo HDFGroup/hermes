@@ -196,11 +196,12 @@ TEST_CASE("TestHermesSerializedPutGet") {
       HILOG(kInfo, "Iteration: {} with blob name {}", i, std::to_string(i));
       // Put a blob
       std::vector<int> data(1024, i);
-      hermes::BlobId blob_id = bkt.Put(std::to_string(i), data, ctx);
+      hermes::BlobId blob_id = bkt.Put<std::vector<int>>(
+          std::to_string(i), data, ctx);
       HILOG(kInfo, "(iteration {}) Using BlobID: {}", i, blob_id);
       // Get a blob
       std::vector<int> data2(1024, i);
-      bkt.Get(blob_id, data2, ctx);
+      bkt.Get<std::vector<int>>(blob_id, data2, ctx);
       REQUIRE(data == data2);
     }
   }
@@ -528,8 +529,13 @@ TEST_CASE("TestHermesDataOp") {
   for (size_t i = off; i < proc_count; ++i) {
     HILOG(kInfo, "Iteration: {}", i);
     // Put a blob
+    float val = 5 + i % 256;
     hermes::Blob blob(page_size);
-    memset(blob.data(), i % 256, blob.size());
+    float *data = (float*)blob.data();
+    for (size_t j = 0; j < page_size / sizeof(float); ++j) {
+      data[j] = val;
+    }
+    memcpy(blob.data(), data, blob.size());
     std::string blob_name = std::to_string(i);
     bkt.Put(blob_name, blob, ctx);
   }
@@ -539,7 +545,12 @@ TEST_CASE("TestHermesDataOp") {
   // Verify derived operator happens
   hermes::Bucket bkt_min("data_bkt_min", 0, 0);
   size_t size = bkt_min.GetSize();
+
+  hermes::Blob blob2;
+  bkt_min.Get(std::to_string(0), blob2, ctx);
+  float min = *(float *)blob2.data();
   REQUIRE(size == sizeof(float) * count_per_proc * nprocs);
+  REQUIRE(min == 5);
 }
 
 TEST_CASE("TestHermesCollectMetadata") {

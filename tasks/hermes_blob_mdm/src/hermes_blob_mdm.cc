@@ -11,6 +11,7 @@
 #include "bdev/bdev.h"
 #include "data_stager/data_stager.h"
 #include "hermes_data_op/hermes_data_op.h"
+#include "hermes/score_histogram.h"
 
 namespace hermes::blob_mdm {
 
@@ -123,21 +124,59 @@ class Server : public TaskLib {
     task->SetModuleComplete();
   }
 
+  /** New score */
+  float MakeScore(BlobInfo &blob_info, hshm::Timepoint &now) {
+    float freq_score = blob_info.access_freq_ / 5;
+    float access_score = (float)(1 - (blob_info.last_access_.GetSecFromStart(now) / 5));
+    if (freq_score > 1) {
+      freq_score = 1;
+    }
+    if (access_score > 1) {
+      access_score = 1;
+    }
+    return std::max(freq_score, access_score);
+  }
+
   /**
-   * Long-running task to stage out data periodically
+   * Long-running task to stage out data periodically and
+   * reorganize blobs
    * */
   void FlushData(FlushDataTask *task, RunContext &rctx) {
+    hshm::Timepoint now;
+    now.Now();
     // Get the blob info data structure
     BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     for (auto &it : blob_map) {
       BlobInfo &blob_info = it.second;
+      // Update blob scores
+      float new_score = MakeScore(blob_info, now);
+      bool reorganize = false;
+      for (BufferInfo &buf : blob_info.buffers_) {
+        TargetInfo &target = *target_map_[buf.tid_];
+        Histogram &hist = target.monitor_task_->score_hist_;
+        target.AsyncUpdateScore(task->task_node_ + 1,
+                                blob_info.score_, new_score);
+        u32 percentile = hist.GetPercentile(blob_info.score_);
+        if (percentile < 10 || percentile > 90) {
+          reorganize = true;
+        }
+      }
+      if (reorganize) {
+        blob_mdm_.AsyncReorganizeBlob(task->task_node_ + 1,
+                                      blob_info.tag_id_,
+                                      blob_info.blob_id_,
+                                      new_score, 0);
+      }
+      blob_info.access_freq_ = 0;
+      blob_info.score_ = new_score;
+
+      // Flush data
       if (blob_info.last_flush_ > 0 &&
           blob_info.mod_count_ > blob_info.last_flush_) {
         HILOG(kDebug, "Flushing blob {} (mod_count={}, last_flush={})",
               blob_info.blob_id_, blob_info.mod_count_, blob_info.last_flush_);
         blob_info.last_flush_ = 1;
         blob_info.mod_count_ = 0;
-        blob_info.access_freq_ = 0;
         blob_info.UpdateWriteStats();
         LPointer<char> data = HRUN_CLIENT->AllocateBuffer(blob_info.blob_size_);
         LPointer<GetBlobTask> get_blob =
@@ -155,7 +194,6 @@ class Server : public TaskLib {
                                   TASK_DATA_OWNER | TASK_FIRE_AND_FORGET);
       }
     }
-    // task->SetModuleComplete();
   }
 
   /**
@@ -227,6 +265,7 @@ class Server : public TaskLib {
         LPointer<bdev::AllocateTask> alloc_task =
             bdev.AsyncAllocate(task->task_node_ + 1,
                                placement.size_,
+                               blob_info.score_,
                                blob_info.buffers_);
         alloc_task->Wait<TASK_YIELD_CO>(task);
         if (alloc_task->alloc_size_ < alloc_task->size_) {
@@ -306,7 +345,9 @@ class Server : public TaskLib {
     for (BufferInfo &buf : blob_info.buffers_) {
       TargetInfo &target = *target_map_[buf.tid_];
       std::vector<BufferInfo> buf_vec = {buf};
-      // target.AsyncFree(task->task_node_ + 1, std::move(buf_vec), true);
+      target.AsyncFree(task->task_node_ + 1,
+                       blob_info.score_,
+                       std::move(buf_vec), true);
     }
     blob_info.buffers_.clear();
     blob_info.max_blob_size_ = 0;
@@ -580,7 +621,8 @@ class Server : public TaskLib {
           TargetInfo &tgt_info = *target_map_[buf.tid_];
           std::vector<BufferInfo> buf_vec = {buf};
           bdev::FreeTask *free_task = tgt_info.AsyncFree(
-              task->task_node_ + 1, std::move(buf_vec), false).ptr_;
+              task->task_node_ + 1, blob_info.score_,
+              std::move(buf_vec), false).ptr_;
           task->free_tasks_->emplace_back(free_task);
         }
         task->phase_ = DestroyBlobPhase::kWaitFreeBuffers;

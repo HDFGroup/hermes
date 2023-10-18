@@ -86,6 +86,11 @@ if( Hermes_INCLUDE_DIR )
             hermes
             ${Boost_LIBRARIES} ${Hermes_LIBRARY})
     set(Hermes_CLIENT_LIBRARIES ${Hermes_LIBRARIES})
+    set(Hermes_RUNTIME_LIBRARIES
+            ${Hermes_CLIENT_LIBRARIES}
+            hrun_runtime
+            ${Boost_LIBRARIES})
+    set(Hermes_RUNTIME_DEPS "")
   endif(Hermes_LIBRARY)
 
 else(Hermes_INCLUDE_DIR)

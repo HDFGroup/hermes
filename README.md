@@ -24,7 +24,7 @@ Hermes is a heterogeneous-aware, multi-tiered, dynamic, and distributed I/O buff
 
 ```bash
 # set location of hermes_file_staging
-git clone https://github.com/HDFGroup/hermes
+git clone https://github.com/HDFGroup/hermes --recurse-submodules
 spack repo add ${HERMES_REPO}/ci/hermes
 # Master should include all stable updates
 spack install hermes@master
@@ -34,6 +34,13 @@ spack install hermes@master
 
 Hermes makes use of the CMake build system and requires an out of source build.
 
+Hermes has a corresponding package, hermes_shm, which has all the same dependencies as Hermes.
+```
+spack install hermes_shm
+spack load hermes_shm
+```
+
+You can then build Hermes with CMake:
 ```
 cd /path/to/hermes
 mkdir build

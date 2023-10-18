@@ -147,11 +147,14 @@ class SlabAllocator {
 
  public:
   /** Free a set of buffers */
-  void Free(const std::vector<BufferInfo> &buffers) {
+  size_t Free(const std::vector<BufferInfo> &buffers) {
+    size_t total_size = 0;
     for (const auto &buffer : buffers) {
       auto &slab = slab_lists_[buffer.t_slab_];
       slab.buffers_.push_back(buffer);
+      total_size += slab.slab_size_;
     }
+    return total_size;
   }
 };
 
