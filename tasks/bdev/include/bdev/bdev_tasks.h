@@ -12,6 +12,7 @@
 #include "hermes/hermes_types.h"
 #include "hermes/config_server.h"
 #include "proc_queue/proc_queue.h"
+#include "hermes/score_histogram.h"
 
 namespace hermes::bdev {
 
@@ -244,7 +245,8 @@ struct ReadTask : public Task, TaskFlags<TF_LOCAL> {
 
 /** A task to monitor bdev statistics */
 struct MonitorTask : public Task, TaskFlags<TF_LOCAL> {
-  OUT size_t rem_cap_; /**< Remaining capacity of the target */
+  OUT size_t rem_cap_;  /**< Remaining capacity of the target */
+  OUT Histogram score_hist_;  /**< Score distribution */
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -270,6 +272,43 @@ struct MonitorTask : public Task, TaskFlags<TF_LOCAL> {
 
     // Custom
     rem_cap_ = rem_cap;
+  }
+
+  /** Create group */
+  HSHM_ALWAYS_INLINE
+  u32 GetGroup(hshm::charbuf &group) {
+    return TASK_UNORDERED;
+  }
+};
+
+/** A task to monitor bdev statistics */
+struct UpdateScoreTask : public Task, TaskFlags<TF_LOCAL> {
+  OUT float old_score_;
+  OUT float new_score_;
+
+  /** SHM default constructor */
+  HSHM_ALWAYS_INLINE explicit
+  UpdateScoreTask(hipc::Allocator *alloc) : Task(alloc) {}
+
+  /** Emplace constructor */
+  HSHM_ALWAYS_INLINE explicit
+  UpdateScoreTask(hipc::Allocator *alloc,
+              const TaskNode &task_node,
+              const DomainId &domain_id,
+              const TaskStateId &state_id,
+              float old_score, float new_score) : Task(alloc) {
+    // Initialize task
+    task_node_ = task_node;
+    lane_hash_ = 0;
+    prio_ = TaskPrio::kLowLatency;
+    task_state_ = state_id;
+    method_ = Method::kUpdateScore;
+    task_flags_.SetBits(TASK_LOW_LATENCY | TASK_FIRE_AND_FORGET | TASK_REMOTE_DEBUG_MARK);
+    domain_id_ = domain_id;
+
+    // Custom
+    old_score_ = old_score;
+    new_score_ = new_score;
   }
 
   /** Create group */

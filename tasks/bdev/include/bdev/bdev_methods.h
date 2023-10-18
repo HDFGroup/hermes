@@ -8,6 +8,7 @@ struct Method : public TaskMethod {
   TASK_METHOD_T kAllocate = kLast + 2;
   TASK_METHOD_T kFree = kLast + 3;
   TASK_METHOD_T kMonitor = kLast + 4;
+  TASK_METHOD_T kUpdateScore = kLast + 5;
 };
 
 #endif  // HRUN_BDEV_METHODS_H_

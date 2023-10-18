@@ -57,6 +57,31 @@ class Histogram {
   std::atomic<u32> count_;
 
  public:
+  /** Default constructor */
+  Histogram() : histogram_(), count_(0) {}
+
+  /** Copy constructor */
+  Histogram(const Histogram &other) : histogram_(other.histogram_),
+                                      count_(other.count_.load()) {}
+
+  /** Copy operator */
+  Histogram &operator=(const Histogram &other) {
+    histogram_ = other.histogram_;
+    count_.store(other.count_.load());
+    return *this;
+  }
+
+  /** Move constructor */
+  Histogram(Histogram &&other) noexcept : histogram_(other.histogram_),
+                                          count_(other.count_.load()) {}
+
+  /** Move operator */
+  Histogram &operator=(Histogram &&other) noexcept {
+    histogram_ = other.histogram_;
+    count_.store(other.count_.load());
+    return *this;
+  }
+
   /** Resize the histogram */
   void Resize(int num_bins) {
     histogram_.resize(num_bins);

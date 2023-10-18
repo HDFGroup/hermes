@@ -119,9 +119,22 @@ class Server : public TaskLib {
       stager_mdm_.Init(task->stager_mdm_);
       op_mdm_.Init(task->op_mdm_);
       // TODO(llogan): Add back
-      flush_task_ = blob_mdm_.AsyncFlushData(task->task_node_ + 1);
+      // flush_task_ = blob_mdm_.AsyncFlushData(task->task_node_ + 1);
     }
     task->SetModuleComplete();
+  }
+
+  /** New score */
+  float MakeScore(BlobInfo &blob_info, hshm::Timepoint &now) {
+    float freq_score = blob_info.access_freq_ / 5;
+    float access_score = (float)(1 - (blob_info.last_access_.GetSecFromStart(now) / 5));
+    if (freq_score > 1) {
+      freq_score = 1;
+    }
+    if (access_score > 1) {
+      access_score = 1;
+    }
+    return std::max(freq_score, access_score);
   }
 
   /**
@@ -129,17 +142,41 @@ class Server : public TaskLib {
    * reorganize blobs
    * */
   void FlushData(FlushDataTask *task, RunContext &rctx) {
+    hshm::Timepoint now;
+    now.Now();
     // Get the blob info data structure
     BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     for (auto &it : blob_map) {
       BlobInfo &blob_info = it.second;
+      // Update blob scores
+      float new_score = MakeScore(blob_info, now);
+      bool reorganize = false;
+      for (BufferInfo &buf : blob_info.buffers_) {
+        TargetInfo &target = *target_map_[buf.tid_];
+        Histogram &hist = target.monitor_task_->score_hist_;
+        target.AsyncUpdateScore(task->task_node_ + 1,
+                                blob_info.score_, new_score);
+        u32 percentile = hist.GetPercentile(blob_info.score_);
+        if (percentile < 10 || percentile > 90) {
+          reorganize = true;
+        }
+      }
+      if (reorganize) {
+        blob_mdm_.AsyncReorganizeBlob(task->task_node_ + 1,
+                                      blob_info.tag_id_,
+                                      blob_info.blob_id_,
+                                      new_score, 0);
+      }
+      blob_info.access_freq_ = 0;
+      blob_info.score_ = new_score;
+
+      // Flush data
       if (blob_info.last_flush_ > 0 &&
           blob_info.mod_count_ > blob_info.last_flush_) {
         HILOG(kDebug, "Flushing blob {} (mod_count={}, last_flush={})",
               blob_info.blob_id_, blob_info.mod_count_, blob_info.last_flush_);
         blob_info.last_flush_ = 1;
         blob_info.mod_count_ = 0;
-        blob_info.access_freq_ = 0;
         blob_info.UpdateWriteStats();
         LPointer<char> data = HRUN_CLIENT->AllocateBuffer(blob_info.blob_size_);
         LPointer<GetBlobTask> get_blob =
