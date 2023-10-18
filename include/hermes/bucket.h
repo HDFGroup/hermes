@@ -393,7 +393,7 @@ class Bucket {
    * */
   void ReorganizeBlob(const BlobId &blob_id,
                       float score) {
-    blob_mdm_->AsyncReorganizeBlobRoot(id_, blob_id, score, 0);
+    blob_mdm_->AsyncReorganizeBlobRoot(id_, blob_id, score, 0, true);
   }
 
   /**
@@ -402,7 +402,7 @@ class Bucket {
   void ReorganizeBlob(const BlobId &blob_id,
                       float score,
                       Context &ctx) {
-    blob_mdm_->AsyncReorganizeBlobRoot(id_, blob_id, score, 0);
+    blob_mdm_->AsyncReorganizeBlobRoot(id_, blob_id, score, 0, true);
   }
 
   /**
@@ -412,7 +412,7 @@ class Bucket {
                       float score,
                       u32 node_id,
                       Context &ctx) {
-    blob_mdm_->AsyncReorganizeBlobRoot(id_, blob_id, score, node_id);
+    blob_mdm_->AsyncReorganizeBlobRoot(id_, blob_id, score, node_id, true);
   }
 
   /**

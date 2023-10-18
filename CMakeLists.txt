@@ -97,7 +97,8 @@ if(thallium_FOUND)
 endif()
 
 # Boost
-find_package(Boost REQUIRED COMPONENTS regex system filesystem fiber REQUIRED)
+# find_package(Boost REQUIRED COMPONENTS regex system filesystem fiber REQUIRED)
+find_package(Boost REQUIRED COMPONENTS fiber REQUIRED)
 if (Boost_FOUND)
     message(STATUS "found boost at ${Boost_INCLUDE_DIRS}")
 endif()
