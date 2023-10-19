@@ -111,18 +111,18 @@ class Server : public TaskLib {
   }
 
   void RunOp(RunOpTask *task, RunContext &rctx) {
-    for (OpGraph &op_graph : op_graphs_[rctx.lane_id_]) {
-      for (Op &op : op_graph.ops_) {
-        switch(op.op_id_) {
-          case 0:
-            RunMin(task, op);
-            break;
-          case 1:
-            RunMax(task, op);
-            break;
-        }
-      }
-    }
+//    for (OpGraph &op_graph : op_graphs_[rctx.lane_id_]) {
+//      for (Op &op : op_graph.ops_) {
+//        switch(op.op_id_) {
+//          case 0:
+//            RunMin(task, op);
+//            break;
+//          case 1:
+//            RunMax(task, op);
+//            break;
+//        }
+//      }
+//    }
   }
 
   std::list<OpData> GetPendingData(Op &op) {
