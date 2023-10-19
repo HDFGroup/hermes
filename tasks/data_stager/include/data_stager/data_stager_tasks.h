@@ -113,6 +113,12 @@ struct RegisterStagerTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
     HSHM_MAKE_AR(url_, alloc, url);
   }
 
+  /** Destructor */
+  HSHM_ALWAYS_INLINE
+  ~RegisterStagerTask() {
+    HSHM_DESTROY_AR(url_)
+  }
+
   /** Duplicate message */
   void Dup(hipc::Allocator *alloc, RegisterStagerTask &other) {
     task_dup(other);
