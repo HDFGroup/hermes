@@ -47,9 +47,9 @@ class Server : public TaskLib {
   }
 
   void StageIn(StageInTask *task, RunContext &rctx) {
-    AbstractStager &stager = *url_map_[rctx.lane_id_][task->bkt_id_];
-    stager.StageIn(blob_mdm_, task, rctx);
-    task->SetModuleComplete();
+//    AbstractStager &stager = *url_map_[rctx.lane_id_][task->bkt_id_];
+//    stager.StageIn(blob_mdm_, task, rctx);
+//    task->SetModuleComplete();
   }
 
   void StageOut(StageOutTask *task, RunContext &rctx) {
