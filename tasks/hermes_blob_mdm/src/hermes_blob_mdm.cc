@@ -134,7 +134,36 @@ class Server : public TaskLib {
     if (access_score > 1) {
       access_score = 1;
     }
-    return std::max(freq_score, access_score);
+    float data_score = std::max(freq_score, access_score);
+    float user_score = blob_info.user_score_;
+    if (!blob_info.flags_.Any(HERMES_USER_SCORE_STATIONARY)) {
+      user_score *= data_score;
+    }
+    return std::max(data_score, user_score);
+  }
+
+  /** Check if blob should be reorganized */
+  template<bool UPDATE_SCORE=false>
+  bool ShouldReorganize(BlobInfo &blob_info,
+                        float score,
+                        TaskNode &task_node) {
+//    for (BufferInfo &buf : blob_info.buffers_) {
+//      TargetInfo &target = *target_map_[buf.tid_];
+//      Histogram &hist = target.monitor_task_->score_hist_;
+//      if constexpr(UPDATE_SCORE) {
+//        target.AsyncUpdateScore(task_node + 1,
+//                                blob_info.score_, score);
+//      }
+//      u32 percentile = hist.GetPercentile(score);
+//      size_t rem_cap = target.monitor_task_->rem_cap_;
+//      size_t max_cap = target.max_cap_;
+//      if (rem_cap < max_cap / 10) {
+//        if (percentile < 10 || percentile > 90) {
+//          return true;
+//        }
+//      }
+//    }
+    return false;
   }
 
   /**
@@ -150,22 +179,11 @@ class Server : public TaskLib {
       BlobInfo &blob_info = it.second;
       // Update blob scores
       float new_score = MakeScore(blob_info, now);
-      bool reorganize = false;
-      for (BufferInfo &buf : blob_info.buffers_) {
-        TargetInfo &target = *target_map_[buf.tid_];
-        Histogram &hist = target.monitor_task_->score_hist_;
-        target.AsyncUpdateScore(task->task_node_ + 1,
-                                blob_info.score_, new_score);
-        u32 percentile = hist.GetPercentile(blob_info.score_);
-        if (percentile < 10 || percentile > 90) {
-          reorganize = true;
-        }
-      }
-      if (reorganize) {
+      if (ShouldReorganize<true>(blob_info, new_score, task->task_node_)) {
         blob_mdm_.AsyncReorganizeBlob(task->task_node_ + 1,
                                       blob_info.tag_id_,
                                       blob_info.blob_id_,
-                                      new_score, 0);
+                                      new_score, 0, false);
       }
       blob_info.access_freq_ = 0;
       blob_info.score_ = new_score;
@@ -345,6 +363,7 @@ class Server : public TaskLib {
     for (BufferInfo &buf : blob_info.buffers_) {
       TargetInfo &target = *target_map_[buf.tid_];
       std::vector<BufferInfo> buf_vec = {buf};
+      // TODO(llogan): add back
       target.AsyncFree(task->task_node_ + 1,
                        blob_info.score_,
                        std::move(buf_vec), true);
@@ -663,6 +682,17 @@ class Server : public TaskLib {
           return;
         }
         BlobInfo &blob_info = it->second;
+        if (task->is_user_score_) {
+          blob_info.user_score_ = task->score_;
+          blob_info.score_ = std::max(blob_info.user_score_,
+                                      blob_info.score_);
+        } else {
+          blob_info.score_ = task->score_;
+        }
+        if (!ShouldReorganize(blob_info, task->score_, task->task_node_)) {
+          task->SetModuleComplete();
+          return;
+        }
         task->data_ = HRUN_CLIENT->AllocateBuffer(blob_info.blob_size_).shm_;
         task->data_size_ = blob_info.blob_size_;
         task->get_task_ = blob_mdm_.AsyncGetBlob(task->task_node_ + 1,

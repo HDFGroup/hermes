@@ -151,19 +151,19 @@ class Client : public TaskLibClient {
 class Server {
  public:
   ssize_t rem_cap_;       /**< Remaining capacity */
-  Histogram score_hist_;  /**< Score distribution */
+  // Histogram score_hist_;  /**< Score distribution */
 
  public:
   void UpdateScore(UpdateScoreTask *task, RunContext &ctx) {
-    if (task->old_score_ >= 0) {
-      score_hist_.Decrement(task->old_score_);
-    }
-    score_hist_.Increment(task->new_score_);
+//    if (task->old_score_ >= 0) {
+//      score_hist_.Decrement(task->old_score_);
+//    }
+//    score_hist_.Increment(task->new_score_);
   }
 
   void Monitor(MonitorTask *task, RunContext &ctx) {
     task->rem_cap_ = rem_cap_;
-    task->score_hist_ = score_hist_;
+//    task->score_hist_ = score_hist_;
   }
 };
 

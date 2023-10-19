@@ -278,10 +278,12 @@ struct BlobInfo {
   size_t blob_size_;      /**< The overall size of the blob */
   size_t max_blob_size_;  /**< The amount of space current buffers support */
   float score_;  /**< The priority of this blob */
+  float user_score_;  /**< The user-defined priority of this blob */
   std::atomic<u32> access_freq_;  /**< Number of times blob accessed in epoch */
   hshm::Timepoint last_access_;  /**< Last time blob accessed */
   std::atomic<size_t> mod_count_;   /**< The number of times blob modified */
   std::atomic<size_t> last_flush_;  /**< The last mod that was flushed */
+  bitfield32_t flags_;  /**< Flags */
 
   /** Serialization */
   template<typename Ar>

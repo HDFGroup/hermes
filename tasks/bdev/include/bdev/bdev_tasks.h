@@ -246,7 +246,7 @@ struct ReadTask : public Task, TaskFlags<TF_LOCAL> {
 /** A task to monitor bdev statistics */
 struct MonitorTask : public Task, TaskFlags<TF_LOCAL> {
   OUT size_t rem_cap_;  /**< Remaining capacity of the target */
-  OUT Histogram score_hist_;  /**< Score distribution */
+  // OUT Histogram score_hist_;  /**< Score distribution */
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
