@@ -20,7 +20,7 @@ class HermesShm(CMakePackage):
     depends_on('cereal')
     depends_on('yaml-cpp')
     depends_on('doxygen@1.9.3')
-    depends_on('boost@1.7: +context +fiber +filesystem +system +atomic +chrono +serialization +signals +pic')
+    depends_on('boost@1.7: +context +fiber +filesystem +system +atomic +chrono +serialization +signals +pic +regex')
     depends_on('libfabric fabrics=sockets,tcp,udp,rxm,rxd,verbs',
                when='+ares')
     depends_on('libfabric fabrics=verbs',
