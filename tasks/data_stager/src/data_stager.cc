@@ -49,10 +49,10 @@ class Server : public TaskLib {
   void StageIn(StageInTask *task, RunContext &rctx) {
     std::unordered_map<hermes::BucketId, std::unique_ptr<AbstractStager>>::iterator it =
         url_map_[rctx.lane_id_].find(task->bkt_id_);
-//    if (it == url_map_[rctx.lane_id_].end()) {
-//      HELOG(kError, "Could not find stager for bucket: {}", task->bkt_id_);
-//      task->SetModuleComplete();
-//    }
+    if (it == url_map_[rctx.lane_id_].end()) {
+      HELOG(kError, "Could not find stager for bucket: {}", task->bkt_id_);
+      task->SetModuleComplete();
+    }
 //    AbstractStager &stager = *it->second;
     // stager.StageIn(blob_mdm_, task, rctx);
     task->SetModuleComplete();
