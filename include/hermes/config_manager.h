@@ -48,6 +48,7 @@ class ConfigurationManager {
     LoadClientConfig(config_path);
     LoadServerConfig(config_path);
     mdm_.CreateRoot(DomainId::GetGlobal(), "hermes_mdm");
+    mdm_.CreateRoot(DomainId::GetGlobal(), "hermes_mdm1");
     blob_mdm_.CreateRoot(DomainId::GetGlobal(), "hermes_blob_mdm");
     bkt_mdm_.CreateRoot(DomainId::GetGlobal(), "hermes_bkt_mdm");
     // TODO(llogan): add back
@@ -57,8 +58,6 @@ class ConfigurationManager {
 //                       bkt_mdm_.id_, blob_mdm_.id_);
     stager_mdm_.CreateRoot(DomainId::GetGlobal(),
                            "hermes_stager_mdm", blob_mdm_.id_);
-    stager_mdm_.CreateRoot(DomainId::GetGlobal(),
-                           "hermes_stager_mdm1", blob_mdm_.id_);
     HILOG(kInfo, "(node {}) FINISHED CREATING STAGER AND OP_MDM", HRUN_CLIENT->node_id_)
     blob_mdm_.SetBucketMdmRoot(DomainId::GetGlobal(),
                                bkt_mdm_.id_,
