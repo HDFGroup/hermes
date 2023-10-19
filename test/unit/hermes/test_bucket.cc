@@ -464,10 +464,10 @@ TEST_CASE("TestHermesDataStager") {
   // Create a stageable bucket
   using hermes::data_stager::BinaryFileStager;
   hermes::Context ctx;
-  ctx.flags_.SetBits(HERMES_IS_FILE);
+  ctx.flags_.SetBits(0);
   hshm::charbuf url =
       BinaryFileStager::BuildFileUrl("/tmp/test.txt", page_size);
-  hermes::Bucket bkt(url.str(), file_size, HERMES_IS_FILE);
+  hermes::Bucket bkt(url.str(), file_size, 0);
 
   // Put a few blobs in the bucket
   for (size_t i = off; i < proc_count; ++i) {
