@@ -178,15 +178,16 @@ class Server : public TaskLib {
     for (auto &it : blob_map) {
       BlobInfo &blob_info = it.second;
       // Update blob scores
-      float new_score = MakeScore(blob_info, now);
-      if (ShouldReorganize<true>(blob_info, new_score, task->task_node_)) {
-        blob_mdm_.AsyncReorganizeBlob(task->task_node_ + 1,
-                                      blob_info.tag_id_,
-                                      blob_info.blob_id_,
-                                      new_score, 0, false);
-      }
-      blob_info.access_freq_ = 0;
-      blob_info.score_ = new_score;
+      // TODO(llogan): Add back
+//      float new_score = MakeScore(blob_info, now);
+//      if (ShouldReorganize<true>(blob_info, new_score, task->task_node_)) {
+//        blob_mdm_.AsyncReorganizeBlob(task->task_node_ + 1,
+//                                      blob_info.tag_id_,
+//                                      blob_info.blob_id_,
+//                                      new_score, 0, false);
+//      }
+//      blob_info.access_freq_ = 0;
+//      blob_info.score_ = new_score;
 
       // Flush data
       if (blob_info.last_flush_ > 0 &&
