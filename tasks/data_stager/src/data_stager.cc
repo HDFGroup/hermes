@@ -39,6 +39,9 @@ class Server : public TaskLib {
   }
 
   void UnregisterStager(UnregisterStagerTask *task, RunContext &rctx) {
+    if (url_map_[rctx.lane_id_].find(task->bkt_id_) == url_map_[rctx.lane_id_].end()) {
+      return;
+    }
     url_map_[rctx.lane_id_].erase(task->bkt_id_);
     task->SetModuleComplete();
   }
