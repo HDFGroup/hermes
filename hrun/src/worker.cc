@@ -78,8 +78,10 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
     rctx.exec_ = exec;
     if (!exec) {
       for (std::pair<std::string, TaskStateId> entries  : HRUN_TASK_REGISTRY->task_state_ids_) {
-        HILOG(kInfo, "Task state: {} id: {} ptr: {}",
-              entries.first, entries.second, (size_t)HRUN_TASK_REGISTRY->task_states_[entries.second]);
+        HILOG(kInfo, "Task state: {} id: {} ptr: {} equal: {}",
+              entries.first, entries.second,
+              (size_t)HRUN_TASK_REGISTRY->task_states_[entries.second],
+              entries.second == task->task_state_);
       }
       bool was_end = HRUN_TASK_REGISTRY->task_states_.find(task->task_state_) ==
           HRUN_TASK_REGISTRY->task_states_.end();
