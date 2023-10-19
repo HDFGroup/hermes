@@ -131,6 +131,9 @@ class Server : public TaskLib {
       return pending;
     }
     for (OpBucketName &bkt_name : op.in_) {
+      if (op_data_map_.find(bkt_name.bkt_id_) == op_data_map_.end()) {
+        continue;
+      }
       OpPendingData &op_data = op_data_map_[bkt_name.bkt_id_];
       pending = op_data.pending_;
       std::list<OpData> pruned;
