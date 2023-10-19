@@ -551,6 +551,7 @@ TEST_CASE("TestHermesDataOp") {
   do {
     size = bkt_min.GetSize();
     if (size != sizeof(float) * count_per_proc * nprocs) {
+      HILOG(kInfo, "Waiting for derived data");
       sleep(1);
     } else {
       break;
