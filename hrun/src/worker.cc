@@ -81,6 +81,9 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
         HILOG(kInfo, "Task state: {} id: {} ptr: {}",
               entries.first, entries.second, (size_t)HRUN_TASK_REGISTRY->task_states_[entries.second]);
       }
+      bool was_end = HRUN_TASK_REGISTRY->task_states_.find(task->task_state_) ==
+          HRUN_TASK_REGISTRY->task_states_.end();
+      HILOG(kInfo, "Was end: {}", was_end);
       HELOG(kFatal, "(node {}) Could not find the task state: {}",
             HRUN_CLIENT->node_id_, task->task_state_);
       entry->complete_ = true;
