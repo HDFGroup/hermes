@@ -364,9 +364,9 @@ class Server : public TaskLib {
       TargetInfo &target = *target_map_[buf.tid_];
       std::vector<BufferInfo> buf_vec = {buf};
       // TODO(llogan): add back
-      target.AsyncFree(task->task_node_ + 1,
-                       blob_info.score_,
-                       std::move(buf_vec), true);
+//      target.AsyncFree(task->task_node_ + 1,
+//                       blob_info.score_,
+//                       std::move(buf_vec), true);
     }
     blob_info.buffers_.clear();
     blob_info.max_blob_size_ = 0;
