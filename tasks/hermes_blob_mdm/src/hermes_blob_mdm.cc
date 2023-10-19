@@ -282,8 +282,8 @@ class Server : public TaskLib {
         TargetInfo &bdev = *target_map_[placement.tid_];
         LPointer<bdev::AllocateTask> alloc_task =
             bdev.AsyncAllocate(task->task_node_ + 1,
-                               placement.size_,
                                blob_info.score_,
+                               placement.size_,
                                blob_info.buffers_);
         alloc_task->Wait<TASK_YIELD_CO>(task);
         if (alloc_task->alloc_size_ < alloc_task->size_) {
@@ -363,7 +363,6 @@ class Server : public TaskLib {
     for (BufferInfo &buf : blob_info.buffers_) {
       TargetInfo &target = *target_map_[buf.tid_];
       std::vector<BufferInfo> buf_vec = {buf};
-      // TODO(llogan): add back
       target.AsyncFree(task->task_node_ + 1,
                        blob_info.score_,
                        std::move(buf_vec), true);

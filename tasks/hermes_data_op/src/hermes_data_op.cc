@@ -186,11 +186,11 @@ class Server : public TaskLib {
       in_task->Wait<TASK_YIELD_CO>(task);
 
       // Calaculate the minimum
-      LPointer<char> min_ptr = HRUN_CLIENT->AllocateBuffer(sizeof(float));
-      float &min = *((float*)min_ptr.ptr_);
-      min = std::numeric_limits<float>::max();
+      LPointer<char> min_lptr = HRUN_CLIENT->AllocateBuffer(sizeof(float));
+      float *min_ptr = (float*)min_lptr.ptr_;
+      *min_ptr = std::numeric_limits<float>::max();
       for (size_t i = 0; i < in_task->data_size_; i += sizeof(float)) {
-        min = std::min(min, *(float*)(data_ptr.ptr_ + i));
+        *min_ptr = std::min(*min_ptr, *(float*)(data_ptr.ptr_ + i));
       }
 
       // Store the minimum in Hermes
@@ -200,7 +200,7 @@ class Server : public TaskLib {
                              hshm::charbuf(min_blob_name),
                              BlobId::GetNull(),
                              0, sizeof(float),
-                             min_ptr.shm_, 0, 0);
+                             min_lptr.shm_, 0, 0);
     }
   }
 
