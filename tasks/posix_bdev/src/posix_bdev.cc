@@ -25,6 +25,7 @@ namespace hermes::posix_bdev {
     DeviceInfo &dev_info = task->info_;
     rem_cap_ = dev_info.capacity_;
     alloc_.Init(id_, dev_info.capacity_, dev_info.slab_sizes_);
+    // score_hist_.Resize(10);
     std::string text = dev_info.mount_dir_ +
         "/" + "slab_" + dev_info.dev_name_;
     auto canon = stdfs::weakly_canonical(text).string();

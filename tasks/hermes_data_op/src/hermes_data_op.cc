@@ -39,14 +39,17 @@ class Server : public TaskLib {
 //    op_id_map_["max"] = 1;
 //    op_graphs_.resize(HRUN_QM_RUNTIME->max_lanes_);
 //    run_task_ = client_.AsyncRunOp(task->task_node_ + 1);
+    HILOG(kInfo, "Created hermes_data_op");
     task->SetModuleComplete();
   }
 
   void Destruct(DestructTask *task, RunContext &rctx) {
+    HILOG(kInfo, "Destroyed hermes_data_op");
     task->SetModuleComplete();
   }
 
   void RegisterOp(RegisterOpTask *task, RunContext &rctx) {
+    HILOG(kInfo, "Registering op")
     // Load OpGraph
     op_graphs_[rctx.lane_id_].push_back(task->GetOpGraph());
     OpGraph &op_graph = op_graphs_[rctx.lane_id_].back();
@@ -100,6 +103,7 @@ class Server : public TaskLib {
   }
 
   void RegisterData(RegisterDataTask *task, RunContext &rctx) {
+    HILOG(kInfo, "Registering data")
 //    if (!op_data_lock_.TryLock(0)) {
 //      return;
 //    }
@@ -111,6 +115,7 @@ class Server : public TaskLib {
   }
 
   void RunOp(RunOpTask *task, RunContext &rctx) {
+    HILOG(kInfo, "Running op")
 //    for (OpGraph &op_graph : op_graphs_[rctx.lane_id_]) {
 //      for (Op &op : op_graph.ops_) {
 //        switch(op.op_id_) {
