@@ -21,19 +21,16 @@ class Server : public TaskLib {
   Server() = default;
 
   void Construct(ConstructTask *task, RunContext &rctx) {
-//    url_map_.resize(HRUN_QM_RUNTIME->max_lanes_);
-//    blob_mdm_.Init(task->blob_mdm_);
-    HILOG(kInfo, "DataStager Constructed")
+    url_map_.resize(HRUN_QM_RUNTIME->max_lanes_);
+    blob_mdm_.Init(task->blob_mdm_);
     task->SetModuleComplete();
   }
 
   void Destruct(DestructTask *task, RunContext &rctx) {
-    HILOG(kInfo, "DataStager Destructed")
     task->SetModuleComplete();
   }
 
   void RegisterStager(RegisterStagerTask *task, RunContext &rctx) {
-    HILOG(kInfo, "RegisterStager")
     std::string url = task->url_->str();
     std::unique_ptr<AbstractStager> stager = StagerFactory::Get(url);
     stager->RegisterStager(task, rctx);
@@ -42,7 +39,6 @@ class Server : public TaskLib {
   }
 
   void UnregisterStager(UnregisterStagerTask *task, RunContext &rctx) {
-    HILOG(kInfo, "UnregisterStager")
     if (url_map_[rctx.lane_id_].find(task->bkt_id_) == url_map_[rctx.lane_id_].end()) {
       return;
     }
@@ -51,14 +47,12 @@ class Server : public TaskLib {
   }
 
   void StageIn(StageInTask *task, RunContext &rctx) {
-    HILOG(kInfo, "StageIn")
     AbstractStager &stager = *url_map_[rctx.lane_id_][task->bkt_id_];
     stager.StageIn(blob_mdm_, task, rctx);
     task->SetModuleComplete();
   }
 
   void StageOut(StageOutTask *task, RunContext &rctx) {
-    HILOG(kInfo, "StageOut")
     AbstractStager &stager = *url_map_[rctx.lane_id_][task->bkt_id_];
     stager.StageOut(blob_mdm_, task, rctx);
     task->SetModuleComplete();

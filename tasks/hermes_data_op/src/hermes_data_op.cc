@@ -32,13 +32,13 @@ class Server : public TaskLib {
   Server() = default;
 
   void Construct(ConstructTask *task, RunContext &rctx) {
-//    bkt_mdm_.Init(task->bkt_mdm_);
-//    blob_mdm_.Init(task->blob_mdm_);
-//    client_.Init(id_);
-//    op_id_map_["min"] = 0;
-//    op_id_map_["max"] = 1;
-//    op_graphs_.resize(HRUN_QM_RUNTIME->max_lanes_);
-//    run_task_ = client_.AsyncRunOp(task->task_node_ + 1);
+    bkt_mdm_.Init(task->bkt_mdm_);
+    blob_mdm_.Init(task->blob_mdm_);
+    client_.Init(id_);
+    op_id_map_["min"] = 0;
+    op_id_map_["max"] = 1;
+    op_graphs_.resize(HRUN_QM_RUNTIME->max_lanes_);
+    run_task_ = client_.AsyncRunOp(task->task_node_ + 1);
     HILOG(kInfo, "Created hermes_data_op");
     task->SetModuleComplete();
   }
@@ -103,31 +103,29 @@ class Server : public TaskLib {
   }
 
   void RegisterData(RegisterDataTask *task, RunContext &rctx) {
-    HILOG(kInfo, "Registering data")
-//    if (!op_data_lock_.TryLock(0)) {
-//      return;
-//    }
-//    OpPendingData &op_data = op_data_map_[task->data_.bkt_id_];
-//    task->data_.data_id_ = op_data.data_id_++;
-//    op_data.pending_.emplace_back(task->data_);
-//    op_data_lock_.Unlock();
+    if (!op_data_lock_.TryLock(0)) {
+      return;
+    }
+    OpPendingData &op_data = op_data_map_[task->data_.bkt_id_];
+    task->data_.data_id_ = op_data.data_id_++;
+    op_data.pending_.emplace_back(task->data_);
+    op_data_lock_.Unlock();
     task->SetModuleComplete();
   }
 
   void RunOp(RunOpTask *task, RunContext &rctx) {
-    HILOG(kInfo, "Running op")
-//    for (OpGraph &op_graph : op_graphs_[rctx.lane_id_]) {
-//      for (Op &op : op_graph.ops_) {
-//        switch(op.op_id_) {
-//          case 0:
-//            RunMin(task, op);
-//            break;
-//          case 1:
-//            RunMax(task, op);
-//            break;
-//        }
-//      }
-//    }
+    for (OpGraph &op_graph : op_graphs_[rctx.lane_id_]) {
+      for (Op &op : op_graph.ops_) {
+        switch(op.op_id_) {
+          case 0:
+            RunMin(task, op);
+            break;
+          case 1:
+            RunMax(task, op);
+            break;
+        }
+      }
+    }
   }
 
   std::list<OpData> GetPendingData(Op &op) {
