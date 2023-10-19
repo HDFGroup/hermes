@@ -54,8 +54,8 @@ class Server : public TaskLib {
       task->SetModuleComplete();
       return;
     }
-    AbstractStager &stager = *it->second;
-    // stager.StageIn(blob_mdm_, task, rctx);
+    std::unique_ptr<AbstractStager> &stager = it->second;
+    stager->StageIn(blob_mdm_, task, rctx);
     task->SetModuleComplete();
   }
 
@@ -67,8 +67,8 @@ class Server : public TaskLib {
       task->SetModuleComplete();
       return;
     }
-    AbstractStager &stager = *it->second;
-    stager.StageOut(blob_mdm_, task, rctx);
+    std::unique_ptr<AbstractStager> &stager = it->second;
+    stager->StageOut(blob_mdm_, task, rctx);
     task->SetModuleComplete();
   }
  public:
