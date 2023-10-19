@@ -147,22 +147,22 @@ class Server : public TaskLib {
   bool ShouldReorganize(BlobInfo &blob_info,
                         float score,
                         TaskNode &task_node) {
-    for (BufferInfo &buf : blob_info.buffers_) {
-      TargetInfo &target = *target_map_[buf.tid_];
-      Histogram &hist = target.monitor_task_->score_hist_;
-      if constexpr(UPDATE_SCORE) {
-        target.AsyncUpdateScore(task_node + 1,
-                                blob_info.score_, score);
-      }
-      u32 percentile = hist.GetPercentile(score);
-      size_t rem_cap = target.monitor_task_->rem_cap_;
-      size_t max_cap = target.max_cap_;
-      if (rem_cap < max_cap / 10) {
-        if (percentile < 10 || percentile > 90) {
-          return true;
-        }
-      }
-    }
+//    for (BufferInfo &buf : blob_info.buffers_) {
+//      TargetInfo &target = *target_map_[buf.tid_];
+//      Histogram &hist = target.monitor_task_->score_hist_;
+//      if constexpr(UPDATE_SCORE) {
+//        target.AsyncUpdateScore(task_node + 1,
+//                                blob_info.score_, score);
+//      }
+//      u32 percentile = hist.GetPercentile(score);
+//      size_t rem_cap = target.monitor_task_->rem_cap_;
+//      size_t max_cap = target.max_cap_;
+//      if (rem_cap < max_cap / 10) {
+//        if (percentile < 10 || percentile > 90) {
+//          return true;
+//        }
+//      }
+//    }
     return false;
   }
 
@@ -363,6 +363,7 @@ class Server : public TaskLib {
     for (BufferInfo &buf : blob_info.buffers_) {
       TargetInfo &target = *target_map_[buf.tid_];
       std::vector<BufferInfo> buf_vec = {buf};
+      // TODO(llogan): add back
 //      target.AsyncFree(task->task_node_ + 1,
 //                       blob_info.score_,
 //                       std::move(buf_vec), true);

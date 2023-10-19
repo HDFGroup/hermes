@@ -20,7 +20,7 @@ class Server : public TaskLib, public bdev::Server {
     rem_cap_ = dev_info.capacity_;
     alloc_.Init(id_, dev_info.capacity_, dev_info.slab_sizes_);
     mem_ptr_ = (char*)malloc(dev_info.capacity_);
-    score_hist_.Resize(10);
+    // score_hist_.Resize(10);
     HILOG(kDebug, "Created {} at {} of size {}",
           dev_info.dev_name_, dev_info.mount_point_, dev_info.capacity_);
     task->SetModuleComplete();
@@ -35,14 +35,14 @@ class Server : public TaskLib, public bdev::Server {
     HILOG(kDebug, "Allocating {} bytes (RAM)", task->size_);
     alloc_.Allocate(task->size_, *task->buffers_, task->alloc_size_);
     rem_cap_ -= task->alloc_size_;
-    score_hist_.Increment(task->score_);
+    // score_hist_.Increment(task->score_);
     HILOG(kDebug, "Allocated {} bytes (RAM)", task->alloc_size_);
     task->SetModuleComplete();
   }
 
   void Free(FreeTask *task, RunContext &rctx) {
     rem_cap_ += alloc_.Free(task->buffers_);
-    score_hist_.Decrement(task->score_);
+    // score_hist_.Decrement(task->score_);
     task->SetModuleComplete();
   }
 
