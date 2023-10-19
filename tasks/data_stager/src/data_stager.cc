@@ -54,7 +54,7 @@ class Server : public TaskLib {
       task->SetModuleComplete();
     }
     AbstractStager &stager = *it->second;
-    stager.StageIn(blob_mdm_, task, rctx);
+    // stager.StageIn(blob_mdm_, task, rctx);
     task->SetModuleComplete();
   }
 
