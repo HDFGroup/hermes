@@ -90,8 +90,6 @@ class Server : public TaskLib {
         task);
     queue->flags_.SetBits(QUEUE_READY);
     task->SetModuleComplete();
-    HILOG(kInfo, "(node {}) Allocated task state {} with id {}",
-          HRUN_CLIENT->node_id_, state_name, task->task_state_);
   }
 
   void GetTaskStateId(GetTaskStateIdTask *task, RunContext &rctx) {

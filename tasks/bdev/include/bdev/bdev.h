@@ -23,6 +23,8 @@ class Client : public TaskLibClient {
   float score_;         /**< Relative importance of this tier */
 
  public:
+  Client() : score_(0) {}
+
   /** Copy dev info */
   void CopyDevInfo(DeviceInfo &dev_info) {
     max_cap_ = dev_info.capacity_;

@@ -37,8 +37,8 @@ class Server : public TaskLib {
     client_.Init(id_);
     op_id_map_["min"] = 0;
     op_id_map_["max"] = 1;
-    run_task_ = client_.AsyncRunOp(task->task_node_ + 1);
     op_graphs_.resize(HRUN_QM_RUNTIME->max_lanes_);
+    run_task_ = client_.AsyncRunOp(task->task_node_ + 1);
     task->SetModuleComplete();
   }
 
@@ -131,6 +131,9 @@ class Server : public TaskLib {
       return pending;
     }
     for (OpBucketName &bkt_name : op.in_) {
+      if (op_data_map_.find(bkt_name.bkt_id_) == op_data_map_.end()) {
+        continue;
+      }
       OpPendingData &op_data = op_data_map_[bkt_name.bkt_id_];
       pending = op_data.pending_;
       std::list<OpData> pruned;
@@ -180,11 +183,11 @@ class Server : public TaskLib {
       in_task->Wait<TASK_YIELD_CO>(task);
 
       // Calaculate the minimum
-      LPointer<char> min_ptr = HRUN_CLIENT->AllocateBuffer(sizeof(float));
-      float &min = *((float*)min_ptr.ptr_);
-      min = std::numeric_limits<float>::max();
+      LPointer<char> min_lptr = HRUN_CLIENT->AllocateBuffer(sizeof(float));
+      float *min_ptr = (float*)min_lptr.ptr_;
+      *min_ptr = std::numeric_limits<float>::max();
       for (size_t i = 0; i < in_task->data_size_; i += sizeof(float)) {
-        min = std::min(min, *(float*)(data_ptr.ptr_ + i));
+        *min_ptr = std::min(*min_ptr, *(float*)(data_ptr.ptr_ + i));
       }
 
       // Store the minimum in Hermes
@@ -194,7 +197,7 @@ class Server : public TaskLib {
                              hshm::charbuf(min_blob_name),
                              BlobId::GetNull(),
                              0, sizeof(float),
-                             min_ptr.shm_, 0, 0);
+                             min_lptr.shm_, 0, 0);
     }
   }
 

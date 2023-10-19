@@ -125,7 +125,7 @@ struct SetBucketMdmTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   template<typename Ar>
   void SerializeStart(Ar &ar) {
     task_serialize<Ar>(ar);
-    ar(bkt_mdm_, stager_mdm_);
+    ar(bkt_mdm_, stager_mdm_, op_mdm_);
   }
 
   /** (De)serialize message return */
