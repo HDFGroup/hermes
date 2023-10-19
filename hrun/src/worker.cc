@@ -78,7 +78,8 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
     exec = HRUN_TASK_REGISTRY->GetTaskState(task->task_state_);
     if (!exec) {
       for (std::pair<std::string, TaskStateId> entries  : HRUN_TASK_REGISTRY->task_state_ids_) {
-        HILOG(kInfo, "Task state: {} id: {}", entries.first, entries.second)
+        HILOG(kInfo, "Task state: {} id: {}",
+              entries.first, entries.second, HRUN_TASK_REGISTRY->task_states_[entries.second]);
       }
       HELOG(kFatal, "(node {}) Could not find the task state: {}",
             HRUN_CLIENT->node_id_, task->task_state_);
