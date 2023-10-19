@@ -547,7 +547,15 @@ TEST_CASE("TestHermesDataOp") {
   // HRUN_ADMIN->FlushRoot(DomainId::GetGlobal());
   // Verify derived operator happens
   hermes::Bucket bkt_min("data_bkt_min", 0, 0);
-  size_t size = bkt_min.GetSize();
+  size_t size;
+  do {
+    size = bkt_min.GetSize();
+    if (size != sizeof(float) * count_per_proc * nprocs) {
+      sleep(1);
+    } else {
+      break;
+    }
+  } while (true);
 
   hermes::Blob blob2;
   bkt_min.Get(std::to_string(0), blob2, ctx);
