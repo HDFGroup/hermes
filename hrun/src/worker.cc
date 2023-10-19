@@ -74,8 +74,8 @@ void Worker::PollGrouped(WorkEntry &work_entry) {
     rctx.lane_id_ = work_entry.lane_id_;
     rctx.flush_ = &flush_;
     // Get the task state
-    TaskState *&exec = rctx.exec_;
-    exec = HRUN_TASK_REGISTRY->GetTaskState(task->task_state_);
+    TaskState *exec = HRUN_TASK_REGISTRY->GetTaskState(task->task_state_);
+    rctx.exec_ = exec;
     if (!exec) {
       for (std::pair<std::string, TaskStateId> entries  : HRUN_TASK_REGISTRY->task_state_ids_) {
         HILOG(kInfo, "Task state: {} id: {} ptr: {}",
