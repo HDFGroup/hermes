@@ -26,10 +26,10 @@ struct HistEntry {
   HistEntry() : x_(0) {}
 
   /** Constructor */
-  HistEntry(int x) : x_(x) {}
+  explicit HistEntry(int x) : x_(x) {}
 
   /** Copy constructor */
-  HistEntry(const HistEntry &other) : x_(other.x_.load()) {}
+  explicit HistEntry(const HistEntry &other) : x_(other.x_.load()) {}
 
   /** Copy operator */
   HistEntry &operator=(const HistEntry &other) {
