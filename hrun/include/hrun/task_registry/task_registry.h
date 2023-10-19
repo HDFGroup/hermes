@@ -270,9 +270,9 @@ class TaskRegistry {
   /** Get a task state instance */
   TaskState* GetTaskState(const TaskStateId &task_state_id) {
     auto it = task_states_.find(task_state_id);
-    if (it == task_states_.end()) {
-      return nullptr;
-    }
+//    if (it == task_states_.end()) {
+//      return nullptr;
+//    }
     return it->second;
   }
 
