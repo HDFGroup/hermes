@@ -32,9 +32,9 @@ class Server : public TaskLib {
   Server() = default;
 
   void Construct(ConstructTask *task, RunContext &rctx) {
-    bkt_mdm_.Init(task->bkt_mdm_);
-    blob_mdm_.Init(task->blob_mdm_);
-    client_.Init(id_);
+//    bkt_mdm_.Init(task->bkt_mdm_);
+//    blob_mdm_.Init(task->blob_mdm_);
+//    client_.Init(id_);
 //    op_id_map_["min"] = 0;
 //    op_id_map_["max"] = 1;
 //    op_graphs_.resize(HRUN_QM_RUNTIME->max_lanes_);

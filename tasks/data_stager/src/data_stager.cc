@@ -21,8 +21,8 @@ class Server : public TaskLib {
   Server() = default;
 
   void Construct(ConstructTask *task, RunContext &rctx) {
-    url_map_.resize(HRUN_QM_RUNTIME->max_lanes_);
-    blob_mdm_.Init(task->blob_mdm_);
+//    url_map_.resize(HRUN_QM_RUNTIME->max_lanes_);
+//    blob_mdm_.Init(task->blob_mdm_);
     HILOG(kInfo, "DataStager Constructed")
     task->SetModuleComplete();
   }
