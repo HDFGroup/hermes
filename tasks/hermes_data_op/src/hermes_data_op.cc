@@ -100,13 +100,13 @@ class Server : public TaskLib {
   }
 
   void RegisterData(RegisterDataTask *task, RunContext &rctx) {
-    if (!op_data_lock_.TryLock(0)) {
-      return;
-    }
-    OpPendingData &op_data = op_data_map_[task->data_.bkt_id_];
-    task->data_.data_id_ = op_data.data_id_++;
-    op_data.pending_.emplace_back(task->data_);
-    op_data_lock_.Unlock();
+//    if (!op_data_lock_.TryLock(0)) {
+//      return;
+//    }
+//    OpPendingData &op_data = op_data_map_[task->data_.bkt_id_];
+//    task->data_.data_id_ = op_data.data_id_++;
+//    op_data.pending_.emplace_back(task->data_);
+//    op_data_lock_.Unlock();
     task->SetModuleComplete();
   }
 
