@@ -47,13 +47,25 @@ class Server : public TaskLib {
   }
 
   void StageIn(StageInTask *task, RunContext &rctx) {
-    AbstractStager &stager = *url_map_[rctx.lane_id_][task->bkt_id_];
+    std::unordered_map<hermes::BucketId, std::unique_ptr<AbstractStager>>::iterator it =
+        url_map_[rctx.lane_id_].find(task->bkt_id_);
+    if (it == url_map_[rctx.lane_id_].end()) {
+      HELOG(kError, "Could not find stager for bucket: {}", task->bkt_id_);
+      task->SetModuleComplete();
+    }
+    AbstractStager &stager = *it->second;
     stager.StageIn(blob_mdm_, task, rctx);
     task->SetModuleComplete();
   }
 
   void StageOut(StageOutTask *task, RunContext &rctx) {
-    AbstractStager &stager = *url_map_[rctx.lane_id_][task->bkt_id_];
+    std::unordered_map<hermes::BucketId, std::unique_ptr<AbstractStager>>::iterator it =
+        url_map_[rctx.lane_id_].find(task->bkt_id_);
+    if (it == url_map_[rctx.lane_id_].end()) {
+      HELOG(kError, "Could not find stager for bucket: {}", task->bkt_id_);
+      task->SetModuleComplete();
+    }
+    AbstractStager &stager = *it->second;
     stager.StageOut(blob_mdm_, task, rctx);
     task->SetModuleComplete();
   }
