@@ -52,6 +52,7 @@ class Server : public TaskLib {
     if (it == url_map_[rctx.lane_id_].end()) {
       HELOG(kError, "Could not find stager for bucket: {}", task->bkt_id_);
       task->SetModuleComplete();
+      return;
     }
 //    AbstractStager &stager = *it->second;
     // stager.StageIn(blob_mdm_, task, rctx);
@@ -64,6 +65,7 @@ class Server : public TaskLib {
     if (it == url_map_[rctx.lane_id_].end()) {
       HELOG(kError, "Could not find stager for bucket: {}", task->bkt_id_);
       task->SetModuleComplete();
+      return;
     }
     AbstractStager &stager = *it->second;
     stager.StageOut(blob_mdm_, task, rctx);
