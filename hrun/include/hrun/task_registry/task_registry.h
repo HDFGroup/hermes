@@ -82,6 +82,7 @@ class TaskRegistry {
   std::unordered_map<TaskStateId, TaskState*> task_states_;
   /** A unique identifier counter */
   std::atomic<u64> *unique_;
+  RwLock lock_;
 
  public:
   /** Default constructor */
@@ -191,6 +192,7 @@ class TaskRegistry {
   /** Check if task state exists by ID */
   HSHM_ALWAYS_INLINE
   bool TaskStateExists(const TaskStateId &state_id) {
+    ScopedRwReadLock lock(lock_, 0);
     auto it = task_states_.find(state_id);
     return it != task_states_.end();
   }
@@ -240,6 +242,7 @@ class TaskRegistry {
     // Add the state to the registry
     task_state->id_ = state_id;
     task_state->name_ = state_name;
+    ScopedRwWriteLock lock(lock_, 0);
     task_state_ids_.emplace(state_name, state_id);
     task_states_.emplace(state_id, task_state);
     HILOG(kInfo, "(node {})  Created an instance of {} with name {} and ID {}",
@@ -249,6 +252,7 @@ class TaskRegistry {
 
   /** Get or create a task state's ID */
   TaskStateId GetOrCreateTaskStateId(const std::string &state_name) {
+    ScopedRwReadLock lock(lock_, 0);
     auto it = task_state_ids_.find(state_name);
     if (it == task_state_ids_.end()) {
       TaskStateId state_id = CreateTaskStateId();
@@ -260,6 +264,7 @@ class TaskRegistry {
 
   /** Get a task state's ID */
   TaskStateId GetTaskStateId(const std::string &state_name) {
+    ScopedRwReadLock lock(lock_, 0);
     auto it = task_state_ids_.find(state_name);
     if (it == task_state_ids_.end()) {
       return TaskStateId::GetNull();
@@ -269,6 +274,7 @@ class TaskRegistry {
 
   /** Get a task state instance */
   TaskState* GetTaskState(const TaskStateId &task_state_id) {
+    ScopedRwReadLock lock(lock_, 0);
     auto it = task_states_.find(task_state_id);
     if (it == task_states_.end()) {
       return nullptr;
@@ -278,6 +284,7 @@ class TaskRegistry {
 
   /** Get task state instance by name OR by ID */
   TaskState* GetTaskState(const std::string &task_name, const TaskStateId &task_state_id) {
+    ScopedRwReadLock lock(lock_, 0);
     TaskStateId id = GetTaskStateId(task_name);
     if (id.IsNull()) {
       id = task_state_id;
@@ -287,6 +294,7 @@ class TaskRegistry {
 
   /** Destroy a task state */
   void DestroyTaskState(const TaskStateId &task_state_id) {
+    ScopedRwWriteLock lock(lock_, 0);
     auto it = task_states_.find(task_state_id);
     if (it == task_states_.end()) {
       HELOG(kWarning, "Could not find the task state");
