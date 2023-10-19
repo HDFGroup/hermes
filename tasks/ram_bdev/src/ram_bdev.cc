@@ -33,7 +33,6 @@ class Server : public TaskLib, public bdev::Server {
 
   void Allocate(AllocateTask *task, RunContext &rctx) {
     HILOG(kDebug, "Allocating {} bytes (RAM)", task->size_);
-    task->alloc_size_ = 0;
     alloc_.Allocate(task->size_, *task->buffers_, task->alloc_size_);
     rem_cap_ -= task->alloc_size_;
     // score_hist_.Increment(task->score_);
