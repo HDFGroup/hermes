@@ -346,12 +346,12 @@ class Server : public TaskLib {
                                task->blob_id_);
     }
     if (task->flags_.Any(HERMES_HAS_DERIVED)) {
-      op_mdm_.AsyncRegisterData(task->task_node_ + 1,
-                                task->tag_id_,
-                                task->blob_name_->str(),
-                                task->blob_id_,
-                                task->blob_off_,
-                                task->data_size_);
+//      op_mdm_.AsyncRegisterData(task->task_node_ + 1,
+//                                task->tag_id_,
+//                                task->blob_name_->str(),
+//                                task->blob_id_,
+//                                task->blob_off_,
+//                                task->data_size_);
     }
 
     // Free data
