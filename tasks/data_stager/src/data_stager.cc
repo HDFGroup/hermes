@@ -36,7 +36,7 @@ class Server : public TaskLib {
     std::string url = task->url_->str();
     std::unique_ptr<AbstractStager> stager = StagerFactory::Get(url);
     stager->RegisterStager(task, rctx);
-    HILOG(kInfo, "REGISTERING STAGER: {}", (size_t)stager.get());
+    HILOG(kInfo, "(node {}) REGISTERING STAGER: {}", HRUN_CLIENT->node_id_, (size_t)stager.get());
     url_map_[rctx.lane_id_].emplace(task->bkt_id_, std::move(stager));
     task->SetModuleComplete();
   }
