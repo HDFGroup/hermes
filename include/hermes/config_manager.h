@@ -50,6 +50,7 @@ class ConfigurationManager {
     mdm_.CreateRoot(DomainId::GetGlobal(), "hermes_mdm");
     blob_mdm_.CreateRoot(DomainId::GetGlobal(), "hermes_blob_mdm");
     bkt_mdm_.CreateRoot(DomainId::GetGlobal(), "hermes_bkt_mdm");
+    HILOG(kInfo, "(node {}) BLOB MDM ID: {}", HRUN_CLIENT->node_id_, blob_mdm_.id_)
     op_mdm_.CreateRoot(DomainId::GetGlobal(), "hermes_op_mdm",
                        bkt_mdm_.id_, blob_mdm_.id_);
     stager_mdm_.CreateRoot(DomainId::GetGlobal(),

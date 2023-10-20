@@ -41,7 +41,7 @@ class Client : public TaskLibClient {
         task_node, domain_id, state_name, id_, queue_info);
   }
   void AsyncCreateComplete(ConstructTask *task) {
-    if (task->IsComplete()) {
+    if (task->IsModuleComplete()) {
       id_ = task->id_;
       queue_id_ = QueueId(id_);
       HRUN_CLIENT->DelTask(task);
