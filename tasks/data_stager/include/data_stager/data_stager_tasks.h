@@ -149,7 +149,10 @@ struct RegisterStagerTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   /** Create group */
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
-    return TASK_UNORDERED;
+    hrun::LocalSerialize srl(group);
+    srl << bkt_id_.unique_;
+    srl << bkt_id_.node_id_;
+    return 0;
   }
 };
 
@@ -263,7 +266,10 @@ struct StageInTask : public Task, TaskFlags<TF_LOCAL> {
   /** Create group */
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
-    return TASK_UNORDERED;
+    hrun::LocalSerialize srl(group);
+    srl << bkt_id_.unique_;
+    srl << bkt_id_.node_id_;
+    return 0;
   }
 };
 
@@ -318,7 +324,10 @@ struct StageOutTask : public Task, TaskFlags<TF_LOCAL> {
   /** Create group */
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
-    return TASK_UNORDERED;
+    hrun::LocalSerialize srl(group);
+    srl << bkt_id_.unique_;
+    srl << bkt_id_.node_id_;
+    return 0;
   }
 };
 
