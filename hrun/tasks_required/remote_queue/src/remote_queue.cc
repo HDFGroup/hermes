@@ -276,7 +276,7 @@ class Server : public TaskLib {
     // of the state they are constructing. This is because their
     // state does not yet exist. We fix this by passing the params
     // buffer to the construction task.
-    if (orig_task->method_ == Method::kConstruct) {
+    if (orig_task->method_ == Admin::Method::kCreateTaskState) {
       HILOG(kInfo, "Setting the net buf for the construction task");
       ((CreateTaskStateTask*)orig_task)->net_buf_ = &params;
     }
