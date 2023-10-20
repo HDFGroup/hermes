@@ -39,7 +39,7 @@ class Server : public TaskLib {
     op_id_map_["min"] = 0;
     op_id_map_["max"] = 1;
     op_graphs_.resize(HRUN_QM_RUNTIME->max_lanes_);
-    run_task_ = client_.AsyncRunOp(task->task_node_ + 1);
+    // run_task_ = client_.AsyncRunOp(task->task_node_ + 1);
     task->SetModuleComplete();
   }
 
