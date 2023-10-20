@@ -50,8 +50,8 @@ class ConfigurationManager {
     mdm_.CreateRoot(DomainId::GetGlobal(), "hermes_mdm");
     blob_mdm_.CreateRoot(DomainId::GetGlobal(), "hermes_blob_mdm");
     bkt_mdm_.CreateRoot(DomainId::GetGlobal(), "hermes_bkt_mdm");
-    op_mdm_.CreateRoot(DomainId::GetGlobal(), "hermes_op_mdm",
-                       bkt_mdm_.id_, blob_mdm_.id_);
+//    op_mdm_.CreateRoot(DomainId::GetGlobal(), "hermes_op_mdm",
+//                       bkt_mdm_.id_, blob_mdm_.id_);
     stager_mdm_.CreateRoot(DomainId::GetGlobal(),
                            "hermes_stager_mdm", blob_mdm_.id_);
     blob_mdm_.SetBucketMdmRoot(DomainId::GetGlobal(),

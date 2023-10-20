@@ -80,11 +80,11 @@ class Server : public TaskLib {
           task->orig_task_->method_);
     if (!task->orig_task_->IsLongRunning()) {
       task->orig_task_->SetModuleComplete();
-      task->SetModuleComplete();
     } else {
       task->orig_task_->UnsetStarted();
       task->orig_task_->UnsetDisableRun();
     }
+    task->SetModuleComplete();
   }
 
   /** Push for small message */
