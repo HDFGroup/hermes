@@ -70,7 +70,7 @@ class BinaryFileStager : public AbstractStager {
             page_size_, url_);
       return;
     }
-    memcpy(blob.ptr_ + plcmnt.blob_off_, blob.ptr_, real_size);
+    // memcpy(blob.ptr_ + plcmnt.blob_off_, blob.ptr_, real_size);
     HILOG(kInfo, "Staged {} bytes from the backend file {}",
           real_size, url_);
     HILOG(kInfo, "Submitting put blob {} ({}) to blob mdm ({})",
