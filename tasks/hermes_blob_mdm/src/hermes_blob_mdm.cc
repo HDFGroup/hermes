@@ -219,13 +219,13 @@ class Server : public TaskLib {
    * Create a blob's metadata
    * */
   void PutBlob(PutBlobTask *task, RunContext &rctx) {
-    HILOG(kInfo, "Beginning PUT");
     // Get the blob info data structure
     hshm::charbuf blob_name = hshm::to_charbuf(*task->blob_name_);
     if (task->blob_id_.IsNull()) {
       task->blob_id_ = GetOrCreateBlobId(task->tag_id_, task->lane_hash_,
                                          blob_name, rctx, task->flags_);
     }
+    HILOG(kInfo, "Beginning PUT for {}", blob_name);
     BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     BlobInfo &blob_info = blob_map[task->blob_id_];
 
