@@ -225,7 +225,7 @@ class Server : public TaskLib {
       task->blob_id_ = GetOrCreateBlobId(task->tag_id_, task->lane_hash_,
                                          blob_name, rctx, task->flags_);
     }
-    HILOG(kInfo, "Beginning PUT for {}", blob_name.str());
+    HILOG(kDebug, "Beginning PUT for {}", blob_name.str());
     BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     BlobInfo &blob_info = blob_map[task->blob_id_];
 
@@ -267,7 +267,7 @@ class Server : public TaskLib {
       size_diff = needed_space - blob_info.max_blob_size_;
     }
     blob_info.blob_size_ += size_diff;
-    HILOG(kInfo, "The size diff is {} bytes", size_diff)
+    HILOG(kDebug, "The size diff is {} bytes", size_diff)
 
     // Use DPE
     std::vector<PlacementSchema> schema_vec;
@@ -303,7 +303,7 @@ class Server : public TaskLib {
     write_tasks.reserve(blob_info.buffers_.size());
     size_t blob_off = 0, buf_off = 0;
     char *blob_buf = HRUN_CLIENT->GetPrivatePointer(task->data_);
-    HILOG(kInfo, "Number of buffers {}", blob_info.buffers_.size());
+    HILOG(kDebug, "Number of buffers {}", blob_info.buffers_.size());
     for (BufferInfo &buf : blob_info.buffers_) {
       size_t blob_left = blob_off;
       size_t blob_right = blob_off + buf.t_size_;
@@ -314,7 +314,7 @@ class Server : public TaskLib {
         if (blob_off + buf_size > task->blob_off_ + task->data_size_) {
           buf_size = task->blob_off_ + task->data_size_ - blob_off;
         }
-        HILOG(kInfo, "Writing {} bytes at off {} from target {}", buf_size, tgt_off, buf.tid_)
+        HILOG(kDebug, "Writing {} bytes at off {} from target {}", buf_size, tgt_off, buf.tid_)
         TargetInfo &target = *target_map_[buf.tid_];
         LPointer<bdev::WriteTask> write_task =
             target.AsyncWrite(task->task_node_ + 1,
@@ -357,7 +357,7 @@ class Server : public TaskLib {
     }
 
     // Free data
-    HILOG(kInfo, "Completing PUT for {}", blob_name.str());
+    HILOG(kDebug, "Completing PUT for {}", blob_name.str());
     task->SetModuleComplete();
   }
 
