@@ -76,15 +76,15 @@ class BinaryFileStager : public AbstractStager {
     HILOG(kInfo, "Submitting put blob {} ({}) to blob mdm ({})",
           task->blob_name_->str(), task->bkt_id_, blob_mdm.id_)
     hapi::Context ctx;
-    LPointer<blob_mdm::PutBlobTask> put_task =
-        blob_mdm.AsyncPutBlob(task->task_node_ + 1,
-                              task->bkt_id_,
-                              hshm::to_charbuf(*task->blob_name_),
-                              hermes::BlobId::GetNull(),
-                              0, real_size, blob.shm_, task->score_, 0,
-                              ctx, TASK_DATA_OWNER | TASK_LOW_LATENCY);
-    put_task->Wait<TASK_YIELD_CO>(task);
-    HRUN_CLIENT->DelTask(put_task);
+//    LPointer<blob_mdm::PutBlobTask> put_task =
+//        blob_mdm.AsyncPutBlob(task->task_node_ + 1,
+//                              task->bkt_id_,
+//                              hshm::to_charbuf(*task->blob_name_),
+//                              hermes::BlobId::GetNull(),
+//                              0, real_size, blob.shm_, task->score_, 0,
+//                              ctx, TASK_DATA_OWNER | TASK_LOW_LATENCY);
+//    put_task->Wait<TASK_YIELD_CO>(task);
+//    HRUN_CLIENT->DelTask(put_task);
   }
 
   /** Stage data out to remote source */
