@@ -106,13 +106,6 @@ struct ConstructTask : public CreateTaskStateTask {
     ar(bkt_mdm_, blob_mdm_);
   }
 
-  /** (De)serialize message call */
-  template<typename Ar>
-  void SerializeStart(Ar &ar) {
-    CreateTaskStateTask::SerializeStart(ar);
-    ar(bkt_mdm_, blob_mdm_);
-  }
-
   HSHM_ALWAYS_INLINE
   ~ConstructTask() {
     // Custom params
