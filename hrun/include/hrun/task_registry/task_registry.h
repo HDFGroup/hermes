@@ -214,15 +214,16 @@ class TaskRegistry {
    * Create a task state
    * state_id must not be NULL.
    * */
-  bool CreateTaskState(const char *lib_name,
-                       const char *state_name,
-                       const TaskStateId &state_id,
-                       Admin::CreateTaskStateTask *task) {
+  TaskState* CreateTaskState(const char *lib_name,
+                             const char *state_name,
+                             const TaskStateId &state_id,
+                             Admin::CreateTaskStateTask *task,
+                             bool alloc_only = false) {
     // Ensure state_id is not NULL
     if (state_id.IsNull()) {
       HILOG(kError, "The task state ID cannot be null");
       task->SetModuleComplete();
-      return false;
+      return nullptr;
     }
 //    HILOG(kInfo, "(node {}) Creating an instance of {} with name {}",
 //          HRUN_CLIENT->node_id_, lib_name, state_name)
@@ -232,24 +233,29 @@ class TaskRegistry {
     if (it == libs_.end()) {
       HELOG(kError, "Could not find the task lib: {}", lib_name);
       task->SetModuleComplete();
-      return false;
+      return nullptr;
     }
 
     // Ensure the task state does not already exist
     if (TaskStateExists(state_id)) {
       HELOG(kError, "The task state already exists: {}", state_name);
       task->SetModuleComplete();
-      return true;
+      return nullptr;
     }
 
     // Create the state instance
     task->id_ = state_id;
     TaskLibInfo &info = it->second;
-    TaskState *task_state = info.create_state_(task, state_name);
+    TaskState *task_state;
+    if (!alloc_only) {
+      task_state = info.create_state_(task, state_name);
+    } else {
+      task_state = info.alloc_state_(task, state_name);
+    }
     if (!task_state) {
       HELOG(kError, "Could not create the task state: {}", state_name);
       task->SetModuleComplete();
-      return false;
+      return nullptr;
     }
 
     // Add the state to the registry
@@ -260,7 +266,7 @@ class TaskRegistry {
     task_states_.emplace(state_id, task_state);
     HILOG(kInfo, "(node {})  Created an instance of {} with name {} and ID {}",
           HRUN_CLIENT->node_id_, lib_name, state_name, state_id)
-    return true;
+    return task_state;
   }
 
   /** Get or create a task state's ID */

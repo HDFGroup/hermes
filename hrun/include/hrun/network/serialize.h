@@ -220,6 +220,14 @@ class BinaryInputArchive {
     ss_.str(std::string((char*)param_xfer.data_, param_xfer.data_size_));
   }
 
+  /** String constructor */
+  BinaryInputArchive(const std::string &params) : ar_(ss_) {
+    xfer_.resize(1);
+    xfer_[0].data_ = (void*)params.data();
+    xfer_[0].data_size_ = params.size();
+    ss_.str(params);
+  }
+
   /** Deserialize using call */
   template<typename T, typename ...Args>
   BinaryInputArchive& operator()(T &var, Args &&...args) {

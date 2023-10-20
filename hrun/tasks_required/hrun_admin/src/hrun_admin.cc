@@ -81,13 +81,21 @@ class Server : public TaskLib {
     QueueId qid(task->id_);
     MultiQueue *queue = HRUN_QM_RUNTIME->CreateQueue(
         qid, task->queue_info_->vec());
-    // Run the task state's submethod
+    // Allocate the task state
     task->method_ = Method::kConstruct;
-    bool ret = HRUN_TASK_REGISTRY->CreateTaskState(
+    TaskState *exec = HRUN_TASK_REGISTRY->CreateTaskState(
         lib_name.c_str(),
         state_name.c_str(),
         task->id_,
-        task);
+        task, task->net_buf_ != nullptr);
+    if (exec && task->net_buf_ != nullptr) {
+      // For networked tasks, need to re-deserialize using the proper
+      // deserialization method.
+      BinaryInputArchive<true> net_buf(*task->net_buf_);
+      TaskPointer task_ptr = exec->LoadStart(Method::kConstruct, net_buf);
+      exec->Run(Method::kConstruct, task_ptr.ptr_, rctx);
+      HRUN_CLIENT->DelTask(exec, task_ptr.ptr_);
+    }
     queue->flags_.SetBits(QUEUE_READY);
     task->SetModuleComplete();
   }

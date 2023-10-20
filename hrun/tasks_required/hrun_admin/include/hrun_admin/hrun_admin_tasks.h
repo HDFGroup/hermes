@@ -143,6 +143,7 @@ struct CreateTaskStateTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   IN hipc::ShmArchive<hipc::string> state_name_;
   IN hipc::ShmArchive<hipc::vector<PriorityInfo>> queue_info_;
   INOUT TaskStateId id_;
+  TEMP std::string *net_buf_ = nullptr;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit

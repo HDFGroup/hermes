@@ -93,10 +93,11 @@ struct ConstructTask : public CreateTaskStateTask {
     blob_mdm_ = blob_mdm_id;
   }
 
+  /** (De)serialize message call */
   template<typename Ar>
   void SerializeStart(Ar &ar) {
-    task_serialize<Ar>(ar);
-    ar(lib_name_, state_name_, id_, queue_info_, bkt_mdm_, blob_mdm_);
+    CreateTaskStateTask::SerializeStart(ar);
+    ar(bkt_mdm_, blob_mdm_);
   }
 
   HSHM_ALWAYS_INLINE

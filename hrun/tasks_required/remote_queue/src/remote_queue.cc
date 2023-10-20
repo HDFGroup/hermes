@@ -204,7 +204,7 @@ class Server : public TaskLib {
     // Process the message
     TaskState *exec;
     Task *orig_task;
-    RpcExec(req, state_id, method, xfer, orig_task, exec);
+    RpcExec(req, state_id, method, params, xfer, orig_task, exec);
     RpcComplete(req, method, orig_task, exec, state_id);
   }
 
@@ -235,7 +235,7 @@ class Server : public TaskLib {
     }
     TaskState *exec;
     Task *orig_task;
-    RpcExec(req, state_id, method, xfer, orig_task, exec);
+    RpcExec(req, state_id, method, params, xfer, orig_task, exec);
     if (io_type == IoType::kRead) {
       HILOG(kDebug, "(node {}) Read blob integer: {}", HRUN_CLIENT->node_id_, (int)data[0])
       HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.data(), data_size);
@@ -249,6 +249,7 @@ class Server : public TaskLib {
   void RpcExec(const tl::request &req,
                const TaskStateId &state_id,
                u32 method,
+               std::string &params,
                std::vector<DataTransfer> &xfer,
                Task *&orig_task, TaskState *&exec) {
     size_t data_size = xfer[0].data_size_;
@@ -268,16 +269,29 @@ class Server : public TaskLib {
     }
     TaskPointer task_ptr = exec->LoadStart(method, ar);
     orig_task = task_ptr.ptr_;
-    hipc::Pointer &p = task_ptr.shm_;
     orig_task->domain_id_ = DomainId::GetNode(HRUN_CLIENT->node_id_);
 
-    // Execute task
-    MultiQueue *queue = HRUN_CLIENT->GetQueue(QueueId(state_id));
+    // NOTE(llogan): Construction tasks will call deserialization
+    // improperly since they are routed to the Admin state instead
+    // of the state they are constructing. This is because their
+    // state does not yet exist. We fix this by passing the params
+    // buffer to the construction task.
+    if (orig_task->method_ == Method::kConstruct) {
+      ((CreateTaskStateTask*)orig_task)->net_buf_ = &params;
+    }
+
+    // Unset task flags
+    // NOTE(llogan): Remote tasks are executed to completion and
+    // return values sent back to the remote host. This is
+    // for things like long-running monitoring tasks.
     orig_task->UnsetFireAndForget();
     orig_task->UnsetStarted();
     orig_task->UnsetDataOwner();
     orig_task->UnsetLongRunning();
-    queue->Emplace(orig_task->prio_, orig_task->lane_hash_, p);
+
+    // Execute task
+    MultiQueue *queue = HRUN_CLIENT->GetQueue(QueueId(state_id));
+    queue->Emplace(orig_task->prio_, orig_task->lane_hash_, task_ptr.shm_);
     HILOG(kDebug,
           "(node {}) Executing task (task_node={}, task_state={}/{}, state_name={}, method={}, size={}, lane_hash={})",
           HRUN_CLIENT->node_id_,
