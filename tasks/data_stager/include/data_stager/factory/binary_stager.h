@@ -73,7 +73,7 @@ class BinaryFileStager : public AbstractStager {
     memcpy(blob.ptr_ + plcmnt.blob_off_, blob.ptr_, real_size);
     HILOG(kInfo, "Staged {} bytes from the backend file {}",
           real_size, url_);
-    HILOG(kInfo, "Submitting put blob {} to blob mdm", task->blob_name_->str())
+    HILOG(kInfo, "Submitting put blob {} ({}) to blob mdm", task->blob_name_->str(), task->bkt_id_)
     hapi::Context ctx;
     LPointer<blob_mdm::PutBlobTask> put_task =
         blob_mdm.AsyncPutBlob(task->task_node_ + 1,
