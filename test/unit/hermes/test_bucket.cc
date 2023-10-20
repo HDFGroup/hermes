@@ -470,7 +470,7 @@ TEST_CASE("TestHermesDataStager") {
   hshm::charbuf url =
       BinaryFileStager::BuildFileUrl(path, page_size);
   hermes::Bucket bkt(url.str(), file_size, HERMES_IS_FILE);
-  return;
+  sleep(5);
 
   // Put a few blobs in the bucket
   for (size_t i = off; i < proc_count; ++i) {
