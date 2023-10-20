@@ -34,6 +34,7 @@ class Server : public TaskLib {
     std::string url = task->url_->str();
     std::unique_ptr<AbstractStager> stager = StagerFactory::Get(url);
     stager->RegisterStager(task, rctx);
+    HILOG(kInfo, "REGISTERING STAGER: {}", (size_t)stager.get());
     url_map_[rctx.lane_id_].emplace(task->bkt_id_, std::move(stager));
     task->SetModuleComplete();
   }
@@ -57,6 +58,7 @@ class Server : public TaskLib {
     std::unique_ptr<AbstractStager> &stager = it->second;
     HILOG(kInfo, "POINTER FAILING HERE?: {}", (size_t)stager.get());
     stager->StageIn(blob_mdm_, task, rctx);
+    HILOG(kInfo, "STAGED IN?: {}", (size_t)stager.get());
     task->SetModuleComplete();
   }
 
