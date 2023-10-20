@@ -1,0 +1,18 @@
+extern "C" {
+void* alloc_state(hrun::Admin::CreateTaskStateTask *task, const char *state_name) {
+  hrun::TaskState *exec = reinterpret_cast<hrun::TaskState*>(
+      new TYPE_UNWRAP(TRAIT_CLASS)());
+  exec->Init(task->id_, state_name);
+  return exec;
+}
+void* create_state(hrun::Admin::CreateTaskStateTask *task, const char *state_name) {
+  hrun::TaskState *exec = reinterpret_cast<hrun::TaskState*>(
+      new TYPE_UNWRAP(TRAIT_CLASS)());
+  exec->Init(task->id_, state_name);
+  RunContext rctx(0);
+  exec->Run(hrun::TaskMethod::kConstruct, task, rctx);
+  return exec;
+}
+const char* get_task_lib_name(void) { return TASK_NAME; }
+bool is_hrun_task_ = true;
+}

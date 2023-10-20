@@ -29,6 +29,7 @@ namespace hrun {
 /** All information needed to create a trait */
 struct TaskLibInfo {
   void *lib_;  /**< The dlfcn library */
+  alloc_state_t alloc_state_;   /**< The create task function */
   create_state_t create_state_;   /**< The create task function */
   get_task_lib_name_t get_task_lib_name; /**< The get task name function */
 
@@ -44,22 +45,27 @@ struct TaskLibInfo {
 
   /** Emplace constructor */
   explicit TaskLibInfo(void *lib,
-                       create_state_t create_task,
+                       alloc_state_t alloc_state,
+                       create_state_t create_state,
                        get_task_lib_name_t get_task_name)
-      : lib_(lib), create_state_(create_task), get_task_lib_name(get_task_name) {}
+      : lib_(lib), alloc_state_(alloc_state),
+      create_state_(create_state), get_task_lib_name(get_task_name) {}
 
   /** Copy constructor */
   TaskLibInfo(const TaskLibInfo &other)
       : lib_(other.lib_),
+        alloc_state_(other.alloc_state_),
         create_state_(other.create_state_),
         get_task_lib_name(other.get_task_lib_name) {}
 
   /** Move constructor */
   TaskLibInfo(TaskLibInfo &&other) noexcept
       : lib_(other.lib_),
+        alloc_state_(other.alloc_state_),
         create_state_(other.create_state_),
         get_task_lib_name(other.get_task_lib_name) {
     other.lib_ = nullptr;
+    other.alloc_state_ = nullptr;
     other.create_state_ = nullptr;
     other.get_task_lib_name = nullptr;
   }
@@ -154,6 +160,13 @@ class TaskRegistry {
           info.lib_, "create_state");
       if (!info.create_state_) {
         HELOG(kError, "The lib {} does not have create_state symbol",
+              lib_path);
+        return false;
+      }
+      info.alloc_state_ = (alloc_state_t)dlsym(
+          info.lib_, "alloc_state");
+      if (!info.alloc_state_) {
+        HELOG(kError, "The lib {} does not have alloc_state symbol",
               lib_path);
         return false;
       }
