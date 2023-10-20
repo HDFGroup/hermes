@@ -143,7 +143,7 @@ struct CreateTaskStateTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   IN hipc::ShmArchive<hipc::string> state_name_;
   IN hipc::ShmArchive<hipc::vector<PriorityInfo>> queue_info_;
   INOUT TaskStateId id_;
-  TEMP std::string *net_buf_ = nullptr;
+  IN hipc::ShmArchive<hipc::string> custom_;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -171,6 +171,7 @@ struct CreateTaskStateTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
     HSHM_MAKE_AR(state_name_, alloc, state_name);
     HSHM_MAKE_AR(lib_name_, alloc, lib_name);
     HSHM_MAKE_AR(queue_info_, alloc, queue_info);
+    HSHM_MAKE_AR(custom_, alloc, "");
     id_ = id;
   }
 
@@ -179,6 +180,7 @@ struct CreateTaskStateTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
     HSHM_DESTROY_AR(state_name_);
     HSHM_DESTROY_AR(lib_name_);
     HSHM_DESTROY_AR(queue_info_);
+    HSHM_DESTROY_AR(custom_);
   }
 
   /** Duplicate message */
@@ -204,7 +206,7 @@ struct CreateTaskStateTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   template<typename Ar>
   void SerializeStart(Ar &ar) {
     task_serialize<Ar>(ar);
-    ar(lib_name_, state_name_, id_, queue_info_);
+    ar(lib_name_, state_name_, id_, queue_info_, custom_);
   }
 
   /** (De)serialize message return */

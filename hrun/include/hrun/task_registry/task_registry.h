@@ -217,8 +217,7 @@ class TaskRegistry {
   TaskState* CreateTaskState(const char *lib_name,
                              const char *state_name,
                              const TaskStateId &state_id,
-                             Admin::CreateTaskStateTask *task,
-                             bool alloc_only = false) {
+                             Admin::CreateTaskStateTask *task) {
     // Ensure state_id is not NULL
     if (state_id.IsNull()) {
       HILOG(kError, "The task state ID cannot be null");
@@ -247,11 +246,7 @@ class TaskRegistry {
     task->id_ = state_id;
     TaskLibInfo &info = it->second;
     TaskState *task_state;
-    if (!alloc_only) {
-      task_state = info.create_state_(task, state_name);
-    } else {
-      task_state = info.alloc_state_(task, state_name);
-    }
+    task_state = info.create_state_(task, state_name);
     if (!task_state) {
       HELOG(kError, "Could not create the task state: {}", state_name);
       task->SetModuleComplete();

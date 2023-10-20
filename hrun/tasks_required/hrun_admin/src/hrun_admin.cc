@@ -83,20 +83,11 @@ class Server : public TaskLib {
         qid, task->queue_info_->vec());
     // Allocate the task state
     task->method_ = Method::kConstruct;
-    TaskState *exec = HRUN_TASK_REGISTRY->CreateTaskState(
+    HRUN_TASK_REGISTRY->CreateTaskState(
         lib_name.c_str(),
         state_name.c_str(),
         task->id_,
-        task, task->net_buf_ != nullptr);
-    if (exec && task->net_buf_ != nullptr) {
-      // For networked tasks, need to re-deserialize using the proper
-      // deserialization method.
-      HILOG(kInfo, "Networked buffer mode???")
-      BinaryInputArchive<true> net_buf(*task->net_buf_);
-      TaskPointer task_ptr = exec->LoadStart(Method::kConstruct, net_buf);
-      exec->Run(Method::kConstruct, task_ptr.ptr_, rctx);
-      HRUN_CLIENT->DelTask(exec, task_ptr.ptr_);
-    }
+        task);
     queue->flags_.SetBits(QUEUE_READY);
     task->SetModuleComplete();
   }

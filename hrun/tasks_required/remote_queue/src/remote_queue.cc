@@ -271,16 +271,6 @@ class Server : public TaskLib {
     orig_task = task_ptr.ptr_;
     orig_task->domain_id_ = DomainId::GetNode(HRUN_CLIENT->node_id_);
 
-    // NOTE(llogan): Construction tasks will call deserialization
-    // improperly since they are routed to the Admin state instead
-    // of the state they are constructing. This is because their
-    // state does not yet exist. We fix this by passing the params
-    // buffer to the construction task.
-    if (orig_task->method_ == Admin::Method::kCreateTaskState) {
-      HILOG(kInfo, "Setting the net buf for the construction task");
-      ((CreateTaskStateTask*)orig_task)->net_buf_ = &params;
-    }
-
     // Unset task flags
     // NOTE(llogan): Remote tasks are executed to completion and
     // return values sent back to the remote host. This is

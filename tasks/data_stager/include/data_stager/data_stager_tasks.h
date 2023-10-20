@@ -44,12 +44,18 @@ struct ConstructTask : public CreateTaskStateTask {
                             "data_stager", id, queue_info) {
     // Custom params
     blob_mdm_ = blob_mdm;
+    std::stringstream ss;
+    cereal::BinaryOutputArchive ar(ss);
+    ar(blob_mdm_);
+    std::string data = ss.str();
+    *custom_ = data;
   }
 
-  /** (De)serialize message call */
-  template<typename Ar>
-  void SerializeStart(Ar &ar) {
-    CreateTaskStateTask::SerializeStart(ar);
+  /** Deserialize parameters */
+  void Deserialize() {
+    std::string data = custom_->str();
+    std::stringstream ss(data);
+    cereal::BinaryInputArchive ar(ss);
     ar(blob_mdm_);
   }
 

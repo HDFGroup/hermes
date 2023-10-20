@@ -42,6 +42,18 @@ struct ConstructTask : public CreateTaskStateTask {
                             "hermes_mdm", id, queue_info) {
     // Custom params
     HSHM_MAKE_AR(server_config_path_, alloc, server_config_path);
+    std::stringstream ss;
+    cereal::BinaryOutputArchive ar(ss);
+    ar(server_config_path_);
+    std::string data = ss.str();
+    *custom_ = data;
+  }
+
+  void Deserialize() {
+    std::string data = custom_->str();
+    std::stringstream ss(data);
+    cereal::BinaryInputArchive ar(ss);
+    ar(server_config_path_);
   }
 
   /** Destructor */
@@ -49,17 +61,6 @@ struct ConstructTask : public CreateTaskStateTask {
   ~ConstructTask() {
     HSHM_DESTROY_AR(server_config_path_);
   }
-
-  /** (De)serialize message call */
-  template<typename Ar>
-  void SerializeStart(Ar &ar) {
-    CreateTaskStateTask::SerializeStart(ar);
-    ar(server_config_path_);
-  }
-
-  /** (De)serialize message return */
-  template<typename Ar>
-  void SerializeEnd(u32 replica, Ar &ar) {}
 };
 
 /** A task to destroy hermes_mdm */

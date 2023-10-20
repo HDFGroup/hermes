@@ -21,6 +21,7 @@ class Server : public TaskLib {
   Server() = default;
 
   void Construct(ConstructTask *task, RunContext &rctx) {
+    task->Deserialize();
     url_map_.resize(HRUN_QM_RUNTIME->max_lanes_);
     blob_mdm_.Init(task->blob_mdm_);
     HILOG(kInfo, "(node {}) BLOB MDM: {}", HRUN_CLIENT->node_id_, blob_mdm_.id_);
