@@ -91,6 +91,7 @@ class Server : public TaskLib {
     if (exec && task->net_buf_ != nullptr) {
       // For networked tasks, need to re-deserialize using the proper
       // deserialization method.
+      HILOG(kInfo, "Networked buffer mode???")
       BinaryInputArchive<true> net_buf(*task->net_buf_);
       TaskPointer task_ptr = exec->LoadStart(Method::kConstruct, net_buf);
       exec->Run(Method::kConstruct, task_ptr.ptr_, rctx);
