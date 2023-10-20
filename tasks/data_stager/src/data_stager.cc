@@ -56,7 +56,7 @@ class Server : public TaskLib {
     }
     std::unique_ptr<AbstractStager> &stager = it->second;
     HILOG(kInfo, "POINTER FAILING HERE?: {}", (size_t)stager.get());
-    // stager->StageIn(blob_mdm_, task, rctx);
+    stager->StageIn(blob_mdm_, task, rctx);
     task->SetModuleComplete();
   }
 
