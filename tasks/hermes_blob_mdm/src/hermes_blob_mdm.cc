@@ -255,6 +255,8 @@ class Server : public TaskLib {
         HRUN_CLIENT->DelTask(stage_task);
       }
     } else {
+      HILOG(kInfo, "Reaccessing a blob using stager mdm {} on bucket {}",
+            stager_mdm_.id_, task->tag_id_);
       // Modify existing blob
       blob_info.UpdateWriteStats();
     }
