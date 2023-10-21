@@ -119,7 +119,7 @@ class Server : public TaskLib {
       stager_mdm_.Init(task->stager_mdm_);
       op_mdm_.Init(task->op_mdm_);
       // TODO(llogan): Add back
-      // flush_task_ = blob_mdm_.AsyncFlushData(task->task_node_ + 1);
+      flush_task_ = blob_mdm_.AsyncFlushData(task->task_node_ + 1);
     }
     task->SetModuleComplete();
   }
