@@ -41,7 +41,7 @@ class Client : public TaskLibClient {
         task_node, domain_id, state_name, id_, queue_info);
   }
   void AsyncCreateComplete(ConstructTask *task) {
-    if (task->IsComplete()) {
+    if (task->IsModuleComplete()) {
       id_ = task->id_;
       queue_id_ = QueueId(id_);
       HRUN_CLIENT->DelTask(task);
@@ -186,11 +186,12 @@ class Client : public TaskLibClient {
                                     const TagId &tag_id,
                                     const BlobId &blob_id,
                                     float score,
-                                    u32 node_id) {
+                                    u32 node_id,
+                                    bool user_score) {
     // HILOG(kDebug, "Beginning REORGANIZE (task_node={})", task_node);
     HRUN_CLIENT->ConstructTask<ReorganizeBlobTask>(
         task, task_node, DomainId::GetNode(blob_id.node_id_), id_,
-        tag_id, blob_id, score, node_id);
+        tag_id, blob_id, score, node_id, user_score);
   }
   HRUN_TASK_NODE_PUSH_ROOT(ReorganizeBlob);
 

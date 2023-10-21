@@ -278,16 +278,18 @@ struct BlobInfo {
   size_t blob_size_;      /**< The overall size of the blob */
   size_t max_blob_size_;  /**< The amount of space current buffers support */
   float score_;  /**< The priority of this blob */
+  float user_score_;  /**< The user-defined priority of this blob */
   std::atomic<u32> access_freq_;  /**< Number of times blob accessed in epoch */
-  u64 last_access_;  /**< Last time blob accessed */
+  hshm::Timepoint last_access_;  /**< Last time blob accessed */
   std::atomic<size_t> mod_count_;   /**< The number of times blob modified */
   std::atomic<size_t> last_flush_;  /**< The last mod that was flushed */
+  bitfield32_t flags_;  /**< Flags */
 
   /** Serialization */
   template<typename Ar>
   void serialize(Ar &ar) {
     ar(tag_id_, blob_id_, name_, buffers_, tags_, blob_size_, max_blob_size_,
-       score_, access_freq_, last_access_, mod_count_, last_flush_);
+       score_, access_freq_, mod_count_, last_flush_);
   }
 
   /** Default constructor */
@@ -317,17 +319,8 @@ struct BlobInfo {
 
   /** Update read stats */
   void UpdateReadStats() {
-    last_access_ = GetTimeFromStartNs();
+    last_access_.Now();
     access_freq_.fetch_add(1);
-  }
-
-  /** Get the time from start in nanoseconds */
-  static u64 GetTimeFromStartNs() {
-    struct timespec currentTime;
-    clock_gettime(CLOCK_MONOTONIC, &currentTime);
-    unsigned long long nanoseconds =
-        currentTime.tv_sec * 1000000000ULL + currentTime.tv_nsec;
-    return nanoseconds;
   }
 };
 

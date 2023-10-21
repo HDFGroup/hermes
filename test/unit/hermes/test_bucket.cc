@@ -196,11 +196,12 @@ TEST_CASE("TestHermesSerializedPutGet") {
       HILOG(kInfo, "Iteration: {} with blob name {}", i, std::to_string(i));
       // Put a blob
       std::vector<int> data(1024, i);
-      hermes::BlobId blob_id = bkt.Put(std::to_string(i), data, ctx);
+      hermes::BlobId blob_id = bkt.Put<std::vector<int>>(
+          std::to_string(i), data, ctx);
       HILOG(kInfo, "(iteration {}) Using BlobID: {}", i, blob_id);
       // Get a blob
       std::vector<int> data2(1024, i);
-      bkt.Get(blob_id, data2, ctx);
+      bkt.Get<std::vector<int>>(blob_id, data2, ctx);
       REQUIRE(data == data2);
     }
   }
@@ -444,6 +445,8 @@ TEST_CASE("TestHermesDataStager") {
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 
   // create dataset
+  std::string home_dir = getenv("HOME");
+  std::string path = home_dir + "/test.txt";
   size_t count_per_proc = 16;
   size_t off = rank * count_per_proc;
   size_t proc_count = off + count_per_proc;
@@ -451,7 +454,7 @@ TEST_CASE("TestHermesDataStager") {
   size_t file_size = nprocs * page_size * 16;
   std::vector<char> data(file_size, 0);
   if (rank == 0) {
-    FILE *file = fopen("/tmp/test.txt", "w");
+    FILE *file = fopen(path.c_str(), "w");
     fwrite(data.data(), sizeof(char), data.size(), file);
     fclose(file);
   }
@@ -465,7 +468,7 @@ TEST_CASE("TestHermesDataStager") {
   hermes::Context ctx;
   ctx.flags_.SetBits(HERMES_IS_FILE);
   hshm::charbuf url =
-      BinaryFileStager::BuildFileUrl("/tmp/test.txt", page_size);
+      BinaryFileStager::BuildFileUrl(path, page_size);
   hermes::Bucket bkt(url.str(), file_size, HERMES_IS_FILE);
 
   // Put a few blobs in the bucket
@@ -528,8 +531,13 @@ TEST_CASE("TestHermesDataOp") {
   for (size_t i = off; i < proc_count; ++i) {
     HILOG(kInfo, "Iteration: {}", i);
     // Put a blob
+    float val = 5 + i % 256;
     hermes::Blob blob(page_size);
-    memset(blob.data(), i % 256, blob.size());
+    float *data = (float*)blob.data();
+    for (size_t j = 0; j < page_size / sizeof(float); ++j) {
+      data[j] = val;
+    }
+    memcpy(blob.data(), data, blob.size());
     std::string blob_name = std::to_string(i);
     bkt.Put(blob_name, blob, ctx);
   }
@@ -538,8 +546,22 @@ TEST_CASE("TestHermesDataOp") {
   // HRUN_ADMIN->FlushRoot(DomainId::GetGlobal());
   // Verify derived operator happens
   hermes::Bucket bkt_min("data_bkt_min", 0, 0);
-  size_t size = bkt_min.GetSize();
+  size_t size;
+  do {
+    size = bkt_min.GetSize();
+    if (size != sizeof(float) * count_per_proc * nprocs) {
+      HILOG(kInfo, "Waiting for derived data");
+      sleep(1);
+    } else {
+      break;
+    }
+  } while (true);
+
+  hermes::Blob blob2;
+  bkt_min.Get(std::to_string(0), blob2, ctx);
+  float min = *(float *)blob2.data();
   REQUIRE(size == sizeof(float) * count_per_proc * nprocs);
+  REQUIRE(min == 5);
 }
 
 TEST_CASE("TestHermesCollectMetadata") {

@@ -12,6 +12,7 @@
 #include "hermes/hermes_types.h"
 #include "hermes/config_server.h"
 #include "proc_queue/proc_queue.h"
+#include "hermes/score_histogram.h"
 
 namespace hermes::bdev {
 
@@ -73,6 +74,7 @@ struct DestructTask : public DestroyTaskStateTask {
  * */
 struct AllocateTask : public Task, TaskFlags<TF_LOCAL> {
   IN size_t size_;  /**< Size in buf */
+  IN float score_;  /**< Score of the blob allocating stuff */
   OUT std::vector<BufferInfo> *buffers_;
   OUT size_t alloc_size_;
 
@@ -87,6 +89,7 @@ struct AllocateTask : public Task, TaskFlags<TF_LOCAL> {
             const DomainId &domain_id,
             const TaskStateId &state_id,
             size_t size,
+            float score,
             std::vector<BufferInfo> *buffers) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
@@ -99,6 +102,7 @@ struct AllocateTask : public Task, TaskFlags<TF_LOCAL> {
 
     // Free params
     size_ = size;
+    score_ = score;
     buffers_ = buffers;
   }
 
@@ -114,6 +118,7 @@ struct AllocateTask : public Task, TaskFlags<TF_LOCAL> {
  * */
 struct FreeTask : public Task, TaskFlags<TF_LOCAL> {
   IN std::vector<BufferInfo> buffers_;
+  IN float score_;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -125,6 +130,7 @@ struct FreeTask : public Task, TaskFlags<TF_LOCAL> {
            const TaskNode &task_node,
            const DomainId &domain_id,
            const TaskStateId &state_id,
+           float score,
            const std::vector<BufferInfo> &buffers,
            bool fire_and_forget) : Task(alloc) {
     // Initialize task
@@ -141,6 +147,7 @@ struct FreeTask : public Task, TaskFlags<TF_LOCAL> {
 
     // Free params
     buffers_ = buffers;
+    score_ = score;
   }
 
   /** Create group */
@@ -238,7 +245,8 @@ struct ReadTask : public Task, TaskFlags<TF_LOCAL> {
 
 /** A task to monitor bdev statistics */
 struct MonitorTask : public Task, TaskFlags<TF_LOCAL> {
-  OUT size_t rem_cap_; /**< Remaining capacity of the target */
+  OUT size_t rem_cap_;  /**< Remaining capacity of the target */
+  // OUT Histogram score_hist_;  /**< Score distribution */
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -273,31 +281,34 @@ struct MonitorTask : public Task, TaskFlags<TF_LOCAL> {
   }
 };
 
-/** A task to update bdev capacity */
-struct UpdateCapacityTask : public Task, TaskFlags<TF_LOCAL> {
-  IN ssize_t diff_;
+/** A task to monitor bdev statistics */
+struct UpdateScoreTask : public Task, TaskFlags<TF_LOCAL> {
+  OUT float old_score_;
+  OUT float new_score_;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
-  UpdateCapacityTask(hipc::Allocator *alloc) : Task(alloc) {}
+  UpdateScoreTask(hipc::Allocator *alloc) : Task(alloc) {}
 
   /** Emplace constructor */
   HSHM_ALWAYS_INLINE explicit
-  UpdateCapacityTask(hipc::Allocator *alloc,
-                     const TaskNode &task_node,
-                     const DomainId &domain_id,
-                     const TaskStateId &state_id,
-                     ssize_t diff) : Task(alloc) {
+  UpdateScoreTask(hipc::Allocator *alloc,
+              const TaskNode &task_node,
+              const DomainId &domain_id,
+              const TaskStateId &state_id,
+              float old_score, float new_score) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
+    lane_hash_ = 0;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
-    method_ = Method::kUpdateCapacity;
-    task_flags_.SetBits(TASK_FIRE_AND_FORGET | TASK_UNORDERED | TASK_REMOTE_DEBUG_MARK);
+    method_ = Method::kUpdateScore;
+    task_flags_.SetBits(TASK_LOW_LATENCY | TASK_FIRE_AND_FORGET | TASK_REMOTE_DEBUG_MARK);
     domain_id_ = domain_id;
 
     // Custom
-    diff_ = diff;
+    old_score_ = old_score;
+    new_score_ = new_score;
   }
 
   /** Create group */

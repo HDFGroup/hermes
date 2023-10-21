@@ -14,7 +14,7 @@
 
 namespace hermes::posix_bdev {
 
-class Server : public TaskLib {
+ class Server : public TaskLib, public bdev::Server {
  public:
   SlabAllocator alloc_;
   int fd_;
@@ -23,7 +23,9 @@ class Server : public TaskLib {
  public:
   void Construct(ConstructTask *task, RunContext &rctx) {
     DeviceInfo &dev_info = task->info_;
+    rem_cap_ = dev_info.capacity_;
     alloc_.Init(id_, dev_info.capacity_, dev_info.slab_sizes_);
+    // score_hist_.Resize(10);
     std::string text = dev_info.mount_dir_ +
         "/" + "slab_" + dev_info.dev_name_;
     auto canon = stdfs::weakly_canonical(text).string();
@@ -46,11 +48,14 @@ class Server : public TaskLib {
   void Allocate(AllocateTask *task, RunContext &rctx) {
     alloc_.Allocate(task->size_, *task->buffers_, task->alloc_size_);
     HILOG(kDebug, "Allocated {}/{} bytes ({})", task->alloc_size_, task->size_, path_);
+    rem_cap_ -= task->alloc_size_;
+    // score_hist_.Increment(task->score_);
     task->SetModuleComplete();
   }
 
   void Free(FreeTask *task, RunContext &rctx) {
-    alloc_.Free(task->buffers_);
+    rem_cap_ += alloc_.Free(task->buffers_);
+    // score_hist_.Decrement(task->score_);
     task->SetModuleComplete();
   }
 
@@ -73,14 +78,6 @@ class Server : public TaskLib {
     }
     task->SetModuleComplete();
   }
-
-  void Monitor(MonitorTask *task, RunContext &rctx) {
-  }
-
-  void UpdateCapacity(UpdateCapacityTask *task, RunContext &rctx) {
-    task->SetModuleComplete();
-  }
-
  public:
 #include "bdev/bdev_lib_exec.h"
 };

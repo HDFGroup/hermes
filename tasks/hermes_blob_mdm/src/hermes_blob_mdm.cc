@@ -11,6 +11,7 @@
 #include "bdev/bdev.h"
 #include "data_stager/data_stager.h"
 #include "hermes_data_op/hermes_data_op.h"
+#include "hermes/score_histogram.h"
 
 namespace hermes::blob_mdm {
 
@@ -118,26 +119,83 @@ class Server : public TaskLib {
       stager_mdm_.Init(task->stager_mdm_);
       op_mdm_.Init(task->op_mdm_);
       // TODO(llogan): Add back
-      // flush_task_ = blob_mdm_.AsyncFlushData(task->task_node_ + 1);
+      flush_task_ = blob_mdm_.AsyncFlushData(task->task_node_ + 1);
     }
     task->SetModuleComplete();
   }
 
+  /** New score */
+  float MakeScore(BlobInfo &blob_info, hshm::Timepoint &now) {
+    float freq_score = blob_info.access_freq_ / 5;
+    float access_score = (float)(1 - (blob_info.last_access_.GetSecFromStart(now) / 5));
+    if (freq_score > 1) {
+      freq_score = 1;
+    }
+    if (access_score > 1) {
+      access_score = 1;
+    }
+    float data_score = std::max(freq_score, access_score);
+    float user_score = blob_info.user_score_;
+    if (!blob_info.flags_.Any(HERMES_USER_SCORE_STATIONARY)) {
+      user_score *= data_score;
+    }
+    return std::max(data_score, user_score);
+  }
+
+  /** Check if blob should be reorganized */
+  template<bool UPDATE_SCORE=false>
+  bool ShouldReorganize(BlobInfo &blob_info,
+                        float score,
+                        TaskNode &task_node) {
+//    for (BufferInfo &buf : blob_info.buffers_) {
+//      TargetInfo &target = *target_map_[buf.tid_];
+//      Histogram &hist = target.monitor_task_->score_hist_;
+//      if constexpr(UPDATE_SCORE) {
+//        target.AsyncUpdateScore(task_node + 1,
+//                                blob_info.score_, score);
+//      }
+//      u32 percentile = hist.GetPercentile(score);
+//      size_t rem_cap = target.monitor_task_->rem_cap_;
+//      size_t max_cap = target.max_cap_;
+//      if (rem_cap < max_cap / 10) {
+//        if (percentile < 10 || percentile > 90) {
+//          return true;
+//        }
+//      }
+//    }
+    return false;
+  }
+
   /**
-   * Long-running task to stage out data periodically
+   * Long-running task to stage out data periodically and
+   * reorganize blobs
    * */
   void FlushData(FlushDataTask *task, RunContext &rctx) {
+    hshm::Timepoint now;
+    now.Now();
     // Get the blob info data structure
     BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     for (auto &it : blob_map) {
       BlobInfo &blob_info = it.second;
+      // Update blob scores
+      // TODO(llogan): Add back
+//      float new_score = MakeScore(blob_info, now);
+//      if (ShouldReorganize<true>(blob_info, new_score, task->task_node_)) {
+//        blob_mdm_.AsyncReorganizeBlob(task->task_node_ + 1,
+//                                      blob_info.tag_id_,
+//                                      blob_info.blob_id_,
+//                                      new_score, 0, false);
+//      }
+//      blob_info.access_freq_ = 0;
+//      blob_info.score_ = new_score;
+
+      // Flush data
       if (blob_info.last_flush_ > 0 &&
           blob_info.mod_count_ > blob_info.last_flush_) {
         HILOG(kDebug, "Flushing blob {} (mod_count={}, last_flush={})",
               blob_info.blob_id_, blob_info.mod_count_, blob_info.last_flush_);
         blob_info.last_flush_ = 1;
         blob_info.mod_count_ = 0;
-        blob_info.access_freq_ = 0;
         blob_info.UpdateWriteStats();
         LPointer<char> data = HRUN_CLIENT->AllocateBuffer(blob_info.blob_size_);
         LPointer<GetBlobTask> get_blob =
@@ -155,7 +213,6 @@ class Server : public TaskLib {
                                   TASK_DATA_OWNER | TASK_FIRE_AND_FORGET);
       }
     }
-    // task->SetModuleComplete();
   }
 
   /**
@@ -168,6 +225,7 @@ class Server : public TaskLib {
       task->blob_id_ = GetOrCreateBlobId(task->tag_id_, task->lane_hash_,
                                          blob_name, rctx, task->flags_);
     }
+    HILOG(kDebug, "Beginning PUT for {}", blob_name.str());
     BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     BlobInfo &blob_info = blob_map[task->blob_id_];
 
@@ -184,6 +242,8 @@ class Server : public TaskLib {
       blob_info.last_flush_ = 0;
       blob_info.UpdateWriteStats();
       if (task->flags_.Any(HERMES_IS_FILE)) {
+        HILOG(kInfo, "Staging in using stager mdm {} on bucket {}",
+              stager_mdm_.id_, task->tag_id_);
         blob_info.mod_count_ = 1;
         blob_info.last_flush_ = 1;
         LPointer<data_stager::StageInTask> stage_task =
@@ -195,6 +255,8 @@ class Server : public TaskLib {
         HRUN_CLIENT->DelTask(stage_task);
       }
     } else {
+      HILOG(kInfo, "Reaccessing a blob using stager mdm {} on bucket {}",
+            stager_mdm_.id_, task->tag_id_);
       // Modify existing blob
       blob_info.UpdateWriteStats();
     }
@@ -226,6 +288,7 @@ class Server : public TaskLib {
         TargetInfo &bdev = *target_map_[placement.tid_];
         LPointer<bdev::AllocateTask> alloc_task =
             bdev.AsyncAllocate(task->task_node_ + 1,
+                               blob_info.score_,
                                placement.size_,
                                blob_info.buffers_);
         alloc_task->Wait<TASK_YIELD_CO>(task);
@@ -298,6 +361,7 @@ class Server : public TaskLib {
     }
 
     // Free data
+    HILOG(kDebug, "Completing PUT for {}", blob_name.str());
     task->SetModuleComplete();
   }
 
@@ -306,7 +370,9 @@ class Server : public TaskLib {
     for (BufferInfo &buf : blob_info.buffers_) {
       TargetInfo &target = *target_map_[buf.tid_];
       std::vector<BufferInfo> buf_vec = {buf};
-      // target.AsyncFree(task->task_node_ + 1, std::move(buf_vec), true);
+//      target.AsyncFree(task->task_node_ + 1,
+//                       blob_info.score_,
+//                       std::move(buf_vec), true);
     }
     blob_info.buffers_.clear();
     blob_info.max_blob_size_ = 0;
@@ -580,7 +646,8 @@ class Server : public TaskLib {
           TargetInfo &tgt_info = *target_map_[buf.tid_];
           std::vector<BufferInfo> buf_vec = {buf};
           bdev::FreeTask *free_task = tgt_info.AsyncFree(
-              task->task_node_ + 1, std::move(buf_vec), false).ptr_;
+              task->task_node_ + 1, blob_info.score_,
+              std::move(buf_vec), false).ptr_;
           task->free_tasks_->emplace_back(free_task);
         }
         task->phase_ = DestroyBlobPhase::kWaitFreeBuffers;
@@ -621,6 +688,17 @@ class Server : public TaskLib {
           return;
         }
         BlobInfo &blob_info = it->second;
+        if (task->is_user_score_) {
+          blob_info.user_score_ = task->score_;
+          blob_info.score_ = std::max(blob_info.user_score_,
+                                      blob_info.score_);
+        } else {
+          blob_info.score_ = task->score_;
+        }
+        if (!ShouldReorganize(blob_info, task->score_, task->task_node_)) {
+          task->SetModuleComplete();
+          return;
+        }
         task->data_ = HRUN_CLIENT->AllocateBuffer(blob_info.blob_size_).shm_;
         task->data_size_ = blob_info.blob_size_;
         task->get_task_ = blob_mdm_.AsyncGetBlob(task->task_node_ + 1,

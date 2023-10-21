@@ -191,7 +191,6 @@ class Server : public TaskLib {
   /** Get or create a tag */
   void GetOrCreateTag(GetOrCreateTagTask *task, RunContext &rctx) {
     TagId tag_id;
-    HILOG(kDebug, "Creating a tag on lane {}", rctx.lane_id_);
 
     // Check if the tag exists
     TAG_ID_MAP_T &tag_id_map = tag_id_map_[rctx.lane_id_];
@@ -201,6 +200,7 @@ class Server : public TaskLib {
     if (tag_name.size() > 0) {
       did_create = tag_id_map.find(tag_name) == tag_id_map.end();
     }
+    HILOG(kDebug, "Creating a tag {} on lane {}", tag_name.str(), rctx.lane_id_);
 
     // Emplace bucket if it does not already exist
     if (did_create) {

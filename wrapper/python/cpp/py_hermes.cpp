@@ -69,9 +69,7 @@ void BindBlobInfo(py::module &m) {
       .def_readonly("score", &BlobInfo::score_)
       .def_readonly("access_freq", &BlobInfo::access_freq_)
       .def_readonly("last_access", &BlobInfo::last_access_)
-      .def_readonly("mod_count", &BlobInfo::mod_count_)
-      .def_readonly("last_flush", &BlobInfo::last_flush_)
-      .def_static("GetTimeFromStartNs", &BlobInfo::GetTimeFromStartNs);
+      .def_readonly("mod_count", &BlobInfo::mod_count_);
 }
 
 void BindTargetStats(py::module &m) {

@@ -6,6 +6,7 @@
 #define HRUN_bdev_H_
 
 #include "bdev_tasks.h"
+#include "hermes/score_histogram.h"
 
 namespace hermes::bdev {
 
@@ -22,12 +23,14 @@ class Client : public TaskLibClient {
   float score_;         /**< Relative importance of this tier */
 
  public:
+  Client() : score_(0) {}
+
   /** Copy dev info */
   void CopyDevInfo(DeviceInfo &dev_info) {
     max_cap_ = dev_info.capacity_;
     bandwidth_ = dev_info.bandwidth_;
     latency_ = dev_info.latency_;
-    score_ = 1;
+    score_ = 0;
   }
 
   /** Async create task state */
@@ -51,10 +54,10 @@ class Client : public TaskLibClient {
         queue_info, dev_info);
   }
   void AsyncCreateComplete(ConstructTask *task) {
-    if (task->IsComplete()) {
+    if (task->IsModuleComplete()) {
       id_ = task->id_;
       queue_id_ = QueueId(id_);
-      monitor_task_ = AsyncMonitor(task->task_node_, 100).ptr_;
+      monitor_task_ = AsyncMonitor(task->task_node_ + 1, 100).ptr_;
       HRUN_CLIENT->DelTask(task);
     }
   }
@@ -85,15 +88,6 @@ class Client : public TaskLibClient {
   }
   HRUN_TASK_NODE_PUSH_ROOT(Monitor);
 
-  /** Update bdev capacity */
-  void AsyncUpdateCapacityConstruct(UpdateCapacityTask *task,
-                                    const TaskNode &task_node,
-                                    ssize_t size) {
-    HRUN_CLIENT->ConstructTask<UpdateCapacityTask>(
-        task, task_node, domain_id_, id_, size);
-  }
-  HRUN_TASK_NODE_PUSH_ROOT(UpdateCapacity);
-
   /** Get bdev remaining capacity */
   HSHM_ALWAYS_INLINE
   size_t GetRemCap() const {
@@ -105,9 +99,10 @@ class Client : public TaskLibClient {
   void AsyncAllocateConstruct(AllocateTask *task,
                               const TaskNode &task_node,
                               size_t size,
+                              float score,
                               std::vector<BufferInfo> &buffers) {
     HRUN_CLIENT->ConstructTask<AllocateTask>(
-        task, task_node, domain_id_, id_, size, &buffers);
+        task, task_node, domain_id_, id_, score, size, &buffers);
   }
   HRUN_TASK_NODE_PUSH_ROOT(Allocate);
 
@@ -115,10 +110,11 @@ class Client : public TaskLibClient {
   HSHM_ALWAYS_INLINE
   void AsyncFreeConstruct(FreeTask *task,
                           const TaskNode &task_node,
+                          float score,
                           const std::vector<BufferInfo> &buffers,
                           bool fire_and_forget) {
     HRUN_CLIENT->ConstructTask<FreeTask>(
-        task, task_node, domain_id_, id_, buffers, fire_and_forget);
+        task, task_node, domain_id_, id_, score, buffers, fire_and_forget);
   }
   HRUN_TASK_NODE_PUSH_ROOT(Free);
 
@@ -141,19 +137,35 @@ class Client : public TaskLibClient {
         task, task_node, domain_id_, id_, data, off, size);
   }
   HRUN_TASK_NODE_PUSH_ROOT(Read);
+
+  /** Update blob scores */
+  HSHM_ALWAYS_INLINE
+  void AsyncUpdateScoreConstruct(UpdateScoreTask *task,
+                                 const TaskNode &task_node,
+                                 float old_score, float new_score) {
+    HRUN_CLIENT->ConstructTask<UpdateScoreTask>(
+        task, task_node, domain_id_, id_,
+        old_score, new_score);
+  }
+  HRUN_TASK_NODE_PUSH_ROOT(UpdateScore);
 };
 
 class Server {
  public:
-  ssize_t rem_cap_;
+  ssize_t rem_cap_;       /**< Remaining capacity */
+  // Histogram score_hist_;  /**< Score distribution */
 
  public:
-  void UpdateCapacity(UpdateCapacityTask *task) {
-    rem_cap_ += task->diff_;
+  void UpdateScore(UpdateScoreTask *task, RunContext &ctx) {
+//    if (task->old_score_ >= 0) {
+//      score_hist_.Decrement(task->old_score_);
+//    }
+//    score_hist_.Increment(task->new_score_);
   }
 
-  void Monitor(MonitorTask *task) {
+  void Monitor(MonitorTask *task, RunContext &ctx) {
     task->rem_cap_ = rem_cap_;
+//    task->score_hist_ = score_hist_;
   }
 };
 

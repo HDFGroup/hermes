@@ -81,17 +81,15 @@ class Server : public TaskLib {
     QueueId qid(task->id_);
     MultiQueue *queue = HRUN_QM_RUNTIME->CreateQueue(
         qid, task->queue_info_->vec());
-    // Run the task state's submethod
+    // Allocate the task state
     task->method_ = Method::kConstruct;
-    bool ret = HRUN_TASK_REGISTRY->CreateTaskState(
+    HRUN_TASK_REGISTRY->CreateTaskState(
         lib_name.c_str(),
         state_name.c_str(),
         task->id_,
         task);
     queue->flags_.SetBits(QUEUE_READY);
     task->SetModuleComplete();
-    HILOG(kInfo, "(node {}) Allocated task state {} with id {}",
-          HRUN_CLIENT->node_id_, state_name, task->task_state_);
   }
 
   void GetTaskStateId(GetTaskStateIdTask *task, RunContext &rctx) {

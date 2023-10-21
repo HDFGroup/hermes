@@ -125,7 +125,7 @@ struct SetBucketMdmTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   template<typename Ar>
   void SerializeStart(Ar &ar) {
     task_serialize<Ar>(ar);
-    ar(bkt_mdm_, stager_mdm_);
+    ar(bkt_mdm_, stager_mdm_, op_mdm_);
   }
 
   /** (De)serialize message return */
@@ -226,6 +226,7 @@ class PutBlobPhase {
 #define HERMES_BLOB_DID_CREATE BIT_OPT(u32, 4)
 #define HERMES_GET_BLOB_ID BIT_OPT(u32, 5)
 #define HERMES_HAS_DERIVED BIT_OPT(u32, 6)
+#define HERMES_USER_SCORE_STATIONARY BIT_OPT(u32, 7)
 
 /** A task to put data in a blob */
 struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> {
@@ -1075,6 +1076,7 @@ struct ReorganizeBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
   IN BlobId blob_id_;
   IN float score_;
   IN u32 node_id_;
+  IN bool is_user_score_;
   TEMP int phase_ = ReorganizeBlobPhase::kGet;
   TEMP hipc::Pointer data_;
   TEMP size_t data_size_;
@@ -1095,7 +1097,8 @@ struct ReorganizeBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
                      const TagId &tag_id,
                      const BlobId &blob_id,
                      float score,
-                     u32 node_id) : Task(alloc) {
+                     u32 node_id,
+                     bool is_user_score) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = blob_id.hash_;
@@ -1110,6 +1113,7 @@ struct ReorganizeBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
     blob_id_ = blob_id;
     score_ = score;
     node_id_ = node_id;
+    is_user_score_ = is_user_score;
   }
 
   /** (De)serialize message call */
