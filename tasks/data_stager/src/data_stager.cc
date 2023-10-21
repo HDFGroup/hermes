@@ -36,7 +36,6 @@ class Server : public TaskLib {
     std::string url = task->url_->str();
     std::unique_ptr<AbstractStager> stager = StagerFactory::Get(url);
     stager->RegisterStager(task, rctx);
-    HILOG(kInfo, "(node {}) REGISTERING STAGER: {}", HRUN_CLIENT->node_id_, (size_t)stager.get());
     url_map_[rctx.lane_id_].emplace(task->bkt_id_, std::move(stager));
     task->SetModuleComplete();
   }
@@ -54,13 +53,12 @@ class Server : public TaskLib {
         url_map_[rctx.lane_id_].find(task->bkt_id_);
     if (it == url_map_[rctx.lane_id_].end()) {
       HELOG(kError, "Could not find stager for bucket: {}", task->bkt_id_);
-      task->SetModuleComplete();
+      // TODO(llogan): Probably should add back...
+      // task->SetModuleComplete();
       return;
     }
-    HILOG(kInfo, "Staging in bucket: {}", task->bkt_id_);
     std::unique_ptr<AbstractStager> &stager = it->second;
     stager->StageIn(blob_mdm_, task, rctx);
-    HILOG(kInfo, "Finished staging in bucket: {}", task->bkt_id_);
     task->SetModuleComplete();
   }
 
