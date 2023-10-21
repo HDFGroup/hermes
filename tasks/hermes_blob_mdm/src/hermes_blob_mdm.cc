@@ -339,9 +339,9 @@ class Server : public TaskLib {
 
     // Update information
     int update_mode = bucket_mdm::UpdateSizeMode::kAdd;
-//    if (task->flags_.Any(HERMES_IS_FILE)) {
-//      update_mode = bucket_mdm::UpdateSizeMode::kCap;
-//    }
+    if (task->flags_.Any(HERMES_IS_FILE)) {
+      update_mode = bucket_mdm::UpdateSizeMode::kCap;
+    }
     bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
                              task->tag_id_,
                              task->blob_off_ + task->data_size_,
