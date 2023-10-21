@@ -242,8 +242,6 @@ class Server : public TaskLib {
       blob_info.last_flush_ = 0;
       blob_info.UpdateWriteStats();
       if (task->flags_.Any(HERMES_IS_FILE)) {
-        HILOG(kInfo, "Staging in using stager mdm {} on bucket {}",
-              stager_mdm_.id_, task->tag_id_);
         blob_info.mod_count_ = 1;
         blob_info.last_flush_ = 1;
         LPointer<data_stager::StageInTask> stage_task =
@@ -255,8 +253,6 @@ class Server : public TaskLib {
         HRUN_CLIENT->DelTask(stage_task);
       }
     } else {
-      HILOG(kInfo, "Reaccessing a blob using stager mdm {} on bucket {}",
-            stager_mdm_.id_, task->tag_id_);
       // Modify existing blob
       blob_info.UpdateWriteStats();
     }
