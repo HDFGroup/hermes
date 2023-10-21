@@ -251,7 +251,7 @@ struct WorkPending {
 struct RunContext {
   u32 lane_id_;  /**< The lane id of the task */
   bctx::transfer_t jmp_;  /**< Current execution state of the task (runtime) */
-  size_t stack_size_ = KILOBYTES(64);  /**< The size of the stack for the task (runtime) */
+  size_t stack_size_ = KILOBYTES(128);  /**< The size of the stack for the task (runtime) */
   void *stack_ptr_;                    /**< The pointer to the stack (runtime) */
   TaskLib *exec_;
   WorkPending *flush_;
