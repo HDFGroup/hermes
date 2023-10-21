@@ -156,10 +156,7 @@ struct RegisterStagerTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   /** Create group */
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
-    hrun::LocalSerialize srl(group);
-    srl << bkt_id_.unique_;
-    srl << bkt_id_.node_id_;
-    return 0;
+    return TASK_UNORDERED;
   }
 };
 
@@ -167,7 +164,7 @@ struct RegisterStagerTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
  * Unregister a new stager
  * */
 struct UnregisterStagerTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
-  hermes::BucketId bkt_id_;
+  IN hermes::BucketId bkt_id_;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -285,10 +282,10 @@ struct StageInTask : public Task, TaskFlags<TF_LOCAL> {
  * A task to stage data out of a hermes to a remote source
  * */
 struct StageOutTask : public Task, TaskFlags<TF_LOCAL> {
-  hermes::BucketId bkt_id_;
-  hipc::ShmArchive<hipc::charbuf> blob_name_;
-  hipc::Pointer data_;
-  size_t data_size_;
+  IN hermes::BucketId bkt_id_;
+  IN hipc::ShmArchive<hipc::charbuf> blob_name_;
+  IN hipc::Pointer data_;
+  IN size_t data_size_;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -332,10 +329,7 @@ struct StageOutTask : public Task, TaskFlags<TF_LOCAL> {
   /** Create group */
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
-    hrun::LocalSerialize srl(group);
-    srl << bkt_id_.unique_;
-    srl << bkt_id_.node_id_;
-    return 0;
+    return TASK_UNORDERED;
   }
 };
 
