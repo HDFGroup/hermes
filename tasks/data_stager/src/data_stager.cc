@@ -57,8 +57,10 @@ class Server : public TaskLib {
       task->SetModuleComplete();
       return;
     }
+    HILOG(kInfo, "Staging in bucket: {}", task->bkt_id_);
     std::unique_ptr<AbstractStager> &stager = it->second;
     stager->StageIn(blob_mdm_, task, rctx);
+    HILOG(kInfo, "Finished staging in bucket: {}", task->bkt_id_);
     task->SetModuleComplete();
   }
 
