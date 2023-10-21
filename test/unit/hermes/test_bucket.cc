@@ -481,11 +481,11 @@ TEST_CASE("TestHermesDataStager") {
     bkt.PartialPut(blob_name.str(), blob, 0, ctx);
     hermes::Blob blob2;
     bkt.Get(blob_name.str(), blob2, ctx);
-    // REQUIRE(blob2.size() == page_size);
+    REQUIRE(blob2.size() == page_size);
     hermes::Blob full_blob(page_size);
     memcpy(full_blob.data(), blob.data(), blob.size());
     memcpy(full_blob.data() + blob.size(), data.data(), page_size / 2);
-    // REQUIRE(full_blob == blob2);
+    REQUIRE(full_blob == blob2);
   }
   for (size_t i = off; i < proc_count; ++i) {
     hshm::charbuf blob_name = hermes::adapter::BlobPlacement::CreateBlobName(i);
