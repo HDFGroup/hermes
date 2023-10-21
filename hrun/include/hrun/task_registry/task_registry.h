@@ -29,6 +29,7 @@ namespace hrun {
 /** All information needed to create a trait */
 struct TaskLibInfo {
   void *lib_;  /**< The dlfcn library */
+  alloc_state_t alloc_state_;   /**< The create task function */
   create_state_t create_state_;   /**< The create task function */
   get_task_lib_name_t get_task_lib_name; /**< The get task name function */
 
@@ -44,22 +45,27 @@ struct TaskLibInfo {
 
   /** Emplace constructor */
   explicit TaskLibInfo(void *lib,
-                       create_state_t create_task,
+                       alloc_state_t alloc_state,
+                       create_state_t create_state,
                        get_task_lib_name_t get_task_name)
-      : lib_(lib), create_state_(create_task), get_task_lib_name(get_task_name) {}
+      : lib_(lib), alloc_state_(alloc_state),
+      create_state_(create_state), get_task_lib_name(get_task_name) {}
 
   /** Copy constructor */
   TaskLibInfo(const TaskLibInfo &other)
       : lib_(other.lib_),
+        alloc_state_(other.alloc_state_),
         create_state_(other.create_state_),
         get_task_lib_name(other.get_task_lib_name) {}
 
   /** Move constructor */
   TaskLibInfo(TaskLibInfo &&other) noexcept
       : lib_(other.lib_),
+        alloc_state_(other.alloc_state_),
         create_state_(other.create_state_),
         get_task_lib_name(other.get_task_lib_name) {
     other.lib_ = nullptr;
+    other.alloc_state_ = nullptr;
     other.create_state_ = nullptr;
     other.get_task_lib_name = nullptr;
   }
@@ -157,6 +163,13 @@ class TaskRegistry {
               lib_path);
         return false;
       }
+      info.alloc_state_ = (alloc_state_t)dlsym(
+          info.lib_, "alloc_state");
+      if (!info.alloc_state_) {
+        HELOG(kError, "The lib {} does not have alloc_state symbol",
+              lib_path);
+        return false;
+      }
       info.get_task_lib_name = (get_task_lib_name_t)dlsym(
           info.lib_, "get_task_lib_name");
       if (!info.get_task_lib_name) {
@@ -201,15 +214,15 @@ class TaskRegistry {
    * Create a task state
    * state_id must not be NULL.
    * */
-  bool CreateTaskState(const char *lib_name,
-                       const char *state_name,
-                       const TaskStateId &state_id,
-                       Admin::CreateTaskStateTask *task) {
+  TaskState* CreateTaskState(const char *lib_name,
+                             const char *state_name,
+                             const TaskStateId &state_id,
+                             Admin::CreateTaskStateTask *task) {
     // Ensure state_id is not NULL
     if (state_id.IsNull()) {
       HILOG(kError, "The task state ID cannot be null");
       task->SetModuleComplete();
-      return false;
+      return nullptr;
     }
 //    HILOG(kInfo, "(node {}) Creating an instance of {} with name {}",
 //          HRUN_CLIENT->node_id_, lib_name, state_name)
@@ -219,24 +232,25 @@ class TaskRegistry {
     if (it == libs_.end()) {
       HELOG(kError, "Could not find the task lib: {}", lib_name);
       task->SetModuleComplete();
-      return false;
+      return nullptr;
     }
 
     // Ensure the task state does not already exist
     if (TaskStateExists(state_id)) {
       HELOG(kError, "The task state already exists: {}", state_name);
       task->SetModuleComplete();
-      return true;
+      return nullptr;
     }
 
     // Create the state instance
     task->id_ = state_id;
     TaskLibInfo &info = it->second;
-    TaskState *task_state = info.create_state_(task, state_name);
+    TaskState *task_state;
+    task_state = info.create_state_(task, state_name);
     if (!task_state) {
       HELOG(kError, "Could not create the task state: {}", state_name);
       task->SetModuleComplete();
-      return false;
+      return nullptr;
     }
 
     // Add the state to the registry
@@ -247,7 +261,7 @@ class TaskRegistry {
     task_states_.emplace(state_id, task_state);
     HILOG(kInfo, "(node {})  Created an instance of {} with name {} and ID {}",
           HRUN_CLIENT->node_id_, lib_name, state_name, state_id)
-    return true;
+    return task_state;
   }
 
   /** Get or create a task state's ID */

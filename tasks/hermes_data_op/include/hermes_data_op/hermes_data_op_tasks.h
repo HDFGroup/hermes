@@ -91,12 +91,19 @@ struct ConstructTask : public CreateTaskStateTask {
     // Custom params
     bkt_mdm_ = bkt_mdm_id;
     blob_mdm_ = blob_mdm_id;
+    std::stringstream ss;
+    cereal::BinaryOutputArchive ar(ss);
+    ar(bkt_mdm_, blob_mdm_);
+    std::string data = ss.str();
+    *custom_ = data;
   }
 
-  template<typename Ar>
-  void SerializeStart(Ar &ar) {
-    task_serialize<Ar>(ar);
-    ar(lib_name_, state_name_, id_, queue_info_, bkt_mdm_, blob_mdm_);
+  /** Deserialize parameters */
+  void Deserialize() {
+    std::string data = custom_->str();
+    std::stringstream ss(data);
+    cereal::BinaryInputArchive ar(ss);
+    ar(bkt_mdm_, blob_mdm_);
   }
 
   HSHM_ALWAYS_INLINE

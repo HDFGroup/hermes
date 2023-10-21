@@ -81,9 +81,9 @@ class Server : public TaskLib {
     QueueId qid(task->id_);
     MultiQueue *queue = HRUN_QM_RUNTIME->CreateQueue(
         qid, task->queue_info_->vec());
-    // Run the task state's submethod
+    // Allocate the task state
     task->method_ = Method::kConstruct;
-    bool ret = HRUN_TASK_REGISTRY->CreateTaskState(
+    HRUN_TASK_REGISTRY->CreateTaskState(
         lib_name.c_str(),
         state_name.c_str(),
         task->id_,

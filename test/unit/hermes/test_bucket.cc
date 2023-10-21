@@ -445,6 +445,8 @@ TEST_CASE("TestHermesDataStager") {
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 
   // create dataset
+  std::string home_dir = getenv("HOME");
+  std::string path = home_dir + "/test.txt";
   size_t count_per_proc = 16;
   size_t off = rank * count_per_proc;
   size_t proc_count = off + count_per_proc;
@@ -452,7 +454,7 @@ TEST_CASE("TestHermesDataStager") {
   size_t file_size = nprocs * page_size * 16;
   std::vector<char> data(file_size, 0);
   if (rank == 0) {
-    FILE *file = fopen("/tmp/test.txt", "w");
+    FILE *file = fopen(path.c_str(), "w");
     fwrite(data.data(), sizeof(char), data.size(), file);
     fclose(file);
   }
@@ -466,7 +468,7 @@ TEST_CASE("TestHermesDataStager") {
   hermes::Context ctx;
   ctx.flags_.SetBits(HERMES_IS_FILE);
   hshm::charbuf url =
-      BinaryFileStager::BuildFileUrl("/tmp/test.txt", page_size);
+      BinaryFileStager::BuildFileUrl(path, page_size);
   hermes::Bucket bkt(url.str(), file_size, HERMES_IS_FILE);
 
   // Put a few blobs in the bucket
@@ -544,7 +546,16 @@ TEST_CASE("TestHermesDataOp") {
   // HRUN_ADMIN->FlushRoot(DomainId::GetGlobal());
   // Verify derived operator happens
   hermes::Bucket bkt_min("data_bkt_min", 0, 0);
-  size_t size = bkt_min.GetSize();
+  size_t size;
+  do {
+    size = bkt_min.GetSize();
+    if (size != sizeof(float) * count_per_proc * nprocs) {
+      HILOG(kInfo, "Waiting for derived data");
+      sleep(1);
+    } else {
+      break;
+    }
+  } while (true);
 
   hermes::Blob blob2;
   bkt_min.Get(std::to_string(0), blob2, ctx);

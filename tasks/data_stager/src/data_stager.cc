@@ -21,8 +21,10 @@ class Server : public TaskLib {
   Server() = default;
 
   void Construct(ConstructTask *task, RunContext &rctx) {
+    task->Deserialize();
     url_map_.resize(HRUN_QM_RUNTIME->max_lanes_);
     blob_mdm_.Init(task->blob_mdm_);
+    HILOG(kInfo, "(node {}) BLOB MDM: {}", HRUN_CLIENT->node_id_, blob_mdm_.id_);
     task->SetModuleComplete();
   }
 
@@ -47,14 +49,29 @@ class Server : public TaskLib {
   }
 
   void StageIn(StageInTask *task, RunContext &rctx) {
-    AbstractStager &stager = *url_map_[rctx.lane_id_][task->bkt_id_];
-    stager.StageIn(blob_mdm_, task, rctx);
+    std::unordered_map<hermes::BucketId, std::unique_ptr<AbstractStager>>::iterator it =
+        url_map_[rctx.lane_id_].find(task->bkt_id_);
+    if (it == url_map_[rctx.lane_id_].end()) {
+      HELOG(kError, "Could not find stager for bucket: {}", task->bkt_id_);
+      // TODO(llogan): Probably should add back...
+      // task->SetModuleComplete();
+      return;
+    }
+    std::unique_ptr<AbstractStager> &stager = it->second;
+    stager->StageIn(blob_mdm_, task, rctx);
     task->SetModuleComplete();
   }
 
   void StageOut(StageOutTask *task, RunContext &rctx) {
-    AbstractStager &stager = *url_map_[rctx.lane_id_][task->bkt_id_];
-    stager.StageOut(blob_mdm_, task, rctx);
+    std::unordered_map<hermes::BucketId, std::unique_ptr<AbstractStager>>::iterator it =
+        url_map_[rctx.lane_id_].find(task->bkt_id_);
+    if (it == url_map_[rctx.lane_id_].end()) {
+      HELOG(kError, "Could not find stager for bucket: {}", task->bkt_id_);
+      task->SetModuleComplete();
+      return;
+    }
+    std::unique_ptr<AbstractStager> &stager = it->second;
+    stager->StageOut(blob_mdm_, task, rctx);
     task->SetModuleComplete();
   }
  public:

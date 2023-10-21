@@ -98,26 +98,35 @@ class TaskLibClient {
 };
 
 extern "C" {
-/** The two methods provided by all tasks */
+/** Allocate a state (no construction) */
+typedef TaskState* (*alloc_state_t)(Task *task, const char *state_name);
+/** Allocate + construct a state */
 typedef TaskState* (*create_state_t)(Task *task, const char *state_name);
 /** Get the name of a task */
 typedef const char* (*get_task_lib_name_t)(void);
 }  // extern c
 
 /** Used internally by task source file */
-#define HRUN_TASK_CC(TRAIT_CLASS, TASK_NAME) \
-    extern "C" {                              \
-        void* create_state(hrun::Admin::CreateTaskStateTask *task, const char *state_name) { \
-          hrun::TaskState *exec = reinterpret_cast<hrun::TaskState*>( \
-            new TYPE_UNWRAP(TRAIT_CLASS)()); \
-          exec->Init(task->id_, state_name); \
-          RunContext rctx(0); \
-          exec->Run(hrun::TaskMethod::kConstruct, task, rctx); \
-          return exec; \
-        } \
-        const char* get_task_lib_name(void) { return TASK_NAME; } \
-        bool is_hrun_task_ = true; \
-    }
+#define HRUN_TASK_CC(TRAIT_CLASS, TASK_NAME)\
+  extern "C" {\
+  void* alloc_state(hrun::Admin::CreateTaskStateTask *task, const char *state_name) {\
+    hrun::TaskState *exec = reinterpret_cast<hrun::TaskState*>(\
+        new TYPE_UNWRAP(TRAIT_CLASS)());\
+    exec->Init(task->id_, state_name);\
+    return exec;\
+  }\
+  void* create_state(hrun::Admin::CreateTaskStateTask *task, const char *state_name) {\
+    hrun::TaskState *exec = reinterpret_cast<hrun::TaskState*>(\
+        new TYPE_UNWRAP(TRAIT_CLASS)());\
+    exec->Init(task->id_, state_name);\
+    RunContext rctx(0);\
+    exec->Run(hrun::TaskMethod::kConstruct, task, rctx);\
+    return exec;\
+  }\
+  const char* get_task_lib_name(void) { return TASK_NAME; }\
+  bool is_hrun_task_ = true;\
+  }
+
 }   // namespace hrun
 
 #endif  // HRUN_INCLUDE_HRUN_TASK_TASK_H_

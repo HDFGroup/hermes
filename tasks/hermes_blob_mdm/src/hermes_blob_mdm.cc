@@ -119,7 +119,7 @@ class Server : public TaskLib {
       stager_mdm_.Init(task->stager_mdm_);
       op_mdm_.Init(task->op_mdm_);
       // TODO(llogan): Add back
-      // flush_task_ = blob_mdm_.AsyncFlushData(task->task_node_ + 1);
+      flush_task_ = blob_mdm_.AsyncFlushData(task->task_node_ + 1);
     }
     task->SetModuleComplete();
   }
@@ -178,15 +178,16 @@ class Server : public TaskLib {
     for (auto &it : blob_map) {
       BlobInfo &blob_info = it.second;
       // Update blob scores
-      float new_score = MakeScore(blob_info, now);
-      if (ShouldReorganize<true>(blob_info, new_score, task->task_node_)) {
-        blob_mdm_.AsyncReorganizeBlob(task->task_node_ + 1,
-                                      blob_info.tag_id_,
-                                      blob_info.blob_id_,
-                                      new_score, 0, false);
-      }
-      blob_info.access_freq_ = 0;
-      blob_info.score_ = new_score;
+      // TODO(llogan): Add back
+//      float new_score = MakeScore(blob_info, now);
+//      if (ShouldReorganize<true>(blob_info, new_score, task->task_node_)) {
+//        blob_mdm_.AsyncReorganizeBlob(task->task_node_ + 1,
+//                                      blob_info.tag_id_,
+//                                      blob_info.blob_id_,
+//                                      new_score, 0, false);
+//      }
+//      blob_info.access_freq_ = 0;
+//      blob_info.score_ = new_score;
 
       // Flush data
       if (blob_info.last_flush_ > 0 &&
@@ -224,6 +225,7 @@ class Server : public TaskLib {
       task->blob_id_ = GetOrCreateBlobId(task->tag_id_, task->lane_hash_,
                                          blob_name, rctx, task->flags_);
     }
+    HILOG(kDebug, "Beginning PUT for {}", blob_name.str());
     BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     BlobInfo &blob_info = blob_map[task->blob_id_];
 
@@ -240,6 +242,8 @@ class Server : public TaskLib {
       blob_info.last_flush_ = 0;
       blob_info.UpdateWriteStats();
       if (task->flags_.Any(HERMES_IS_FILE)) {
+        HILOG(kInfo, "Staging in using stager mdm {} on bucket {}",
+              stager_mdm_.id_, task->tag_id_);
         blob_info.mod_count_ = 1;
         blob_info.last_flush_ = 1;
         LPointer<data_stager::StageInTask> stage_task =
@@ -251,6 +255,8 @@ class Server : public TaskLib {
         HRUN_CLIENT->DelTask(stage_task);
       }
     } else {
+      HILOG(kInfo, "Reaccessing a blob using stager mdm {} on bucket {}",
+            stager_mdm_.id_, task->tag_id_);
       // Modify existing blob
       blob_info.UpdateWriteStats();
     }
@@ -355,6 +361,7 @@ class Server : public TaskLib {
     }
 
     // Free data
+    HILOG(kDebug, "Completing PUT for {}", blob_name.str());
     task->SetModuleComplete();
   }
 
@@ -363,9 +370,9 @@ class Server : public TaskLib {
     for (BufferInfo &buf : blob_info.buffers_) {
       TargetInfo &target = *target_map_[buf.tid_];
       std::vector<BufferInfo> buf_vec = {buf};
-      target.AsyncFree(task->task_node_ + 1,
-                       blob_info.score_,
-                       std::move(buf_vec), true);
+//      target.AsyncFree(task->task_node_ + 1,
+//                       blob_info.score_,
+//                       std::move(buf_vec), true);
     }
     blob_info.buffers_.clear();
     blob_info.max_blob_size_ = 0;

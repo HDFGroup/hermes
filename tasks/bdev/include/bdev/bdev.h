@@ -54,10 +54,10 @@ class Client : public TaskLibClient {
         queue_info, dev_info);
   }
   void AsyncCreateComplete(ConstructTask *task) {
-    if (task->IsComplete()) {
+    if (task->IsModuleComplete()) {
       id_ = task->id_;
       queue_id_ = QueueId(id_);
-      monitor_task_ = AsyncMonitor(task->task_node_, 100).ptr_;
+      monitor_task_ = AsyncMonitor(task->task_node_ + 1, 100).ptr_;
       HRUN_CLIENT->DelTask(task);
     }
   }

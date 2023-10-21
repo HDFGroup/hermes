@@ -32,6 +32,7 @@ class Server : public TaskLib {
   Server() = default;
 
   void Construct(ConstructTask *task, RunContext &rctx) {
+    task->Deserialize();
     bkt_mdm_.Init(task->bkt_mdm_);
     blob_mdm_.Init(task->blob_mdm_);
     client_.Init(id_);
