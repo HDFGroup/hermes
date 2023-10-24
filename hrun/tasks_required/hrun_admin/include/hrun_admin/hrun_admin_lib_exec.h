@@ -46,6 +46,51 @@ void Run(u32 method, Task *task, RunContext &rctx) override {
     }
   }
 }
+/** Execute a task */
+void Monitor(u32 mode, Task *task, RunContext &rctx) override {
+  switch (task->method_) {
+    case Method::kCreateTaskState: {
+      MonitorCreateTaskState(mode, reinterpret_cast<CreateTaskStateTask *>(task), rctx);
+      break;
+    }
+    case Method::kDestroyTaskState: {
+      MonitorDestroyTaskState(mode, reinterpret_cast<DestroyTaskStateTask *>(task), rctx);
+      break;
+    }
+    case Method::kRegisterTaskLib: {
+      MonitorRegisterTaskLib(mode, reinterpret_cast<RegisterTaskLibTask *>(task), rctx);
+      break;
+    }
+    case Method::kDestroyTaskLib: {
+      MonitorDestroyTaskLib(mode, reinterpret_cast<DestroyTaskLibTask *>(task), rctx);
+      break;
+    }
+    case Method::kGetOrCreateTaskStateId: {
+      MonitorGetOrCreateTaskStateId(mode, reinterpret_cast<GetOrCreateTaskStateIdTask *>(task), rctx);
+      break;
+    }
+    case Method::kGetTaskStateId: {
+      MonitorGetTaskStateId(mode, reinterpret_cast<GetTaskStateIdTask *>(task), rctx);
+      break;
+    }
+    case Method::kStopRuntime: {
+      MonitorStopRuntime(mode, reinterpret_cast<StopRuntimeTask *>(task), rctx);
+      break;
+    }
+    case Method::kSetWorkOrchQueuePolicy: {
+      MonitorSetWorkOrchQueuePolicy(mode, reinterpret_cast<SetWorkOrchQueuePolicyTask *>(task), rctx);
+      break;
+    }
+    case Method::kSetWorkOrchProcPolicy: {
+      MonitorSetWorkOrchProcPolicy(mode, reinterpret_cast<SetWorkOrchProcPolicyTask *>(task), rctx);
+      break;
+    }
+    case Method::kFlush: {
+      MonitorFlush(mode, reinterpret_cast<FlushTask *>(task), rctx);
+      break;
+    }
+  }
+}
 /** Delete a task */
 void Del(u32 method, Task *task) override {
   switch (method) {

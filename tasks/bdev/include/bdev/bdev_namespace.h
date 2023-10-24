@@ -17,7 +17,7 @@ using ::hermes::bdev::AllocateTask;
 using ::hermes::bdev::FreeTask;
 using ::hermes::bdev::ReadTask;
 using ::hermes::bdev::WriteTask;
-using ::hermes::bdev::MonitorTask;
+using ::hermes::bdev::StatBdevTask;
 using ::hermes::bdev::UpdateScoreTask;
 
 /** Create admin requests */

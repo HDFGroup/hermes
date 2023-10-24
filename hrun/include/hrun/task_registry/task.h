@@ -189,9 +189,10 @@ static inline std::ostream &operator<<(std::ostream &os, const TaskNode &obj) {
 #define TF_SRL_ASYM (TF_SRL_ASYM_START | TF_SRL_ASYM_END)
 /** This task uses replication */
 #define TF_REPLICA BIT_OPT(u32, 31)
-/** This task uses duplication */
 /** This task is intended to be used only locally */
 #define TF_LOCAL BIT_OPT(u32, 5)
+/** This task supports monitoring of all sub-methods */
+#define TF_MONITOR BIT_OPT(u32, 6)
 
 /** All tasks inherit this to easily check if a class is a task using SFINAE */
 class IsTask {};
@@ -219,6 +220,7 @@ struct TaskFlags : public IsTask {
   TASK_FLAG_T SRL_SYM_START = FLAGS & TF_SRL_SYM_START;
   TASK_FLAG_T SRL_SYM_END = FLAGS & TF_SRL_SYM_END;
   TASK_FLAG_T REPLICA = FLAGS & TF_REPLICA;
+  TASK_FLAG_T MONITOR = FLAGS & TF_MONITOR;
 };
 
 /** The type of a compile-time task flag */

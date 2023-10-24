@@ -30,6 +30,35 @@ void Run(u32 method, Task *task, RunContext &rctx) override {
     }
   }
 }
+/** Execute a task */
+void Monitor(u32 mode, Task *task, RunContext &rctx) override {
+  switch (task->method_) {
+    case Method::kConstruct: {
+      MonitorConstruct(mode, reinterpret_cast<ConstructTask *>(task), rctx);
+      break;
+    }
+    case Method::kDestruct: {
+      MonitorDestruct(mode, reinterpret_cast<DestructTask *>(task), rctx);
+      break;
+    }
+    case Method::kRegisterStager: {
+      MonitorRegisterStager(mode, reinterpret_cast<RegisterStagerTask *>(task), rctx);
+      break;
+    }
+    case Method::kUnregisterStager: {
+      MonitorUnregisterStager(mode, reinterpret_cast<UnregisterStagerTask *>(task), rctx);
+      break;
+    }
+    case Method::kStageIn: {
+      MonitorStageIn(mode, reinterpret_cast<StageInTask *>(task), rctx);
+      break;
+    }
+    case Method::kStageOut: {
+      MonitorStageOut(mode, reinterpret_cast<StageOutTask *>(task), rctx);
+      break;
+    }
+  }
+}
 /** Delete a task */
 void Del(u32 method, Task *task) override {
   switch (method) {

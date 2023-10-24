@@ -21,15 +21,22 @@ class Server : public TaskLib {
   u32 count_;
 
  public:
+  /** Construct work orchestrator queue scheduler */
   void Construct(ConstructTask *task, RunContext &rctx) {
     count_ = 0;
     task->SetModuleComplete();
   }
+  void MonitorConstruct(u32 mode, ConstructTask *task, RunContext &rctx) {
+  }
 
+  /** Destroy work orchestrator queue scheduler */
   void Destruct(DestructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
+  void MonitorDestruct(u32 mode, DestructTask *task, RunContext &rctx) {
+  }
 
+  /** Schedule work orchestrator queues */
   void Schedule(ScheduleTask *task, RunContext &rctx) {
     // Check if any new queues need to be scheduled
     for (MultiQueue &queue : *HRUN_QM_RUNTIME->queue_map_) {
@@ -57,6 +64,8 @@ class Server : public TaskLib {
         }
       }
     }
+  }
+  void MonitorSchedule(u32 mode, ScheduleTask *task, RunContext &rctx) {
   }
 
 #include "worch_queue_round_robin/worch_queue_round_robin_lib_exec.h"

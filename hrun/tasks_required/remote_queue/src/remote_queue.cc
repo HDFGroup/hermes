@@ -51,12 +51,53 @@ class Server : public TaskLib {
     });
     task->SetModuleComplete();
   }
+  void MonitorConstruct(u32 mode, ConstructTask *task, RunContext &rctx) {
+  }
 
   /** Destroy remote queue */
   void Destruct(DestructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
+  void MonitorDestruct(u32 mode, DestructTask *task, RunContext &rctx) {
+  }
 
+  /** Push operation called on client */
+  void Push(PushTask *task, RunContext &rctx) {
+    std::vector<DataTransfer> &xfer = task->xfer_;
+    switch (xfer.size()) {
+      case 1: {
+        ClientSmallPush(xfer, task);
+        break;
+      }
+      case 2: {
+        ClientIoPush(xfer, task);
+        break;
+      }
+      default: {
+        HELOG(kFatal, "The task {}/{} does not support remote calls", task->task_state_, task->method_);
+      }
+    }
+    ClientHandlePushReplicaEnd(task);
+  }
+  void MonitorPush(u32 mode, PushTask *task, RunContext &rctx) {
+  }
+
+  /** Duplicate operations */
+  void Dup(DupTask *task, RunContext &ctx) {
+    for (size_t i = 0; i < task->dups_.size(); ++i) {
+      LPointer<Task> &dup = task->dups_[i];
+      dup->Wait<TASK_YIELD_CO>(task);
+      task->exec_->DupEnd(dup->method_, i, task->orig_task_, dup.ptr_);
+      HRUN_CLIENT->DelTask(dup);
+    }
+    task->exec_->ReplicateEnd(task->exec_method_, task->orig_task_);
+    task->orig_task_->SetModuleComplete();
+    task->SetModuleComplete();
+  }
+  void MonitorDup(u32 mode, DupTask *task, RunContext &rctx) {
+  }
+
+ private:
   /** Handle output from replica PUSH */
   static void ClientHandlePushReplicaOutput(int replica, std::string &ret, PushTask *task) {
     std::vector<DataTransfer> xfer(1);
@@ -100,10 +141,10 @@ class Server : public TaskLib {
             HRUN_CLIENT->node_id_,
             domain_id.id_);
       std::string ret = HRUN_THALLIUM->SyncCall<std::string>(domain_id.id_,
-                                                                "RpcPushSmall",
-                                                                task->exec_->id_,
-                                                                task->exec_method_,
-                                                                task->params_);
+                                                             "RpcPushSmall",
+                                                             task->exec_->id_,
+                                                             task->exec_method_,
+                                                             task->params_);
       HILOG(kDebug, "(SM) Finished {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={})",
             task->params_.size(),
             task->orig_task_->task_node_,
@@ -135,15 +176,15 @@ class Server : public TaskLib {
             domain_id.id_,
             static_cast<int>(io_type));
       std::string ret = HRUN_THALLIUM->SyncIoCall<std::string>(domain_id.id_,
-                                                                  "RpcPushBulk",
-                                                                  io_type,
-                                                                  data,
-                                                                  data_size,
-                                                                  task->exec_->id_,
-                                                                  task->exec_method_,
-                                                                  task->params_,
-                                                                  data_size,
-                                                                  io_type);
+                                                               "RpcPushBulk",
+                                                               io_type,
+                                                               data,
+                                                               data_size,
+                                                               task->exec_->id_,
+                                                               task->exec_method_,
+                                                               task->params_,
+                                                               data_size,
+                                                               io_type);
       HILOG(kDebug, "(IO) Finished transferring {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={}, type={})",
             data_size,
             task->orig_task_->task_node_,
@@ -156,39 +197,6 @@ class Server : public TaskLib {
     }
   }
 
-  /** Push operation called on client */
-  void Push(PushTask *task, RunContext &rctx) {
-    std::vector<DataTransfer> &xfer = task->xfer_;
-    switch (xfer.size()) {
-      case 1: {
-        ClientSmallPush(xfer, task);
-        break;
-      }
-      case 2: {
-        ClientIoPush(xfer, task);
-        break;
-      }
-      default: {
-        HELOG(kFatal, "The task {}/{} does not support remote calls", task->task_state_, task->method_);
-      }
-    }
-    ClientHandlePushReplicaEnd(task);
-  }
-
-  /** Duplicate operations */
-  void Dup(DupTask *task, RunContext &ctx) {
-    for (size_t i = 0; i < task->dups_.size(); ++i) {
-      LPointer<Task> &dup = task->dups_[i];
-      dup->Wait<TASK_YIELD_CO>(task);
-      task->exec_->DupEnd(dup->method_, i, task->orig_task_, dup.ptr_);
-      HRUN_CLIENT->DelTask(dup);
-    }
-    task->exec_->ReplicateEnd(task->exec_method_, task->orig_task_);
-    task->orig_task_->SetModuleComplete();
-    task->SetModuleComplete();
-  }
-
- private:
   /** The RPC for processing a small message */
   void RpcPushSmall(const tl::request &req,
                     TaskStateId state_id,
