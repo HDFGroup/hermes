@@ -41,7 +41,7 @@ class QueueManagerRuntime : public QueueManager {
   void ServerInit(hipc::Allocator *alloc, u32 node_id, ServerConfig *config, QueueManagerShm &shm) {
     config_ = config;
     Init(node_id);
-    QueueManagerInfo &qm = config_->queue_manager_;
+    config::QueueManagerInfo &qm = config_->queue_manager_;
     // Initialize ticket queue (ticket 0 is for admin queue)
     max_queues_ = qm.max_queues_;
     max_lanes_ = qm.max_lanes_;

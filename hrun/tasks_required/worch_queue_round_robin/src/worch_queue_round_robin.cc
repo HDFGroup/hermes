@@ -48,7 +48,7 @@ class Server : public TaskLib {
         if (lane_group.IsLowPriority()) {
           for (u32 lane_id = lane_group.num_scheduled_; lane_id < lane_group.num_lanes_; ++lane_id) {
             // HILOG(kDebug, "Scheduling the queue {} (lane {})", queue.id_, lane_id);
-            Worker &worker = HRUN_WORK_ORCHESTRATOR->workers_[0];
+            Worker &worker = *HRUN_WORK_ORCHESTRATOR->workers_[0];
             worker.PollQueues({WorkEntry(lane_group.prio_, lane_id, &queue)});
           }
           lane_group.num_scheduled_ = lane_group.num_lanes_;
@@ -56,7 +56,7 @@ class Server : public TaskLib {
           for (u32 lane_id = lane_group.num_scheduled_; lane_id < lane_group.num_lanes_; ++lane_id) {
             // HILOG(kDebug, "Scheduling the queue {} (lane {})", queue.id_, lane_id);
             u32 worker_id = (count_ % (HRUN_WORK_ORCHESTRATOR->workers_.size() - 1)) + 1;
-            Worker &worker = HRUN_WORK_ORCHESTRATOR->workers_[worker_id];
+            Worker &worker = *HRUN_WORK_ORCHESTRATOR->workers_[worker_id];
             worker.PollQueues({WorkEntry(lane_group.prio_, lane_id, &queue)});
             count_ += 1;
           }

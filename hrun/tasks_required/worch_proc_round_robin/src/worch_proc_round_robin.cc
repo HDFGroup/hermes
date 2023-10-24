@@ -35,8 +35,8 @@ class Server : public TaskLib {
   /** Schedule running processes */
   void Schedule(ScheduleTask *task, RunContext &rctx) {
     int rr = 0;
-    for (Worker &worker : HRUN_WORK_ORCHESTRATOR->workers_) {
-      worker.SetCpuAffinity(rr % HERMES_SYSTEM_INFO->ncpu_);
+    for (std::unique_ptr<Worker> &worker : HRUN_WORK_ORCHESTRATOR->workers_) {
+      worker->SetCpuAffinity(rr % HERMES_SYSTEM_INFO->ncpu_);
       ++rr;
     }
   }

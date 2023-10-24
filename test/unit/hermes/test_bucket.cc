@@ -495,6 +495,8 @@ TEST_CASE("TestHermesDataStager") {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Verify staging happened
+  HRUN_ADMIN->FlushRoot(DomainId::GetGlobal());
+  HILOG(kInfo, "Flushing finished")
 }
 
 TEST_CASE("TestHermesDataOp") {
