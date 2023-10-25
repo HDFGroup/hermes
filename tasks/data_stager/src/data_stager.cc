@@ -65,7 +65,7 @@ class Server : public TaskLib {
     std::unordered_map<hermes::BucketId, std::unique_ptr<AbstractStager>>::iterator it =
         url_map_[rctx.lane_id_].find(task->bkt_id_);
     if (it == url_map_[rctx.lane_id_].end()) {
-      HELOG(kError, "Could not find stager for bucket: {}", task->bkt_id_);
+      // HELOG(kError, "Could not find stager for bucket: {}", task->bkt_id_);
       // TODO(llogan): Probably should add back...
       // task->SetModuleComplete();
       return;
