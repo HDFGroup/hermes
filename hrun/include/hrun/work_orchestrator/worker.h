@@ -27,6 +27,8 @@ static inline pid_t GetLinuxTid() {
   return syscall(SYS_gettid);
 }
 
+#define DEBUG
+
 namespace hrun {
 
 #define WORKER_CONTINUOUS_POLLING BIT_OPT(u32, 0)
@@ -422,8 +424,8 @@ class Worker {
       }
       // Cleanup on task completion
       if (task->IsModuleComplete()) {
-//      HILOG(kDebug, "(node {}) Ending task: task_node={} task_state={} lane={} queue={} worker={}",
-//            HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, lane_id, queue->id_, id_);
+//      HILOG(kDebug, "(node {}) Ending task: task_node={} task_state={} worker={}",
+//            HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, id_);
         entry->complete_ = true;
         if (task->IsCoroutine()) {
           free(rctx.stack_ptr_);
@@ -501,15 +503,17 @@ class Worker {
     if (it == group_map_.end()) {
       node.node_depth_ = 1;
       group_map_.emplace(group_, node);
-//      HILOG(kDebug, "(node {}) Increasing depth of group to {} worker={}",
-//            HRUN_CLIENT->node_id_, node.node_depth_, id_);
+//      HILOG(kDebug, "(node {}) Increasing depth of (task_state={} method={} name={}) group to {} worker={}",
+//            HRUN_CLIENT->node_id_, task->task_state_, task->method_, exec->name_,
+//            node.node_depth_, id_);
       return true;
     }
     TaskNode &node_cmp = it->second;
     if (node_cmp.root_ == node.root_) {
       node_cmp.node_depth_ += 1;
-//      HILOG(kDebug, "(node {}) Increasing depth of group to {} worker={}",
-//            HRUN_CLIENT->node_id_, node_cmp.node_depth_, id_);
+//      HILOG(kDebug, "(node {}) Increasing depth of (task_state={} method={} name={}) group to {} worker={}",
+//            HRUN_CLIENT->node_id_, task->task_state_, task->method_, exec->name_,
+//            node.node_depth_, id_);
       return true;
     }
     return false;

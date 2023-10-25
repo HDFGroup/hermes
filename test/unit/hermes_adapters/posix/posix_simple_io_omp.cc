@@ -77,9 +77,13 @@ void TestThread(char *path,
 
 #pragma omp barrier
   for (int i = 0; i < count; ++i) {
+    HILOG(kInfo, "ITERATION: {} / {}", i, count);
     char nonce = i + 1;
     if (!do_read) {
       memset(buf.data(), nonce, block_size);
+      if (i == 252) {
+        std::cout << "Writing 253th block" << std::endl;
+      }
       int ret = write(fd, buf.data(), block_size);
       if (ret != block_size) {
         std::cout << "Write failed!" << std::endl;
