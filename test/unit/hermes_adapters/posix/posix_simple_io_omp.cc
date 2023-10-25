@@ -24,7 +24,7 @@
 #include <cstring>
 #include "basic_test.h"
 
-static const int kNumProcs = 1;
+static const int kNumProcs = 8;
 
 void TestThread(char *path,
                 int do_read,
