@@ -40,7 +40,7 @@
 #include "H5FDhermes.h"     /* Hermes file driver     */
 
 #include "hermes_adapters/posix/posix_io_client.h"
-#include "posix/posix_fs_api.h"
+#include "hermes_adapters/posix/posix_fs_api.h"
 
 /**
  * Make this adapter use Hermes.
@@ -211,7 +211,8 @@ H5FD__hermes_term(void) {
   /* Reset VFL ID */
   H5FD_HERMES_g = H5I_INVALID_HID;
 
-  HERMES->Finalize();
+  // TODO(llogan): Probably should add back at some point.
+  // HERMES->Finalize();
   return ret_value;
 } /* end H5FD__hermes_term() */
 
@@ -515,13 +516,13 @@ static herr_t H5FD__hermes_write(H5FD_t *_file, H5FD_mem_t type,
  */
 H5PL_type_t
 H5PLget_plugin_type(void) {
-  TRANSPARENT_HERMES
+  TRANSPARENT_HERMES();
   return H5PL_TYPE_VFD;
 }
 
 const void*
 H5PLget_plugin_info(void) {
-  TRANSPARENT_HERMES
+  TRANSPARENT_HERMES();
   return &H5FD_hermes_g;
 }
 
