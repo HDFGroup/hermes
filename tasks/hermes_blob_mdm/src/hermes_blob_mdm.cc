@@ -125,7 +125,7 @@ class Server : public TaskLib {
       stager_mdm_.Init(task->stager_mdm_);
       op_mdm_.Init(task->op_mdm_);
       // TODO(llogan): Add back
-      flush_task_ = blob_mdm_.AsyncFlushData(task->task_node_ + 1);
+      // flush_task_ = blob_mdm_.AsyncFlushData(task->task_node_ + 1);
     }
     task->SetModuleComplete();
   }
@@ -314,7 +314,7 @@ class Server : public TaskLib {
     // Place blob in buffers
     std::vector<LPointer<bdev::WriteTask>> write_tasks;
     write_tasks.reserve(blob_info.buffers_.size());
-    size_t blob_off = 0, buf_off = 0;
+    size_t blob_off = task->blob_off_, buf_off = 0;
     char *blob_buf = HRUN_CLIENT->GetPrivatePointer(task->data_);
     HILOG(kDebug, "Number of buffers {}", blob_info.buffers_.size());
     for (BufferInfo &buf : blob_info.buffers_) {
@@ -349,10 +349,12 @@ class Server : public TaskLib {
     // Update information
     if (task->flags_.Any(HERMES_IS_FILE)) {
       // TODO(llogan): Convert blob name to file offset and use kCap
+      adapter::BlobPlacement p;
+      p.DecodeBlobName(task->blob_name_->str(), 1 << 20);
       bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
                                task->tag_id_,
-                               bkt_size_diff,
-                               bucket_mdm::UpdateSizeMode::kAdd);
+                               p.bucket_off_ + task->blob_off_ + task->data_size_,
+                               bucket_mdm::UpdateSizeMode::kCap);
     } else {
       bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
                                task->tag_id_,
@@ -421,7 +423,7 @@ class Server : public TaskLib {
     read_tasks.reserve(blob_info.buffers_.size());
     HILOG(kDebug, "Getting blob {} of size {} starting at offset {} (total_blob_size={}, buffers={})",
           task->blob_id_, task->data_size_, task->blob_off_, blob_info.blob_size_, blob_info.buffers_.size());
-    size_t blob_off = 0, buf_off = 0;
+    size_t blob_off = task->blob_off_, buf_off = 0;
     hipc::mptr<char> blob_data_mptr(task->data_);
     char *blob_buf = blob_data_mptr.get();
     for (BufferInfo &buf : blob_info.buffers_) {
