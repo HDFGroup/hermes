@@ -279,8 +279,8 @@ class Server : public TaskLib {
       size_diff = needed_space - blob_info.max_blob_size_;
     }
     blob_info.blob_size_ += size_diff;
-    bkt_size_diff += size_diff;
-    HILOG(kDebug, "The size diff is {} bytes", size_diff)
+    bkt_size_diff += (ssize_t)size_diff;
+    HILOG(kDebug, "The size diff is {} bytes (bkt diff {})", size_diff, bkt_size_diff)
 
     // Use DPE
     std::vector<PlacementSchema> schema_vec;
@@ -347,10 +347,18 @@ class Server : public TaskLib {
     }
 
     // Update information
-    bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
-                             task->tag_id_,
-                             bkt_size_diff,
-                             bucket_mdm::UpdateSizeMode::kAdd);
+    if (task->flags_.Any(HERMES_IS_FILE)) {
+      // TODO(llogan): Convert blob name to file offset and use kCap
+      bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
+                               task->tag_id_,
+                               bkt_size_diff,
+                               bucket_mdm::UpdateSizeMode::kAdd);
+    } else {
+      bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
+                               task->tag_id_,
+                               bkt_size_diff,
+                               bucket_mdm::UpdateSizeMode::kAdd);
+    }
     if (task->flags_.Any(HERMES_BLOB_DID_CREATE)) {
       bkt_mdm_.AsyncTagAddBlob(task->task_node_ + 1,
                                task->tag_id_,
