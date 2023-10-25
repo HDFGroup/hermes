@@ -20,14 +20,21 @@ class Server : public TaskLib {
  public:
   Server() = default;
 
+  /** Construct proc queue */
   void Construct(ConstructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
+  void MonitorConstruct(u32 mode, ConstructTask *task, RunContext &rctx) {
+  }
 
+  /** Destroy proc queue */
   void Destruct(DestructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
+  void MonitorDestruct(u32 mode, DestructTask *task, RunContext &rctx) {
+  }
 
+  /** Push a task onto the process queue */
   void Push(PushTask *task, RunContext &rctx) {
     switch (task->phase_) {
       case PushTaskPhase::kSchedule: {
@@ -52,6 +59,8 @@ class Server : public TaskLib {
         task->SetModuleComplete();
       }
     }
+  }
+  void MonitorPush(u32 mode, PushTask *task, RunContext &rctx) {
   }
 
  public:

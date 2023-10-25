@@ -29,6 +29,7 @@ class Server : public TaskLib {
  public:
   Server() = default;
 
+  /** Construct bucket mdm */
   void Construct(ConstructTask *task, RunContext &rctx) {
     id_alloc_ = 0;
     node_id_ = HRUN_CLIENT->node_id_;
@@ -37,9 +38,14 @@ class Server : public TaskLib {
     tag_map_.resize(HRUN_QM_RUNTIME->max_lanes_);
     task->SetModuleComplete();
   }
+  void MonitorConstruct(u32 mode, ConstructTask *task, RunContext &rctx) {
+  }
 
+  /** Destroy bucket mdm */
   void Destruct(DestructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
+  }
+  void MonitorDestruct(u32 mode, DestructTask *task, RunContext &rctx) {
   }
 
   /**
@@ -49,6 +55,8 @@ class Server : public TaskLib {
     blob_mdm_.Init(task->blob_mdm_);
     stager_mdm_.Init(task->stager_mdm_);
     task->SetModuleComplete();
+  }
+  void MonitorSetBlobMdm(u32 mode, SetBlobMdmTask *task, RunContext &rctx) {
   }
 
   /** Update the size of the bucket */
@@ -65,6 +73,8 @@ class Server : public TaskLib {
           task->tag_id_, tag_info.internal_size_, internal_size, task->update_, task->mode_)
     tag_info.internal_size_ = (size_t) internal_size;
     task->SetModuleComplete();
+  }
+  void MonitorUpdateSize(u32 mode, UpdateSizeTask *task, RunContext &rctx) {
   }
 
   /**
@@ -123,6 +133,8 @@ class Server : public TaskLib {
         task->SetModuleComplete();
       }
     }
+  }
+  void MonitorAppendBlobSchema(u32 mode, AppendBlobSchemaTask *task, RunContext &rctx) {
   }
 
   /**
@@ -187,6 +199,8 @@ class Server : public TaskLib {
       }
     }
   }
+  void MonitorAppendBlob(u32 mode, AppendBlobTask *task, RunContext &rctx) {
+  }
 
   /** Get or create a tag */
   void GetOrCreateTag(GetOrCreateTagTask *task, RunContext &rctx) {
@@ -235,6 +249,8 @@ class Server : public TaskLib {
     // task->did_create_ = did_create;
     task->SetModuleComplete();
   }
+  void MonitorGetOrCreateTag(u32 mode, GetOrCreateTagTask *task, RunContext &rctx) {
+  }
 
   /** Get tag ID */
   void GetTagId(GetTagIdTask *task, RunContext &rctx) {
@@ -249,6 +265,8 @@ class Server : public TaskLib {
     task->tag_id_ = it->second;
     task->SetModuleComplete();
   }
+  void MonitorGetTagId(u32 mode, GetTagIdTask *task, RunContext &rctx) {
+  }
 
   /** Get tag name */
   void GetTagName(GetTagNameTask *task, RunContext &rctx) {
@@ -261,6 +279,8 @@ class Server : public TaskLib {
     (*task->tag_name_) = it->second.name_;
     task->SetModuleComplete();
   }
+  void MonitorGetTagName(u32 mode, GetTagNameTask *task, RunContext &rctx) {
+  }
 
   /** Rename tag */
   void RenameTag(RenameTagTask *task, RunContext &rctx) {
@@ -272,6 +292,8 @@ class Server : public TaskLib {
     }
     (*task->tag_name_) = (*task->tag_name_);
     task->SetModuleComplete();
+  }
+  void MonitorRenameTag(u32 mode, RenameTagTask *task, RunContext &rctx) {
   }
 
   /** Destroy tag */
@@ -312,6 +334,8 @@ class Server : public TaskLib {
       }
     }
   }
+  void MonitorDestroyTag(u32 mode, DestroyTagTask *task, RunContext &rctx) {
+  }
 
   /** Add a blob to a tag */
   void TagAddBlob(TagAddBlobTask *task, RunContext &rctx) {
@@ -324,6 +348,8 @@ class Server : public TaskLib {
     TagInfo &tag = it->second;
     tag.blobs_.emplace_back(task->blob_id_);
     task->SetModuleComplete();
+  }
+  void MonitorTagAddBlob(u32 mode, TagAddBlobTask *task, RunContext &rctx) {
   }
 
   /** Remove a blob from a tag */
@@ -339,6 +365,8 @@ class Server : public TaskLib {
     tag.blobs_.erase(blob_it);
     task->SetModuleComplete();
   }
+  void MonitorTagRemoveBlob(u32 mode, TagRemoveBlobTask *task, RunContext &rctx) {
+  }
 
   /** Clear blobs from a tag */
   void TagClearBlobs(TagClearBlobsTask *task, RunContext &rctx) {
@@ -353,6 +381,8 @@ class Server : public TaskLib {
     tag.internal_size_ = 0;
     task->SetModuleComplete();
   }
+  void MonitorTagClearBlobs(u32 mode, TagClearBlobsTask *task, RunContext &rctx) {
+  }
 
   /** Get size of the bucket */
   void GetSize(GetSizeTask *task, RunContext &rctx) {
@@ -366,6 +396,8 @@ class Server : public TaskLib {
     TagInfo &tag = it->second;
     task->size_ = tag.internal_size_;
     task->SetModuleComplete();
+  }
+  void MonitorGetSize(u32 mode, GetSizeTask *task, RunContext &rctx) {
   }
 
   /** Get contained blob IDs */
@@ -384,6 +416,8 @@ class Server : public TaskLib {
     }
     task->SetModuleComplete();
   }
+  void MonitorGetContainedBlobIds(u32 mode, GetContainedBlobIdsTask *task, RunContext &rctx) {
+  }
 
   /**
   * Get all metadata about a blob
@@ -399,6 +433,8 @@ class Server : public TaskLib {
     }
     task->SerializeTagMetadata(tag_mdms);
     task->SetModuleComplete();
+  }
+  void MonitorPollTagMetadata(u32 mode, PollTagMetadataTask *task, RunContext &rctx) {
   }
 
  public:

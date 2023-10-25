@@ -23,8 +23,6 @@ namespace hermes {
 using hermes::blob_mdm::PutBlobTask;
 using hermes::blob_mdm::GetBlobTask;
 
-#define HERMES_BUCKET_IS_FILE BIT_OPT(u32, 1)
-
 class Bucket {
  public:
   mdm::Client *mdm_;

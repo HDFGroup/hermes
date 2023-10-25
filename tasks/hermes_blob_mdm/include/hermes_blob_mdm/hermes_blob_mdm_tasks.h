@@ -1152,7 +1152,7 @@ struct FlushDataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = 0;
-    prio_ = TaskPrio::kLowLatency;
+    prio_ = TaskPrio::kLongRunning;
     task_state_ = state_id;
     method_ = Method::kFlushData;
     task_flags_.SetBits(

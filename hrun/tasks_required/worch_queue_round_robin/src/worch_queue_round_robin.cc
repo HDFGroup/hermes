@@ -21,15 +21,22 @@ class Server : public TaskLib {
   u32 count_;
 
  public:
+  /** Construct work orchestrator queue scheduler */
   void Construct(ConstructTask *task, RunContext &rctx) {
     count_ = 0;
     task->SetModuleComplete();
   }
+  void MonitorConstruct(u32 mode, ConstructTask *task, RunContext &rctx) {
+  }
 
+  /** Destroy work orchestrator queue scheduler */
   void Destruct(DestructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
+  void MonitorDestruct(u32 mode, DestructTask *task, RunContext &rctx) {
+  }
 
+  /** Schedule work orchestrator queues */
   void Schedule(ScheduleTask *task, RunContext &rctx) {
     // Check if any new queues need to be scheduled
     for (MultiQueue &queue : *HRUN_QM_RUNTIME->queue_map_) {
@@ -41,7 +48,7 @@ class Server : public TaskLib {
         if (lane_group.IsLowPriority()) {
           for (u32 lane_id = lane_group.num_scheduled_; lane_id < lane_group.num_lanes_; ++lane_id) {
             // HILOG(kDebug, "Scheduling the queue {} (lane {})", queue.id_, lane_id);
-            Worker &worker = HRUN_WORK_ORCHESTRATOR->workers_[0];
+            Worker &worker = *HRUN_WORK_ORCHESTRATOR->workers_[0];
             worker.PollQueues({WorkEntry(lane_group.prio_, lane_id, &queue)});
           }
           lane_group.num_scheduled_ = lane_group.num_lanes_;
@@ -49,7 +56,7 @@ class Server : public TaskLib {
           for (u32 lane_id = lane_group.num_scheduled_; lane_id < lane_group.num_lanes_; ++lane_id) {
             // HILOG(kDebug, "Scheduling the queue {} (lane {})", queue.id_, lane_id);
             u32 worker_id = (count_ % (HRUN_WORK_ORCHESTRATOR->workers_.size() - 1)) + 1;
-            Worker &worker = HRUN_WORK_ORCHESTRATOR->workers_[worker_id];
+            Worker &worker = *HRUN_WORK_ORCHESTRATOR->workers_[worker_id];
             worker.PollQueues({WorkEntry(lane_group.prio_, lane_id, &queue)});
             count_ += 1;
           }
@@ -57,6 +64,8 @@ class Server : public TaskLib {
         }
       }
     }
+  }
+  void MonitorSchedule(u32 mode, ScheduleTask *task, RunContext &rctx) {
   }
 
 #include "worch_queue_round_robin/worch_queue_round_robin_lib_exec.h"

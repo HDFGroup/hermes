@@ -20,18 +20,26 @@ class Server : public TaskLib {
  public:
   Server() = default;
 
+  /** Construct TASK_NAME */
   void Construct(ConstructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
+  void MonitorConstruct(u32 mode, ConstructTask *task, RunContext &rctx) {
+  }
 
+  /** Destroy TASK_NAME */
   void Destruct(DestructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
+  void MonitorDestruct(u32 mode, DestructTask *task, RunContext &rctx) {
+  }
 
+  /** A custom method */
   void Custom(CustomTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
-
+  void MonitorCustom(u32 mode, CustomTask *task, RunContext &rctx) {
+  }
  public:
 #include "TASK_NAME/TASK_NAME_lib_exec.h"
 };

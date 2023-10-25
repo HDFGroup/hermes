@@ -74,6 +74,79 @@ void Run(u32 method, Task *task, RunContext &rctx) override {
     }
   }
 }
+/** Execute a task */
+void Monitor(u32 mode, Task *task, RunContext &rctx) override {
+  switch (task->method_) {
+    case Method::kConstruct: {
+      MonitorConstruct(mode, reinterpret_cast<ConstructTask *>(task), rctx);
+      break;
+    }
+    case Method::kDestruct: {
+      MonitorDestruct(mode, reinterpret_cast<DestructTask *>(task), rctx);
+      break;
+    }
+    case Method::kGetOrCreateTag: {
+      MonitorGetOrCreateTag(mode, reinterpret_cast<GetOrCreateTagTask *>(task), rctx);
+      break;
+    }
+    case Method::kGetTagId: {
+      MonitorGetTagId(mode, reinterpret_cast<GetTagIdTask *>(task), rctx);
+      break;
+    }
+    case Method::kGetTagName: {
+      MonitorGetTagName(mode, reinterpret_cast<GetTagNameTask *>(task), rctx);
+      break;
+    }
+    case Method::kRenameTag: {
+      MonitorRenameTag(mode, reinterpret_cast<RenameTagTask *>(task), rctx);
+      break;
+    }
+    case Method::kDestroyTag: {
+      MonitorDestroyTag(mode, reinterpret_cast<DestroyTagTask *>(task), rctx);
+      break;
+    }
+    case Method::kTagAddBlob: {
+      MonitorTagAddBlob(mode, reinterpret_cast<TagAddBlobTask *>(task), rctx);
+      break;
+    }
+    case Method::kTagRemoveBlob: {
+      MonitorTagRemoveBlob(mode, reinterpret_cast<TagRemoveBlobTask *>(task), rctx);
+      break;
+    }
+    case Method::kTagClearBlobs: {
+      MonitorTagClearBlobs(mode, reinterpret_cast<TagClearBlobsTask *>(task), rctx);
+      break;
+    }
+    case Method::kUpdateSize: {
+      MonitorUpdateSize(mode, reinterpret_cast<UpdateSizeTask *>(task), rctx);
+      break;
+    }
+    case Method::kAppendBlobSchema: {
+      MonitorAppendBlobSchema(mode, reinterpret_cast<AppendBlobSchemaTask *>(task), rctx);
+      break;
+    }
+    case Method::kAppendBlob: {
+      MonitorAppendBlob(mode, reinterpret_cast<AppendBlobTask *>(task), rctx);
+      break;
+    }
+    case Method::kGetSize: {
+      MonitorGetSize(mode, reinterpret_cast<GetSizeTask *>(task), rctx);
+      break;
+    }
+    case Method::kSetBlobMdm: {
+      MonitorSetBlobMdm(mode, reinterpret_cast<SetBlobMdmTask *>(task), rctx);
+      break;
+    }
+    case Method::kGetContainedBlobIds: {
+      MonitorGetContainedBlobIds(mode, reinterpret_cast<GetContainedBlobIdsTask *>(task), rctx);
+      break;
+    }
+    case Method::kPollTagMetadata: {
+      MonitorPollTagMetadata(mode, reinterpret_cast<PollTagMetadataTask *>(task), rctx);
+      break;
+    }
+  }
+}
 /** Delete a task */
 void Del(u32 method, Task *task) override {
   switch (method) {

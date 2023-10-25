@@ -23,6 +23,14 @@ namespace hrun {
 
 typedef LPointer<Task> TaskPointer;
 
+/** Monitoring modes */
+class MonitorMode {
+ public:
+  TASK_METHOD_T kEstTime = 0;
+  TASK_METHOD_T kTrainTime = 1;
+  TASK_METHOD_T kFlushStat = 2;
+};
+
 /**
  * Represents a custom operation to perform.
  * Tasks are independent of Hermes.
@@ -48,6 +56,9 @@ class TaskLib {
 
   /** Run a method of the task */
   virtual void Run(u32 method, Task *task, RunContext &rctx) = 0;
+
+  /** Monitor a method of the task */
+  virtual void Monitor(u32 mode, Task *task, RunContext &rctx) = 0;
 
   /** Delete a task */
   virtual void Del(u32 method, Task *task) = 0;

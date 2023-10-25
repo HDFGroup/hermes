@@ -10,7 +10,6 @@
 #include "hermes_shm/util/timer.h"
 #include "hrun/work_orchestrator/affinity.h"
 #include "hermes/hermes.h"
-#include "hrun/work_orchestrator/worker.h"
 #include "hrun/api/hrun_runtime.h"
 
 /** The performance of getting a queue */

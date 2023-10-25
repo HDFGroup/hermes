@@ -86,6 +86,91 @@ void Run(u32 method, Task *task, RunContext &rctx) override {
     }
   }
 }
+/** Execute a task */
+void Monitor(u32 mode, Task *task, RunContext &rctx) override {
+  switch (task->method_) {
+    case Method::kConstruct: {
+      MonitorConstruct(mode, reinterpret_cast<ConstructTask *>(task), rctx);
+      break;
+    }
+    case Method::kDestruct: {
+      MonitorDestruct(mode, reinterpret_cast<DestructTask *>(task), rctx);
+      break;
+    }
+    case Method::kPutBlob: {
+      MonitorPutBlob(mode, reinterpret_cast<PutBlobTask *>(task), rctx);
+      break;
+    }
+    case Method::kGetBlob: {
+      MonitorGetBlob(mode, reinterpret_cast<GetBlobTask *>(task), rctx);
+      break;
+    }
+    case Method::kTruncateBlob: {
+      MonitorTruncateBlob(mode, reinterpret_cast<TruncateBlobTask *>(task), rctx);
+      break;
+    }
+    case Method::kDestroyBlob: {
+      MonitorDestroyBlob(mode, reinterpret_cast<DestroyBlobTask *>(task), rctx);
+      break;
+    }
+    case Method::kTagBlob: {
+      MonitorTagBlob(mode, reinterpret_cast<TagBlobTask *>(task), rctx);
+      break;
+    }
+    case Method::kBlobHasTag: {
+      MonitorBlobHasTag(mode, reinterpret_cast<BlobHasTagTask *>(task), rctx);
+      break;
+    }
+    case Method::kGetBlobId: {
+      MonitorGetBlobId(mode, reinterpret_cast<GetBlobIdTask *>(task), rctx);
+      break;
+    }
+    case Method::kGetOrCreateBlobId: {
+      MonitorGetOrCreateBlobId(mode, reinterpret_cast<GetOrCreateBlobIdTask *>(task), rctx);
+      break;
+    }
+    case Method::kGetBlobName: {
+      MonitorGetBlobName(mode, reinterpret_cast<GetBlobNameTask *>(task), rctx);
+      break;
+    }
+    case Method::kGetBlobSize: {
+      MonitorGetBlobSize(mode, reinterpret_cast<GetBlobSizeTask *>(task), rctx);
+      break;
+    }
+    case Method::kGetBlobScore: {
+      MonitorGetBlobScore(mode, reinterpret_cast<GetBlobScoreTask *>(task), rctx);
+      break;
+    }
+    case Method::kGetBlobBuffers: {
+      MonitorGetBlobBuffers(mode, reinterpret_cast<GetBlobBuffersTask *>(task), rctx);
+      break;
+    }
+    case Method::kRenameBlob: {
+      MonitorRenameBlob(mode, reinterpret_cast<RenameBlobTask *>(task), rctx);
+      break;
+    }
+    case Method::kReorganizeBlob: {
+      MonitorReorganizeBlob(mode, reinterpret_cast<ReorganizeBlobTask *>(task), rctx);
+      break;
+    }
+    case Method::kSetBucketMdm: {
+      MonitorSetBucketMdm(mode, reinterpret_cast<SetBucketMdmTask *>(task), rctx);
+      break;
+    }
+    case Method::kFlushData: {
+      MonitorFlushData(mode, reinterpret_cast<FlushDataTask *>(task), rctx);
+      break;
+    }
+    case Method::kPollBlobMetadata: {
+      MonitorPollBlobMetadata(mode, reinterpret_cast<PollBlobMetadataTask *>(task), rctx);
+      break;
+    }
+    case Method::kPollTargetMetadata: {
+      MonitorPollTargetMetadata(mode, reinterpret_cast<PollTargetMetadataTask *>(task), rctx);
+      break;
+    }
+  }
+}
 /** Delete a task */
 void Del(u32 method, Task *task) override {
   switch (method) {

@@ -16,7 +16,7 @@ namespace hermes::bdev {
 class Client : public TaskLibClient {
  public:
   DomainId domain_id_;
-  MonitorTask *monitor_task_;
+  StatBdevTask *monitor_task_;
   size_t max_cap_;      /**< maximum capacity of the target */
   double bandwidth_;    /**< the bandwidth of the device */
   double latency_;      /**< the latency of the device */
@@ -57,7 +57,7 @@ class Client : public TaskLibClient {
     if (task->IsModuleComplete()) {
       id_ = task->id_;
       queue_id_ = QueueId(id_);
-      monitor_task_ = AsyncMonitor(task->task_node_ + 1, 100).ptr_;
+      monitor_task_ = AsyncStatBdev(task->task_node_ + 1, 100).ptr_;
       HRUN_CLIENT->DelTask(task);
     }
   }
@@ -80,13 +80,13 @@ class Client : public TaskLibClient {
 
   /** BDEV monitoring task */
   HSHM_ALWAYS_INLINE
-  void AsyncMonitorConstruct(MonitorTask *task,
+  void AsyncStatBdevConstruct(StatBdevTask *task,
                              const TaskNode &task_node,
                              size_t freq_ms) {
-    HRUN_CLIENT->ConstructTask<MonitorTask>(
+    HRUN_CLIENT->ConstructTask<StatBdevTask>(
         task, task_node, domain_id_, id_, freq_ms, max_cap_);
   }
-  HRUN_TASK_NODE_PUSH_ROOT(Monitor);
+  HRUN_TASK_NODE_PUSH_ROOT(StatBdev);
 
   /** Get bdev remaining capacity */
   HSHM_ALWAYS_INLINE
@@ -156,16 +156,22 @@ class Server {
   // Histogram score_hist_;  /**< Score distribution */
 
  public:
+  /** Update the blob score in this tier */
   void UpdateScore(UpdateScoreTask *task, RunContext &ctx) {
 //    if (task->old_score_ >= 0) {
 //      score_hist_.Decrement(task->old_score_);
 //    }
 //    score_hist_.Increment(task->new_score_);
   }
+  void MonitorUpdateScore(u32 mode, UpdateScoreTask *task, RunContext &ctx) {
+  }
 
-  void Monitor(MonitorTask *task, RunContext &ctx) {
+  /** Stat capacity and scores */
+  void StatBdev(StatBdevTask *task, RunContext &ctx) {
     task->rem_cap_ = rem_cap_;
 //    task->score_hist_ = score_hist_;
+  }
+  void MonitorStatBdev(u32 mode, StatBdevTask *task, RunContext &ctx) {
   }
 };
 

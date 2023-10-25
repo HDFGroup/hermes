@@ -2,6 +2,6 @@ kWrite: 0
 kRead: 1
 kAllocate: 2
 kFree: 3
-kMonitor: 4
+kStatBdev: 4
 kUpdateScore: 5
 kLast: 6

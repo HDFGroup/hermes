@@ -14,6 +14,7 @@
 #include "hermes_shm/util/singleton.h"
 #include "filesystem_mdm.h"
 #include "hermes_adapters/mapper/mapper_factory.h"
+#include "data_stager/factory/stager_factory.h"
 
 #include <fcntl.h>
 #include <filesystem>
@@ -55,23 +56,25 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
         return;
       }
     }
+    // Update page size
+    stat.page_size_ = mdm->GetAdapterPageSize(path);
     // Get or create the bucket
+    hshm::charbuf url = hermes::data_stager::BinaryFileStager::BuildFileUrl(
+        stat.path_, stat.page_size_);
     if (stat.hflags_.Any(HERMES_FS_TRUNC)) {
       // The file was opened with TRUNCATION
-      stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, 0, HERMES_BUCKET_IS_FILE);
+      stat.bkt_id_ = HERMES->GetBucket(url.str(), ctx, 0, HERMES_IS_FILE);
       stat.bkt_id_.Clear();
     } else {
       // The file was opened regularly
       stat.file_size_ = io_client_->GetSize(*path_shm);
-      stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, stat.file_size_, HERMES_BUCKET_IS_FILE);
+      stat.bkt_id_ = HERMES->GetBucket(url.str(), ctx, stat.file_size_, HERMES_IS_FILE);
     }
     HILOG(kDebug, "File has size: {}", stat.bkt_id_.GetSize());
     // Update file position pointer
     if (stat.hflags_.Any(HERMES_FS_APPEND)) {
       stat.st_ptr_ = std::numeric_limits<size_t>::max();
     }
-    // Update page size
-    stat.page_size_ = mdm->GetAdapterPageSize(path);
     // Allocate internal hermes data
     auto stat_ptr = std::make_shared<AdapterStat>(stat);
     FilesystemIoClientState fs_ctx(&mdm->fs_mdm_, (void*)stat_ptr.get());

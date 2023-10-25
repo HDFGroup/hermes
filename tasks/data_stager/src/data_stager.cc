@@ -20,6 +20,7 @@ class Server : public TaskLib {
  public:
   Server() = default;
 
+  /** Construct data stager */
   void Construct(ConstructTask *task, RunContext &rctx) {
     task->Deserialize();
     url_map_.resize(HRUN_QM_RUNTIME->max_lanes_);
@@ -27,11 +28,17 @@ class Server : public TaskLib {
     HILOG(kInfo, "(node {}) BLOB MDM: {}", HRUN_CLIENT->node_id_, blob_mdm_.id_);
     task->SetModuleComplete();
   }
+  void MonitorConstruct(u32 mode, ConstructTask *task, RunContext &rctx) {
+  }
 
+  /** Destroy data stager */
   void Destruct(DestructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
+  void MonitorDestruct(u32 mode, DestructTask *task, RunContext &rctx) {
+  }
 
+  /** Register a stager */
   void RegisterStager(RegisterStagerTask *task, RunContext &rctx) {
     std::string url = task->url_->str();
     std::unique_ptr<AbstractStager> stager = StagerFactory::Get(url);
@@ -39,7 +46,10 @@ class Server : public TaskLib {
     url_map_[rctx.lane_id_].emplace(task->bkt_id_, std::move(stager));
     task->SetModuleComplete();
   }
+  void MonitorRegisterStager(u32 mode, RegisterStagerTask *task, RunContext &rctx) {
+  }
 
+  /** Unregister stager */
   void UnregisterStager(UnregisterStagerTask *task, RunContext &rctx) {
     if (url_map_[rctx.lane_id_].find(task->bkt_id_) == url_map_[rctx.lane_id_].end()) {
       return;
@@ -47,7 +57,10 @@ class Server : public TaskLib {
     url_map_[rctx.lane_id_].erase(task->bkt_id_);
     task->SetModuleComplete();
   }
+  void MonitorUnregisterStager(u32 mode, UnregisterStagerTask *task, RunContext &rctx) {
+  }
 
+  /** Stage in data */
   void StageIn(StageInTask *task, RunContext &rctx) {
     std::unordered_map<hermes::BucketId, std::unique_ptr<AbstractStager>>::iterator it =
         url_map_[rctx.lane_id_].find(task->bkt_id_);
@@ -61,7 +74,10 @@ class Server : public TaskLib {
     stager->StageIn(blob_mdm_, task, rctx);
     task->SetModuleComplete();
   }
+  void MonitorStageIn(u32 mode, StageInTask *task, RunContext &rctx) {
+  }
 
+  /** Stage out data */
   void StageOut(StageOutTask *task, RunContext &rctx) {
     std::unordered_map<hermes::BucketId, std::unique_ptr<AbstractStager>>::iterator it =
         url_map_[rctx.lane_id_].find(task->bkt_id_);
@@ -74,6 +90,9 @@ class Server : public TaskLib {
     stager->StageOut(blob_mdm_, task, rctx);
     task->SetModuleComplete();
   }
+  void MonitorStageOut(u32 mode, StageOutTask *task, RunContext &rctx) {
+  }
+
  public:
 #include "data_stager/data_stager_lib_exec.h"
 };

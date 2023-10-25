@@ -56,6 +56,7 @@ class Server : public TaskLib {
  public:
   Server() = default;
 
+  /** Construct blob mdm and it targets */
   void Construct(ConstructTask *task, RunContext &rctx) {
     id_alloc_ = 0;
     node_id_ = HRUN_CLIENT->node_id_;
@@ -93,9 +94,14 @@ class Server : public TaskLib {
     HILOG(kInfo, "(node {}) Created Blob MDM", HRUN_CLIENT->node_id_);
     task->SetModuleComplete();
   }
+  void MonitorConstruct(u32 mode, ConstructTask *task, RunContext &rctx) {
+  }
 
+  /** Destroy blob mdm */
   void Destruct(DestructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
+  }
+  void MonitorDestruct(u32 mode, DestructTask *task, RunContext &rctx) {
   }
 
  private:
@@ -122,6 +128,8 @@ class Server : public TaskLib {
       flush_task_ = blob_mdm_.AsyncFlushData(task->task_node_ + 1);
     }
     task->SetModuleComplete();
+  }
+  void MonitorSetBucketMdm(u32 mode, SetBucketMdmTask *task, RunContext &rctx) {
   }
 
   /** New score */
@@ -214,6 +222,8 @@ class Server : public TaskLib {
       }
     }
   }
+  void MonitorFlushData(u32 mode, FlushDataTask *task, RunContext &rctx) {
+  }
 
   /**
    * Create a blob's metadata
@@ -256,7 +266,9 @@ class Server : public TaskLib {
       // Modify existing blob
       blob_info.UpdateWriteStats();
     }
+    ssize_t bkt_size_diff = 0;
     if (task->flags_.Any(HERMES_BLOB_REPLACE)) {
+      bkt_size_diff -= blob_info.blob_size_;
       PutBlobFreeBuffersPhase(blob_info, task, rctx);
     }
 
@@ -267,7 +279,8 @@ class Server : public TaskLib {
       size_diff = needed_space - blob_info.max_blob_size_;
     }
     blob_info.blob_size_ += size_diff;
-    HILOG(kDebug, "The size diff is {} bytes", size_diff)
+    bkt_size_diff += (ssize_t)size_diff;
+    HILOG(kDebug, "The size diff is {} bytes (bkt diff {})", size_diff, bkt_size_diff)
 
     // Use DPE
     std::vector<PlacementSchema> schema_vec;
@@ -334,14 +347,18 @@ class Server : public TaskLib {
     }
 
     // Update information
-    int update_mode = bucket_mdm::UpdateSizeMode::kAdd;
     if (task->flags_.Any(HERMES_IS_FILE)) {
-      update_mode = bucket_mdm::UpdateSizeMode::kCap;
+      // TODO(llogan): Convert blob name to file offset and use kCap
+      bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
+                               task->tag_id_,
+                               bkt_size_diff,
+                               bucket_mdm::UpdateSizeMode::kAdd);
+    } else {
+      bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
+                               task->tag_id_,
+                               bkt_size_diff,
+                               bucket_mdm::UpdateSizeMode::kAdd);
     }
-    bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
-                             task->tag_id_,
-                             task->blob_off_ + task->data_size_,
-                             update_mode);
     if (task->flags_.Any(HERMES_BLOB_DID_CREATE)) {
       bkt_mdm_.AsyncTagAddBlob(task->task_node_ + 1,
                                task->tag_id_,
@@ -359,6 +376,8 @@ class Server : public TaskLib {
     // Free data
     HILOG(kDebug, "Completing PUT for {}", blob_name.str());
     task->SetModuleComplete();
+  }
+  void MonitorPutBlob(u32 mode, PutBlobTask *task, RunContext &rctx) {
   }
 
   /** Release buffers */
@@ -385,6 +404,8 @@ class Server : public TaskLib {
         GetBlobWaitPhase(task, rctx);
       }
     }
+  }
+  void MonitorGetBlob(u32 mode, GetBlobTask *task, RunContext &rctx) {
   }
 
   void GetBlobGetPhase(GetBlobTask *task, RunContext &rctx) {
@@ -455,6 +476,8 @@ class Server : public TaskLib {
     blob.tags_.push_back(task->tag_);
     task->SetModuleComplete();
   }
+  void MonitorTagBlob(u32 mode, TagBlobTask *task, RunContext &rctx) {
+  }
 
   /**
    * Check if blob has a tag
@@ -471,6 +494,8 @@ class Server : public TaskLib {
                                blob.tags_.end(),
                                task->tag_) != blob.tags_.end();
     task->SetModuleComplete();
+  }
+  void MonitorBlobHasTag(u32 mode, BlobHasTagTask *task, RunContext &rctx) {
   }
 
   /**
@@ -498,6 +523,8 @@ class Server : public TaskLib {
     task->blob_id_ = GetOrCreateBlobId(task->tag_id_, task->lane_hash_, blob_name, rctx, flags);
     task->SetModuleComplete();
   }
+  void MonitorGetOrCreateBlobId(u32 mode, GetOrCreateBlobIdTask *task, RunContext &rctx) {
+  }
 
   /**
    * Get \a blob_name BLOB from \a bkt_id bucket
@@ -518,6 +545,8 @@ class Server : public TaskLib {
     HILOG(kDebug, "Found blob {} / {} in {}", task->blob_id_, blob_name.str(), task->tag_id_);
     task->SetModuleComplete();
   }
+  void MonitorGetBlobId(u32 mode, GetBlobIdTask *task, RunContext &rctx) {
+  }
 
   /**
    * Get \a blob_name BLOB name from \a blob_id BLOB id
@@ -532,6 +561,8 @@ class Server : public TaskLib {
     BlobInfo &blob = it->second;
     (*task->blob_name_) = blob.name_;
     task->SetModuleComplete();
+  }
+  void MonitorGetBlobName(u32 mode, GetBlobNameTask *task, RunContext &rctx) {
   }
 
   /**
@@ -555,6 +586,8 @@ class Server : public TaskLib {
     task->size_ = blob.blob_size_;
     task->SetModuleComplete();
   }
+  void MonitorGetBlobSize(u32 mode, GetBlobSizeTask *task, RunContext &rctx) {
+  }
 
   /**
    * Get \a score from \a blob_id BLOB id
@@ -570,6 +603,8 @@ class Server : public TaskLib {
     task->score_ = blob.score_;
     task->SetModuleComplete();
   }
+  void MonitorGetBlobScore(u32 mode, GetBlobScoreTask *task, RunContext &rctx) {
+  }
 
   /**
    * Get \a blob_id blob's buffers
@@ -584,6 +619,8 @@ class Server : public TaskLib {
     BlobInfo &blob = it->second;
     (*task->buffers_) = blob.buffers_;
     task->SetModuleComplete();
+  }
+  void MonitorGetBlobBuffers(u32 mode, GetBlobBuffersTask *task, RunContext &rctx) {
   }
 
   /**
@@ -604,6 +641,8 @@ class Server : public TaskLib {
     blob.name_ = hshm::to_charbuf(*task->new_blob_name_);
     task->SetModuleComplete();
   }
+  void MonitorRenameBlob(u32 mode, RenameBlobTask *task, RunContext &rctx) {
+  }
 
   /**
    * Truncate a blob to a new size
@@ -618,6 +657,8 @@ class Server : public TaskLib {
     BlobInfo &blob_info = it->second;
     // TODO(llogan): truncate blob
     task->SetModuleComplete();
+  }
+  void MonitorTruncateBlob(u32 mode, TruncateBlobTask *task, RunContext &rctx) {
   }
 
   /**
@@ -669,6 +710,8 @@ class Server : public TaskLib {
         task->SetModuleComplete();
       }
     }
+  }
+  void MonitorDestroyBlob(u32 mode, DestroyBlobTask *task, RunContext &rctx) {
   }
 
   /**
@@ -726,6 +769,8 @@ class Server : public TaskLib {
       }
     }
   }
+  void MonitorReorganizeBlob(u32 mode, ReorganizeBlobTask *task, RunContext &rctx) {
+  }
 
   /**
    * Get all metadata about a blob
@@ -741,6 +786,8 @@ class Server : public TaskLib {
     }
     task->SerializeBlobMetadata(blob_mdms);
     task->SetModuleComplete();
+  }
+  void MonitorPollBlobMetadata(u32 mode, PollBlobMetadataTask *task, RunContext &rctx) {
   }
 
   /**
@@ -766,6 +813,8 @@ class Server : public TaskLib {
     }
     task->SerializeTargetMetadata(target_mdms);
     task->SetModuleComplete();
+  }
+  void MonitorPollTargetMetadata(u32 mode, PollTargetMetadataTask *task, RunContext &rctx) {
   }
 
  public:

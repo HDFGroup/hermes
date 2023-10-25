@@ -60,7 +60,7 @@ struct DestructTask : public DestroyTaskStateTask {
                const TaskNode &task_node,
                TaskStateId &state_id,
                const DomainId &domain_id)
-  : DestroyTaskStateTask(alloc, task_node, domain_id, state_id) {}
+      : DestroyTaskStateTask(alloc, task_node, domain_id, state_id) {}
 
   /** Create group */
   HSHM_ALWAYS_INLINE
@@ -85,12 +85,12 @@ struct AllocateTask : public Task, TaskFlags<TF_LOCAL> {
   /** Emplace constructor */
   HSHM_ALWAYS_INLINE explicit
   AllocateTask(hipc::Allocator *alloc,
-            const TaskNode &task_node,
-            const DomainId &domain_id,
-            const TaskStateId &state_id,
-            size_t size,
-            float score,
-            std::vector<BufferInfo> *buffers) : Task(alloc) {
+               const TaskNode &task_node,
+               const DomainId &domain_id,
+               const TaskStateId &state_id,
+               size_t size,
+               float score,
+               std::vector<BufferInfo> *buffers) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = 0;
@@ -244,28 +244,28 @@ struct ReadTask : public Task, TaskFlags<TF_LOCAL> {
 };
 
 /** A task to monitor bdev statistics */
-struct MonitorTask : public Task, TaskFlags<TF_LOCAL> {
+struct StatBdevTask : public Task, TaskFlags<TF_LOCAL> {
   OUT size_t rem_cap_;  /**< Remaining capacity of the target */
   // OUT Histogram score_hist_;  /**< Score distribution */
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
-  MonitorTask(hipc::Allocator *alloc) : Task(alloc) {}
+  StatBdevTask(hipc::Allocator *alloc) : Task(alloc) {}
 
   /** Emplace constructor */
   HSHM_ALWAYS_INLINE explicit
-  MonitorTask(hipc::Allocator *alloc,
-              const TaskNode &task_node,
-              const DomainId &domain_id,
-              const TaskStateId &state_id,
-              size_t freq_ms,
-              size_t rem_cap) : Task(alloc) {
+  StatBdevTask(hipc::Allocator *alloc,
+               const TaskNode &task_node,
+               const DomainId &domain_id,
+               const TaskStateId &state_id,
+               size_t freq_ms,
+               size_t rem_cap) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = 0;
     prio_ = TaskPrio::kLongRunning;
     task_state_ = state_id;
-    method_ = Method::kMonitor;
+    method_ = Method::kStatBdev;
     task_flags_.SetBits(TASK_LONG_RUNNING | TASK_REMOTE_DEBUG_MARK);
     SetPeriodMs(freq_ms);
     domain_id_ = domain_id;
@@ -293,10 +293,10 @@ struct UpdateScoreTask : public Task, TaskFlags<TF_LOCAL> {
   /** Emplace constructor */
   HSHM_ALWAYS_INLINE explicit
   UpdateScoreTask(hipc::Allocator *alloc,
-              const TaskNode &task_node,
-              const DomainId &domain_id,
-              const TaskStateId &state_id,
-              float old_score, float new_score) : Task(alloc) {
+                  const TaskNode &task_node,
+                  const DomainId &domain_id,
+                  const TaskStateId &state_id,
+                  float old_score, float new_score) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = 0;

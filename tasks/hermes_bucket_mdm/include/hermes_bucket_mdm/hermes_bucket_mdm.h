@@ -68,7 +68,7 @@ class Client : public TaskLibClient {
   void AsyncUpdateSizeConstruct(UpdateSizeTask *task,
                                 const TaskNode &task_node,
                                 TagId tag_id,
-                                size_t update,
+                                ssize_t update,
                                 int mode) {
     HRUN_CLIENT->ConstructTask<UpdateSizeTask>(
         task, task_node, DomainId::GetNode(tag_id.node_id_), id_,

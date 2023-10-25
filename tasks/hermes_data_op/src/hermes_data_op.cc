@@ -31,6 +31,7 @@ class Server : public TaskLib {
  public:
   Server() = default;
 
+  /** Construct data operator table */
   void Construct(ConstructTask *task, RunContext &rctx) {
     task->Deserialize();
     bkt_mdm_.Init(task->bkt_mdm_);
@@ -42,11 +43,17 @@ class Server : public TaskLib {
     run_task_ = client_.AsyncRunOp(task->task_node_ + 1);
     task->SetModuleComplete();
   }
+  void MonitorConstruct(u32 mode, ConstructTask *task, RunContext &rctx) {
+  }
 
+  /** Destroy data operators */
   void Destruct(DestructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
+  void MonitorDestruct(u32 mode, DestructTask *task, RunContext &rctx) {
+  }
 
+  /** Registor operators */
   void RegisterOp(RegisterOpTask *task, RunContext &rctx) {
     // Load OpGraph
     op_graphs_[rctx.lane_id_].push_back(task->GetOpGraph());
@@ -99,7 +106,10 @@ class Server : public TaskLib {
     // Store the operator to perform
     task->SetModuleComplete();
   }
+  void MonitorRegisterOp(u32 mode, RegisterOpTask *task, RunContext &rctx) {
+  }
 
+  /** Inform that data is ready for operators */
   void RegisterData(RegisterDataTask *task, RunContext &rctx) {
     if (!op_data_lock_.TryLock(0)) {
       return;
@@ -110,7 +120,10 @@ class Server : public TaskLib {
     op_data_lock_.Unlock();
     task->SetModuleComplete();
   }
+  void MonitorRegisterData(u32 mode, RegisterDataTask *task, RunContext &rctx) {
+  }
 
+  /** Run the operator */
   void RunOp(RunOpTask *task, RunContext &rctx) {
     for (OpGraph &op_graph : op_graphs_[rctx.lane_id_]) {
       for (Op &op : op_graph.ops_) {
@@ -125,7 +138,10 @@ class Server : public TaskLib {
       }
     }
   }
+  void MonitorRunOp(u32 mode, RunOpTask *task, RunContext &rctx) {
+  }
 
+  /** Get pending data needed for the operator */
   std::list<OpData> GetPendingData(Op &op) {
     std::list<OpData> pending;
     if (!op_data_lock_.TryLock(0)) {
@@ -151,6 +167,7 @@ class Server : public TaskLib {
     return pending;
   }
 
+  /** Get the minimum of data */
   void RunMin(RunOpTask *task, Op &op) {
     // Get the pending data from Hermes
     std::list<OpData> op_data = GetPendingData(op);
@@ -202,6 +219,7 @@ class Server : public TaskLib {
     }
   }
 
+  /** Get the maximum of data */
   void RunMax(RunOpTask *task, Op &op) {
   }
 

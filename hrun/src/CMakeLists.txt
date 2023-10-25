@@ -21,7 +21,7 @@ target_link_libraries(hrun_client
 # Build Hrun Runtime Library
 #------------------------------------------------------------------------------
 add_library(hrun_runtime
-        worker.cc
+        work_orchestrator.cc
         hrun_runtime.cc)
 add_dependencies(hrun_runtime ${Hermes_CLIENT_DEPS})
 target_link_libraries(hrun_runtime thallium ${Hermes_CLIENT_LIBRARIES})
