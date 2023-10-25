@@ -7,8 +7,7 @@ class Hermes(CMakePackage):
 
     version('master',
             branch='master', submodules=True)
-    version('dev', git='https://github.com/lukemartinlogan/hermes.git',
-            branch='dev', submodules=True)
+    version('dev', branch='dev', submodules=True)
     version('dev-priv', git='https://github.com/lukemartinlogan/hermes.git',
             branch='dev', submodules=True)
     version("1.0.5-beta", sha256="1f3ba51a8beda4bc1314d6541b800de1525f5e233a6f498fcde6dc43562ddcb7")
