@@ -348,7 +348,7 @@ class Server : public TaskLib {
 
     // Update information
     if (task->flags_.Any(HERMES_IS_FILE)) {
-      // TODO(llogan): Convert blob name to file offset and use kCap
+      // TODO(llogan): Move to data stager
       adapter::BlobPlacement p;
       p.DecodeBlobName(task->blob_name_->str(), 1 << 20);
       bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
