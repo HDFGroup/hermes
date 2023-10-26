@@ -19,7 +19,6 @@ class HermesShm(CMakePackage):
     depends_on('mochi-thallium~cereal@0.10.1')
     depends_on('catch2@3.0.1')
     depends_on('mpi')
-    depends_on('mpich@3.3.2', when='+mpiio')
     depends_on('cereal')
     depends_on('yaml-cpp')
     depends_on('doxygen@1.9.3')
