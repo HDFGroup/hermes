@@ -68,7 +68,7 @@ if(BUILD_MPI_TESTS)
     elseif(MPI_C_COMPILER_ID STREQUAL "MPICH")
         set(HERMES_MPICH ON)
     else()
-        message(FATAL_ERROR "Unknown MPI implementation")
+        message(FATAL_ERROR "Unknown MPI implementation: ${MPI_C_COMPILER_ID}")
     endif()
 endif()
 
