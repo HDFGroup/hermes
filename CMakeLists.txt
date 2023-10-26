@@ -18,9 +18,6 @@ option(HERMES_ENABLE_PUBSUB_ADAPTER "Build the Hermes pub/sub adapter." OFF)
 option(HERMES_ENABLE_KVSTORE "Build the Hermes KVStore adapter." OFF)
 option(HERMES_ENABLE_PYTHON "Build the Hermes Python wrapper" ON)
 
-option(HERMES_MPICH "Specify that this a MPICH build" OFF)
-option(HERMES_OPENMPI "Specify that this a OpenMPI build" OFF)
-
 #-----------------------------------------------------------------------------
 # Compiler Optimization
 #-----------------------------------------------------------------------------
@@ -62,10 +59,17 @@ message(STATUS "found yaml-cpp at ${yaml-cpp_DIR}")
 find_package(Catch2 3.0.1 REQUIRED)
 message(STATUS "found catch2.h at ${Catch2_CXX_INCLUDE_DIRS}")
 
-# MPICH
+# MPI
 if(BUILD_MPI_TESTS)
     find_package(MPI REQUIRED COMPONENTS C CXX)
     message(STATUS "found mpi.h at ${MPI_CXX_INCLUDE_DIRS}")
+    if(MPI_C_COMPILER_ID STREQUAL "OpenMPI")
+        set(HERMES_OPENMPI ON)
+    elseif(MPI_C_COMPILER_ID STREQUAL "MPICH")
+        set(HERMES_MPICH ON)
+    else()
+        message(FATAL_ERROR "Unknown MPI implementation")
+    endif()
 endif()
 
 # OpenMP
