@@ -18,6 +18,9 @@ option(HERMES_ENABLE_PUBSUB_ADAPTER "Build the Hermes pub/sub adapter." OFF)
 option(HERMES_ENABLE_KVSTORE "Build the Hermes KVStore adapter." OFF)
 option(HERMES_ENABLE_PYTHON "Build the Hermes Python wrapper" ON)
 
+option(HERMES_MPICH "Specify that this a MPICH build" OFF)
+option(HERMES_OPENMPI "Specify that this a OpenMPI build" OFF)
+
 #-----------------------------------------------------------------------------
 # Compiler Optimization
 #-----------------------------------------------------------------------------
