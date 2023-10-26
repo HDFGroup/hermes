@@ -38,6 +38,10 @@ class HermesShm(CMakePackage):
             args.append('-DCMAKE_BUILD_TYPE=Release')
         if '+mpiio' in self.spec:
             args.append('-DHERMES_ENABLE_MPIIO_ADAPTER=ON')
+            if 'openmpi' in self.spec:
+                args.append('-DHERMES_OPENMPI=ON')
+            elif 'mpich' in self.spec:
+                args.append('-DHERMES_MPICH=ON')
         if '+stdio' in self.spec:
             args.append('-HERMES_ENABLE_STDIO_ADAPTER=ON')
         if '+vfd' in self.spec:
