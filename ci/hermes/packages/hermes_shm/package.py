@@ -30,7 +30,6 @@ class HermesShm(CMakePackage):
                when='+only_verbs')
     depends_on('libzmq', '+zmq')
     depends_on('hdf5@1.14.0', when='+vfd')
-    depends_on('hdf5@1.14.0^mpich', when='+vfd +mpiio')
 
     def cmake_args(self):
         args = []
