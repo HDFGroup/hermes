@@ -11,6 +11,13 @@ add_dependencies(hermes_mpiio_io_client
         hermes hermes_fs_base)
 target_link_libraries(hermes_mpiio_io_client
         hermes hermes_fs_base MPI::MPI_CXX stdc++fs dl)
+if (HERMES_MPICH)
+    message(STATUS "Using HERMES_MPICH")
+    add_definitions(-DHERMES_MPICH)
+elseif(HERMES_OPENMPI)
+    message(STATUS "Using HERMES_OPENMPI")
+    add_definitions(-DHERMES_OPENMPI)
+endif()
 
 # Create the MPIIO interceptor
 set(INTERCEPTOR_DEPS

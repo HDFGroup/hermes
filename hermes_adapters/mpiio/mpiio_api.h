@@ -17,7 +17,9 @@
 #include <iostream>
 #include "hermes_shm/util/logging.h"
 #include <mpi.h>
+#ifdef HERMES_MPICH
 #include <mpio.h>
+#endif
 #include "hermes_adapters/real_api.h"
 
 #ifndef MPI_MODE_TRUNCATE

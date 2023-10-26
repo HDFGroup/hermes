@@ -214,8 +214,15 @@ ERROR:
 
 /** Update the I/O status after a ReadBlob or WriteBlob */
 void MpiioIoClient::UpdateIoStatus(size_t count, IoStatus &status) {
+#ifdef HERMES_OPENMPI
+  status.mpi_status_ptr_->_cancelled = 0;
+  status.mpi_status_ptr_->_ucount = count;
+#elif defined(HERMES_MPICH)
   status.mpi_status_ptr_->count_hi_and_cancelled = 0;
   status.mpi_status_ptr_->count_lo = count;
+#else
+#error "No MPI implementation specified for MPIIO adapter"
+#endif
 }
 
 }  // namespace hermes::adapter::fs

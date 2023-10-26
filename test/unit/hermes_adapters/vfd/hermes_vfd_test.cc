@@ -23,12 +23,10 @@
 #include <hdf5.h>
 
 #include "hermes/hermes.h"
-#include "hermes_types.h"
+#include "hermes/hermes_types.h"
 #include "adapter_test_utils.h"
 #include "catch_config.h"
 
-using hermes::f32;
-using hermes::u32;
 namespace stdfs = std::filesystem;
 
 namespace hermes::adapter::vfd::test {
@@ -399,7 +397,7 @@ void RemoveFiles() {
 int init(int* argc, char*** argv) {
 #if HERMES_INTERCEPT == 1
   setenv("HERMES_FLUSH_MODE", "kSync", 1);
-  TRANSPARENT_HERMES
+  TRANSPARENT_HERMES();
   HERMES_CLIENT_CONF.flushing_mode_ = hermes::FlushingMode::kSync;
 #endif
   MPI_Init(argc, argv);

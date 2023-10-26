@@ -9,7 +9,7 @@ endif()
 if (HERMES_ENABLE_MPIIO_ADAPTER)
     add_subdirectory(mpiio)
 endif()
-if (HERMES_ENABLE_HDF5_ADAPTER)
+if (HERMES_ENABLE_VFD)
     add_subdirectory(vfd)
 endif()
 
