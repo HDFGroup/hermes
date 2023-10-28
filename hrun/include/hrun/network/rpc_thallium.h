@@ -291,7 +291,7 @@ class ThalliumRpc {
     return req.received();
   }
 
-  /** Wait for thallium to complete */
+  /** Wait for async thallium to complete */
   template<typename RetT>
   RetT Wait(thallium::async_response &req) {
     if constexpr(std::is_same_v<void, RetT>) {
@@ -299,6 +299,11 @@ class ThalliumRpc {
     } else {
       return req.wait();
     }
+  }
+
+  /** Check if async thallium complete */
+  bool IsComplete(thallium::async_response &req) {
+    return req.received();
   }
 };
 

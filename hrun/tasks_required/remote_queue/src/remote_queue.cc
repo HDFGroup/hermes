@@ -66,11 +66,11 @@ class Server : public TaskLib {
     std::vector<DataTransfer> &xfer = task->xfer_;
     switch (xfer.size()) {
       case 1: {
-        ClientSmallPush(xfer, task);
+        AsyncClientSmallPush(xfer, task);
         break;
       }
       case 2: {
-        ClientIoPush(xfer, task);
+        AsyncClientIoPush(xfer, task);
         break;
       }
       default: {
@@ -128,8 +128,8 @@ class Server : public TaskLib {
     task->SetModuleComplete();
   }
 
-  /** Push for small message */
-  void ClientSmallPush(std::vector<DataTransfer> &xfer, PushTask *task) {
+  /** Sync Push for small message */
+  void SyncClientSmallPush(std::vector<DataTransfer> &xfer, PushTask *task) {
     task->params_ = std::string((char *) xfer[0].data_, xfer[0].data_size_);
     for (int replica = 0; replica < task->domain_ids_.size(); ++replica) {
       DomainId domain_id = task->domain_ids_[replica];
@@ -156,8 +156,8 @@ class Server : public TaskLib {
     }
   }
 
-  /** Push for I/O message */
-  void ClientIoPush(std::vector<DataTransfer> &xfer, PushTask *task) {
+  /** Sync Push for I/O message */
+  void SyncClientIoPush(std::vector<DataTransfer> &xfer, PushTask *task) {
     task->params_ = std::string((char *) xfer[1].data_, xfer[1].data_size_);
     IoType io_type = IoType::kRead;
     if (xfer[0].flags_.Any(DT_RECEIVER_READ)) {
@@ -193,6 +193,93 @@ class Server : public TaskLib {
             HRUN_CLIENT->node_id_,
             domain_id.id_,
             static_cast<int>(io_type));
+      ClientHandlePushReplicaOutput(replica, ret, task);
+    }
+  }
+
+  /** Push for small message */
+  void AsyncClientSmallPush(std::vector<DataTransfer> &xfer, PushTask *task) {
+    task->params_ = std::string((char *) xfer[0].data_, xfer[0].data_size_);
+    std::vector<thallium::async_response> waiters;
+    for (int replica = 0; replica < task->domain_ids_.size(); ++replica) {
+      DomainId domain_id = task->domain_ids_[replica];
+      HILOG(kDebug, "(SM) Transferring {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={})",
+            task->params_.size(),
+            task->orig_task_->task_node_,
+            task->orig_task_->task_state_,
+            task->orig_task_->method_,
+            HRUN_CLIENT->node_id_,
+            domain_id.id_);
+      waiters.emplace_back(HRUN_THALLIUM->AsyncCall(domain_id.id_,
+                                                "RpcPushSmall",
+                                                task->exec_->id_,
+                                                task->exec_method_,
+                                                task->params_));
+      HILOG(kDebug, "(SM) Submitted {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={})",
+            task->params_.size(),
+            task->orig_task_->task_node_,
+            task->orig_task_->task_state_,
+            task->orig_task_->method_,
+            HRUN_CLIENT->node_id_,
+            domain_id.id_);
+    }
+
+    for (int replica = 0; replica < task->domain_ids_.size(); ++replica) {
+      thallium::async_response &async = waiters[replica];
+      if (!HRUN_THALLIUM->IsComplete(async)) {
+        task->Wait<TASK_YIELD_CO>();
+      }
+      std::string ret = HRUN_THALLIUM->Wait<std::string>(async);
+      ClientHandlePushReplicaOutput(replica, ret, task);
+    }
+  }
+
+  /** Push for I/O message */
+  void AsyncClientIoPush(std::vector<DataTransfer> &xfer, PushTask *task) {
+    task->params_ = std::string((char *) xfer[1].data_, xfer[1].data_size_);
+    std::vector<thallium::async_response> waiters;
+    IoType io_type = IoType::kRead;
+    if (xfer[0].flags_.Any(DT_RECEIVER_READ)) {
+      io_type = IoType::kWrite;
+    }
+    for (int replica = 0; replica < task->domain_ids_.size(); ++replica) {
+      DomainId domain_id = task->domain_ids_[replica];
+      char *data = (char*)xfer[0].data_;
+      size_t data_size = xfer[0].data_size_;
+      HILOG(kDebug, "(IO) Transferring {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={}, type={})",
+            data_size,
+            task->orig_task_->task_node_,
+            task->orig_task_->task_state_,
+            task->orig_task_->method_,
+            HRUN_CLIENT->node_id_,
+            domain_id.id_,
+            static_cast<int>(io_type));
+      waiters.emplace_back(HRUN_THALLIUM->AsyncIoCall(domain_id.id_,
+                                                      "RpcPushBulk",
+                                                      io_type,
+                                                      data,
+                                                      data_size,
+                                                      task->exec_->id_,
+                                                      task->exec_method_,
+                                                      task->params_,
+                                                      data_size,
+                                                      io_type));
+      HILOG(kDebug, "(IO) Submitted transfer {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={}, type={})",
+            data_size,
+            task->orig_task_->task_node_,
+            task->orig_task_->task_state_,
+            task->orig_task_->method_,
+            HRUN_CLIENT->node_id_,
+            domain_id.id_,
+            static_cast<int>(io_type));
+    }
+
+    for (int replica = 0; replica < task->domain_ids_.size(); ++replica) {
+      thallium::async_response &async = waiters[replica];
+      if (!HRUN_THALLIUM->IsComplete(async)) {
+        task->Wait<TASK_YIELD_CO>();
+      }
+      std::string ret = HRUN_THALLIUM->Wait<std::string>(async);
       ClientHandlePushReplicaOutput(replica, ret, task);
     }
   }
