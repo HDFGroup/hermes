@@ -67,6 +67,7 @@ class Client : public TaskLibClient {
     // Serialize task + create the wait task
     HILOG(kDebug, "Beginning dispersion for (task_node={}, task_state={}, method={})",
           orig_task->task_node_ + 1, orig_task->task_state_, orig_task->method_)
+    orig_task->UnsetStarted();
     BinaryOutputArchive<true> ar(DomainId::GetNode(HRUN_CLIENT->node_id_));
     std::vector<DataTransfer> xfer =
         exec->SaveStart(orig_task->method_, ar, orig_task);
