@@ -29,6 +29,8 @@
 #define QUEUE_UNORDERED BIT_OPT(u32, 4)
 /** Requests in this queue are long-running */
 #define QUEUE_LONG_RUNNING BIT_OPT(u32, 5)
+/** Requests in this queue should not be scheduled on a traditional worker */
+#define QUEUE_DISABLED BIT_OPT(u32, 5)
 
 namespace hrun {
 

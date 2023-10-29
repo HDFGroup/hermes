@@ -365,7 +365,7 @@ class Worker {
       if (!task->IsRunDisabled() &&
           CheckTaskGroup(task, exec, work_entry.lane_id_, task->task_node_, is_remote) &&
           task->ShouldRun(work_entry.cur_time_, flush_.flushing_)) {
-#ifdef REMOTE_DEBUG
+// #ifdef REMOTE_DEBUG
         if (task->task_state_ != HRUN_QM_CLIENT->admin_task_state_ &&
           !task->task_flags_.Any(TASK_REMOTE_DEBUG_MARK) &&
           task->method_ != TaskMethod::kConstruct &&
@@ -373,7 +373,7 @@ class Worker {
         is_remote = true;
       }
       task->task_flags_.SetBits(TASK_REMOTE_DEBUG_MARK);
-#endif
+// #endif
         // Execute or schedule task
         if (is_remote) {
           auto ids = HRUN_RUNTIME->ResolveDomainId(task->domain_id_);
@@ -406,12 +406,9 @@ class Worker {
                 rctx.stack_size_, &Worker::RunCoroutine);
             task->SetStarted();
           }
-        } else if (task->IsPreemptive()) {
-          task->SetDisableRun();
-          entry->thread_ = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(&Worker::RunPreemptive, task);
         } else {
-          task->SetStarted();
           exec->Run(task->method_, task, rctx);
+          task->SetStarted();
         }
         task->DidRun(work_entry.cur_time_);
         if (flush_.flushing_ && !task->IsModuleComplete() && !task->IsFlush()) {
@@ -449,23 +446,6 @@ class Worker {
     exec->Run(task->method_, task, rctx);
     task->UnsetStarted();
     task->Yield<TASK_YIELD_CO>();
-  }
-
-  /** Run a task requiring preemption */
-  static void RunPreemptive(void *data) {
-    Task *task = reinterpret_cast<Task *>(data);
-    TaskState *exec = HRUN_TASK_REGISTRY->GetTaskState(task->task_state_);
-    RunContext &real_rctx = task->ctx_;
-    RunContext rctx(0);
-    do {
-      hshm::Timepoint now;
-      now.Now();
-      if (task->ShouldRun(now, real_rctx.flush_->flushing_)) {
-        exec->Run(task->method_, task, rctx);
-        task->DidRun(now);
-      }
-      task->Yield<TASK_YIELD_ABT>();
-    } while(!task->IsModuleComplete());
   }
 
   /**===============================================================

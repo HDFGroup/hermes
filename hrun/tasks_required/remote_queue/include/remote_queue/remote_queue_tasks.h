@@ -88,7 +88,6 @@ struct PushTask : public Task, TaskFlags<TF_LOCAL> {
   IN TaskState *exec_;
   IN u32 exec_method_;
   IN std::vector<DataTransfer> xfer_;
-  TEMP std::string params_;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -112,7 +111,8 @@ struct PushTask : public Task, TaskFlags<TF_LOCAL> {
     task_state_ = state_id;
     method_ = Method::kPush;
     // task_flags_.SetBits(TASK_LOW_LATENCY | TASK_PREEMPTIVE | TASK_REMOTE_DEBUG_MARK | TASK_FIRE_AND_FORGET);
-    task_flags_.SetBits(TASK_LOW_LATENCY | TASK_COROUTINE | TASK_REMOTE_DEBUG_MARK | TASK_FIRE_AND_FORGET);
+    // task_flags_.SetBits(TASK_LOW_LATENCY | TASK_COROUTINE | TASK_REMOTE_DEBUG_MARK | TASK_FIRE_AND_FORGET);
+    task_flags_.SetBits(TASK_LOW_LATENCY | TASK_REMOTE_DEBUG_MARK | TASK_FIRE_AND_FORGET);
     domain_id_ = domain_id;
 
     // Custom params
