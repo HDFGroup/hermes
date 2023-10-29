@@ -50,7 +50,7 @@ class Server : public TaskLib {
     HILOG(kInfo, "(node {}) Constructing remote queue (task_node={}, task_state={}, method={})",
           HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, task->method_);
     threads_ = hipc::make_uptr<hipc::mpsc_queue<AbtWorkerEntry*>>(
-        HRUN_WORK_ORCHESTRATOR->workers_.size());
+        HRUN_RPC->num_threads_);
     for (int i = 0; i < HRUN_WORK_ORCHESTRATOR->workers_.size(); ++i) {
       AbtWorkerEntry *entry = new AbtWorkerEntry(this);
       ABT_thread thread = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(
