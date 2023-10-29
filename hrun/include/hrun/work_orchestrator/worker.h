@@ -365,7 +365,7 @@ class Worker {
       if (!task->IsRunDisabled() &&
           CheckTaskGroup(task, exec, work_entry.lane_id_, task->task_node_, is_remote) &&
           task->ShouldRun(work_entry.cur_time_, flush_.flushing_)) {
-#ifdef REMOTE_DEBUG
+// #ifdef REMOTE_DEBUG
         if (task->task_state_ != HRUN_QM_CLIENT->admin_task_state_ &&
           !task->task_flags_.Any(TASK_REMOTE_DEBUG_MARK) &&
           task->method_ != TaskMethod::kConstruct &&
@@ -373,7 +373,7 @@ class Worker {
         is_remote = true;
       }
       task->task_flags_.SetBits(TASK_REMOTE_DEBUG_MARK);
-#endif
+// #endif
         // Execute or schedule task
         if (is_remote) {
           auto ids = HRUN_RUNTIME->ResolveDomainId(task->domain_id_);

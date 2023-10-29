@@ -23,16 +23,24 @@ SERIALIZE_ENUM(hrun::IoType);
 
 namespace hrun::remote_queue {
 
+class Server;
+
 struct AbtWorkerEntry {
+  Server *server_;
+  ABT_thread thread_;
   PushTask *task_;
   RunContext *rctx_;
+
+  AbtWorkerEntry() = default;
+
+  AbtWorkerEntry(Server *server)
+  : server_(server), task_(nullptr), rctx_(nullptr) {}
 };
 
 class Server : public TaskLib {
  public:
   hrun::remote_queue::Client client_;
-  hipc::uptr<hipc::mpsc_queue<AbtWorkerEntry>> queue_;
-  ABT_thread thread_;
+  hipc::uptr<hipc::mpsc_queue<AbtWorkerEntry*>> threads_;
 
  public:
   Server() = default;
@@ -41,9 +49,15 @@ class Server : public TaskLib {
   void Construct(ConstructTask *task, RunContext &rctx) {
     HILOG(kInfo, "(node {}) Constructing remote queue (task_node={}, task_state={}, method={})",
           HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, task->method_);
-    QueueManagerInfo &qm = HRUN_CLIENT->server_config_.queue_manager_;
-    queue_ = hipc::make_uptr<hipc::mpsc_queue<AbtWorkerEntry>>(qm.queue_depth_);
-    thread_ = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(&Server::RunPreemptive, this);
+    threads_ = hipc::make_uptr<hipc::mpsc_queue<AbtWorkerEntry*>>(
+        HRUN_WORK_ORCHESTRATOR->workers_.size());
+    for (int i = 0; i < HRUN_WORK_ORCHESTRATOR->workers_.size(); ++i) {
+      AbtWorkerEntry *entry = new AbtWorkerEntry(this);
+      ABT_thread thread = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(
+          &Server::RunPreemptive, entry);
+      entry->thread_ = thread;
+      threads_->emplace(entry);
+    }
     HRUN_THALLIUM->RegisterRpc("RpcPushSmall", [this](const tl::request &req,
                                                          TaskStateId state_id,
                                                          u32 method,
@@ -66,13 +80,15 @@ class Server : public TaskLib {
 
   /** An ABT thread */
   static void RunPreemptive(void *data) {
-    Server *server = (Server *) data;
-    hipc::mpsc_queue<AbtWorkerEntry> *queue = server->queue_.get();
+    AbtWorkerEntry *entry = (AbtWorkerEntry *) data;
+    Server *server = entry->server_;
     WorkOrchestrator *orchestrator = HRUN_WORK_ORCHESTRATOR;
-    AbtWorkerEntry entry;
     while (orchestrator->IsAlive()) {
-      while (!queue->pop(entry).IsNull()) {
-        server->PushPreemptive(entry.task_, *entry.rctx_);
+      PushTask *task = entry->task_;
+      if (task) {
+        server->PushPreemptive(entry->task_, *entry->rctx_);
+        entry->task_ = nullptr;
+        server->threads_->emplace(entry);
       }
       ABT_thread_yield();
     }
@@ -106,8 +122,14 @@ class Server : public TaskLib {
 
   /** Push operation called on client */
   void Push(PushTask *task, RunContext &rctx) {
+    AbtWorkerEntry *entry;
     if (!task->IsStarted()) {
-      queue_->emplace(AbtWorkerEntry{task, &rctx});
+      threads_->pop(entry);
+      if (entry == nullptr) {
+        HELOG(kFatal, "Could not get an ABT thread for networking");
+      }
+      entry->rctx_ = &rctx;
+      entry->task_ = task;
     }
   }
   void MonitorPush(u32 mode, PushTask *task, RunContext &rctx) {
