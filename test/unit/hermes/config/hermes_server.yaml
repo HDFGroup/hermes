@@ -101,6 +101,7 @@ queue_manager:
   shm_allocator: kScalablePageAllocator
   shm_name: "hrun_shm"
   shm_size: 0g
+  data_shm_size: 4g
 
 ### Task Registry
 task_registry: [

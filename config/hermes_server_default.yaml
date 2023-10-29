@@ -76,12 +76,6 @@ devices:
     is_shared_device: true
     borg_capacity_thresh: [ 0.0, 1.0 ]
 
-# Define the maximum amount of memory Hermes can use for non-buffering tasks.
-# This includes metadata management and memory allocations.
-# This memory will not be preallocated, so if you don't know, 0 indicates
-# any amount of memory
-max_memory: 0g
-
 ### Define properties of the BORG
 buffer_organizer:
   # The number of threads used in the background organization of internal Hermes buffers.
@@ -158,6 +152,7 @@ queue_manager:
   # The size of the shared memory region to allocate for general data structures
   shm_size: 0g
   # The size of the shared memory to allocate for data buffers
+  data_shm_size: 4g
 
 ### Define properties of RPCs
 rpc:

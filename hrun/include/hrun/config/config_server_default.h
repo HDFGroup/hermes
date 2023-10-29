@@ -21,6 +21,7 @@ const inline char* kHrunServerDefaultConfigStr =
 "  # The size of the shared memory region to allocate for general data structures\n"
 "  shm_size: 0g\n"
 "  # The size of the shared memory to allocate for data buffers\n"
+"  data_shm_size: 4g\n"
 "\n"
 "### Define properties of RPCs\n"
 "rpc:\n"

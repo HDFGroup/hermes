@@ -477,7 +477,7 @@ class Bucket {
     push_task->Wait();
     GetBlobTask *task = push_task->get();
     blob_id = task->blob_id_;
-    char *data = HRUN_CLIENT->GetPrivatePointer(task->data_);
+    char *data = HRUN_CLIENT->GetDataPointer(task->data_);
     memcpy(blob.data(), data, data_size);
     HRUN_CLIENT->FreeBuffer(task->data_);
     HRUN_CLIENT->DelTask(push_task);

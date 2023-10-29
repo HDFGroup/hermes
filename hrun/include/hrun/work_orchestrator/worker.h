@@ -337,7 +337,7 @@ class Worker {
         PopTask(lane, off);
         continue;
       }
-      task = HRUN_CLIENT->GetPrivatePointer<Task>(entry->p_);
+      task = HRUN_CLIENT->GetMainPointer<Task>(entry->p_);
       RunContext &rctx = task->ctx_;
       rctx.lane_id_ = work_entry.lane_id_;
       rctx.flush_ = &flush_;

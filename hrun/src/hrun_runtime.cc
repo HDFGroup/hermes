@@ -103,20 +103,30 @@ void Runtime::ServerInit(std::string server_config_path) {
 /** Initialize shared-memory between daemon and client */
 void Runtime::InitSharedMemory() {
   // Create shared-memory allocator
+  config::QueueManagerInfo &qm = server_config_.queue_manager_;
   auto mem_mngr = HERMES_MEMORY_MANAGER;
-  if (server_config_.queue_manager_.shm_size_ == 0) {
-    server_config_.queue_manager_.shm_size_ =
+  if (qm.shm_size_ == 0) {
+    qm.shm_size_ =
         hipc::MemoryManager::GetDefaultBackendSize();
   }
+  // Create general allocator
   mem_mngr->CreateBackend<hipc::PosixShmMmap>(
-      server_config_.queue_manager_.shm_size_,
-      server_config_.queue_manager_.shm_name_);
+      qm.shm_size_,
+      qm.shm_name_);
   main_alloc_ =
       mem_mngr->CreateAllocator<hipc::ScalablePageAllocator>(
-          server_config_.queue_manager_.shm_name_,
+          qm.shm_name_,
           main_alloc_id_,
           sizeof(HrunShm));
   header_ = main_alloc_->GetCustomHeader<HrunShm>();
+  // Create separate data allocator
+  mem_mngr->CreateBackend<hipc::PosixShmMmap>(
+      qm.data_shm_size_,
+      qm.data_shm_name_);
+  data_alloc_ =
+      mem_mngr->CreateAllocator<hipc::ScalablePageAllocator>(
+          qm.data_shm_name_,
+          data_alloc_id_, 0);
 }
 
 /** Finalize Hermes explicitly */

@@ -39,7 +39,7 @@ class Server : public TaskLib {
     switch (task->phase_) {
       case PushTaskPhase::kSchedule: {
         task->sub_run_.shm_ = task->sub_cli_.shm_;
-        task->sub_run_.ptr_ = HRUN_CLIENT->GetPrivatePointer<Task>(task->sub_cli_.shm_);
+        task->sub_run_.ptr_ = HRUN_CLIENT->GetMainPointer<Task>(task->sub_cli_.shm_);
         Task *&ptr = task->sub_run_.ptr_;
 //        HILOG(kDebug, "Scheduling task {} on state {} tid {}",
 //              ptr->task_node_, ptr->task_state_, GetLinuxTid());

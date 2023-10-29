@@ -315,7 +315,7 @@ class Server : public TaskLib {
     std::vector<LPointer<bdev::WriteTask>> write_tasks;
     write_tasks.reserve(blob_info.buffers_.size());
     size_t blob_off = task->blob_off_, buf_off = 0;
-    char *blob_buf = HRUN_CLIENT->GetPrivatePointer(task->data_);
+    char *blob_buf = HRUN_CLIENT->GetDataPointer(task->data_);
     HILOG(kDebug, "Number of buffers {}", blob_info.buffers_.size());
     for (BufferInfo &buf : blob_info.buffers_) {
       size_t blob_left = blob_off;
@@ -424,8 +424,7 @@ class Server : public TaskLib {
     HILOG(kDebug, "Getting blob {} of size {} starting at offset {} (total_blob_size={}, buffers={})",
           task->blob_id_, task->data_size_, task->blob_off_, blob_info.blob_size_, blob_info.buffers_.size());
     size_t blob_off = task->blob_off_, buf_off = 0;
-    hipc::mptr<char> blob_data_mptr(task->data_);
-    char *blob_buf = blob_data_mptr.get();
+    char *blob_buf = HRUN_CLIENT->GetDataPointer(task->data_);
     for (BufferInfo &buf : blob_info.buffers_) {
       size_t blob_left = blob_off;
       size_t blob_right = blob_off + buf.t_size_;

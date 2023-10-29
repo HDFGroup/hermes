@@ -398,7 +398,7 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
   template<typename T>
   HSHM_ALWAYS_INLINE
   void Get(T &obj) {
-    char *data = HRUN_CLIENT->GetPrivatePointer(data_);
+    char *data = HRUN_CLIENT->GetDataPointer(data_);
     std::stringstream ss(std::string(data, data_size_));
     cereal::BinaryInputArchive ar(ss);
     ar >> obj;

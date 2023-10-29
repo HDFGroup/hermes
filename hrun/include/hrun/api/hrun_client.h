@@ -72,13 +72,17 @@ class Client : public ConfigurationManager {
   /** Connect to a Daemon's shared memory */
   void LoadSharedMemory(bool server) {
     // Load shared-memory allocator
+    config::QueueManagerInfo &qm = server_config_.queue_manager_;
     auto mem_mngr = HERMES_MEMORY_MANAGER;
     if (!server) {
       mem_mngr->AttachBackend(hipc::MemoryBackendType::kPosixShmMmap,
-                              server_config_.queue_manager_.shm_name_);
+                              qm.shm_name_);
+      mem_mngr->AttachBackend(hipc::MemoryBackendType::kPosixShmMmap,
+                              qm.data_shm_name_);
     }
     main_alloc_ = mem_mngr->GetAllocator(main_alloc_id_);
     header_ = main_alloc_->GetCustomHeader<HrunShm>();
+    data_alloc_ = mem_mngr->GetAllocator(data_alloc_id_);
     unique_ = &header_->unique_;
     node_id_ = header_->node_id_;
   }
@@ -205,6 +209,42 @@ class Client : public ConfigurationManager {
     exec->Del(task->method_, task);
   }
 
+  /** Convert pointer to char* */
+  template<typename T = char>
+  HSHM_ALWAYS_INLINE
+  T* GetMainPointer(const hipc::Pointer &p) {
+    return main_alloc_->Convert<T, hipc::Pointer>(p);
+  }
+
+  /** Allocate a buffer */
+  HSHM_ALWAYS_INLINE
+  LPointer<char> AllocateBuffer(size_t size) {
+    LPointer<char> p;
+    do {
+      p = data_alloc_->AllocateLocalPtr<char>(size);
+    } while (p.ptr_ == nullptr);
+    return p;
+  }
+
+  /** Free a buffer */
+  HSHM_ALWAYS_INLINE
+  void FreeBuffer(hipc::Pointer &p) {
+    data_alloc_->Free(p);
+  }
+
+  /** Free a buffer */
+  HSHM_ALWAYS_INLINE
+  void FreeBuffer(LPointer<char> &p) {
+    data_alloc_->FreeLocalPtr(p);
+  }
+
+  /** Convert pointer to char* */
+  template<typename T = char>
+  HSHM_ALWAYS_INLINE
+  T* GetDataPointer(const hipc::Pointer &p) {
+    return data_alloc_->Convert<T, hipc::Pointer>(p);
+  }
+
   /** Get a queue by its ID */
   HSHM_ALWAYS_INLINE
   MultiQueue* GetQueue(const QueueId &queue_id) {
@@ -221,35 +261,6 @@ class Client : public ConfigurationManager {
     } else {
       return false;
     }
-  }
-
-  /** Allocate a buffer */
-  HSHM_ALWAYS_INLINE
-  LPointer<char> AllocateBuffer(size_t size) {
-    LPointer<char> p = main_alloc_->AllocateLocalPtr<char>(size);
-    if (p.ptr_ == nullptr) {
-      throw std::runtime_error("Could not allocate buffer");
-    }
-    return p;
-  }
-
-  /** Convert pointer to char* */
-  template<typename T = char>
-  HSHM_ALWAYS_INLINE
-  T* GetPrivatePointer(const hipc::Pointer &p) {
-    return main_alloc_->Convert<T, hipc::Pointer>(p);
-  }
-
-  /** Free a buffer */
-  HSHM_ALWAYS_INLINE
-  void FreeBuffer(hipc::Pointer &p) {
-     main_alloc_->Free(p);
-  }
-
-  /** Free a buffer */
-  HSHM_ALWAYS_INLINE
-  void FreeBuffer(LPointer<char> &p) {
-     main_alloc_->FreeLocalPtr(p);
   }
 };
 
