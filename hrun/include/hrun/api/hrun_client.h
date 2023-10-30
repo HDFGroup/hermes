@@ -231,6 +231,7 @@ class Client : public ConfigurationManager {
       } else if constexpr (THREAD_MODEL == TASK_YIELD_ABT) {
         ABT_thread_yield();
       }
+      HILOG(kDebug, "Could not allocate buffer of size {}?", size);
     }
     return p;
   }
