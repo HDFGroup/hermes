@@ -351,7 +351,7 @@ class Server : public TaskLib {
                    const tl::bulk &bulk,
                    size_t data_size,
                    IoType io_type) {
-    hshm::charbuf data(data_size);
+    hshm::charbuf data(HRUN_CLIENT->data_alloc_, data_size);
 
     // Create the input data transfer object
     std::vector<DataTransfer> xfer(2);
