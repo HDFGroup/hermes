@@ -228,9 +228,7 @@ class Bucket {
     // Copy data to shared memory
     LPointer<char> p = HRUN_CLIENT->AllocateBuffer<TASK_YIELD_STD>(blob.size());
     char *data = p.ptr_;
-    HILOG(kInfo, "Copying from {} to {}", (void *)blob.data(), (void *)data);
     memcpy(data, blob.data(), blob.size());
-    HILOG(kInfo, "Copied from {} to {}", (void *)blob.data(), (void *)data);
     // Put to shared memory
     hshm::charbuf blob_name_buf = hshm::to_charbuf(blob_name);
     if constexpr (!ASYNC) {

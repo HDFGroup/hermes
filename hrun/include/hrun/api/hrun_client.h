@@ -115,7 +115,7 @@ class Client : public ConfigurationManager {
   HSHM_ALWAYS_INLINE
   LPointer<TaskT> NewEmptyTask() {
     LPointer<TaskT> task = main_alloc_->NewObjLocal<TaskT>(main_alloc_);
-    if (task.ptr_ == nullptr) {
+    if (task.shm_.IsNull()) {
       throw std::runtime_error("Could not allocate buffer");
     }
     return task;
@@ -126,7 +126,7 @@ class Client : public ConfigurationManager {
   HSHM_ALWAYS_INLINE
   hipc::LPointer<TaskT> AllocateTask() {
     hipc::LPointer<TaskT> task = main_alloc_->AllocateLocalPtr<TaskT>(sizeof(TaskT));
-    if (task.ptr_ == nullptr) {
+    if (task.shm_.IsNull()) {
       throw std::runtime_error("Could not allocate buffer");
     }
     return task;
@@ -146,7 +146,7 @@ class Client : public ConfigurationManager {
   LPointer<TaskT> NewTask(const TaskNode &task_node, Args&& ...args) {
     LPointer<TaskT> ptr = main_alloc_->NewObjLocal<TaskT>(
         main_alloc_, task_node, std::forward<Args>(args)...);
-    if (ptr.ptr_ == nullptr) {
+    if (ptr.shm_.IsNull()) {
       throw std::runtime_error("Could not allocate buffer");
     }
     return ptr;
@@ -159,7 +159,7 @@ class Client : public ConfigurationManager {
     TaskNode task_node = MakeTaskNodeId();
     LPointer<TaskT> ptr = main_alloc_->NewObjLocal<TaskT>(
         main_alloc_, task_node, std::forward<Args>(args)...);
-    if (ptr.ptr_ == nullptr) {
+    if (ptr.shm_.IsNull()) {
       throw std::runtime_error("Could not allocate buffer");
     }
     return ptr;
