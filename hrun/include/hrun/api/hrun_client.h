@@ -254,7 +254,7 @@ class Client : public ConfigurationManager {
       if (!p.shm_.IsNull()) {
         break;
       }
-      HILOG(kDebug, "Could not allocate buffer of size {} (2)?", size);
+      HILOG(kInfo, "{} Could not allocate buffer of size {} (2)?", THREAD_MODEL, size);
       Yield<THREAD_MODEL>(yield_task);
     }
     return p;
@@ -264,7 +264,7 @@ class Client : public ConfigurationManager {
   template<int THREAD_MODEL>
   HSHM_ALWAYS_INLINE
   LPointer<char> AllocateBuffer(size_t size) {
-    HILOG(kInfo, "Heap size: {}", data_alloc_->GetCurrentlyAllocatedSize());
+    HILOG(kInfo, "{} Heap size: {}", THREAD_MODEL, data_alloc_->GetCurrentlyAllocatedSize());
     LPointer<char> p;
     while (true) {
       try {

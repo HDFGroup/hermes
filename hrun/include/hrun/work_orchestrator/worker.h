@@ -364,7 +364,7 @@ class Worker {
       if (!task->IsRunDisabled() &&
           CheckTaskGroup(task, exec, work_entry.lane_id_, task->task_node_, is_remote) &&
           task->ShouldRun(work_entry.cur_time_, flush_.flushing_)) {
-// #define REMOTE_DEBUG
+#define REMOTE_DEBUG
 #ifdef REMOTE_DEBUG
         if (task->task_state_ != HRUN_QM_CLIENT->admin_task_state_ &&
           !task->task_flags_.Any(TASK_REMOTE_DEBUG_MARK) &&
