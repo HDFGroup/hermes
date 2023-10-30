@@ -106,7 +106,8 @@ class Client : public ConfigurationManager {
   TaskT* NewEmptyTask(hipc::Pointer &p) {
     TaskT *task = main_alloc_->NewObj<TaskT>(p, main_alloc_);
     if (task == nullptr) {
-      throw std::runtime_error("Could not allocate buffer");
+      // throw std::runtime_error("Could not allocate buffer");
+      HELOG(kFatal, "Could not allocate buffer (1)");
     }
     return task;
   }
@@ -117,7 +118,8 @@ class Client : public ConfigurationManager {
   LPointer<TaskT> NewEmptyTask() {
     LPointer<TaskT> task = main_alloc_->NewObjLocal<TaskT>(main_alloc_);
     if (task.shm_.IsNull()) {
-      throw std::runtime_error("Could not allocate buffer");
+      // throw std::runtime_error("Could not allocate buffer");
+      HELOG(kFatal, "Could not allocate buffer (2)");
     }
     return task;
   }
@@ -128,7 +130,8 @@ class Client : public ConfigurationManager {
   hipc::LPointer<TaskT> AllocateTask() {
     hipc::LPointer<TaskT> task = main_alloc_->AllocateLocalPtr<TaskT>(sizeof(TaskT));
     if (task.shm_.IsNull()) {
-      throw std::runtime_error("Could not allocate buffer");
+      // throw std::runtime_error("Could not allocate buffer");
+      HELOG(kFatal, "Could not allocate buffer (3)");
     }
     return task;
   }
@@ -148,7 +151,8 @@ class Client : public ConfigurationManager {
     LPointer<TaskT> ptr = main_alloc_->NewObjLocal<TaskT>(
         main_alloc_, task_node, std::forward<Args>(args)...);
     if (ptr.shm_.IsNull()) {
-      throw std::runtime_error("Could not allocate buffer");
+      // throw std::runtime_error("Could not allocate buffer");
+      HELOG(kFatal, "Could not allocate buffer (4)");
     }
     return ptr;
   }
@@ -161,7 +165,8 @@ class Client : public ConfigurationManager {
     LPointer<TaskT> ptr = main_alloc_->NewObjLocal<TaskT>(
         main_alloc_, task_node, std::forward<Args>(args)...);
     if (ptr.shm_.IsNull()) {
-      throw std::runtime_error("Could not allocate buffer");
+      // throw std::runtime_error("Could not allocate buffer");
+      HELOG(kFatal, "Could not allocate buffer (5)");
     }
     return ptr;
   }
