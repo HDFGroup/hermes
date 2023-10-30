@@ -463,7 +463,6 @@ class Bucket {
                  size_t blob_off,
                  Context &ctx) {
     // TODO(llogan): intercept mmap to avoid copy
-    // TODO(llogan): make GetBlobSize work with blob_name
     size_t data_size = blob.size();
     if (blob.size() == 0) {
       data_size = blob_mdm_->GetBlobSizeRoot(
@@ -612,7 +611,6 @@ class Bucket {
    * Delete \a blob_id blob
    * */
   void DestroyBlob(const BlobId &blob_id, Context &ctx) {
-    // TODO(llogan): Make apart of bkt_mdm_ instead
     blob_mdm_->DestroyBlobRoot(id_, blob_id);
   }
 

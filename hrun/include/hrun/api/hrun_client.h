@@ -244,7 +244,7 @@ class Client : public ConfigurationManager {
   HSHM_ALWAYS_INLINE
   LPointer<char> AllocateBuffer(size_t size, Task *yield_task) {
     LPointer<char> p;
-    HILOG(kInfo, "Heap size: {}", data_alloc_->GetCurrentlyAllocatedSize());
+    // HILOG(kInfo, "Heap size: {}", data_alloc_->GetCurrentlyAllocatedSize());
     while (true) {
       try {
         p = data_alloc_->AllocateLocalPtr<char>(size);
@@ -284,14 +284,14 @@ class Client : public ConfigurationManager {
   /** Free a buffer */
   HSHM_ALWAYS_INLINE
   void FreeBuffer(hipc::Pointer &p) {
-    HILOG(kInfo, "Heap size: {}", data_alloc_->GetCurrentlyAllocatedSize());
+    // HILOG(kInfo, "Heap size: {}", data_alloc_->GetCurrentlyAllocatedSize());
     data_alloc_->Free(p);
   }
 
   /** Free a buffer */
   HSHM_ALWAYS_INLINE
   void FreeBuffer(LPointer<char> &p) {
-    HILOG(kInfo, "Heap size: {}", data_alloc_->GetCurrentlyAllocatedSize());
+    // HILOG(kInfo, "Heap size: {}", data_alloc_->GetCurrentlyAllocatedSize());
     data_alloc_->FreeLocalPtr(p);
   }
 

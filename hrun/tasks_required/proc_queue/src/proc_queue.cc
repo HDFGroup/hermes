@@ -56,7 +56,6 @@ class Server : public TaskLib {
         if (!ptr->IsComplete()) {
           return;
         }
-        // TODO(llogan): handle fire & forget tasks gracefully
         if (task->is_fire_forget_) {
           TaskState *exec = HRUN_TASK_REGISTRY->GetTaskState(ptr->task_state_);
           exec->Del(ptr->method_, ptr);
