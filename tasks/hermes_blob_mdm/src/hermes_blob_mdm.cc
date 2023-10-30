@@ -308,6 +308,7 @@ class Server : public TaskLib {
           // next_placement.size_ += diff;
           HELOG(kFatal, "Ran outta space in this tier -- will fix soon")
         }
+        // bdev.monitor_task_->rem_cap_ -= alloc_task->alloc_size_;
         HRUN_CLIENT->DelTask(alloc_task);
       }
     }

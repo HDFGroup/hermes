@@ -81,6 +81,7 @@ class Client : public ConfigurationManager {
                               qm.data_shm_name_);
     }
     main_alloc_ = mem_mngr->GetAllocator(main_alloc_id_);
+    data_alloc_ = mem_mngr->GetAllocator(data_alloc_id_);
     header_ = main_alloc_->GetCustomHeader<HrunShm>();
     unique_ = &header_->unique_;
     node_id_ = header_->node_id_;
@@ -239,7 +240,7 @@ class Client : public ConfigurationManager {
   LPointer<char> AllocateBuffer(size_t size, Task *yield_task) {
     LPointer<char> p;
     while (true) {
-      p = main_alloc_->AllocateLocalPtr<char>(size);
+      p = data_alloc_->AllocateLocalPtr<char>(size);
       if (!p.shm_.IsNull()) {
         break;
       }
@@ -255,7 +256,7 @@ class Client : public ConfigurationManager {
   LPointer<char> AllocateBuffer(size_t size) {
     LPointer<char> p;
     while (true) {
-      p = main_alloc_->AllocateLocalPtr<char>(size);
+      p = data_alloc_->AllocateLocalPtr<char>(size);
       if (!p.shm_.IsNull()) {
         break;
       }
@@ -268,20 +269,20 @@ class Client : public ConfigurationManager {
   /** Free a buffer */
   HSHM_ALWAYS_INLINE
   void FreeBuffer(hipc::Pointer &p) {
-    main_alloc_->Free(p);
+    data_alloc_->Free(p);
   }
 
   /** Free a buffer */
   HSHM_ALWAYS_INLINE
   void FreeBuffer(LPointer<char> &p) {
-    main_alloc_->FreeLocalPtr(p);
+    data_alloc_->FreeLocalPtr(p);
   }
 
   /** Convert pointer to char* */
   template<typename T = char>
   HSHM_ALWAYS_INLINE
   T* GetDataPointer(const hipc::Pointer &p) {
-    return main_alloc_->Convert<T, hipc::Pointer>(p);
+    return data_alloc_->Convert<T, hipc::Pointer>(p);
   }
 
   /** Get a queue by its ID */
