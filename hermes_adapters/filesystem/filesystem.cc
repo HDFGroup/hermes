@@ -96,7 +96,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   std::string filename = bkt.GetName();
   bool is_append = stat.st_ptr_ == std::numeric_limits<size_t>::max();
 
-  HILOG(kDebug, "Write called for filename: {}"
+  HILOG(kInfo, "Write called for filename: {}"
                 " on offset: {}"
                 " from position: {}"
                 " and current file size: {}"
