@@ -6,7 +6,7 @@ work_orchestrator:
 ### Queue Manager settings
 queue_manager:
   # The default depth of allocated queues
-  queue_depth: 256
+  queue_depth: 100000
   # The maximum number of lanes per queue
   max_lanes: 16
   # The maximum number of queues
