@@ -541,11 +541,7 @@ class Worker {
   HSHM_ALWAYS_INLINE
   void EndTask(Lane *lane, TaskState *exec, Task *task, int &off) {
     PopTask(lane, off);
-    if (exec->name_ == "hermes_blob_mdm" && task->method_ == 2) {
-      HILOG(kInfo, "In task {}/{} and is FF: {}", task->task_state_, task->method_, task->IsFireAndForget());
-    }
     if (exec && task->IsFireAndForget()) {
-      // HRUN_CLIENT->DelTask<TaskState>(exec, task);
       exec->Del(task->method_, task);
     } else {
       task->SetComplete();
