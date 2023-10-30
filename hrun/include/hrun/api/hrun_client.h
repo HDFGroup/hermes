@@ -276,7 +276,7 @@ class Client : public ConfigurationManager {
         break;
       }
       Yield<THREAD_MODEL>();
-      HILOG(kInfo, "Could not allocate buffer of size {} (1)?", size);
+      HILOG(kInfo, "{} Could not allocate buffer of size {} (1)?", THREAD_MODEL, size);
     }
     return p;
   }
