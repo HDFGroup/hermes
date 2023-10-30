@@ -245,7 +245,11 @@ class Client : public ConfigurationManager {
   LPointer<char> AllocateBuffer(size_t size, Task *yield_task) {
     LPointer<char> p;
     while (true) {
-      p = data_alloc_->AllocateLocalPtr<char>(size);
+      try {
+        p = data_alloc_->AllocateLocalPtr<char>(size);
+      } catch (...) {
+        p.shm_.SetNull();
+      }
       if (!p.shm_.IsNull()) {
         break;
       }
@@ -261,7 +265,11 @@ class Client : public ConfigurationManager {
   LPointer<char> AllocateBuffer(size_t size) {
     LPointer<char> p;
     while (true) {
-      p = data_alloc_->AllocateLocalPtr<char>(size);
+      try {
+        p = data_alloc_->AllocateLocalPtr<char>(size);
+      } catch (...) {
+        p.shm_.SetNull();
+      }
       if (!p.shm_.IsNull()) {
         break;
       }
