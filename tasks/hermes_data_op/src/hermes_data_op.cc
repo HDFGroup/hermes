@@ -182,7 +182,8 @@ class Server : public TaskLib {
     std::vector<DataPair> in_tasks;
     for (OpData &data : op_data) {
       // Get the input data
-      LPointer<char> data_ptr = HRUN_CLIENT->AllocateBuffer(data.size_);
+      LPointer<char> data_ptr =
+          HRUN_CLIENT->AllocateBuffer<TASK_YIELD_CO>(data.size_, task);
       LPointer<blob_mdm::GetBlobTask> in_task =
           blob_mdm_.AsyncGetBlob(task->task_node_ + 1,
                                  data.bkt_id_,
@@ -201,7 +202,8 @@ class Server : public TaskLib {
       in_task->Wait<TASK_YIELD_CO>(task);
 
       // Calaculate the minimum
-      LPointer<char> min_lptr = HRUN_CLIENT->AllocateBuffer(sizeof(float));
+      LPointer<char> min_lptr =
+          HRUN_CLIENT->AllocateBuffer<TASK_YIELD_CO>(sizeof(float), task);
       float *min_ptr = (float*)min_lptr.ptr_;
       *min_ptr = std::numeric_limits<float>::max();
       for (size_t i = 0; i < in_task->data_size_; i += sizeof(float)) {

@@ -205,7 +205,8 @@ class Server : public TaskLib {
         blob_info.last_flush_ = 1;
         blob_info.mod_count_ = 0;
         blob_info.UpdateWriteStats();
-        LPointer<char> data = HRUN_CLIENT->AllocateBuffer(blob_info.blob_size_);
+        LPointer<char> data = HRUN_CLIENT->AllocateBuffer<TASK_YIELD_CO>(blob_info.blob_size_,
+                                                                         task);
         LPointer<GetBlobTask> get_blob =
             blob_mdm_.AsyncGetBlob(task->task_node_ + 1,
                                    blob_info.tag_id_,
@@ -739,7 +740,8 @@ class Server : public TaskLib {
           task->SetModuleComplete();
           return;
         }
-        task->data_ = HRUN_CLIENT->AllocateBuffer(blob_info.blob_size_).shm_;
+        task->data_ = HRUN_CLIENT->AllocateBuffer<TASK_YIELD_STD>(blob_info.blob_size_,
+                                                                  task).shm_;
         task->data_size_ = blob_info.blob_size_;
         task->get_task_ = blob_mdm_.AsyncGetBlob(task->task_node_ + 1,
                                                  task->tag_id_,

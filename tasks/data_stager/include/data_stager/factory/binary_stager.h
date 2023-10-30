@@ -60,7 +60,7 @@ class BinaryFileStager : public AbstractStager {
     plcmnt.DecodeBlobName(*task->blob_name_, page_size_);
     HILOG(kDebug, "Attempting to stage {} bytes from the backend file {} at offset {}",
           page_size_, url_, plcmnt.bucket_off_);
-    LPointer<char> blob = HRUN_CLIENT->AllocateBuffer(page_size_);
+    LPointer<char> blob = HRUN_CLIENT->AllocateBuffer<TASK_YIELD_STD>(page_size_);
     ssize_t real_size = HERMES_POSIX_API->pread(fd_,
                                                 blob.ptr_,
                                                 page_size_,

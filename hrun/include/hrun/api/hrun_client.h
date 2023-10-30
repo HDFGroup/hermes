@@ -217,12 +217,36 @@ class Client : public ConfigurationManager {
   }
 
   /** Allocate a buffer */
+  template<int THREAD_MODEL>
   HSHM_ALWAYS_INLINE
   LPointer<char> AllocateBuffer(size_t size) {
     LPointer<char> p;
-    do {
+    while (true) {
       p = data_alloc_->AllocateLocalPtr<char>(size);
-    } while (p.ptr_ == nullptr);
+      if (p.ptr_) {
+        break;
+      }
+      if constexpr (THREAD_MODEL == TASK_YIELD_STD) {
+        HERMES_THREAD_MODEL->Yield();
+      } else if constexpr (THREAD_MODEL == TASK_YIELD_ABT) {
+        ABT_thread_yield();
+      }
+    }
+    return p;
+  }
+
+  /** Allocate a buffer in a task */
+  template<int THREAD_MODEL>
+  HSHM_ALWAYS_INLINE
+  LPointer<char> AllocateBuffer(size_t size, Task *yield_task) {
+    LPointer<char> p;
+    while (true) {
+      p = data_alloc_->AllocateLocalPtr<char>(size);
+      if (p.ptr_) {
+        break;
+      }
+      yield_task->Yield<THREAD_MODEL>();
+    }
     return p;
   }
 
