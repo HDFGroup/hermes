@@ -53,9 +53,8 @@ class Server : public TaskLib {
         HRUN_RPC->num_threads_);
     for (int i = 0; i < HRUN_RPC->num_threads_; ++i) {
       AbtWorkerEntry *entry = new AbtWorkerEntry(this);
-      ABT_thread thread = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(
+      entry->thread_ = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(
           &Server::RunPreemptive, entry);
-      entry->thread_ = thread;
       threads_->emplace(entry);
     }
     HRUN_THALLIUM->RegisterRpc("RpcPushSmall", [this](const tl::request &req,

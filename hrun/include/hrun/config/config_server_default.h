@@ -47,7 +47,7 @@ const inline char* kHrunServerDefaultConfigStr =
 "  port: 8080\n"
 "\n"
 "  # The number of handler threads for each RPC server.\n"
-"  num_threads: 4\n"
+"  num_threads: 32\n"
 "\n"
 "### Task Registry\n"
 "task_registry: [\n"
