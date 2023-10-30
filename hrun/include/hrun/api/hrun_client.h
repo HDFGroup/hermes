@@ -240,7 +240,7 @@ class Client : public ConfigurationManager {
     LPointer<char> p;
     while (true) {
       p = main_alloc_->AllocateLocalPtr<char>(size);
-      if (p.ptr_) {
+      if (!p.shm_.IsNull()) {
         break;
       }
       HILOG(kDebug, "Could not allocate buffer of size {} (2)?", size);
@@ -256,7 +256,7 @@ class Client : public ConfigurationManager {
     LPointer<char> p;
     while (true) {
       p = main_alloc_->AllocateLocalPtr<char>(size);
-      if (p.ptr_) {
+      if (!p.shm_.IsNull()) {
         break;
       }
       Yield<THREAD_MODEL>();
