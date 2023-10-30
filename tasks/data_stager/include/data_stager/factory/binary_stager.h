@@ -69,6 +69,8 @@ class BinaryFileStager : public AbstractStager {
       HELOG(kError, "Failed to stage in {} bytes from {}",
             page_size_, url_);
       return;
+    } else if (real_size == 0) {
+      return;
     }
     // memcpy(blob.ptr_ + plcmnt.blob_off_, blob.ptr_, real_size);
     HILOG(kDebug, "Staged {} bytes from the backend file {}",

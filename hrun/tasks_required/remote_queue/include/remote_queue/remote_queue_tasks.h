@@ -88,6 +88,8 @@ struct PushTask : public Task, TaskFlags<TF_LOCAL> {
   IN TaskState *exec_;
   IN u32 exec_method_;
   IN std::vector<DataTransfer> xfer_;
+  TEMP bool started_ = false;
+  TEMP void *server_;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -126,6 +128,10 @@ struct PushTask : public Task, TaskFlags<TF_LOCAL> {
   /** Create group */
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
+//    hrun::LocalSerialize srl(group);
+//    srl << task_state_.unique_;
+//    srl << task_state_.node_id_;
+//    return 0;
     return TASK_UNORDERED;
   }
 };

@@ -82,7 +82,6 @@ class Client : public ConfigurationManager {
     }
     main_alloc_ = mem_mngr->GetAllocator(main_alloc_id_);
     header_ = main_alloc_->GetCustomHeader<HrunShm>();
-    data_alloc_ = mem_mngr->GetAllocator(data_alloc_id_);
     unique_ = &header_->unique_;
     node_id_ = header_->node_id_;
   }
@@ -216,24 +215,22 @@ class Client : public ConfigurationManager {
     return main_alloc_->Convert<T, hipc::Pointer>(p);
   }
 
-  /** Allocate a buffer */
+  /** Agnostic yield function */
   template<int THREAD_MODEL>
   HSHM_ALWAYS_INLINE
-  LPointer<char> AllocateBuffer(size_t size) {
-    LPointer<char> p;
-    while (true) {
-      p = data_alloc_->AllocateLocalPtr<char>(size);
-      if (p.ptr_) {
-        break;
-      }
-      if constexpr (THREAD_MODEL == TASK_YIELD_STD) {
-        HERMES_THREAD_MODEL->Yield();
-      } else if constexpr (THREAD_MODEL == TASK_YIELD_ABT) {
-        ABT_thread_yield();
-      }
-      HILOG(kDebug, "Could not allocate buffer of size {} (1)?", size);
+  void Yield() {
+    if constexpr (THREAD_MODEL == TASK_YIELD_STD) {
+      HERMES_THREAD_MODEL->Yield();
+    } else if constexpr (THREAD_MODEL == TASK_YIELD_ABT) {
+      ABT_thread_yield();
     }
-    return p;
+  }
+
+  /** Contextual yield function */
+  template<int THREAD_MODEL>
+  HSHM_ALWAYS_INLINE
+  void Yield(Task *yield_task) {
+    yield_task->Yield<THREAD_MODEL>();
   }
 
   /** Allocate a buffer in a task */
@@ -242,12 +239,28 @@ class Client : public ConfigurationManager {
   LPointer<char> AllocateBuffer(size_t size, Task *yield_task) {
     LPointer<char> p;
     while (true) {
-      p = data_alloc_->AllocateLocalPtr<char>(size);
+      p = main_alloc_->AllocateLocalPtr<char>(size);
       if (p.ptr_) {
         break;
       }
       HILOG(kDebug, "Could not allocate buffer of size {} (2)?", size);
-      yield_task->Yield<THREAD_MODEL>();
+      Yield<THREAD_MODEL>(yield_task);
+    }
+    return p;
+  }
+
+  /** Allocate a buffer */
+  template<int THREAD_MODEL>
+  HSHM_ALWAYS_INLINE
+  LPointer<char> AllocateBuffer(size_t size) {
+    LPointer<char> p;
+    while (true) {
+      p = main_alloc_->AllocateLocalPtr<char>(size);
+      if (p.ptr_) {
+        break;
+      }
+      Yield<THREAD_MODEL>();
+      HILOG(kDebug, "Could not allocate buffer of size {} (1)?", size);
     }
     return p;
   }
@@ -255,20 +268,20 @@ class Client : public ConfigurationManager {
   /** Free a buffer */
   HSHM_ALWAYS_INLINE
   void FreeBuffer(hipc::Pointer &p) {
-    data_alloc_->Free(p);
+    main_alloc_->Free(p);
   }
 
   /** Free a buffer */
   HSHM_ALWAYS_INLINE
   void FreeBuffer(LPointer<char> &p) {
-    data_alloc_->FreeLocalPtr(p);
+    main_alloc_->FreeLocalPtr(p);
   }
 
   /** Convert pointer to char* */
   template<typename T = char>
   HSHM_ALWAYS_INLINE
   T* GetDataPointer(const hipc::Pointer &p) {
-    return data_alloc_->Convert<T, hipc::Pointer>(p);
+    return main_alloc_->Convert<T, hipc::Pointer>(p);
   }
 
   /** Get a queue by its ID */

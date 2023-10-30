@@ -74,6 +74,8 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     // Update file position pointer
     if (stat.hflags_.Any(HERMES_FS_APPEND)) {
       stat.st_ptr_ = std::numeric_limits<size_t>::max();
+    } else {
+      stat.st_ptr_ = 0;
     }
     // Allocate internal hermes data
     auto stat_ptr = std::make_shared<AdapterStat>(stat);
@@ -92,7 +94,6 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   (void) f;
   hapi::Bucket &bkt = stat.bkt_id_;
   std::string filename = bkt.GetName();
-
   bool is_append = stat.st_ptr_ == std::numeric_limits<size_t>::max();
 
   HILOG(kDebug, "Write called for filename: {}"
@@ -244,7 +245,7 @@ size_t Filesystem::GetSize(File &f, AdapterStat &stat) {
   }
 }
 
-off_t Filesystem::Seek(File &f, AdapterStat &stat,
+size_t Filesystem::Seek(File &f, AdapterStat &stat,
                        SeekMode whence, off64_t offset) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
   switch (whence) {
@@ -281,7 +282,7 @@ off_t Filesystem::Seek(File &f, AdapterStat &stat,
   return offset;
 }
 
-off_t Filesystem::Tell(File &f, AdapterStat &stat) {
+size_t Filesystem::Tell(File &f, AdapterStat &stat) {
   (void) f;
   if (stat.st_ptr_ != std::numeric_limits<size_t>::max()) {
     return stat.st_ptr_;
@@ -360,28 +361,28 @@ int Filesystem::Remove(const std::string &pathname) {
 size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                          size_t total_size, IoStatus &io_status,
                          FsIoOptions opts) {
-  off_t off = stat.st_ptr_;
+  size_t off = stat.st_ptr_;
   return Write(f, stat, ptr, off, total_size, io_status, opts);
 }
 
 size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
                         size_t total_size,
                         IoStatus &io_status, FsIoOptions opts) {
-  off_t off = stat.st_ptr_;
+  size_t off = stat.st_ptr_;
   return Read(f, stat, ptr, off, total_size, io_status, opts);
 }
 
 Task* Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
                          size_t total_size, size_t req_id,
                          IoStatus &io_status, FsIoOptions opts) {
-  off_t off = stat.st_ptr_;
+  size_t off = stat.st_ptr_;
   return AWrite(f, stat, ptr, off, total_size, req_id, io_status, opts);
 }
 
 Task* Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
                         size_t total_size, size_t req_id,
                         IoStatus &io_status, FsIoOptions opts) {
-  off_t off = stat.st_ptr_;
+  size_t off = stat.st_ptr_;
   return ARead(f, stat, ptr, off, total_size, req_id, io_status, opts);
 }
 
@@ -499,8 +500,8 @@ Task* Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
   return ARead(f, *stat, ptr, off, total_size, req_id, io_status, opts);
 }
 
-off_t Filesystem::Seek(File &f, bool &stat_exists,
-                       SeekMode whence, off_t offset) {
+size_t Filesystem::Seek(File &f, bool &stat_exists,
+                       SeekMode whence, size_t offset) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
   auto stat = mdm->Find(f);
   if (!stat) {
@@ -522,7 +523,7 @@ size_t Filesystem::GetSize(File &f, bool &stat_exists) {
   return GetSize(f, *stat);
 }
 
-off_t Filesystem::Tell(File &f, bool &stat_exists) {
+size_t Filesystem::Tell(File &f, bool &stat_exists) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
   auto stat = mdm->Find(f);
   if (!stat) {

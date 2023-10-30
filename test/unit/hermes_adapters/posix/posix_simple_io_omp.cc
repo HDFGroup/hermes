@@ -34,7 +34,7 @@ void TestThread(char *path,
   int rank = omp_get_thread_num();
   size_t size = count * block_size;
   size_t total_size = size * kNumProcs;
-  int off = (rank * size) + block_off * block_size;
+  size_t off = (rank * size) + block_off * block_size;
 
   {
     std::stringstream ss;
@@ -56,7 +56,7 @@ void TestThread(char *path,
     std::cout << "Failed to open the file" << std::endl;
     exit(1);
   }
-  lseek(fd, off, SEEK_SET);
+  lseek64(fd, off, SEEK_SET);
 
   if (do_read) {
     struct stat st;
@@ -81,9 +81,6 @@ void TestThread(char *path,
     char nonce = i + 1;
     if (!do_read) {
       memset(buf.data(), nonce, block_size);
-      if (i == 252) {
-        std::cout << "Writing 253th block" << std::endl;
-      }
       int ret = write(fd, buf.data(), block_size);
       if (ret != block_size) {
         std::cout << "Write failed!" << std::endl;

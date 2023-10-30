@@ -148,6 +148,7 @@ class Worker {
   int pthread_id_;      /**< The worker pthread handle */
   int pid_;             /**< The worker process id */
   u32 numa_node_;       // TODO(llogan): track NUMA affinity
+  ABT_xstream xstream_;
   std::vector<WorkEntry> work_queue_;  /**< The set of queues to poll */
   /** A set of queues to begin polling in a worker */
   hshm::spsc_queue<std::vector<WorkEntry>> poll_queues_;
@@ -180,6 +181,7 @@ class Worker {
     // TODO(llogan): implement reserve for group
     group_.resize(512);
     group_.resize(0);
+    xstream_ = xstream;
     /* int ret = ABT_thread_create_on_xstream(xstream,
                                            [](void *args) { ((Worker*)args)->Loop(); }, this,
                                            ABT_THREAD_ATTR_NULL, &tl_thread_);
@@ -328,11 +330,8 @@ class Worker {
     Lane *&lane = work_entry.lane_;
     Task *task;
     LaneData *entry;
-    for (int i = 0; i < 1024; ++i) {
+    while (!lane->peek(entry, off).IsNull()) {
       // Get the task message
-      if (lane->peek(entry, off).IsNull()) {
-        return;
-      }
       if (entry->complete_) {
         PopTask(lane, off);
         continue;

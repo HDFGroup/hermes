@@ -26,6 +26,7 @@ namespace hrun::remote_queue {
 class Server;
 
 struct AbtWorkerEntry {
+  int id_;
   Server *server_;
   ABT_thread thread_;
   PushTask *task_;
@@ -33,13 +34,12 @@ struct AbtWorkerEntry {
 
   AbtWorkerEntry() = default;
 
-  AbtWorkerEntry(Server *server)
-  : server_(server), task_(nullptr), rctx_(nullptr) {}
+  AbtWorkerEntry(int id, Server *server)
+  : id_(id), server_(server), task_(nullptr), rctx_(nullptr) {}
 };
 
 class Server : public TaskLib {
  public:
-  hrun::remote_queue::Client client_;
   hipc::uptr<hipc::mpsc_queue<AbtWorkerEntry*>> threads_;
 
  public:
@@ -50,9 +50,9 @@ class Server : public TaskLib {
     HILOG(kInfo, "(node {}) Constructing remote queue (task_node={}, task_state={}, method={})",
           HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, task->method_);
     threads_ = hipc::make_uptr<hipc::mpsc_queue<AbtWorkerEntry*>>(
-        HRUN_RPC->num_threads_);
+        HRUN_RPC->num_threads_ + 16);
     for (int i = 0; i < HRUN_RPC->num_threads_; ++i) {
-      AbtWorkerEntry *entry = new AbtWorkerEntry(this);
+      AbtWorkerEntry *entry = new AbtWorkerEntry(i, this);
       entry->thread_ = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(
           &Server::RunPreemptive, entry);
       threads_->emplace(entry);
@@ -77,41 +77,6 @@ class Server : public TaskLib {
   void MonitorConstruct(u32 mode, ConstructTask *task, RunContext &rctx) {
   }
 
-  /** An ABT thread */
-  static void RunPreemptive(void *data) {
-    AbtWorkerEntry *entry = (AbtWorkerEntry *) data;
-    Server *server = entry->server_;
-    WorkOrchestrator *orchestrator = HRUN_WORK_ORCHESTRATOR;
-    while (orchestrator->IsAlive()) {
-      PushTask *task = entry->task_;
-      if (task) {
-        server->PushPreemptive(entry->task_, *entry->rctx_);
-        entry->task_ = nullptr;
-        server->threads_->emplace(entry);
-      }
-      ABT_thread_yield();
-    }
-  }
-
-  /** PUSH using thallium */
-  void PushPreemptive(PushTask *task, RunContext &rctx) {
-    std::vector<DataTransfer> &xfer = task->xfer_;
-    switch (xfer.size()) {
-      case 1: {
-        SyncClientSmallPush(xfer, task);
-        break;
-      }
-      case 2: {
-        SyncClientIoPush(xfer, task);
-        break;
-      }
-      default: {
-        HELOG(kFatal, "The task {}/{} does not support remote calls", task->task_state_, task->method_);
-      }
-    }
-    ClientHandlePushReplicaEnd(task);
-  }
-
   /** Destroy remote queue */
   void Destruct(DestructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
@@ -122,14 +87,21 @@ class Server : public TaskLib {
   /** Push operation called on client */
   void Push(PushTask *task, RunContext &rctx) {
     AbtWorkerEntry *entry;
-    if (!task->IsStarted()) {
-      threads_->pop(entry);
-      if (entry == nullptr) {
-        HELOG(kFatal, "Could not get an ABT thread for networking");
+    if (!task->started_) {
+//      task->server_ = this;
+//      task->started_ = true;
+//      HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(
+//          &Server::RunOnce, task);
+      if (threads_->pop(entry).IsNull()) {
+        return;
       }
+      HILOG(kDebug, "Starting task {} on {}",
+            task->task_node_, entry->id_);
+      task->started_ = true;
       entry->rctx_ = &rctx;
       entry->task_ = task;
     }
+    // HILOG(kDebug, "Continuing task {}", task->task_node_)
   }
   void MonitorPush(u32 mode, PushTask *task, RunContext &rctx) {
   }
@@ -150,6 +122,50 @@ class Server : public TaskLib {
   }
 
  private:
+  /** An ABT thread */
+  static void RunOnce(void *data) {
+    PushTask *task = (PushTask *) data;
+    Server *server = (Server *) task->server_;
+    server->PushPreemptive(task);
+  }
+
+  /** An ABT thread */
+  static void RunPreemptive(void *data) {
+    AbtWorkerEntry *entry = (AbtWorkerEntry *) data;
+    Server *server = entry->server_;
+    WorkOrchestrator *orchestrator = HRUN_WORK_ORCHESTRATOR;
+    while (orchestrator->IsAlive()) {
+      if (entry->task_) {
+        HILOG(kDebug, "Preempt task {}", entry->task_->task_node_)
+        server->PushPreemptive(entry->task_);
+        entry->task_ = nullptr;
+        server->threads_->emplace(entry);
+      }
+      ABT_thread_yield();
+    }
+  }
+
+  /** PUSH using thallium */
+  void PushPreemptive(PushTask *task) {
+    std::vector<DataTransfer> &xfer = task->xfer_;
+    switch (xfer.size()) {
+      case 1: {
+        HILOG(kDebug, "Pushing to small {} vs {}", task->task_node_, task->orig_task_->task_node_)
+        SyncClientSmallPush(xfer, task);
+        break;
+      }
+      case 2: {
+        HILOG(kDebug, "Pushing to io {}", task->task_node_, task->orig_task_->task_node_)
+        SyncClientIoPush(xfer, task);
+        break;
+      }
+      default: {
+        HELOG(kFatal, "The task {}/{} does not support remote calls", task->task_state_, task->method_);
+      }
+    }
+    ClientHandlePushReplicaEnd(task);
+  }
+
   /** Handle output from replica PUSH */
   static void ClientHandlePushReplicaOutput(int replica, std::string &ret, PushTask *task) {
     std::vector<DataTransfer> xfer(1);
@@ -210,6 +226,7 @@ class Server : public TaskLib {
 
   /** Sync Push for I/O message */
   void SyncClientIoPush(std::vector<DataTransfer> &xfer, PushTask *task) {
+
     std::string params = std::string((char *) xfer[1].data_, xfer[1].data_size_);
     IoType io_type = IoType::kRead;
     if (xfer[0].flags_.Any(DT_RECEIVER_READ)) {
@@ -227,16 +244,21 @@ class Server : public TaskLib {
             HRUN_CLIENT->node_id_,
             domain_id.id_,
             static_cast<int>(io_type));
-      std::string ret = HRUN_THALLIUM->SyncIoCall<std::string>(domain_id.id_,
-                                                               "RpcPushBulk",
-                                                               io_type,
-                                                               data,
-                                                               data_size,
-                                                               task->exec_->id_,
-                                                               task->exec_method_,
-                                                               params,
-                                                               data_size,
-                                                               io_type);
+      std::string ret;
+      if (data_size > 0) {
+        ret = HRUN_THALLIUM->SyncIoCall<std::string>(domain_id.id_,
+                                                     "RpcPushBulk",
+                                                     io_type,
+                                                     data,
+                                                     data_size,
+                                                     task->exec_->id_,
+                                                     task->exec_method_,
+                                                     params,
+                                                     data_size,
+                                                     io_type);
+      } else {
+        HILOG(kFatal, "(IO) Thallium can't handle 0-sized I/O")
+      }
       HILOG(kDebug, "(IO) Finished transferring {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={}, type={})",
             data_size,
             task->orig_task_->task_node_,
@@ -350,12 +372,13 @@ class Server : public TaskLib {
                    const tl::bulk &bulk,
                    size_t data_size,
                    IoType io_type) {
-    hshm::charbuf data(HRUN_CLIENT->data_alloc_, data_size);
+    LPointer<char> data =
+        HRUN_CLIENT->AllocateBuffer<TASK_YIELD_ABT>(data_size);
 
     // Create the input data transfer object
     std::vector<DataTransfer> xfer(2);
-    xfer[0].data_ = data.data();
-    xfer[0].data_size_ = data.size();
+    xfer[0].data_ = data.ptr_;
+    xfer[0].data_size_ = data_size;
     xfer[1].data_ = params.data();
     xfer[1].data_size_ = params.size();
 
@@ -364,16 +387,15 @@ class Server : public TaskLib {
 
     // Process the message
     if (io_type == IoType::kWrite) {
-      HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.data(), data_size);
-      HILOG(kDebug, "(node {}) Write blob integer: {}", HRUN_CLIENT->node_id_, (int)data[0])
+      HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.ptr_, data_size);
     }
     TaskState *exec;
     Task *orig_task;
     RpcExec(req, state_id, method, params, xfer, orig_task, exec);
     if (io_type == IoType::kRead) {
-      HILOG(kDebug, "(node {}) Read blob integer: {}", HRUN_CLIENT->node_id_, (int)data[0])
-      HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.data(), data_size);
+      HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.ptr_, data_size);
     }
+    HRUN_CLIENT->FreeBuffer(data);
 
     // Return
     RpcComplete(req, method, orig_task, exec, state_id);

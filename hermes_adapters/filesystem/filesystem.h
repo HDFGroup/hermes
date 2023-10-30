@@ -83,11 +83,11 @@ class Filesystem {
   /** wait for request IDs in \a req_id vector */
   void Wait(std::vector<uint64_t> &req_id, std::vector<size_t> &ret);
   /** seek */
-  off_t Seek(File &f, AdapterStat &stat, SeekMode whence, off64_t offset);
+  size_t Seek(File &f, AdapterStat &stat, SeekMode whence, off64_t offset);
   /** file size */
   size_t GetSize(File &f, AdapterStat &stat);
   /** tell */
-  off_t Tell(File &f, AdapterStat &stat);
+  size_t Tell(File &f, AdapterStat &stat);
   /** sync */
   int Sync(File &f, AdapterStat &stat);
   /** truncate */
@@ -153,11 +153,11 @@ class Filesystem {
                        size_t total_size, size_t req_id, IoStatus &io_status,
                        FsIoOptions opts);
   /** seek */
-  off_t Seek(File &f, bool &stat_exists, SeekMode whence, off_t offset);
+  size_t Seek(File &f, bool &stat_exists, SeekMode whence, size_t offset);
   /** file sizes */
   size_t GetSize(File &f, bool &stat_exists);
   /** tell */
-  off_t Tell(File &f, bool &stat_exists);
+  size_t Tell(File &f, bool &stat_exists);
   /** sync */
   int Sync(File &f, bool &stat_exists);
   /** truncate */
