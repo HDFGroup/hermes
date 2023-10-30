@@ -112,7 +112,7 @@ class Server : public TaskLib {
       LPointer<Task> &dup = task->dups_[i];
       dup->Wait<TASK_YIELD_CO>(task);
       task->exec_->DupEnd(dup->method_, i, task->orig_task_, dup.ptr_);
-      HRUN_CLIENT->DelTask(dup);
+      HRUN_CLIENT->DelTask(task->exec_, dup.ptr_);
     }
     task->exec_->ReplicateEnd(task->exec_method_, task->orig_task_);
     task->orig_task_->SetModuleComplete();
@@ -464,6 +464,7 @@ class Server : public TaskLib {
           orig_task->task_state_,
           state_id,
           method);
+
     HRUN_CLIENT->DelTask(exec, orig_task);
     if (out_xfer.size() > 0 && out_xfer[0].data_size_ > 0) {
       req.respond(std::string((char *) out_xfer[0].data_, out_xfer[0].data_size_));

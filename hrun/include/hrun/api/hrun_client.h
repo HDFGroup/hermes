@@ -264,7 +264,6 @@ class Client : public ConfigurationManager {
   HSHM_ALWAYS_INLINE
   LPointer<char> AllocateBuffer(size_t size) {
     LPointer<char> p;
-    HILOG(kInfo, "Allocate {}", size)
     while (true) {
       try {
         p = data_alloc_->AllocateLocalPtr<char>(size);
@@ -283,14 +282,12 @@ class Client : public ConfigurationManager {
   /** Free a buffer */
   HSHM_ALWAYS_INLINE
   void FreeBuffer(hipc::Pointer &p) {
-    HILOG(kInfo, "Free")
     data_alloc_->Free(p);
   }
 
   /** Free a buffer */
   HSHM_ALWAYS_INLINE
   void FreeBuffer(LPointer<char> &p) {
-    HILOG(kInfo, "Free")
     data_alloc_->FreeLocalPtr(p);
   }
 

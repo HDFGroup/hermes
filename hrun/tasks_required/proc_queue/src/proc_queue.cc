@@ -45,6 +45,7 @@ class Server : public TaskLib {
 //              ptr->task_node_, ptr->task_state_, GetLinuxTid());
         if (ptr->IsFireAndForget()) {
           ptr->UnsetFireAndForget();
+          task->is_fire_forget_ = true;
         }
         MultiQueue *real_queue = HRUN_CLIENT->GetQueue(QueueId(ptr->task_state_));
         real_queue->Emplace(ptr->prio_, ptr->lane_hash_, task->sub_run_.shm_);
@@ -56,6 +57,10 @@ class Server : public TaskLib {
           return;
         }
         // TODO(llogan): handle fire & forget tasks gracefully
+        if (task->is_fire_forget_) {
+          TaskState *exec = HRUN_TASK_REGISTRY->GetTaskState(ptr->task_state_);
+          exec->Del(ptr->method_, ptr);
+        }
         task->SetModuleComplete();
       }
     }
