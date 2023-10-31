@@ -1199,13 +1199,15 @@ struct FlushDataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
 };
 
 /** A task to collect blob metadata */
-struct PollBlobMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
-  OUT hipc::ShmArchive<hipc::string> my_blob_mdms_;
+struct PollBlobMetadataTask : public Task, TaskFlags<TF_SRL_SYM_START | TF_SRL_ASYM_END | TF_REPLICA> {
+  TEMP hipc::ShmArchive<hipc::string> my_blob_mdm_;
   TEMP hipc::ShmArchive<hipc::vector<hipc::string>> blob_mdms_;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
-  PollBlobMetadataTask(hipc::Allocator *alloc) : Task(alloc) {}
+  PollBlobMetadataTask(hipc::Allocator *alloc) : Task(alloc) {
+    HSHM_MAKE_AR0(blob_mdms_, alloc)
+  }
 
   /** Emplace constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -1222,8 +1224,8 @@ struct PollBlobMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
     domain_id_ = DomainId::GetGlobal();
 
     // Custom params
-    HSHM_MAKE_AR0(my_blob_mdms_, alloc)
     HSHM_MAKE_AR0(blob_mdms_, alloc)
+    HSHM_MAKE_AR0(my_blob_mdm_, alloc)
   }
 
   /** Serialize blob info */
@@ -1231,7 +1233,7 @@ struct PollBlobMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
     std::stringstream ss;
     cereal::BinaryOutputArchive ar(ss);
     ar << blob_info;
-    (*my_blob_mdms_) = ss.str();
+    (*my_blob_mdm_) = ss.str();
   }
 
   /** Deserialize blob info */
@@ -1257,39 +1259,46 @@ struct PollBlobMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   /** Deserialize final query output */
   std::vector<BlobInfo> DeserializeBlobMetadata() {
     std::vector<BlobInfo> blob_mdms;
-    DeserializeBlobMetadata(my_blob_mdms_->str(), blob_mdms);
+    DeserializeBlobMetadata((*my_blob_mdm_).str(), blob_mdms);
     return blob_mdms;
   }
 
   /** Destructor */
   ~PollBlobMetadataTask() {
-    HSHM_DESTROY_AR(my_blob_mdms_)
     HSHM_DESTROY_AR(blob_mdms_)
+    HSHM_DESTROY_AR(my_blob_mdm_)
   }
 
   /** Duplicate message */
   void Dup(hipc::Allocator *alloc, PollBlobMetadataTask &other) {
     task_dup(other);
     HSHM_MAKE_AR(blob_mdms_, alloc, *other.blob_mdms_)
-    HSHM_MAKE_AR(my_blob_mdms_, alloc, *other.my_blob_mdms_)
+    HSHM_MAKE_AR(my_blob_mdm_, alloc, *other.my_blob_mdm_)
   }
 
   /** Process duplicate message output */
   void DupEnd(u32 replica, PollBlobMetadataTask &dup_task) {
-    (*blob_mdms_)[replica] = (*dup_task.my_blob_mdms_);
+    (*blob_mdms_)[replica] = (*dup_task.my_blob_mdm_);
   }
 
   /** (De)serialize message call */
   template<typename Ar>
   void SerializeStart(Ar &ar) {
     task_serialize<Ar>(ar);
-    ar(my_blob_mdms_);
+    ar(my_blob_mdm_);
   }
 
   /** (De)serialize message return */
   template<typename Ar>
-  void SerializeEnd(u32 replica, Ar &ar) {
-    ar((*blob_mdms_)[replica]);
+  void SaveEnd(Ar &ar) {
+    ar(my_blob_mdm_);
+  }
+
+  /** (De)serialize message return */
+  template<typename Ar>
+  void LoadEnd(u32 replica, Ar &ar) {
+    ar(my_blob_mdm_);
+    DupEnd(replica, *this);
   }
 
   /** Begin replication */
@@ -1311,13 +1320,15 @@ struct PollBlobMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
 };
 
 /** A task to collect blob metadata */
-struct PollTargetMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
+struct PollTargetMetadataTask : public Task, TaskFlags<TF_SRL_SYM_START | TF_SRL_ASYM_START | TF_REPLICA> {
   OUT hipc::ShmArchive<hipc::string> my_target_mdms_;
   TEMP hipc::ShmArchive<hipc::vector<hipc::string>> target_mdms_;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
-  PollTargetMetadataTask(hipc::Allocator *alloc) : Task(alloc) {}
+  PollTargetMetadataTask(hipc::Allocator *alloc) : Task(alloc) {
+    HSHM_MAKE_AR0(target_mdms_, alloc)
+  }
 
   /** Emplace constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -1380,11 +1391,7 @@ struct PollTargetMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> 
   }
 
   /** Duplicate message */
-  void Dup(hipc::Allocator *alloc, PollTargetMetadataTask &other) {
-    task_dup(other);
-    HSHM_MAKE_AR(target_mdms_, alloc, *other.target_mdms_)
-    HSHM_MAKE_AR(my_target_mdms_, alloc, *other.my_target_mdms_)
-  }
+  void Dup(hipc::Allocator *alloc, PollTargetMetadataTask &other) {}
 
   /** Process duplicate message output */
   void DupEnd(u32 replica, PollTargetMetadataTask &dup_task) {
@@ -1400,8 +1407,15 @@ struct PollTargetMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> 
 
   /** (De)serialize message return */
   template<typename Ar>
-  void SerializeEnd(u32 replica, Ar &ar) {
-    ar((*target_mdms_)[replica]);
+  void SaveEnd(Ar &ar) {
+    ar(my_target_mdms_);
+  }
+
+  /** (De)serialize message return */
+  template<typename Ar>
+  void LoadEnd(u32 replica, Ar &ar) {
+    ar(my_target_mdms_);
+    DupEnd(replica, *this);
   }
 
   /** Begin replication */
