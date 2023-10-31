@@ -322,6 +322,11 @@ struct BlobInfo {
     last_access_.Now();
     access_freq_.fetch_add(1);
   }
+
+  /** Get name as std::string */
+  std::string GetName() {
+    return name_.str();
+  }
 };
 
 /** Data structure used to store Bucket information */
@@ -338,6 +343,11 @@ struct TagInfo {
   template<typename Ar>
   void serialize(Ar &ar) {
     ar(tag_id_, name_, internal_size_, page_size_, owner_);
+  }
+
+  /** Get std::string of name */
+  std::string GetName() {
+    return name_.str();
   }
 };
 
