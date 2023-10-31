@@ -71,7 +71,7 @@ void BindBlobInfo(py::module &m) {
       .def("UpdateReadStats", &BlobInfo::UpdateReadStats)
       .def_readonly("tag_id", &BlobInfo::tag_id_)
       .def_readonly("blob_id", &BlobInfo::blob_id_)
-      .def_readonly("name", &BlobInfo::name_)
+      .def("get_name", &BlobInfo::GetName)
       .def_readonly("buffers", &BlobInfo::buffers_)
       .def_readonly("tags", &BlobInfo::tags_)
       .def_readonly("blob_size", &BlobInfo::blob_size_)
@@ -97,7 +97,7 @@ void BindTagInfo(py::module &m) {
   py::class_<TagInfo>(m, "TagInfo")
       .def(py::init<>())
       .def_readonly("tag_id", &TagInfo::tag_id_)
-      .def_readonly("name", &TagInfo::name_)
+      .def("get_name", &TagInfo::GetName)
       .def_readonly("blobs", &TagInfo::blobs_)
       .def_readonly("traits", &TagInfo::traits_)
       .def_readonly("internal_size", &TagInfo::internal_size_)
@@ -131,6 +131,7 @@ PYBIND11_MODULE(py_hermes, m) {
   BindBufferInfo(m);
   BindBlobInfo(m);
   BindTargetStats(m);
+  BindTagInfo(m);
   BindMetadataTable(m);
   BindHermes(m);
 }
