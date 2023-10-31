@@ -79,35 +79,35 @@ void Monitor(u32 mode, Task *task, RunContext &rctx) override {
 void Del(u32 method, Task *task) override {
   switch (method) {
     case Method::kConstruct: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<ConstructTask *>(task));
+      HRUN_CLIENT->DelTask<ConstructTask>(reinterpret_cast<ConstructTask *>(task));
       break;
     }
     case Method::kDestruct: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<DestructTask *>(task));
+      HRUN_CLIENT->DelTask<DestructTask>(reinterpret_cast<DestructTask *>(task));
       break;
     }
     case Method::kWrite: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<WriteTask *>(task));
+      HRUN_CLIENT->DelTask<WriteTask>(reinterpret_cast<WriteTask *>(task));
       break;
     }
     case Method::kRead: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<ReadTask *>(task));
+      HRUN_CLIENT->DelTask<ReadTask>(reinterpret_cast<ReadTask *>(task));
       break;
     }
     case Method::kAllocate: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<AllocateTask *>(task));
+      HRUN_CLIENT->DelTask<AllocateTask>(reinterpret_cast<AllocateTask *>(task));
       break;
     }
     case Method::kFree: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<FreeTask *>(task));
+      HRUN_CLIENT->DelTask<FreeTask>(reinterpret_cast<FreeTask *>(task));
       break;
     }
     case Method::kStatBdev: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<StatBdevTask *>(task));
+      HRUN_CLIENT->DelTask<StatBdevTask>(reinterpret_cast<StatBdevTask *>(task));
       break;
     }
     case Method::kUpdateScore: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<UpdateScoreTask *>(task));
+      HRUN_CLIENT->DelTask<UpdateScoreTask>(reinterpret_cast<UpdateScoreTask *>(task));
       break;
     }
   }

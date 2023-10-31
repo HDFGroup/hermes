@@ -90,7 +90,7 @@ def refresh_methods(TASK_ROOT):
         method_name = method_enum_name.replace('k', '', 1)
         task_name = method_name + "Task"
         lines += [f'    case Method::{method_enum_name}: {{',
-                  f'      HRUN_CLIENT->DelTask(reinterpret_cast<{task_name} *>(task));',
+                  f'      HRUN_CLIENT->DelTask<{task_name}>(reinterpret_cast<{task_name} *>(task));',
                   f'      break;',
                   f'    }}']
     lines += ['  }']

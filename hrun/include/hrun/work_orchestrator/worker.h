@@ -144,10 +144,11 @@ class Worker {
  public:
   u32 id_;  /**< Unique identifier of this worker */
   std::unique_ptr<std::thread> thread_;  /**< The worker thread handle */
+  ABT_thread tl_thread_;  /**< The worker argobots thread handle */
   int pthread_id_;      /**< The worker pthread handle */
-  // ABT_thread tl_thread_;
   int pid_;             /**< The worker process id */
   u32 numa_node_;       // TODO(llogan): track NUMA affinity
+  ABT_xstream xstream_;
   std::vector<WorkEntry> work_queue_;  /**< The set of queues to poll */
   /** A set of queues to begin polling in a worker */
   hshm::spsc_queue<std::vector<WorkEntry>> poll_queues_;
@@ -180,6 +181,7 @@ class Worker {
     // TODO(llogan): implement reserve for group
     group_.resize(512);
     group_.resize(0);
+    xstream_ = xstream;
     /* int ret = ABT_thread_create_on_xstream(xstream,
                                            [](void *args) { ((Worker*)args)->Loop(); }, this,
                                            ABT_THREAD_ATTR_NULL, &tl_thread_);
@@ -328,16 +330,13 @@ class Worker {
     Lane *&lane = work_entry.lane_;
     Task *task;
     LaneData *entry;
-    for (int i = 0; i < 1024; ++i) {
+    while (!lane->peek(entry, off).IsNull()) {
       // Get the task message
-      if (lane->peek(entry, off).IsNull()) {
-        return;
-      }
       if (entry->complete_) {
         PopTask(lane, off);
         continue;
       }
-      task = HRUN_CLIENT->GetPrivatePointer<Task>(entry->p_);
+      task = HRUN_CLIENT->GetMainPointer<Task>(entry->p_);
       RunContext &rctx = task->ctx_;
       rctx.lane_id_ = work_entry.lane_id_;
       rctx.flush_ = &flush_;
@@ -365,6 +364,7 @@ class Worker {
       if (!task->IsRunDisabled() &&
           CheckTaskGroup(task, exec, work_entry.lane_id_, task->task_node_, is_remote) &&
           task->ShouldRun(work_entry.cur_time_, flush_.flushing_)) {
+// #define REMOTE_DEBUG
 #ifdef REMOTE_DEBUG
         if (task->task_state_ != HRUN_QM_CLIENT->admin_task_state_ &&
           !task->task_flags_.Any(TASK_REMOTE_DEBUG_MARK) &&
@@ -406,12 +406,9 @@ class Worker {
                 rctx.stack_size_, &Worker::RunCoroutine);
             task->SetStarted();
           }
-        } else if (task->IsPreemptive()) {
-          task->SetDisableRun();
-          entry->thread_ = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(&Worker::RunPreemptive, task);
         } else {
-          task->SetStarted();
           exec->Run(task->method_, task, rctx);
+          task->SetStarted();
         }
         task->DidRun(work_entry.cur_time_);
         if (flush_.flushing_ && !task->IsModuleComplete() && !task->IsFlush()) {
@@ -449,23 +446,6 @@ class Worker {
     exec->Run(task->method_, task, rctx);
     task->UnsetStarted();
     task->Yield<TASK_YIELD_CO>();
-  }
-
-  /** Run a task requiring preemption */
-  static void RunPreemptive(void *data) {
-    Task *task = reinterpret_cast<Task *>(data);
-    TaskState *exec = HRUN_TASK_REGISTRY->GetTaskState(task->task_state_);
-    RunContext &real_rctx = task->ctx_;
-    RunContext rctx(0);
-    do {
-      hshm::Timepoint now;
-      now.Now();
-      if (task->ShouldRun(now, real_rctx.flush_->flushing_)) {
-        exec->Run(task->method_, task, rctx);
-        task->DidRun(now);
-      }
-      task->Yield<TASK_YIELD_ABT>();
-    } while(!task->IsModuleComplete());
   }
 
   /**===============================================================
@@ -562,7 +542,7 @@ class Worker {
   void EndTask(Lane *lane, TaskState *exec, Task *task, int &off) {
     PopTask(lane, off);
     if (exec && task->IsFireAndForget()) {
-      HRUN_CLIENT->DelTask<TaskState>(exec, task);
+      exec->Del(task->method_, task);
     } else {
       task->SetComplete();
     }

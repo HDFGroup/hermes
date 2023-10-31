@@ -63,27 +63,27 @@ void Monitor(u32 mode, Task *task, RunContext &rctx) override {
 void Del(u32 method, Task *task) override {
   switch (method) {
     case Method::kConstruct: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<ConstructTask *>(task));
+      HRUN_CLIENT->DelTask<ConstructTask>(reinterpret_cast<ConstructTask *>(task));
       break;
     }
     case Method::kDestruct: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<DestructTask *>(task));
+      HRUN_CLIENT->DelTask<DestructTask>(reinterpret_cast<DestructTask *>(task));
       break;
     }
     case Method::kRegisterStager: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<RegisterStagerTask *>(task));
+      HRUN_CLIENT->DelTask<RegisterStagerTask>(reinterpret_cast<RegisterStagerTask *>(task));
       break;
     }
     case Method::kUnregisterStager: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<UnregisterStagerTask *>(task));
+      HRUN_CLIENT->DelTask<UnregisterStagerTask>(reinterpret_cast<UnregisterStagerTask *>(task));
       break;
     }
     case Method::kStageIn: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<StageInTask *>(task));
+      HRUN_CLIENT->DelTask<StageInTask>(reinterpret_cast<StageInTask *>(task));
       break;
     }
     case Method::kStageOut: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<StageOutTask *>(task));
+      HRUN_CLIENT->DelTask<StageOutTask>(reinterpret_cast<StageOutTask *>(task));
       break;
     }
   }

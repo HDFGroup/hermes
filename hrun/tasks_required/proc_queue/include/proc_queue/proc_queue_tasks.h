@@ -89,6 +89,7 @@ struct TypedPushTask : public Task, TaskFlags<TF_LOCAL> {
   IN LPointer<TaskT> sub_cli_;  /**< Pointer to the subtask (client + SHM) */
   TEMP LPointer<TaskT> sub_run_;  /**< Pointer to the subtask (runtime) */
   TEMP int phase_ = PushTaskPhase::kSchedule;
+  TEMP bool is_fire_forget_ = false;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -119,8 +120,6 @@ struct TypedPushTask : public Task, TaskFlags<TF_LOCAL> {
   ~TypedPushTask() {
     if (!IsFireAndForget()) {
       HRUN_CLIENT->DelTask(sub_cli_);
-    } else {
-      HRUN_CLIENT->DelTask(sub_run_);
     }
   }
 

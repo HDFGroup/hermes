@@ -205,7 +205,8 @@ class Server : public TaskLib {
         blob_info.last_flush_ = 1;
         blob_info.mod_count_ = 0;
         blob_info.UpdateWriteStats();
-        LPointer<char> data = HRUN_CLIENT->AllocateBuffer(blob_info.blob_size_);
+        LPointer<char> data = HRUN_CLIENT->AllocateBuffer<TASK_YIELD_CO>(blob_info.blob_size_,
+                                                                         task);
         LPointer<GetBlobTask> get_blob =
             blob_mdm_.AsyncGetBlob(task->task_node_ + 1,
                                    blob_info.tag_id_,
@@ -252,15 +253,16 @@ class Server : public TaskLib {
       blob_info.last_flush_ = 0;
       blob_info.UpdateWriteStats();
       if (task->flags_.Any(HERMES_IS_FILE)) {
-        blob_info.mod_count_ = 1;
-        blob_info.last_flush_ = 1;
-        LPointer<data_stager::StageInTask> stage_task =
-            stager_mdm_.AsyncStageIn(task->task_node_ + 1,
-                                     task->tag_id_,
-                                     blob_info.name_,
-                                     task->score_, 0);
-        stage_task->Wait<TASK_YIELD_CO>(task);
-        HRUN_CLIENT->DelTask(stage_task);
+        // TODO(llogan): add back
+//        blob_info.mod_count_ = 1;
+//        blob_info.last_flush_ = 1;
+//        LPointer<data_stager::StageInTask> stage_task =
+//            stager_mdm_.AsyncStageIn(task->task_node_ + 1,
+//                                     task->tag_id_,
+//                                     blob_info.name_,
+//                                     task->score_, 0);
+//        stage_task->Wait<TASK_YIELD_CO>(task);
+//        HRUN_CLIENT->DelTask(stage_task);
       }
     } else {
       // Modify existing blob
@@ -307,6 +309,7 @@ class Server : public TaskLib {
           // next_placement.size_ += diff;
           HELOG(kFatal, "Ran outta space in this tier -- will fix soon")
         }
+        // bdev.monitor_task_->rem_cap_ -= alloc_task->alloc_size_;
         HRUN_CLIENT->DelTask(alloc_task);
       }
     }
@@ -315,7 +318,7 @@ class Server : public TaskLib {
     std::vector<LPointer<bdev::WriteTask>> write_tasks;
     write_tasks.reserve(blob_info.buffers_.size());
     size_t blob_off = task->blob_off_, buf_off = 0;
-    char *blob_buf = HRUN_CLIENT->GetPrivatePointer(task->data_);
+    char *blob_buf = HRUN_CLIENT->GetDataPointer(task->data_);
     HILOG(kDebug, "Number of buffers {}", blob_info.buffers_.size());
     for (BufferInfo &buf : blob_info.buffers_) {
       size_t blob_left = blob_off;
@@ -424,8 +427,7 @@ class Server : public TaskLib {
     HILOG(kDebug, "Getting blob {} of size {} starting at offset {} (total_blob_size={}, buffers={})",
           task->blob_id_, task->data_size_, task->blob_off_, blob_info.blob_size_, blob_info.buffers_.size());
     size_t blob_off = task->blob_off_, buf_off = 0;
-    hipc::mptr<char> blob_data_mptr(task->data_);
-    char *blob_buf = blob_data_mptr.get();
+    char *blob_buf = HRUN_CLIENT->GetDataPointer(task->data_);
     for (BufferInfo &buf : blob_info.buffers_) {
       size_t blob_left = blob_off;
       size_t blob_right = blob_off + buf.t_size_;
@@ -740,7 +742,8 @@ class Server : public TaskLib {
           task->SetModuleComplete();
           return;
         }
-        task->data_ = HRUN_CLIENT->AllocateBuffer(blob_info.blob_size_).shm_;
+        task->data_ = HRUN_CLIENT->AllocateBuffer<TASK_YIELD_STD>(blob_info.blob_size_,
+                                                                  task).shm_;
         task->data_size_ = blob_info.blob_size_;
         task->get_task_ = blob_mdm_.AsyncGetBlob(task->task_node_ + 1,
                                                  task->tag_id_,

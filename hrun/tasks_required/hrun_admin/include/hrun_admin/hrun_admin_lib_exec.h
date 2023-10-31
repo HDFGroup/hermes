@@ -95,43 +95,43 @@ void Monitor(u32 mode, Task *task, RunContext &rctx) override {
 void Del(u32 method, Task *task) override {
   switch (method) {
     case Method::kCreateTaskState: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<CreateTaskStateTask *>(task));
+      HRUN_CLIENT->DelTask<CreateTaskStateTask>(reinterpret_cast<CreateTaskStateTask *>(task));
       break;
     }
     case Method::kDestroyTaskState: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<DestroyTaskStateTask *>(task));
+      HRUN_CLIENT->DelTask<DestroyTaskStateTask>(reinterpret_cast<DestroyTaskStateTask *>(task));
       break;
     }
     case Method::kRegisterTaskLib: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<RegisterTaskLibTask *>(task));
+      HRUN_CLIENT->DelTask<RegisterTaskLibTask>(reinterpret_cast<RegisterTaskLibTask *>(task));
       break;
     }
     case Method::kDestroyTaskLib: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<DestroyTaskLibTask *>(task));
+      HRUN_CLIENT->DelTask<DestroyTaskLibTask>(reinterpret_cast<DestroyTaskLibTask *>(task));
       break;
     }
     case Method::kGetOrCreateTaskStateId: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<GetOrCreateTaskStateIdTask *>(task));
+      HRUN_CLIENT->DelTask<GetOrCreateTaskStateIdTask>(reinterpret_cast<GetOrCreateTaskStateIdTask *>(task));
       break;
     }
     case Method::kGetTaskStateId: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<GetTaskStateIdTask *>(task));
+      HRUN_CLIENT->DelTask<GetTaskStateIdTask>(reinterpret_cast<GetTaskStateIdTask *>(task));
       break;
     }
     case Method::kStopRuntime: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<StopRuntimeTask *>(task));
+      HRUN_CLIENT->DelTask<StopRuntimeTask>(reinterpret_cast<StopRuntimeTask *>(task));
       break;
     }
     case Method::kSetWorkOrchQueuePolicy: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<SetWorkOrchQueuePolicyTask *>(task));
+      HRUN_CLIENT->DelTask<SetWorkOrchQueuePolicyTask>(reinterpret_cast<SetWorkOrchQueuePolicyTask *>(task));
       break;
     }
     case Method::kSetWorkOrchProcPolicy: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<SetWorkOrchProcPolicyTask *>(task));
+      HRUN_CLIENT->DelTask<SetWorkOrchProcPolicyTask>(reinterpret_cast<SetWorkOrchProcPolicyTask *>(task));
       break;
     }
     case Method::kFlush: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<FlushTask *>(task));
+      HRUN_CLIENT->DelTask<FlushTask>(reinterpret_cast<FlushTask *>(task));
       break;
     }
   }

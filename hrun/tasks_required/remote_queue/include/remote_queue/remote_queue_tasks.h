@@ -88,7 +88,8 @@ struct PushTask : public Task, TaskFlags<TF_LOCAL> {
   IN TaskState *exec_;
   IN u32 exec_method_;
   IN std::vector<DataTransfer> xfer_;
-  TEMP std::string params_;
+  TEMP bool started_ = false;
+  TEMP void *server_;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -111,7 +112,9 @@ struct PushTask : public Task, TaskFlags<TF_LOCAL> {
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kPush;
-    task_flags_.SetBits(TASK_LOW_LATENCY | TASK_PREEMPTIVE | TASK_REMOTE_DEBUG_MARK | TASK_FIRE_AND_FORGET);
+    // task_flags_.SetBits(TASK_LOW_LATENCY | TASK_PREEMPTIVE | TASK_REMOTE_DEBUG_MARK | TASK_FIRE_AND_FORGET);
+    // task_flags_.SetBits(TASK_LOW_LATENCY | TASK_COROUTINE | TASK_REMOTE_DEBUG_MARK | TASK_FIRE_AND_FORGET);
+    task_flags_.SetBits(TASK_LOW_LATENCY | TASK_REMOTE_DEBUG_MARK | TASK_FIRE_AND_FORGET);
     domain_id_ = domain_id;
 
     // Custom params
@@ -125,6 +128,10 @@ struct PushTask : public Task, TaskFlags<TF_LOCAL> {
   /** Create group */
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
+//    hrun::LocalSerialize srl(group);
+//    srl << task_state_.unique_;
+//    srl << task_state_.node_id_;
+//    return 0;
     return TASK_UNORDERED;
   }
 };

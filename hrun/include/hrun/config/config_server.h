@@ -42,6 +42,10 @@ struct QueueManagerInfo {
   std::string shm_name_;
   /** Shared memory region size */
   size_t shm_size_;
+  /** Shared memory data region name */
+  std::string data_shm_name_;
+  /** Data shared memory region size */
+  size_t data_shm_size_;
 };
 
 /**

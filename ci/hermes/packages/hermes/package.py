@@ -8,6 +8,8 @@ class Hermes(CMakePackage):
     version('master',
             branch='master', submodules=True)
     version('dev', branch='dev', submodules=True)
+    version('priv', branch='dev',
+            github='https://github.com/lukemartinlogan/hermes.git', submodules=True)
     version("1.0.5-beta", sha256="1f3ba51a8beda4bc1314d6541b800de1525f5e233a6f498fcde6dc43562ddcb7")
     version("1.0.0-beta", sha256="301084cced32aa00532ab4bebd638c31b0512c881ffab20bf5da4b7739defac2")
     version("0.9.9-beta", sha256="d2e0025a9bd7a3f05d3ab608c727ed15d86ed30cf582549fe996875daf6cb649")
@@ -26,21 +28,25 @@ class Hermes(CMakePackage):
     version("0.4.0-beta", sha256="06020836e203b2f680bea24007dc73760dfb977eb61e442b795b264f0267c16b")
     version("0.3.0-beta...v0.4.0-beta", sha256="7729b115598277adcab019dee24e5276698fb595066bca758bfa59dc8d51c5a4")
 
+    depends_on('hermes_shm')
+
+    # Common across hermes_shm and hermes
+    variant('mpiio', default=True, description='Enable MPI I/O adapter')
+    variant('stdio', default=True, description='Enable STDIO adapter')
+    variant('vfd', default=False, description='Enable HDF5 VFD')
     variant('ares', default=False, description='Enable full libfabric install')
     variant('only_verbs', default=False, description='Only verbs')
-    variant('vfd', default=False, description='Enable HDF5 VFD')
     variant('debug', default=False, description='Build shared libraries')
     variant('zmq', default=False, description='Build ZeroMQ tests')
 
-    depends_on('hermes_shm')
     depends_on('mochi-thallium~cereal@0.10.1')
     depends_on('catch2@3.0.1')
-    depends_on('mpich@3.3.2')
+    depends_on('mpi')
     depends_on('cereal')
     depends_on('yaml-cpp')
     depends_on('doxygen@1.9.3')
-    depends_on('boost@1.7: +context +fiber +filesystem +system +atomic +chrono +serialization +signals +pic')
-    depends_on('libfabric fabrics=sockets,tcp,udp,rxm,rxd,verbs',
+    depends_on('boost@1.7: +context +fiber +filesystem +system +atomic +chrono +serialization +signals +pic +regex')
+    depends_on('libfabric fabrics=sockets,tcp,udp,verbs',
                when='+ares')
     depends_on('libfabric fabrics=verbs',
                when='+only_verbs')
@@ -48,11 +54,21 @@ class Hermes(CMakePackage):
     depends_on('hdf5@1.14.0', when='+vfd')
 
     def cmake_args(self):
-        args = ['-DCMAKE_INSTALL_PREFIX={}'.format(self.prefix)]
+        args = []
         if '+debug' in self.spec:
             args.append('-DCMAKE_BUILD_TYPE=Debug')
         else:
             args.append('-DCMAKE_BUILD_TYPE=Release')
+        if '+mpiio' in self.spec:
+            args.append('-DHERMES_ENABLE_MPIIO_ADAPTER=ON')
+            if 'openmpi' in self.spec:
+                args.append('-DHERMES_OPENMPI=ON')
+            elif 'mpich' in self.spec:
+                args.append('-DHERMES_MPICH=ON')
+        if '+stdio' in self.spec:
+            args.append('-HERMES_ENABLE_STDIO_ADAPTER=ON')
+        if '+vfd' in self.spec:
+            args.append('-HERMES_ENABLE_VFD=ON')
         return args
 
     def set_include(self, env, path):

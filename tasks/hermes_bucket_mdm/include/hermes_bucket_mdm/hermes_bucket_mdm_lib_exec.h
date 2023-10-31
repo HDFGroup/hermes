@@ -151,71 +151,71 @@ void Monitor(u32 mode, Task *task, RunContext &rctx) override {
 void Del(u32 method, Task *task) override {
   switch (method) {
     case Method::kConstruct: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<ConstructTask *>(task));
+      HRUN_CLIENT->DelTask<ConstructTask>(reinterpret_cast<ConstructTask *>(task));
       break;
     }
     case Method::kDestruct: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<DestructTask *>(task));
+      HRUN_CLIENT->DelTask<DestructTask>(reinterpret_cast<DestructTask *>(task));
       break;
     }
     case Method::kGetOrCreateTag: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<GetOrCreateTagTask *>(task));
+      HRUN_CLIENT->DelTask<GetOrCreateTagTask>(reinterpret_cast<GetOrCreateTagTask *>(task));
       break;
     }
     case Method::kGetTagId: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<GetTagIdTask *>(task));
+      HRUN_CLIENT->DelTask<GetTagIdTask>(reinterpret_cast<GetTagIdTask *>(task));
       break;
     }
     case Method::kGetTagName: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<GetTagNameTask *>(task));
+      HRUN_CLIENT->DelTask<GetTagNameTask>(reinterpret_cast<GetTagNameTask *>(task));
       break;
     }
     case Method::kRenameTag: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<RenameTagTask *>(task));
+      HRUN_CLIENT->DelTask<RenameTagTask>(reinterpret_cast<RenameTagTask *>(task));
       break;
     }
     case Method::kDestroyTag: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<DestroyTagTask *>(task));
+      HRUN_CLIENT->DelTask<DestroyTagTask>(reinterpret_cast<DestroyTagTask *>(task));
       break;
     }
     case Method::kTagAddBlob: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<TagAddBlobTask *>(task));
+      HRUN_CLIENT->DelTask<TagAddBlobTask>(reinterpret_cast<TagAddBlobTask *>(task));
       break;
     }
     case Method::kTagRemoveBlob: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<TagRemoveBlobTask *>(task));
+      HRUN_CLIENT->DelTask<TagRemoveBlobTask>(reinterpret_cast<TagRemoveBlobTask *>(task));
       break;
     }
     case Method::kTagClearBlobs: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<TagClearBlobsTask *>(task));
+      HRUN_CLIENT->DelTask<TagClearBlobsTask>(reinterpret_cast<TagClearBlobsTask *>(task));
       break;
     }
     case Method::kUpdateSize: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<UpdateSizeTask *>(task));
+      HRUN_CLIENT->DelTask<UpdateSizeTask>(reinterpret_cast<UpdateSizeTask *>(task));
       break;
     }
     case Method::kAppendBlobSchema: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<AppendBlobSchemaTask *>(task));
+      HRUN_CLIENT->DelTask<AppendBlobSchemaTask>(reinterpret_cast<AppendBlobSchemaTask *>(task));
       break;
     }
     case Method::kAppendBlob: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<AppendBlobTask *>(task));
+      HRUN_CLIENT->DelTask<AppendBlobTask>(reinterpret_cast<AppendBlobTask *>(task));
       break;
     }
     case Method::kGetSize: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<GetSizeTask *>(task));
+      HRUN_CLIENT->DelTask<GetSizeTask>(reinterpret_cast<GetSizeTask *>(task));
       break;
     }
     case Method::kSetBlobMdm: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<SetBlobMdmTask *>(task));
+      HRUN_CLIENT->DelTask<SetBlobMdmTask>(reinterpret_cast<SetBlobMdmTask *>(task));
       break;
     }
     case Method::kGetContainedBlobIds: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<GetContainedBlobIdsTask *>(task));
+      HRUN_CLIENT->DelTask<GetContainedBlobIdsTask>(reinterpret_cast<GetContainedBlobIdsTask *>(task));
       break;
     }
     case Method::kPollTagMetadata: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<PollTagMetadataTask *>(task));
+      HRUN_CLIENT->DelTask<PollTagMetadataTask>(reinterpret_cast<PollTagMetadataTask *>(task));
       break;
     }
   }

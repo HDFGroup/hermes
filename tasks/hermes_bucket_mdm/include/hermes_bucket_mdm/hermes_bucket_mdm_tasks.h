@@ -915,13 +915,15 @@ struct GetContainedBlobIdsTask : public Task, TaskFlags<TF_SRL_SYM> {
 };
 
 /** A task to collect blob metadata */
-struct PollTagMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
+struct PollTagMetadataTask : public Task, TaskFlags<TF_SRL_SYM_START | TF_SRL_ASYM_END | TF_REPLICA> {
   OUT hipc::ShmArchive<hipc::string> my_tag_mdms_;
   TEMP hipc::ShmArchive<hipc::vector<hipc::string>> tag_mdms_;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
-  PollTagMetadataTask(hipc::Allocator *alloc) : Task(alloc) {}
+  PollTagMetadataTask(hipc::Allocator *alloc) : Task(alloc) {
+    HSHM_MAKE_AR0(tag_mdms_, alloc)
+  }
 
   /** Emplace constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -1004,8 +1006,15 @@ struct PollTagMetadataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
 
   /** (De)serialize message return */
   template<typename Ar>
-  void SerializeEnd(u32 replica, Ar &ar) {
-    ar((*tag_mdms_)[replica]);
+  void SaveEnd(Ar &ar) {
+    ar(my_tag_mdms_);
+  }
+
+  /** (De)serialize message return */
+  template<typename Ar>
+  void LoadEnd(u32 replica, Ar &ar) {
+    ar(my_tag_mdms_);
+    DupEnd(replica, *this);
   }
 
   /** Begin replication */

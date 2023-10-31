@@ -36,7 +36,7 @@ class Client : public TaskLibClient {
         {1, 1, qm.queue_depth_, 0},
         {1, 1, qm.queue_depth_, QUEUE_LONG_RUNNING},
         // {qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY}
-        {1, 1, qm.queue_depth_, QUEUE_LOW_LATENCY}
+        {1, 1, qm.queue_depth_, QUEUE_LOW_LATENCY},
     };
     return HRUN_ADMIN->AsyncCreateTaskState<ConstructTask>(
         task_node, domain_id, state_name, id_, queue_info);
@@ -67,6 +67,7 @@ class Client : public TaskLibClient {
     // Serialize task + create the wait task
     HILOG(kDebug, "Beginning dispersion for (task_node={}, task_state={}, method={})",
           orig_task->task_node_ + 1, orig_task->task_state_, orig_task->method_)
+    orig_task->UnsetStarted();
     BinaryOutputArchive<true> ar(DomainId::GetNode(HRUN_CLIENT->node_id_));
     std::vector<DataTransfer> xfer =
         exec->SaveStart(orig_task->method_, ar, orig_task);
@@ -78,6 +79,8 @@ class Client : public TaskLibClient {
         domain_ids, orig_task, exec, orig_task->method_, xfer);
     MultiQueue *queue = HRUN_CLIENT->GetQueue(queue_id_);
     queue->Emplace(TaskPrio::kLowLatency, orig_task->lane_hash_, push_task.shm_);
+    HILOG(kDebug, "Did dispersion for (task_node={}, task_state={}, method={})",
+          orig_task->task_node_ + 1, orig_task->task_state_, orig_task->method_)
   }
 
   /** Disperse a task among each lane of this node */

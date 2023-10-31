@@ -76,12 +76,6 @@ devices:
     is_shared_device: true
     borg_capacity_thresh: [ 0.0, 1.0 ]
 
-# Define the maximum amount of memory Hermes can use for non-buffering tasks.
-# This includes metadata management and memory allocations.
-# This memory will not be preallocated, so if you don't know, 0 indicates
-# any amount of memory
-max_memory: 0g
-
 ### Define properties of the BORG
 buffer_organizer:
   # The number of threads used in the background organization of internal Hermes buffers.
@@ -146,7 +140,7 @@ work_orchestrator:
 ### Queue Manager settings
 queue_manager:
   # The default depth of allocated queues
-  queue_depth: 256
+  queue_depth: 100000
   # The maximum number of lanes per queue
   max_lanes: 16
   # The maximum number of queues
@@ -158,6 +152,7 @@ queue_manager:
   # The size of the shared memory region to allocate for general data structures
   shm_size: 0g
   # The size of the shared memory to allocate for data buffers
+  data_shm_size: 4g
 
 ### Define properties of RPCs
 rpc:
@@ -183,7 +178,7 @@ rpc:
   port: 8080
 
   # The number of handler threads for each RPC server.
-  num_threads: 4
+  num_threads: 32
 
 ### Task Registry
 task_registry: [
