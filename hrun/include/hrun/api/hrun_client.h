@@ -264,7 +264,7 @@ class Client : public ConfigurationManager {
   template<int THREAD_MODEL>
   HSHM_ALWAYS_INLINE
   LPointer<char> AllocateBuffer(size_t size) {
-    HILOG(kInfo, "{} Heap size: {}", THREAD_MODEL, data_alloc_->GetCurrentlyAllocatedSize());
+    // HILOG(kInfo, "{} Heap size: {}", THREAD_MODEL, data_alloc_->GetCurrentlyAllocatedSize());
     LPointer<char> p;
     while (true) {
       try {
