@@ -1,7 +1,4 @@
 
-import sys
-import os
-print(os.getenv('PYTHONPATH'))
 from py_hermes import Hermes, TRANSPARENT_HERMES
 class MetadataSnapshot:
     def __init__(self):
