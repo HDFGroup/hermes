@@ -5,4 +5,5 @@ pkgs:
     pkg_name: asan
   - pkg_type: hermes_posix_tests
     pkg_name: hermes_posix_tests
-    TEST_CASE: posix_simple_io_omp
+    test_file: posix_simple_io_omp
+    hermes: false

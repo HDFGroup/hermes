@@ -8,4 +8,5 @@ pkgs:
     sleep: 2
   - pkg_type: hermes_posix_tests
     pkg_name: hermes_posix_tests
-    TEST_CASE: hermes_posix_simple_io_omp
+    test_file: posix_simple_io_omp
+    hermes: true

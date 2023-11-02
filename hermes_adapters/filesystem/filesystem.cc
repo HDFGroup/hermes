@@ -295,6 +295,7 @@ int Filesystem::Sync(File &f, AdapterStat &stat) {
   if (HERMES_CLIENT_CONF.flushing_mode_ == FlushingMode::kSync) {
     // NOTE(llogan): only for the unit tests
     // Please don't enable synchronous flushing
+    HRUN_ADMIN->FlushRoot(DomainId::GetGlobal());
   }
   return 0;
 }

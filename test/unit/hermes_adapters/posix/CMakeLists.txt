@@ -11,26 +11,29 @@ target_link_libraries(posix_adapter_test hermes)
 jarvis_test(posix test_posix_basic)
 
 add_executable(posix_adapter_mpi_test posix_adapter_mpi_test.cpp ${ADAPTER_COMMON})
-pytest(posix test_posix_basic_mpi)
+target_link_libraries(posix_adapter_test Catch2::Catch2 MPI::MPI_CXX)
+jarvis_test(posix test_posix_basic_mpi)
 
 add_executable(hermes_posix_adapter_test posix_adapter_test.cpp ${ADAPTER_COMMON})
 target_link_libraries(hermes_posix_adapter_test hermes_posix)
 add_dependencies(hermes_posix_adapter_test hermes_posix)
 set_target_properties(hermes_posix_adapter_test PROPERTIES COMPILE_FLAGS "-DHERMES_INTERCEPT=1")
-pytest(posix test_hermes_posix_basic_small)
-pytest(posix test_hermes_posix_basic_large)
+jarvis_test(posix test_hermes_posix_basic_small)
+jarvis_test(posix test_hermes_posix_basic_large)
 
 add_executable(hermes_posix_adapter_mpi_test posix_adapter_mpi_test.cpp ${ADAPTER_COMMON})
-target_link_libraries(hermes_posix_adapter_mpi_test hermes_posix)
+target_link_libraries(hermes_posix_adapter_mpi_test
+        hermes_posix Catch2::Catch2 MPI::MPI_C MPI::MPI_CXX)
 add_dependencies(hermes_posix_adapter_mpi_test hermes_posix)
 set_target_properties(hermes_posix_adapter_mpi_test PROPERTIES COMPILE_FLAGS "-DHERMES_INTERCEPT=1")
-pytest(posix test_hermes_posix_basic_mpi_small)
-pytest(posix test_hermes_posix_basic_mpi_large)
+jarvis_test(posix test_hermes_posix_basic_mpi_small)
+jarvis_test(posix test_hermes_posix_basic_mpi_large)
 
 include_directories(${CMAKE_SOURCE_DIR}/adapter)
 add_executable(posix_simple_io_mpi posix_simple_io_mpi.cc)
 add_dependencies(posix_simple_io_mpi hermes_posix)
-target_link_libraries(posix_simple_io_mpi hermes_posix)
+target_link_libraries(posix_simple_io_mpi
+        hermes_posix Catch2::Catch2 MPI::MPI_CXX)
 
 add_executable(hermes_posix_simple_io_omp posix_simple_io_omp.cc)
 add_dependencies(hermes_posix_simple_io_omp hermes_posix)
@@ -41,9 +44,11 @@ add_executable(posix_simple_io_omp posix_simple_io_omp.cc)
 target_link_libraries(posix_simple_io_omp
         ${HermesShm_LIBRARIES} Catch2::Catch2 OpenMP::OpenMP_CXX)
 
-pytest(posix test_hermes_posix_simple_io_omp_default)
-pytest(posix test_hermes_posix_simple_io_omp_scratch)
-pytest(posix test_hermes_posix_simple_io_omp_preload)
+jarvis_test(posix test_posix_simple_io_omp)
+jarvis_test(posix test_hermes_posix_simple_io_omp)
+#pytest(posix test_hermes_posix_simple_io_omp_default)
+#pytest(posix test_hermes_posix_simple_io_omp_scratch)
+#pytest(posix test_hermes_posix_simple_io_omp_preload)
 
 set(POSIX_TESTS
   posix_adapter_test
