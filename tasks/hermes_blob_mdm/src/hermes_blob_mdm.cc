@@ -201,9 +201,6 @@ class Server : public TaskLib {
           blob_info.mod_count_ > blob_info.last_flush_) {
         HILOG(kDebug, "Flushing blob {} (mod_count={}, last_flush={})",
               blob_info.blob_id_, blob_info.mod_count_, blob_info.last_flush_);
-        blob_info.last_flush_ = 1;
-        blob_info.mod_count_ = 0;
-        blob_info.UpdateWriteStats();
         LPointer<char> data = HRUN_CLIENT->AllocateBuffer<TASK_YIELD_CO>(blob_info.blob_size_,
                                                                          task);
         LPointer<GetBlobTask> get_blob =
@@ -219,10 +216,20 @@ class Server : public TaskLib {
                                   blob_info.name_,
                                   data.shm_, blob_info.blob_size_,
                                   TASK_DATA_OWNER | TASK_FIRE_AND_FORGET);
+        blob_info.mod_count_ = blob_info.last_flush_.load();
       }
     }
   }
   void MonitorFlushData(u32 mode, FlushDataTask *task, RunContext &rctx) {
+    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
+    for (auto &it : blob_map) {
+      BlobInfo &blob_info = it.second;
+      if (blob_info.last_flush_ > 0 &&
+          blob_info.mod_count_ > blob_info.last_flush_) {
+        rctx.flush_->pending_ += 1;
+        return;
+      }
+    }
   }
 
   /**
@@ -252,7 +259,7 @@ class Server : public TaskLib {
       blob_info.last_flush_ = 0;
       blob_info.UpdateWriteStats();
       if (task->flags_.Any(HERMES_IS_FILE)) {
-        blob_info.mod_count_ = 1;
+        blob_info.mod_count_ = 2;
         blob_info.last_flush_ = 1;
         LPointer<data_stager::StageInTask> stage_task =
             stager_mdm_.AsyncStageIn(task->task_node_ + 1,

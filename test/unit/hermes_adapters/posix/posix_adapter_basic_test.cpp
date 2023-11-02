@@ -248,6 +248,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     test::test_write(info.write_data.data(), args.request_size);
     REQUIRE(test::size_written_orig == args.request_size);
     test::test_close();
+    int status = test::status_orig;
     REQUIRE(test::status_orig == 0);
   }
 
@@ -258,6 +259,8 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == 0);
+    int size = stdfs::file_size(info.new_file);
+    int orig_size = test::size_written_orig;
     REQUIRE(stdfs::file_size(info.new_file) == test::size_written_orig);
   }
 
