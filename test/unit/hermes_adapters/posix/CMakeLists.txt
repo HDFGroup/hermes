@@ -8,7 +8,7 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 add_executable(posix_adapter_test posix_adapter_test.cpp ${ADAPTER_COMMON})
 add_dependencies(posix_adapter_test hermes)
 target_link_libraries(posix_adapter_test hermes)
-pytest(posix test_posix_basic)
+jarvis_test(posix test_posix_basic)
 
 add_executable(posix_adapter_mpi_test posix_adapter_mpi_test.cpp ${ADAPTER_COMMON})
 pytest(posix test_posix_basic_mpi)

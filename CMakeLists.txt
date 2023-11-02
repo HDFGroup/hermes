@@ -232,6 +232,11 @@ function(pytest test_type test_name)
 #            COMMAND ${script} ${test_type} ${test_name} ${CMAKE_BINARY_DIR} ${HERMES_USE_ADDRESS_SANITIZER})
 endfunction()
 
+function(jarvis_test test_type test_name)
+    add_test(NAME ${test_name}
+             COMMAND jarvis pipeline run yaml "${CMAKE_SOURCE_DIR}/test/unit/pipelines/${test_type}/${test_name}.yaml")
+endfunction()
+
 enable_testing()
 add_subdirectory(test)
 
