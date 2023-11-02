@@ -124,8 +124,7 @@ class Server : public TaskLib {
       bkt_mdm_.Init(task->bkt_mdm_);
       stager_mdm_.Init(task->stager_mdm_);
       op_mdm_.Init(task->op_mdm_);
-      // TODO(llogan): Add back
-      // flush_task_ = blob_mdm_.AsyncFlushData(task->task_node_ + 1);
+      flush_task_ = blob_mdm_.AsyncFlushData(task->task_node_ + 1);
     }
     task->SetModuleComplete();
   }
@@ -253,16 +252,15 @@ class Server : public TaskLib {
       blob_info.last_flush_ = 0;
       blob_info.UpdateWriteStats();
       if (task->flags_.Any(HERMES_IS_FILE)) {
-        // TODO(llogan): add back
-//        blob_info.mod_count_ = 1;
-//        blob_info.last_flush_ = 1;
-//        LPointer<data_stager::StageInTask> stage_task =
-//            stager_mdm_.AsyncStageIn(task->task_node_ + 1,
-//                                     task->tag_id_,
-//                                     blob_info.name_,
-//                                     task->score_, 0);
-//        stage_task->Wait<TASK_YIELD_CO>(task);
-//        HRUN_CLIENT->DelTask(stage_task);
+        blob_info.mod_count_ = 1;
+        blob_info.last_flush_ = 1;
+        LPointer<data_stager::StageInTask> stage_task =
+            stager_mdm_.AsyncStageIn(task->task_node_ + 1,
+                                     task->tag_id_,
+                                     blob_info.name_,
+                                     task->score_, 0);
+        stage_task->Wait<TASK_YIELD_CO>(task);
+        HRUN_CLIENT->DelTask(stage_task);
       }
     } else {
       // Modify existing blob

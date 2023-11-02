@@ -380,13 +380,10 @@ class Worker {
           HRUN_REMOTE_QUEUE->Disperse(task, exec, ids);
           task->SetDisableRun();
           task->SetUnordered();
-          task->UnsetCoroutine();
         } else if (task->IsLaneAll()) {
           HRUN_REMOTE_QUEUE->DisperseLocal(task, exec, work_entry.queue_, work_entry.group_);
           task->SetDisableRun();
           task->SetUnordered();
-          task->UnsetCoroutine();
-          task->UnsetLaneAll();
         } else if (task->IsCoroutine()) {
           if (!task->IsStarted()) {
             rctx.stack_ptr_ = malloc(rctx.stack_size_);
@@ -411,12 +408,13 @@ class Worker {
           task->SetStarted();
         }
         task->DidRun(work_entry.cur_time_);
-        if (flush_.flushing_ && !task->IsModuleComplete() && !task->IsFlush()) {
-          if (task->IsLongRunning()) {
-            exec->Monitor(MonitorMode::kFlushStat, task, rctx);
-          } else {
-            flush_.pending_ += 1;
-          }
+      }
+      // Verify tasks
+      if (flush_.flushing_ && !task->IsModuleComplete() && !task->IsFlush()) {
+        if (task->IsLongRunning()) {
+          exec->Monitor(MonitorMode::kFlushStat, task, rctx);
+        } else {
+          flush_.pending_ += 1;
         }
       }
       // Cleanup on task completion
