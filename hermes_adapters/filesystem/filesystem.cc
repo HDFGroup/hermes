@@ -119,35 +119,37 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
     }
     return total_size;
   }
-
-  // Fragment I/O request into pages
-  BlobPlacements mapping;
-  auto mapper = MapperFactory::Get(MapperType::kBalancedMapper);
-  mapper->map(off, total_size, stat.page_size_, mapping);
-  size_t data_offset = 0;
-
-  // Perform a PartialPut for each page
   Context ctx;
   ctx.page_size_ = stat.page_size_;
   ctx.flags_.SetBits(HERMES_IS_FILE);
-  for (const BlobPlacement &p : mapping) {
-    const Blob page((const char*)ptr + data_offset, p.blob_size_);
-    if (!is_append) {
+
+  if (is_append) {
+    // Perform append
+    const Blob page((const char*)ptr, total_size);
+    bkt.Append(page, stat.page_size_, ctx);
+  } else {
+    // Fragment I/O request into pages
+    BlobPlacements mapping;
+    auto mapper = MapperFactory::Get(MapperType::kBalancedMapper);
+    mapper->map(off, total_size, stat.page_size_, mapping);
+    size_t data_offset = 0;
+
+    // Perform a PartialPut for each page
+    for (const BlobPlacement &p : mapping) {
+      const Blob page((const char*)ptr + data_offset, p.blob_size_);
       std::string blob_name(p.CreateBlobName().str());
       bkt.AsyncPartialPut(blob_name, page, p.blob_off_, ctx);
-    } else {
-      bkt.Append(page, stat.page_size_, ctx);
+      data_offset += p.blob_size_;
     }
-    data_offset += p.blob_size_;
-  }
-  if (opts.DoSeek() && !is_append) {
-    stat.st_ptr_ = off + total_size;
+    if (opts.DoSeek()) {
+      stat.st_ptr_ = off + total_size;
+    }
   }
   stat.UpdateTime();
 
   HILOG(kDebug, "The size of file after write: {}",
         GetSize(f, stat))
-  return data_offset;
+  return total_size;
 }
 
 size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,

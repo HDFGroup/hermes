@@ -247,31 +247,17 @@ class Server : public TaskLib {
     BlobInfo &blob_info = blob_map[task->blob_id_];
 
     // Update the blob info
-    if (task->flags_.Any(HERMES_BLOB_DID_CREATE)) {
-      blob_info.name_ = std::move(blob_name);
-      blob_info.blob_id_ = task->blob_id_;
-      blob_info.tag_id_ = task->tag_id_;
-      blob_info.blob_size_ = 0;
-      blob_info.max_blob_size_ = 0;
-      blob_info.score_ = task->score_;
-      blob_info.mod_count_ = 0;
-      blob_info.access_freq_ = 0;
-      blob_info.last_flush_ = 0;
-      blob_info.UpdateWriteStats();
-      if (task->flags_.Any(HERMES_IS_FILE)) {
-        blob_info.mod_count_ = 2;
-        blob_info.last_flush_ = 1;
-        LPointer<data_stager::StageInTask> stage_task =
-            stager_mdm_.AsyncStageIn(task->task_node_ + 1,
-                                     task->tag_id_,
-                                     blob_info.name_,
-                                     task->score_, 0);
-        stage_task->Wait<TASK_YIELD_CO>(task);
-        HRUN_CLIENT->DelTask(stage_task);
-      }
-    } else {
-      // Modify existing blob
-      blob_info.UpdateWriteStats();
+    blob_info.UpdateWriteStats();
+    if (task->flags_.Any(HERMES_IS_FILE) && blob_info.last_flush_ == 0) {
+      blob_info.mod_count_ = 2;
+      blob_info.last_flush_ = 1;
+      LPointer<data_stager::StageInTask> stage_task =
+          stager_mdm_.AsyncStageIn(task->task_node_ + 1,
+                                   task->tag_id_,
+                                   blob_info.name_,
+                                   task->score_, 0);
+      stage_task->Wait<TASK_YIELD_CO>(task);
+      HRUN_CLIENT->DelTask(stage_task);
     }
     ssize_t bkt_size_diff = 0;
     if (task->flags_.Any(HERMES_BLOB_REPLACE)) {
@@ -358,7 +344,8 @@ class Server : public TaskLib {
     if (task->flags_.Any(HERMES_IS_FILE)) {
       // TODO(llogan): Move to data stager
       adapter::BlobPlacement p;
-      p.DecodeBlobName(task->blob_name_->str(), 1 << 20);
+      std::string blob_name_str = task->blob_name_->str();
+      p.DecodeBlobName(blob_name_str, 1 << 20);
       bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
                                task->tag_id_,
                                p.bucket_off_ + task->blob_off_ + task->data_size_,
@@ -522,6 +509,17 @@ class Server : public TaskLib {
       flags.SetBits(HERMES_BLOB_DID_CREATE);
       BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
       blob_map.emplace(blob_id, BlobInfo());
+      BlobInfo &blob_info = blob_map[blob_id];
+      blob_info.name_ = std::move(blob_name);
+      blob_info.blob_id_ = blob_id;
+      blob_info.tag_id_ = tag_id;
+      blob_info.blob_size_ = 0;
+      blob_info.max_blob_size_ = 0;
+      blob_info.score_ = 0;
+      blob_info.mod_count_ = 0;
+      blob_info.access_freq_ = 0;
+      blob_info.last_flush_ = 0;
+      blob_info.UpdateWriteStats();
       return blob_id;
     }
     return it->second;
