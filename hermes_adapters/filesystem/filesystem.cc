@@ -99,7 +99,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   HILOG(kDebug, "Write called for filename: {}"
                 " on offset: {}"
                 " from position: {}"
-                " and current file size: {}"
+                " and size: {}"
                 " and adapter mode: {}",
         filename, off, stat.st_ptr_, total_size,
         AdapterModeConv::str(stat.adapter_mode_))

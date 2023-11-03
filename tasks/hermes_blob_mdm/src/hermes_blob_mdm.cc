@@ -197,8 +197,9 @@ class Server : public TaskLib {
 //      blob_info.score_ = new_score;
 
       // Flush data
+      size_t mod_count = blob_info.mod_count_;
       if (blob_info.last_flush_ > 0 &&
-          blob_info.mod_count_ > blob_info.last_flush_) {
+          mod_count > blob_info.last_flush_) {
         HILOG(kDebug, "Flushing blob {} (mod_count={}, last_flush={})",
               blob_info.blob_id_, blob_info.mod_count_, blob_info.last_flush_);
         LPointer<char> data = HRUN_CLIENT->AllocateBuffer<TASK_YIELD_CO>(blob_info.blob_size_,
@@ -216,7 +217,7 @@ class Server : public TaskLib {
                                   blob_info.name_,
                                   data.shm_, blob_info.blob_size_,
                                   TASK_DATA_OWNER | TASK_FIRE_AND_FORGET);
-        blob_info.mod_count_ = blob_info.last_flush_.load();
+        blob_info.last_flush_ = mod_count;
       }
     }
   }
@@ -247,9 +248,8 @@ class Server : public TaskLib {
     BlobInfo &blob_info = blob_map[task->blob_id_];
 
     // Update the blob info
-    blob_info.UpdateWriteStats();
     if (task->flags_.Any(HERMES_IS_FILE) && blob_info.last_flush_ == 0) {
-      blob_info.mod_count_ = 2;
+      blob_info.mod_count_ = 1;
       blob_info.last_flush_ = 1;
       LPointer<data_stager::StageInTask> stage_task =
           stager_mdm_.AsyncStageIn(task->task_node_ + 1,
@@ -271,7 +271,10 @@ class Server : public TaskLib {
     if (needed_space > blob_info.max_blob_size_) {
       size_diff = needed_space - blob_info.max_blob_size_;
     }
-    blob_info.blob_size_ += size_diff;
+    size_t min_blob_size = task->blob_off_ + task->data_size_;
+    if (min_blob_size > blob_info.blob_size_) {
+      blob_info.blob_size_ = task->blob_off_ + task->data_size_;
+    }
     bkt_size_diff += (ssize_t)size_diff;
     HILOG(kDebug, "The size diff is {} bytes (bkt diff {})", size_diff, bkt_size_diff)
 
@@ -309,17 +312,25 @@ class Server : public TaskLib {
     std::vector<LPointer<bdev::WriteTask>> write_tasks;
     write_tasks.reserve(blob_info.buffers_.size());
     size_t blob_off = task->blob_off_, buf_off = 0;
+    size_t buf_left = 0, buf_right = 0;
+    size_t blob_right = task->blob_off_ + task->data_size_;
     char *blob_buf = HRUN_CLIENT->GetDataPointer(task->data_);
     HILOG(kDebug, "Number of buffers {}", blob_info.buffers_.size());
+    bool found_left = false;
     for (BufferInfo &buf : blob_info.buffers_) {
-      size_t blob_left = blob_off;
-      size_t blob_right = blob_off + buf.t_size_;
-      if (blob_left <= task->blob_off_ && task->blob_off_ < blob_right) {
-        size_t rel_off = task->blob_off_ - blob_off;
+      buf_right = buf_left + buf.t_size_;
+      if (blob_off >= blob_right) {
+        break;
+      }
+      if (buf_left <= blob_off && blob_off < buf_right) {
+        found_left = true;
+      }
+      if (found_left) {
+        size_t rel_off = blob_off - buf_left;
         size_t tgt_off = buf.t_off_ + rel_off;
         size_t buf_size = buf.t_size_ - rel_off;
-        if (blob_off + buf_size > task->blob_off_ + task->data_size_) {
-          buf_size = task->blob_off_ + task->data_size_ - blob_off;
+        if (buf_right > blob_right) {
+          buf_size = blob_right - (buf_left + rel_off);
         }
         HILOG(kDebug, "Writing {} bytes at off {} from target {}", buf_size, tgt_off, buf.tid_)
         TargetInfo &target = *target_map_[buf.tid_];
@@ -329,8 +340,9 @@ class Server : public TaskLib {
                               tgt_off, buf_size);
         write_tasks.emplace_back(write_task);
         buf_off += buf_size;
+        blob_off = buf_right;
       }
-      blob_off += buf.t_size_;
+      buf_left += buf.t_size_;
     }
     blob_info.max_blob_size_ = blob_off;
 
@@ -372,6 +384,7 @@ class Server : public TaskLib {
 
     // Free data
     HILOG(kDebug, "Completing PUT for {}", blob_name.str());
+    blob_info.UpdateWriteStats();
     task->SetModuleComplete();
   }
   void MonitorPutBlob(u32 mode, PutBlobTask *task, RunContext &rctx) {
@@ -418,17 +431,26 @@ class Server : public TaskLib {
     read_tasks.reserve(blob_info.buffers_.size());
     HILOG(kDebug, "Getting blob {} of size {} starting at offset {} (total_blob_size={}, buffers={})",
           task->blob_id_, task->data_size_, task->blob_off_, blob_info.blob_size_, blob_info.buffers_.size());
-    size_t blob_off = task->blob_off_, buf_off = 0;
+    size_t blob_off = task->blob_off_;
+    size_t buf_left = 0, buf_right = 0;
+    size_t buf_off = 0;
+    size_t blob_right = task->blob_off_ + task->data_size_;
+    bool found_left = false;
     char *blob_buf = HRUN_CLIENT->GetDataPointer(task->data_);
     for (BufferInfo &buf : blob_info.buffers_) {
-      size_t blob_left = blob_off;
-      size_t blob_right = blob_off + buf.t_size_;
-      if (blob_left <= task->blob_off_ && task->blob_off_ < blob_right) {
-        size_t rel_off = task->blob_off_ - blob_off;
+      buf_right = buf_left + buf.t_size_;
+      if (blob_off >= blob_right) {
+        break;
+      }
+      if (buf_left <= blob_off && blob_off < buf_right) {
+        found_left = true;
+      }
+      if (found_left) {
+        size_t rel_off = blob_off - buf_left;
         size_t tgt_off = buf.t_off_ + rel_off;
         size_t buf_size = buf.t_size_ - rel_off;
-        if (blob_off + buf_size > task->blob_off_ + task->data_size_) {
-          buf_size = task->blob_off_ + task->data_size_ - blob_off;
+        if (buf_right > blob_right) {
+          buf_size = blob_right - (buf_left + rel_off);
         }
         HILOG(kDebug, "Loading {} bytes at off {} from target {}", buf_size, tgt_off, buf.tid_)
         TargetInfo &target = *target_map_[buf.tid_];
@@ -437,8 +459,9 @@ class Server : public TaskLib {
                                                      tgt_off, buf_size).ptr_;
         read_tasks.emplace_back(read_task);
         buf_off += buf_size;
+        blob_off = buf_right;
       }
-      blob_off += buf.t_size_;
+      buf_left += buf.t_size_;
     }
     task->phase_ = GetBlobPhase::kWait;
   }
