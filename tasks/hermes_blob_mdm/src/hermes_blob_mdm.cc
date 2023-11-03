@@ -247,7 +247,7 @@ class Server : public TaskLib {
     BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     BlobInfo &blob_info = blob_map[task->blob_id_];
 
-    // Update the blob info
+    // Stage Blob
     if (task->flags_.Any(HERMES_IS_FILE) && blob_info.last_flush_ == 0) {
       blob_info.mod_count_ = 1;
       blob_info.last_flush_ = 1;
@@ -406,19 +406,6 @@ class Server : public TaskLib {
 
   /** Get a blob's data */
   void GetBlob(GetBlobTask *task, RunContext &rctx) {
-    switch (task->phase_) {
-      case GetBlobPhase::kStart: {
-        GetBlobGetPhase(task, rctx);
-      }
-      case GetBlobPhase::kWait: {
-        GetBlobWaitPhase(task, rctx);
-      }
-    }
-  }
-  void MonitorGetBlob(u32 mode, GetBlobTask *task, RunContext &rctx) {
-  }
-
-  void GetBlobGetPhase(GetBlobTask *task, RunContext &rctx) {
     if (task->blob_id_.IsNull()) {
       hshm::charbuf blob_name = hshm::to_charbuf(*task->blob_name_);
       task->blob_id_ = GetOrCreateBlobId(task->tag_id_, task->lane_hash_,
@@ -426,8 +413,23 @@ class Server : public TaskLib {
     }
     BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     BlobInfo &blob_info = blob_map[task->blob_id_];
-    HSHM_MAKE_AR0(task->bdev_reads_, nullptr);
-    std::vector<bdev::ReadTask*> &read_tasks = *task->bdev_reads_;
+
+    // Stage Blob
+    if (task->flags_.Any(HERMES_IS_FILE) && blob_info.last_flush_ == 0) {
+      // TODO(llogan): Don't hardcore score = 1
+      blob_info.mod_count_ = 1;
+      blob_info.last_flush_ = 1;
+      LPointer<data_stager::StageInTask> stage_task =
+          stager_mdm_.AsyncStageIn(task->task_node_ + 1,
+                                   task->tag_id_,
+                                   blob_info.name_,
+                                   1, 0);
+      stage_task->Wait<TASK_YIELD_CO>(task);
+      HRUN_CLIENT->DelTask(stage_task);
+    }
+
+    // Read blob from buffers
+    std::vector<bdev::ReadTask*> read_tasks;
     read_tasks.reserve(blob_info.buffers_.size());
     HILOG(kDebug, "Getting blob {} of size {} starting at offset {} (total_blob_size={}, buffers={})",
           task->blob_id_, task->data_size_, task->blob_off_, blob_info.blob_size_, blob_info.buffers_.size());
@@ -463,22 +465,13 @@ class Server : public TaskLib {
       }
       buf_left += buf.t_size_;
     }
-    task->phase_ = GetBlobPhase::kWait;
-  }
-
-  void GetBlobWaitPhase(GetBlobTask *task, RunContext &rctx) {
-    std::vector<bdev::ReadTask*> &read_tasks = *task->bdev_reads_;
     for (bdev::ReadTask *&read_task : read_tasks) {
-      if (!read_task->IsComplete()) {
-        return;
-      }
-    }
-    for (bdev::ReadTask *&read_task : read_tasks) {
+      read_task->Wait<TASK_YIELD_CO>(task);
       HRUN_CLIENT->DelTask(read_task);
     }
-    HSHM_DESTROY_AR(task->bdev_reads_);
-    HILOG(kDebug, "GetBlobTask complete");
     task->SetModuleComplete();
+  }
+  void MonitorGetBlob(u32 mode, GetBlobTask *task, RunContext &rctx) {
   }
 
   /**
@@ -731,10 +724,12 @@ class Server : public TaskLib {
         }
         BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
         BlobInfo &blob_info = blob_map[task->blob_id_];
-        bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
-                                 task->tag_id_,
-                                 -(ssize_t)blob_info.blob_size_,
-                                 bucket_mdm::UpdateSizeMode::kAdd);
+        if (task->update_size_) {
+          bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
+                                   task->tag_id_,
+                                   -(ssize_t) blob_info.blob_size_,
+                                   bucket_mdm::UpdateSizeMode::kAdd);
+        }
         HSHM_DESTROY_AR(task->free_tasks_);
         blob_map.erase(task->blob_id_);
         task->SetModuleComplete();

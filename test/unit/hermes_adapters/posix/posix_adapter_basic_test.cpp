@@ -1212,16 +1212,15 @@ TEST_CASE("BatchedReadSequentialTemporalFixed",
     REQUIRE(test::status_orig == 0);
   }
 
-  SECTION("read from existing file always at start") {
-    test::test_open(info.existing_file.c_str(), O_WRONLY);
+  SECTION("read from existing file") {
+    test::test_open(info.existing_file.c_str(), O_RDWR);
     REQUIRE(test::fh_orig != -1);
-
+    std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
       usleep(info.temporal_interval_ms * 1000);
       test::test_seek(0, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
-      test::test_write(info.write_data.data(), args.request_size);
-      REQUIRE(test::size_written_orig == args.request_size);
+      test::test_read(data.data(), args.request_size);
+      REQUIRE(test::size_read_orig == args.request_size);
     }
     test::test_close();
     REQUIRE(test::status_orig == 0);

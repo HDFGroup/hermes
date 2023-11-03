@@ -316,7 +316,8 @@ class Server : public TaskLib {
         blob_tasks.reserve(tag.blobs_.size());
         for (BlobId &blob_id : tag.blobs_) {
           blob_mdm::DestroyBlobTask *blob_task =
-              blob_mdm_.AsyncDestroyBlob(task->task_node_ + 1, task->tag_id_, blob_id).ptr_;
+              blob_mdm_.AsyncDestroyBlob(task->task_node_ + 1,
+                                         task->tag_id_, blob_id, false).ptr_;
           blob_tasks.emplace_back(blob_task);
         }
         stager_mdm_.AsyncUnregisterStager(task->task_node_ + 1,
@@ -384,6 +385,11 @@ class Server : public TaskLib {
       return;
     }
     TagInfo &tag = it->second;
+    if (tag.owner_) {
+      for (BlobId &blob_id : tag.blobs_) {
+        blob_mdm_.AsyncDestroyBlob(task->task_node_ + 1, task->tag_id_, blob_id);
+      }
+    }
     tag.blobs_.clear();
     tag.internal_size_ = 0;
     task->SetModuleComplete();
