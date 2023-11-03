@@ -27,6 +27,7 @@
 #endif
 
 #include "adapter_test_utils.h"
+#include "filesystem_tests.h"
 
 namespace stdfs = std::filesystem;
 
