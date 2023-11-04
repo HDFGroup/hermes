@@ -406,7 +406,7 @@ void test_seek(long offset, int whence) {
 }
 }  // namespace test
 
-#include "posix_adapter_basic_test.cpp"
-#include "posix_adapter_rs_test.cpp"
+#include "posix_adapter_basic_test.cc"
+#include "posix_adapter_rs_test.cc"
 // TODO(chogan): Disabling until issue #302 is fixed
 // #include "posix_adapter_shared_test.cpp"
