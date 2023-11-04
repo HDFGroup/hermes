@@ -380,10 +380,12 @@ class Worker {
           HRUN_REMOTE_QUEUE->Disperse(task, exec, ids);
           task->SetDisableRun();
           task->SetUnordered();
+          task->UnsetCoroutine();
         } else if (task->IsLaneAll()) {
           HRUN_REMOTE_QUEUE->DisperseLocal(task, exec, work_entry.queue_, work_entry.group_);
           task->SetDisableRun();
           task->SetUnordered();
+          task->UnsetCoroutine();
         } else if (task->IsCoroutine()) {
           if (!task->IsStarted()) {
             rctx.stack_ptr_ = malloc(rctx.stack_size_);
