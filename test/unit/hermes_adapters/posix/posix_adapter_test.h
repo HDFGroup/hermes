@@ -10,16 +10,19 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_TEST_UNIT_HERMES_ADAPTERS_POSIX_POSIX_ADAPTER_TEST_H_
-#define HERMES_TEST_UNIT_HERMES_ADAPTERS_POSIX_POSIX_ADAPTER_TEST_H_
+#ifndef HERMES_TEST_UNIT_HERMES_ADAPTERS_POSIX_POSIX_ADAPTER_BASE_TEST_H_
+#define HERMES_TEST_UNIT_HERMES_ADAPTERS_POSIX_POSIX_ADAPTER_BASE_TEST_H_
 
 #include "filesystem_tests.h"
 
 namespace hermes::adapter::fs::test {
+template<bool WITH_MPI>
 class PosixTest : public FilesystemTests {
  public:
   FileInfo new_file_;
   FileInfo existing_file_;
+  FileInfo shared_new_file_;
+  FileInfo shared_existing_file_;
   FileInfo tmp_file_;
   unsigned int offset_seed_ = 1;
   unsigned int rs_seed_ = 1;
@@ -44,6 +47,10 @@ class PosixTest : public FilesystemTests {
   void RegisterFiles() override {
     RegisterPath("new", 0, new_file_);
     RegisterPath("ext", TEST_DO_CREATE, existing_file_);
+    if constexpr(WITH_MPI) {
+      RegisterPath("shared_new", TEST_DO_CREATE | TEST_FILE_SHARED, shared_new_file_);
+      RegisterPath("shared_ext", TEST_DO_CREATE | TEST_FILE_SHARED, shared_existing_file_);
+    }
     RegisterTmpPath(tmp_file_);
   }
   
@@ -109,8 +116,12 @@ class PosixTest : public FilesystemTests {
 
 }  // namespace hermes::adapter::fs::test
 
-/** Parameters to Catch2 */
+#if defined(HERMES_MPI_TESTS)
 #define TEST_INFO \
-  hshm::EasySingleton<hermes::adapter::fs::test::PosixTest>::GetInstance()
+  hshm::EasySingleton<hermes::adapter::fs::test::PosixTest<HERMES_MPI_TESTS>>::GetInstance()
+#else
+#define TEST_INFO \
+  hshm::EasySingleton<hermes::adapter::fs::test::PosixTest<false>>::GetInstance()
+#endif
 
-#endif //HERMES_TEST_UNIT_HERMES_ADAPTERS_POSIX_POSIX_ADAPTER_TEST_H_
+#endif  // HERMES_TEST_UNIT_HERMES_ADAPTERS_POSIX_POSIX_ADAPTER_BASE_TEST_H_

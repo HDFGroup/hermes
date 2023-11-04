@@ -5,14 +5,12 @@
 #ifndef HERMES_TEST_UNIT_HERMES_ADAPTERS_FILESYSTEM_TESTS_H_
 #define HERMES_TEST_UNIT_HERMES_ADAPTERS_FILESYSTEM_TESTS_H_
 
-#include "hermes_shm/util/singleton.h"
 #include <fcntl.h>
 #include <stdarg.h>
 #include <unistd.h>
 
 #include <filesystem>
 #include <iostream>
-#include "hermes/hermes.h"
 #include <stdio.h>
 
 #include <cmath>
@@ -20,9 +18,11 @@
 #include <string>
 #include <basic_test.h>
 
+#include "hermes_shm/util/singleton.h"
+#include "hermes/hermes.h"
+
 #define CATCH_CONFIG_RUNNER
 #include <mpi.h>
-
 #include <catch2/catch_all.hpp>
 
 namespace hermes::adapter::fs::test {
@@ -31,6 +31,8 @@ namespace hermes::adapter::fs::test {
 #define TEST_DO_CREATE BIT_OPT(u32, 0)
 /** Allow this file to be buffered with Hermes */
 #define TEST_WITH_HERMES BIT_OPT(u32, 1)
+/** Make this file shared across processes */
+#define TEST_FILE_SHARED BIT_OPT(u32, 2)
 
 struct FileInfo {
   std::string hermes_;  /** The file produced by Hermes */
@@ -97,8 +99,10 @@ class FilesystemTests {
                     FileInfo &info) {
     info.hermes_ = dir_ + "/" + filename_ + "_" + basename + "_";
     info.cmp_ = info.hermes_ + "cmp_";
-    info.hermes_ += pid_str_;
-    info.cmp_ += pid_str_;
+    if (!info.flags_.Any(TEST_FILE_SHARED)) {
+      info.hermes_ += pid_str_;
+      info.cmp_ += pid_str_;
+    }
     info.flags_.SetBits(flags | TEST_WITH_HERMES);
     files_.push_back(info);
   }
@@ -141,6 +145,9 @@ class FilesystemTests {
         continue;
       }
       if (info.flags_.Any(TEST_DO_CREATE)) {
+        if (info.flags_.Any(TEST_FILE_SHARED) && rank_ != 0) {
+          continue;
+        }
         CreateFile(info.cmp_, data);
         CreateFile(info.hermes_, data);
       }
@@ -155,13 +162,16 @@ class FilesystemTests {
   }
 
   void Pretest() {
+    MPI_Barrier(MPI_COMM_WORLD);
     IgnoreAllFiles();
     RemoveAllFiles();
     CreateFiles();
     TrackAllFiles();
+    MPI_Barrier(MPI_COMM_WORLD);
   }
 
   void Posttest(bool compare_data = true) {
+    Flush();
     IgnoreAllFiles();
     if (compare_data) {
       for (FileInfo &info : files_) {
@@ -183,7 +193,6 @@ class FilesystemTests {
     /* Delete the files from both Hermes and the backend. */
     TrackAllFiles();
     RemoveAllFiles();
-    Flush();
   }
 
   virtual void RegisterFiles() = 0;
@@ -225,7 +234,8 @@ class FilesystemTests {
     return tmp_s;
   }
 
-  void CreateFile(const std::string &path, const std::vector<char> &data) {
+  void CreateFile(const std::string &path,
+                  const std::vector<char> &data) {
     int fd = open(path.c_str(), O_CREAT | O_TRUNC | O_RDWR, 0666);
     if (fd == -1) {
       HELOG(kFatal, "Failed to open file: {}", path);
