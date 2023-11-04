@@ -830,6 +830,7 @@ class Server : public TaskLib {
       }
       TargetStats stats;
       stats.tgt_id_ = bdev_client.id_;
+      stats.node_id_ = HRUN_CLIENT->node_id_;
       stats.rem_cap_ = bdev_client.monitor_task_->rem_cap_;
       stats.max_cap_ = bdev_client.max_cap_;
       stats.bandwidth_ = bdev_client.bandwidth_;
