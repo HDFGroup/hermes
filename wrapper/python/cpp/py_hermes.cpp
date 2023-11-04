@@ -86,6 +86,7 @@ void BindTargetStats(py::module &m) {
   py::class_<TargetStats>(m, "TargetStats")
       .def(py::init<>())
       .def_readonly("tgt_id", &TargetStats::tgt_id_)
+      .def_readonly("node_id", &TargetStats::node_id_)
       .def_readonly("rem_cap", &TargetStats::rem_cap_)
       .def_readonly("max_cap", &TargetStats::max_cap_)
       .def_readonly("bandwidth", &TargetStats::bandwidth_)

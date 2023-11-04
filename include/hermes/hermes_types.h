@@ -337,12 +337,13 @@ struct TagInfo {
   std::list<Task*> traits_;
   size_t internal_size_;
   size_t page_size_;
+  bitfield32_t flags_;
   bool owner_;
 
   /** Serialization */
   template<typename Ar>
   void serialize(Ar &ar) {
-    ar(tag_id_, name_, internal_size_, page_size_, owner_);
+    ar(tag_id_, name_, internal_size_, page_size_, owner_, flags_);
   }
 
   /** Get std::string of name */

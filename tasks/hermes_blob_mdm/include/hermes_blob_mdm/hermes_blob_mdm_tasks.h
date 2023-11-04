@@ -348,9 +348,6 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
   IN hipc::Pointer data_;
   INOUT ssize_t data_size_;
   IN bitfield32_t flags_;
-  TEMP int phase_ = GetBlobPhase::kStart;
-  TEMP hipc::ShmArchive<std::vector<bdev::ReadTask*>> bdev_reads_;
-  TEMP PutBlobTask *stage_task_ = nullptr;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -375,7 +372,7 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kGetBlob;
-    task_flags_.SetBits(TASK_LOW_LATENCY);
+    task_flags_.SetBits(TASK_LOW_LATENCY | TASK_COROUTINE);
     if (!blob_id.IsNull()) {
       lane_hash_ = blob_id.hash_;
       domain_id_ = domain_id;
@@ -390,7 +387,7 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     blob_off_ = off;
     data_size_ = data_size;
     data_ = data;
-    flags_ = bitfield32_t(flags);
+    flags_ = bitfield32_t(flags | ctx.flags_.bits_);
     HSHM_MAKE_AR(blob_name_, alloc, blob_name);
   }
 
@@ -1013,6 +1010,7 @@ struct DestroyBlobPhase {
 struct DestroyBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
   IN TagId tag_id_;
   IN BlobId blob_id_;
+  IN bool update_size_;
   TEMP int phase_ = DestroyBlobPhase::kFreeBuffers;
   TEMP hipc::ShmArchive<std::vector<bdev::FreeTask *>> free_tasks_;
 
@@ -1027,7 +1025,8 @@ struct DestroyBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
                   const DomainId &domain_id,
                   const TaskStateId &state_id,
                   const TagId &tag_id,
-                  const BlobId &blob_id) : Task(alloc) {
+                  const BlobId &blob_id,
+                  bool update_size = true) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = blob_id.hash_;
@@ -1040,13 +1039,14 @@ struct DestroyBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
     // Custom params
     tag_id_ = tag_id;
     blob_id_ = blob_id;
+    update_size_ = update_size;
   }
 
   /** (De)serialize message call */
   template<typename Ar>
   void SerializeStart(Ar &ar) {
     task_serialize<Ar>(ar);
-    ar(tag_id_, blob_id_);
+    ar(tag_id_, blob_id_, update_size_);
   }
 
   /** (De)serialize message return */
@@ -1161,7 +1161,7 @@ struct FlushDataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
         TASK_LONG_RUNNING |
         TASK_COROUTINE |
         TASK_REMOTE_DEBUG_MARK);
-    SetPeriodSec(2);  // TODO(llogan): don't hardcode this
+    SetPeriodMs(5);  // TODO(llogan): don't hardcode this
     domain_id_ = DomainId::GetLocal();
   }
 

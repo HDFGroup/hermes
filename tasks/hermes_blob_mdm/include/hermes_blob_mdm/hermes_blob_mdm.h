@@ -415,15 +415,17 @@ class Client : public TaskLibClient {
   void AsyncDestroyBlobConstruct(DestroyBlobTask *task,
                                  const TaskNode &task_node,
                                  const TagId &tag_id,
-                                 const BlobId &blob_id) {
+                                 const BlobId &blob_id,
+                                 bool update_size = true) {
     HRUN_CLIENT->ConstructTask<DestroyBlobTask>(
         task, task_node, DomainId::GetNode(blob_id.node_id_),
-        id_, tag_id, blob_id);
+        id_, tag_id, blob_id, update_size);
   }
   void DestroyBlobRoot(const TagId &tag_id,
-                       const BlobId &blob_id) {
+                       const BlobId &blob_id,
+                       bool update_size = true) {
     LPointer<hrunpq::TypedPushTask<DestroyBlobTask>> push_task =
-        AsyncDestroyBlobRoot(tag_id, blob_id);
+        AsyncDestroyBlobRoot(tag_id, blob_id, update_size);
     push_task->Wait();
     HRUN_CLIENT->DelTask(push_task);
   }

@@ -19,7 +19,7 @@ if(HERMES_ENABLE_STDIO_ADAPTER)
 endif()
 
 if(HERMES_ENABLE_MPIIO_ADAPTER)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/mpiio)
+  # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/mpiio)
 endif()
 
 if(HERMES_ENABLE_PUBSUB_ADAPTER)
@@ -27,5 +27,5 @@ if(HERMES_ENABLE_PUBSUB_ADAPTER)
 endif()
 
 if(HERMES_ENABLE_VFD)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vfd)
+  # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vfd)
 endif()

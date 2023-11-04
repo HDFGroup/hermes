@@ -172,6 +172,7 @@ class Server : public TaskLib {
     HILOG(kDebug, "Beginning to flush runtime");
     for (std::unique_ptr<Worker> &worker : HRUN_WORK_ORCHESTRATOR->workers_) {
       worker->flush_.flushing_ = true;
+      worker->flush_.pending_ = 1;
     }
     while (true) {
       int count = 0;

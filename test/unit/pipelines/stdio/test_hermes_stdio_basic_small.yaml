@@ -1,0 +1,13 @@
+name: hermes_unit_hermes_stdio_basic_small
+env: hermes
+pkgs:
+  - pkg_type: asan
+    pkg_name: asan
+  - pkg_type: hermes_run
+    pkg_name: hermes_run
+    sleep: 2
+  - pkg_type: hermes_stdio_tests
+    pkg_name: hermes_stdio_tests
+    test_file: stdio_basic
+    hermes: true
+    size: small

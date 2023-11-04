@@ -109,13 +109,21 @@ struct PushTask : public Task, TaskFlags<TF_LOCAL> {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = 0;
-    prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kPush;
     // task_flags_.SetBits(TASK_LOW_LATENCY | TASK_PREEMPTIVE | TASK_REMOTE_DEBUG_MARK | TASK_FIRE_AND_FORGET);
     // task_flags_.SetBits(TASK_LOW_LATENCY | TASK_COROUTINE | TASK_REMOTE_DEBUG_MARK | TASK_FIRE_AND_FORGET);
     task_flags_.SetBits(TASK_LOW_LATENCY | TASK_REMOTE_DEBUG_MARK | TASK_FIRE_AND_FORGET);
     domain_id_ = domain_id;
+    if (orig_task->IsFlush()) {
+      task_flags_.SetBits(TASK_FLUSH);
+    }
+    if (orig_task->IsLongRunning()) {
+      task_flags_.SetBits(TASK_LONG_RUNNING);
+      prio_ = TaskPrio::kLongRunning;
+    } else {
+      prio_ = TaskPrio::kLowLatency;
+    }
 
     // Custom params
     domain_ids_ = std::move(domain_ids);
@@ -161,11 +169,20 @@ struct DupTask : public Task, TaskFlags<TF_LOCAL> {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = 0;
-    prio_ = TaskPrio::kLowLatency;
+
     task_state_ = state_id;
     method_ = Method::kDup;
     task_flags_.SetBits(TASK_LOW_LATENCY | TASK_REMOTE_DEBUG_MARK | TASK_FIRE_AND_FORGET | TASK_COROUTINE);
     domain_id_ = DomainId::GetLocal();
+    if (orig_task->IsFlush()) {
+      task_flags_.SetBits(TASK_FLUSH);
+    }
+    if (orig_task->IsLongRunning()) {
+      task_flags_.SetBits(TASK_LONG_RUNNING);
+      prio_ = TaskPrio::kLongRunning;
+    } else {
+      prio_ = TaskPrio::kLowLatency;
+    }
 
     // Custom params
     orig_task_ = orig_task;

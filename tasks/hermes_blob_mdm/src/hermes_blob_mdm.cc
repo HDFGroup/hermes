@@ -78,7 +78,7 @@ class Server : public TaskLib {
       bdev::ConstructTask *create_task = client.AsyncCreate(
           task->task_node_ + 1,
           DomainId::GetLocal(),
-          "hermes_" + dev.dev_name_,
+          "hermes_" + dev.dev_name_ + "/" + std::to_string(HRUN_CLIENT->node_id_),
           dev_type,
           dev).ptr_;
       target_tasks_.emplace_back(create_task);
@@ -124,8 +124,7 @@ class Server : public TaskLib {
       bkt_mdm_.Init(task->bkt_mdm_);
       stager_mdm_.Init(task->stager_mdm_);
       op_mdm_.Init(task->op_mdm_);
-      // TODO(llogan): Add back
-      // flush_task_ = blob_mdm_.AsyncFlushData(task->task_node_ + 1);
+      flush_task_ = blob_mdm_.AsyncFlushData(task->task_node_ + 1);
     }
     task->SetModuleComplete();
   }
@@ -198,13 +197,11 @@ class Server : public TaskLib {
 //      blob_info.score_ = new_score;
 
       // Flush data
+      size_t mod_count = blob_info.mod_count_;
       if (blob_info.last_flush_ > 0 &&
-          blob_info.mod_count_ > blob_info.last_flush_) {
+          mod_count > blob_info.last_flush_) {
         HILOG(kDebug, "Flushing blob {} (mod_count={}, last_flush={})",
               blob_info.blob_id_, blob_info.mod_count_, blob_info.last_flush_);
-        blob_info.last_flush_ = 1;
-        blob_info.mod_count_ = 0;
-        blob_info.UpdateWriteStats();
         LPointer<char> data = HRUN_CLIENT->AllocateBuffer<TASK_YIELD_CO>(blob_info.blob_size_,
                                                                          task);
         LPointer<GetBlobTask> get_blob =
@@ -220,10 +217,20 @@ class Server : public TaskLib {
                                   blob_info.name_,
                                   data.shm_, blob_info.blob_size_,
                                   TASK_DATA_OWNER | TASK_FIRE_AND_FORGET);
+        blob_info.last_flush_ = mod_count;
       }
     }
   }
   void MonitorFlushData(u32 mode, FlushDataTask *task, RunContext &rctx) {
+    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
+    for (auto &it : blob_map) {
+      BlobInfo &blob_info = it.second;
+      if (blob_info.last_flush_ > 0 &&
+          blob_info.mod_count_ > blob_info.last_flush_) {
+        rctx.flush_->pending_ += 1;
+        return;
+      }
+    }
   }
 
   /**
@@ -240,33 +247,17 @@ class Server : public TaskLib {
     BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     BlobInfo &blob_info = blob_map[task->blob_id_];
 
-    // Update the blob info
-    if (task->flags_.Any(HERMES_BLOB_DID_CREATE)) {
-      blob_info.name_ = std::move(blob_name);
-      blob_info.blob_id_ = task->blob_id_;
-      blob_info.tag_id_ = task->tag_id_;
-      blob_info.blob_size_ = 0;
-      blob_info.max_blob_size_ = 0;
-      blob_info.score_ = task->score_;
-      blob_info.mod_count_ = 0;
-      blob_info.access_freq_ = 0;
-      blob_info.last_flush_ = 0;
-      blob_info.UpdateWriteStats();
-      if (task->flags_.Any(HERMES_IS_FILE)) {
-        // TODO(llogan): add back
-//        blob_info.mod_count_ = 1;
-//        blob_info.last_flush_ = 1;
-//        LPointer<data_stager::StageInTask> stage_task =
-//            stager_mdm_.AsyncStageIn(task->task_node_ + 1,
-//                                     task->tag_id_,
-//                                     blob_info.name_,
-//                                     task->score_, 0);
-//        stage_task->Wait<TASK_YIELD_CO>(task);
-//        HRUN_CLIENT->DelTask(stage_task);
-      }
-    } else {
-      // Modify existing blob
-      blob_info.UpdateWriteStats();
+    // Stage Blob
+    if (task->flags_.Any(HERMES_IS_FILE) && blob_info.last_flush_ == 0) {
+      blob_info.mod_count_ = 1;
+      blob_info.last_flush_ = 1;
+      LPointer<data_stager::StageInTask> stage_task =
+          stager_mdm_.AsyncStageIn(task->task_node_ + 1,
+                                   task->tag_id_,
+                                   blob_info.name_,
+                                   task->score_, 0);
+      stage_task->Wait<TASK_YIELD_CO>(task);
+      HRUN_CLIENT->DelTask(stage_task);
     }
     ssize_t bkt_size_diff = 0;
     if (task->flags_.Any(HERMES_BLOB_REPLACE)) {
@@ -280,7 +271,10 @@ class Server : public TaskLib {
     if (needed_space > blob_info.max_blob_size_) {
       size_diff = needed_space - blob_info.max_blob_size_;
     }
-    blob_info.blob_size_ += size_diff;
+    size_t min_blob_size = task->blob_off_ + task->data_size_;
+    if (min_blob_size > blob_info.blob_size_) {
+      blob_info.blob_size_ = task->blob_off_ + task->data_size_;
+    }
     bkt_size_diff += (ssize_t)size_diff;
     HILOG(kDebug, "The size diff is {} bytes (bkt diff {})", size_diff, bkt_size_diff)
 
@@ -318,17 +312,25 @@ class Server : public TaskLib {
     std::vector<LPointer<bdev::WriteTask>> write_tasks;
     write_tasks.reserve(blob_info.buffers_.size());
     size_t blob_off = task->blob_off_, buf_off = 0;
+    size_t buf_left = 0, buf_right = 0;
+    size_t blob_right = task->blob_off_ + task->data_size_;
     char *blob_buf = HRUN_CLIENT->GetDataPointer(task->data_);
     HILOG(kDebug, "Number of buffers {}", blob_info.buffers_.size());
+    bool found_left = false;
     for (BufferInfo &buf : blob_info.buffers_) {
-      size_t blob_left = blob_off;
-      size_t blob_right = blob_off + buf.t_size_;
-      if (blob_left <= task->blob_off_ && task->blob_off_ < blob_right) {
-        size_t rel_off = task->blob_off_ - blob_off;
+      buf_right = buf_left + buf.t_size_;
+      if (blob_off >= blob_right) {
+        break;
+      }
+      if (buf_left <= blob_off && blob_off < buf_right) {
+        found_left = true;
+      }
+      if (found_left) {
+        size_t rel_off = blob_off - buf_left;
         size_t tgt_off = buf.t_off_ + rel_off;
         size_t buf_size = buf.t_size_ - rel_off;
-        if (blob_off + buf_size > task->blob_off_ + task->data_size_) {
-          buf_size = task->blob_off_ + task->data_size_ - blob_off;
+        if (buf_right > blob_right) {
+          buf_size = blob_right - (buf_left + rel_off);
         }
         HILOG(kDebug, "Writing {} bytes at off {} from target {}", buf_size, tgt_off, buf.tid_)
         TargetInfo &target = *target_map_[buf.tid_];
@@ -338,8 +340,9 @@ class Server : public TaskLib {
                               tgt_off, buf_size);
         write_tasks.emplace_back(write_task);
         buf_off += buf_size;
+        blob_off = buf_right;
       }
-      blob_off += buf.t_size_;
+      buf_left += buf.t_size_;
     }
     blob_info.max_blob_size_ = blob_off;
 
@@ -353,7 +356,8 @@ class Server : public TaskLib {
     if (task->flags_.Any(HERMES_IS_FILE)) {
       // TODO(llogan): Move to data stager
       adapter::BlobPlacement p;
-      p.DecodeBlobName(task->blob_name_->str(), 1 << 20);
+      std::string blob_name_str = task->blob_name_->str();
+      p.DecodeBlobName(blob_name_str, 1 << 20);
       bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
                                task->tag_id_,
                                p.bucket_off_ + task->blob_off_ + task->data_size_,
@@ -380,6 +384,7 @@ class Server : public TaskLib {
 
     // Free data
     HILOG(kDebug, "Completing PUT for {}", blob_name.str());
+    blob_info.UpdateWriteStats();
     task->SetModuleComplete();
   }
   void MonitorPutBlob(u32 mode, PutBlobTask *task, RunContext &rctx) {
@@ -401,19 +406,6 @@ class Server : public TaskLib {
 
   /** Get a blob's data */
   void GetBlob(GetBlobTask *task, RunContext &rctx) {
-    switch (task->phase_) {
-      case GetBlobPhase::kStart: {
-        GetBlobGetPhase(task, rctx);
-      }
-      case GetBlobPhase::kWait: {
-        GetBlobWaitPhase(task, rctx);
-      }
-    }
-  }
-  void MonitorGetBlob(u32 mode, GetBlobTask *task, RunContext &rctx) {
-  }
-
-  void GetBlobGetPhase(GetBlobTask *task, RunContext &rctx) {
     if (task->blob_id_.IsNull()) {
       hshm::charbuf blob_name = hshm::to_charbuf(*task->blob_name_);
       task->blob_id_ = GetOrCreateBlobId(task->tag_id_, task->lane_hash_,
@@ -421,22 +413,46 @@ class Server : public TaskLib {
     }
     BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     BlobInfo &blob_info = blob_map[task->blob_id_];
-    HSHM_MAKE_AR0(task->bdev_reads_, nullptr);
-    std::vector<bdev::ReadTask*> &read_tasks = *task->bdev_reads_;
+
+    // Stage Blob
+    if (task->flags_.Any(HERMES_IS_FILE) && blob_info.last_flush_ == 0) {
+      // TODO(llogan): Don't hardcore score = 1
+      blob_info.mod_count_ = 1;
+      blob_info.last_flush_ = 1;
+      LPointer<data_stager::StageInTask> stage_task =
+          stager_mdm_.AsyncStageIn(task->task_node_ + 1,
+                                   task->tag_id_,
+                                   blob_info.name_,
+                                   1, 0);
+      stage_task->Wait<TASK_YIELD_CO>(task);
+      HRUN_CLIENT->DelTask(stage_task);
+    }
+
+    // Read blob from buffers
+    std::vector<bdev::ReadTask*> read_tasks;
     read_tasks.reserve(blob_info.buffers_.size());
     HILOG(kDebug, "Getting blob {} of size {} starting at offset {} (total_blob_size={}, buffers={})",
           task->blob_id_, task->data_size_, task->blob_off_, blob_info.blob_size_, blob_info.buffers_.size());
-    size_t blob_off = task->blob_off_, buf_off = 0;
+    size_t blob_off = task->blob_off_;
+    size_t buf_left = 0, buf_right = 0;
+    size_t buf_off = 0;
+    size_t blob_right = task->blob_off_ + task->data_size_;
+    bool found_left = false;
     char *blob_buf = HRUN_CLIENT->GetDataPointer(task->data_);
     for (BufferInfo &buf : blob_info.buffers_) {
-      size_t blob_left = blob_off;
-      size_t blob_right = blob_off + buf.t_size_;
-      if (blob_left <= task->blob_off_ && task->blob_off_ < blob_right) {
-        size_t rel_off = task->blob_off_ - blob_off;
+      buf_right = buf_left + buf.t_size_;
+      if (blob_off >= blob_right) {
+        break;
+      }
+      if (buf_left <= blob_off && blob_off < buf_right) {
+        found_left = true;
+      }
+      if (found_left) {
+        size_t rel_off = blob_off - buf_left;
         size_t tgt_off = buf.t_off_ + rel_off;
         size_t buf_size = buf.t_size_ - rel_off;
-        if (blob_off + buf_size > task->blob_off_ + task->data_size_) {
-          buf_size = task->blob_off_ + task->data_size_ - blob_off;
+        if (buf_right > blob_right) {
+          buf_size = blob_right - (buf_left + rel_off);
         }
         HILOG(kDebug, "Loading {} bytes at off {} from target {}", buf_size, tgt_off, buf.tid_)
         TargetInfo &target = *target_map_[buf.tid_];
@@ -445,25 +461,17 @@ class Server : public TaskLib {
                                                      tgt_off, buf_size).ptr_;
         read_tasks.emplace_back(read_task);
         buf_off += buf_size;
+        blob_off = buf_right;
       }
-      blob_off += buf.t_size_;
-    }
-    task->phase_ = GetBlobPhase::kWait;
-  }
-
-  void GetBlobWaitPhase(GetBlobTask *task, RunContext &rctx) {
-    std::vector<bdev::ReadTask*> &read_tasks = *task->bdev_reads_;
-    for (bdev::ReadTask *&read_task : read_tasks) {
-      if (!read_task->IsComplete()) {
-        return;
-      }
+      buf_left += buf.t_size_;
     }
     for (bdev::ReadTask *&read_task : read_tasks) {
+      read_task->Wait<TASK_YIELD_CO>(task);
       HRUN_CLIENT->DelTask(read_task);
     }
-    HSHM_DESTROY_AR(task->bdev_reads_);
-    HILOG(kDebug, "GetBlobTask complete");
     task->SetModuleComplete();
+  }
+  void MonitorGetBlob(u32 mode, GetBlobTask *task, RunContext &rctx) {
   }
 
   /**
@@ -517,6 +525,17 @@ class Server : public TaskLib {
       flags.SetBits(HERMES_BLOB_DID_CREATE);
       BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
       blob_map.emplace(blob_id, BlobInfo());
+      BlobInfo &blob_info = blob_map[blob_id];
+      blob_info.name_ = std::move(blob_name);
+      blob_info.blob_id_ = blob_id;
+      blob_info.tag_id_ = tag_id;
+      blob_info.blob_size_ = 0;
+      blob_info.max_blob_size_ = 0;
+      blob_info.score_ = 0;
+      blob_info.mod_count_ = 0;
+      blob_info.access_freq_ = 0;
+      blob_info.last_flush_ = 0;
+      blob_info.UpdateWriteStats();
       return blob_id;
     }
     return it->second;
@@ -705,10 +724,12 @@ class Server : public TaskLib {
         }
         BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
         BlobInfo &blob_info = blob_map[task->blob_id_];
-        bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
-                                 task->tag_id_,
-                                 -(ssize_t)blob_info.blob_size_,
-                                 bucket_mdm::UpdateSizeMode::kAdd);
+        if (task->update_size_) {
+          bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
+                                   task->tag_id_,
+                                   -(ssize_t) blob_info.blob_size_,
+                                   bucket_mdm::UpdateSizeMode::kAdd);
+        }
         HSHM_DESTROY_AR(task->free_tasks_);
         blob_map.erase(task->blob_id_);
         task->SetModuleComplete();
@@ -809,6 +830,7 @@ class Server : public TaskLib {
       }
       TargetStats stats;
       stats.tgt_id_ = bdev_client.id_;
+      stats.node_id_ = HRUN_CLIENT->node_id_;
       stats.rem_cap_ = bdev_client.monitor_task_->rem_cap_;
       stats.max_cap_ = bdev_client.max_cap_;
       stats.bandwidth_ = bdev_client.bandwidth_;

@@ -65,12 +65,12 @@ int init(int* argc, char*** argv) {
   HERMES_CLIENT_CONF.flushing_mode_ = hermes::FlushingMode::kSync;
 #endif
   MPI_Init(argc, argv);
-  info.write_data = GenRandom(args.request_size);
-  info.read_data = std::string(args.request_size, 'r');
-  MPI_Comm_rank(MPI_COMM_WORLD, &info.rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &info.comm_size);
-  if (info.debug && info.rank == 0) {
-    printf("%d ready for attach\n", info.comm_size);
+  TEST_INFO->write_data_ = GenRandom(TEST_INFO->request_size_);
+  TEST_INFO->read_data_ = std::string(TEST_INFO->request_size_, 'r');
+  MPI_Comm_rank(MPI_COMM_WORLD, &TEST_INFO->rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &TEST_INFO->comm_size_);
+  if (TEST_INFO->debug && TEST_INFO->rank == 0) {
+    printf("%d ready for attach\n", TEST_INFO->comm_size_);
     fflush(stdout);
     sleep(30);
   }
@@ -90,12 +90,12 @@ size_t size_read_orig;
 size_t size_written_orig;
 void test_fopen(const char* path, const char* mode) {
   std::string cmp_path;
-  if (strcmp(path, info.new_file.c_str()) == 0) {
-    cmp_path = info.new_file_cmp;
-  } else if (strcmp(path, info.existing_file.c_str()) == 0) {
-    cmp_path = info.existing_file_cmp;
+  if (strcmp(path, TEST_INFO->new_file.c_str()) == 0) {
+    cmp_path = TEST_INFO->new_file_cmp;
+  } else if (strcmp(path, TEST_INFO->existing_file.c_str()) == 0) {
+    cmp_path = TEST_INFO->existing_file_cmp;
   } else {
-    cmp_path = info.existing_shared_file_cmp;
+    cmp_path = TEST_INFO->existing_shared_file_cmp;
   }
   fh_orig = fopen(path, mode);
   fh_cmp = fopen(cmp_path.c_str(), mode);
@@ -136,85 +136,85 @@ void test_fseek(long offset, int whence) {
 int pretest() {
   stdfs::path fullpath = args.directory;
   fullpath /= args.filename;
-  info.new_file = fullpath.string() + "_new_" + std::to_string(info.rank) +
-                  "_of_" + std::to_string(info.comm_size) + "_" +
+  TEST_INFO->new_file = fullpath.string() + "_new_" + std::to_string(TEST_INFO->rank) +
+                  "_of_" + std::to_string(TEST_INFO->comm_size_) + "_" +
                   std::to_string(getpid());
-  info.existing_file = fullpath.string() + "_ext_" + std::to_string(info.rank) +
-                       "_of_" + std::to_string(info.comm_size) + "_" +
+  TEST_INFO->existing_file = fullpath.string() + "_ext_" + std::to_string(TEST_INFO->rank) +
+                       "_of_" + std::to_string(TEST_INFO->comm_size_) + "_" +
                        std::to_string(getpid());
-  info.new_file_cmp =
-      fullpath.string() + "_new_cmp_" + std::to_string(info.rank) + "_of_" +
-      std::to_string(info.comm_size) + "_" + std::to_string(getpid());
-  info.existing_file_cmp =
-      fullpath.string() + "_ext_cmp_" + std::to_string(info.rank) + "_of_" +
-      std::to_string(info.comm_size) + "_" + std::to_string(getpid());
-  info.existing_shared_file =
-      fullpath.string() + "_ext_" + std::to_string(info.comm_size);
-  info.existing_shared_file_cmp =
-      fullpath.string() + "_ext_cmp_" + std::to_string(info.comm_size);
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.existing_file_cmp))
-    stdfs::remove(info.existing_file_cmp);
-  if (stdfs::exists(info.existing_shared_file))
-    stdfs::remove(info.existing_shared_file);
-  if (stdfs::exists(info.existing_shared_file_cmp))
-    stdfs::remove(info.existing_shared_file_cmp);
+  TEST_INFO->new_file_cmp =
+      fullpath.string() + "_new_cmp_" + std::to_string(TEST_INFO->rank) + "_of_" +
+      std::to_string(TEST_INFO->comm_size_) + "_" + std::to_string(getpid());
+  TEST_INFO->existing_file_cmp =
+      fullpath.string() + "_ext_cmp_" + std::to_string(TEST_INFO->rank) + "_of_" +
+      std::to_string(TEST_INFO->comm_size_) + "_" + std::to_string(getpid());
+  TEST_INFO->existing_shared_file =
+      fullpath.string() + "_ext_" + std::to_string(TEST_INFO->comm_size_);
+  TEST_INFO->existing_shared_file_cmp =
+      fullpath.string() + "_ext_cmp_" + std::to_string(TEST_INFO->comm_size_);
+  if (stdfs::exists(TEST_INFO->new_file)) stdfs::remove(TEST_INFO->new_file);
+  if (stdfs::exists(TEST_INFO->existing_file)) stdfs::remove(TEST_INFO->existing_file);
+  if (stdfs::exists(TEST_INFO->existing_file)) stdfs::remove(TEST_INFO->existing_file);
+  if (stdfs::exists(TEST_INFO->existing_file_cmp))
+    stdfs::remove(TEST_INFO->existing_file_cmp);
+  if (stdfs::exists(TEST_INFO->existing_shared_file))
+    stdfs::remove(TEST_INFO->existing_shared_file);
+  if (stdfs::exists(TEST_INFO->existing_shared_file_cmp))
+    stdfs::remove(TEST_INFO->existing_shared_file_cmp);
   stdfs::path temp_fullpath = "/tmp";
   temp_fullpath /= args.filename;
   std::string temp_ext_file =
-      temp_fullpath.string() + "_temp_" + std::to_string(info.rank) + "_of_" +
-      std::to_string(info.comm_size) + "_" + std::to_string(getpid());
+      temp_fullpath.string() + "_temp_" + std::to_string(TEST_INFO->rank) + "_of_" +
+      std::to_string(TEST_INFO->comm_size_) + "_" + std::to_string(getpid());
   if (stdfs::exists(temp_ext_file)) stdfs::remove(temp_ext_file);
   if (!stdfs::exists(temp_ext_file)) {
     std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
-                      std::to_string(args.request_size * info.num_iterations) +
+                      std::to_string(TEST_INFO->request_size_ * TEST_INFO->num_iterations_) +
                       "; } > " + temp_ext_file + " 2> /dev/null";
     int status = system(cmd.c_str());
     REQUIRE(status != -1);
     REQUIRE(stdfs::file_size(temp_ext_file) ==
-            args.request_size * info.num_iterations);
-    info.total_size = stdfs::file_size(temp_ext_file);
+            TEST_INFO->request_size_ * TEST_INFO->num_iterations_);
+    TEST_INFO->total_size_ = stdfs::file_size(temp_ext_file);
   }
-  if (info.rank == 0 && !stdfs::exists(info.existing_shared_file)) {
-    std::string cmd = "cp " + temp_ext_file + " " + info.existing_shared_file;
+  if (TEST_INFO->rank == 0 && !stdfs::exists(TEST_INFO->existing_shared_file)) {
+    std::string cmd = "cp " + temp_ext_file + " " + TEST_INFO->existing_shared_file;
     int status = system(cmd.c_str());
     REQUIRE(status != -1);
-    REQUIRE(stdfs::file_size(info.existing_shared_file) ==
-            args.request_size * info.num_iterations);
+    REQUIRE(stdfs::file_size(TEST_INFO->existing_shared_file) ==
+            TEST_INFO->request_size_ * TEST_INFO->num_iterations_);
   }
-  if (info.rank == 0 && !stdfs::exists(info.existing_shared_file_cmp)) {
+  if (TEST_INFO->rank == 0 && !stdfs::exists(TEST_INFO->existing_shared_file_cmp)) {
     std::string cmd =
-        "cp " + temp_ext_file + " " + info.existing_shared_file_cmp;
+        "cp " + temp_ext_file + " " + TEST_INFO->existing_shared_file_cmp;
     int status = system(cmd.c_str());
     REQUIRE(status != -1);
-    REQUIRE(stdfs::file_size(info.existing_shared_file_cmp) ==
-            args.request_size * info.num_iterations);
+    REQUIRE(stdfs::file_size(TEST_INFO->existing_shared_file_cmp) ==
+            TEST_INFO->request_size_ * TEST_INFO->num_iterations_);
   }
-  if (!stdfs::exists(info.existing_file)) {
-    std::string cmd = "cp " + temp_ext_file + " " + info.existing_file;
+  if (!stdfs::exists(TEST_INFO->existing_file)) {
+    std::string cmd = "cp " + temp_ext_file + " " + TEST_INFO->existing_file;
     int status = system(cmd.c_str());
     REQUIRE(status != -1);
-    REQUIRE(stdfs::file_size(info.existing_file) ==
-            args.request_size * info.num_iterations);
-    info.total_size = stdfs::file_size(info.existing_file);
+    REQUIRE(stdfs::file_size(TEST_INFO->existing_file) ==
+            TEST_INFO->request_size_ * TEST_INFO->num_iterations_);
+    TEST_INFO->total_size_ = stdfs::file_size(TEST_INFO->existing_file);
   }
-  if (!stdfs::exists(info.existing_file_cmp)) {
-    std::string cmd = "cp " + info.existing_file + " " + info.existing_file_cmp;
+  if (!stdfs::exists(TEST_INFO->existing_file_cmp)) {
+    std::string cmd = "cp " + TEST_INFO->existing_file + " " + TEST_INFO->existing_file_cmp;
     int status = system(cmd.c_str());
     REQUIRE(status != -1);
-    REQUIRE(stdfs::file_size(info.existing_file_cmp) ==
-            args.request_size * info.num_iterations);
+    REQUIRE(stdfs::file_size(TEST_INFO->existing_file_cmp) ==
+            TEST_INFO->request_size_ * TEST_INFO->num_iterations_);
   }
   if (stdfs::exists(temp_ext_file)) stdfs::remove(temp_ext_file);
-  REQUIRE(info.total_size > 0);
+  REQUIRE(TEST_INFO->total_size_ > 0);
   MPI_Barrier(MPI_COMM_WORLD);
 #if HERMES_INTERCEPT == 1
-  HERMES_CLIENT_CONF.SetAdapterPathTracking(info.existing_file_cmp, false);
-  HERMES_CLIENT_CONF.SetAdapterPathTracking(info.new_file_cmp, false);
+  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->existing_file_cmp, false);
+  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->new_file_cmp, false);
   HERMES_CLIENT_CONF.SetAdapterPathTracking(
-      info.existing_shared_file_cmp, false);
+      TEST_INFO->existing_shared_file_cmp, false);
 #endif
   return 0;
 }
@@ -227,27 +227,27 @@ void Clear() {
 
 int posttest(bool compare_data = true) {
 #if HERMES_INTERCEPT == 1
-  HERMES_CLIENT_CONF.SetAdapterPathTracking(info.existing_file, false);
-  HERMES_CLIENT_CONF.SetAdapterPathTracking(info.new_file, false);
+  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->existing_file, false);
+  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->new_file, false);
   HERMES_CLIENT_CONF.SetAdapterPathTracking(
-      info.existing_shared_file, false);
+      TEST_INFO->existing_shared_file, false);
 #endif
-  if (compare_data && stdfs::exists(info.new_file) &&
-      stdfs::exists(info.new_file_cmp)) {
-    size_t size = stdfs::file_size(info.new_file);
-    REQUIRE(size == stdfs::file_size(info.new_file_cmp));
+  if (compare_data && stdfs::exists(TEST_INFO->new_file) &&
+      stdfs::exists(TEST_INFO->new_file_cmp)) {
+    size_t size = stdfs::file_size(TEST_INFO->new_file);
+    REQUIRE(size == stdfs::file_size(TEST_INFO->new_file_cmp));
     if (size > 0) {
       std::vector<unsigned char> d1(size, '0');
       std::vector<unsigned char> d2(size, '1');
 
-      FILE* fh1 = fopen(info.new_file.c_str(), "r");
+      FILE* fh1 = fopen(TEST_INFO->new_file_.hermes_.c_str(), "r");
       REQUIRE(fh1 != nullptr);
       size_t read_d1 = fread(d1.data(), size, sizeof(unsigned char), fh1);
       REQUIRE(read_d1 == sizeof(unsigned char));
       int status = fclose(fh1);
       REQUIRE(status == 0);
 
-      FILE* fh2 = fopen(info.new_file_cmp.c_str(), "r");
+      FILE* fh2 = fopen(TEST_INFO->new_file_cmp.c_str(), "r");
       REQUIRE(fh2 != nullptr);
       size_t read_d2 = fread(d2.data(), size, sizeof(unsigned char), fh2);
       REQUIRE(read_d2 == sizeof(unsigned char));
@@ -261,23 +261,23 @@ int posttest(bool compare_data = true) {
       REQUIRE(char_mismatch == 0);
     }
   }
-  if (compare_data && stdfs::exists(info.existing_file) &&
-      stdfs::exists(info.existing_file_cmp)) {
-    size_t size = stdfs::file_size(info.existing_file);
-    if (size != stdfs::file_size(info.existing_file_cmp)) sleep(1);
-    REQUIRE(size == stdfs::file_size(info.existing_file_cmp));
+  if (compare_data && stdfs::exists(TEST_INFO->existing_file) &&
+      stdfs::exists(TEST_INFO->existing_file_cmp)) {
+    size_t size = stdfs::file_size(TEST_INFO->existing_file);
+    if (size != stdfs::file_size(TEST_INFO->existing_file_cmp)) sleep(1);
+    REQUIRE(size == stdfs::file_size(TEST_INFO->existing_file_cmp));
     if (size > 0) {
       std::vector<unsigned char> d1(size, '0');
       std::vector<unsigned char> d2(size, '1');
 
-      FILE* fh1 = fopen(info.existing_file.c_str(), "r");
+      FILE* fh1 = fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r");
       REQUIRE(fh1 != nullptr);
       size_t read_d1 = fread(d1.data(), size, sizeof(unsigned char), fh1);
       REQUIRE(read_d1 == sizeof(unsigned char));
       int status = fclose(fh1);
       REQUIRE(status == 0);
 
-      FILE* fh2 = fopen(info.existing_file_cmp.c_str(), "r");
+      FILE* fh2 = fopen(TEST_INFO->existing_file_cmp.c_str(), "r");
       REQUIRE(fh2 != nullptr);
       size_t read_d2 = fread(d2.data(), size, sizeof(unsigned char), fh2);
       REQUIRE(read_d2 == sizeof(unsigned char));
@@ -290,23 +290,23 @@ int posttest(bool compare_data = true) {
       REQUIRE(char_mismatch == 0);
     }
   }
-  if (compare_data && stdfs::exists(info.existing_shared_file) &&
-      stdfs::exists(info.existing_shared_file_cmp)) {
-    size_t size = stdfs::file_size(info.existing_shared_file);
-    if (size != stdfs::file_size(info.existing_shared_file_cmp)) sleep(1);
-    REQUIRE(size == stdfs::file_size(info.existing_shared_file_cmp));
+  if (compare_data && stdfs::exists(TEST_INFO->existing_shared_file) &&
+      stdfs::exists(TEST_INFO->existing_shared_file_cmp)) {
+    size_t size = stdfs::file_size(TEST_INFO->existing_shared_file);
+    if (size != stdfs::file_size(TEST_INFO->existing_shared_file_cmp)) sleep(1);
+    REQUIRE(size == stdfs::file_size(TEST_INFO->existing_shared_file_cmp));
     if (size > 0) {
       std::vector<unsigned char> d1(size, '0');
       std::vector<unsigned char> d2(size, '1');
 
-      FILE* fh1 = fopen(info.existing_shared_file.c_str(), "r");
+      FILE* fh1 = fopen(TEST_INFO->existing_shared_file.c_str(), "r");
       REQUIRE(fh1 != nullptr);
       size_t read_d1 = fread(d1.data(), size, sizeof(unsigned char), fh1);
       REQUIRE(read_d1 == sizeof(unsigned char));
       int status = fclose(fh1);
       REQUIRE(status == 0);
 
-      FILE* fh2 = fopen(info.existing_shared_file_cmp.c_str(), "r");
+      FILE* fh2 = fopen(TEST_INFO->existing_shared_file_cmp.c_str(), "r");
       REQUIRE(fh2 != nullptr);
       size_t read_d2 = fread(d2.data(), size, sizeof(unsigned char), fh2);
       REQUIRE(read_d2 == sizeof(unsigned char));
@@ -320,29 +320,29 @@ int posttest(bool compare_data = true) {
     }
   }
   /* Clean up. */
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file_cmp))
-    stdfs::remove(info.existing_file_cmp);
+  if (stdfs::exists(TEST_INFO->new_file)) stdfs::remove(TEST_INFO->new_file);
+  if (stdfs::exists(TEST_INFO->existing_file)) stdfs::remove(TEST_INFO->existing_file);
+  if (stdfs::exists(TEST_INFO->new_file_cmp)) stdfs::remove(TEST_INFO->new_file_cmp);
+  if (stdfs::exists(TEST_INFO->existing_file_cmp))
+    stdfs::remove(TEST_INFO->existing_file_cmp);
   MPI_Barrier(MPI_COMM_WORLD);
-  if (info.rank == 0) {
-    if (stdfs::exists(info.existing_shared_file))
-      stdfs::remove(info.existing_shared_file);
-    if (stdfs::exists(info.existing_shared_file_cmp))
-      stdfs::remove(info.existing_shared_file_cmp);
+  if (TEST_INFO->rank == 0) {
+    if (stdfs::exists(TEST_INFO->existing_shared_file))
+      stdfs::remove(TEST_INFO->existing_shared_file);
+    if (stdfs::exists(TEST_INFO->existing_shared_file_cmp))
+      stdfs::remove(TEST_INFO->existing_shared_file_cmp);
   }
   Clear();
 
 #if HERMES_INTERCEPT == 1
-  HERMES_CLIENT_CONF.SetAdapterPathTracking(info.existing_file_cmp, true);
-  HERMES_CLIENT_CONF.SetAdapterPathTracking(info.new_file_cmp, true);
-  HERMES_CLIENT_CONF.SetAdapterPathTracking(info.new_file, true);
-  HERMES_CLIENT_CONF.SetAdapterPathTracking(info.existing_file, true);
+  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->existing_file_cmp, true);
+  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->new_file_cmp, true);
+  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->new_file, true);
+  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->existing_file, true);
   HERMES_CLIENT_CONF.SetAdapterPathTracking(
-      info.existing_shared_file, true);
+      TEST_INFO->existing_shared_file, true);
   HERMES_CLIENT_CONF.SetAdapterPathTracking(
-      info.existing_shared_file_cmp, true);
+      TEST_INFO->existing_shared_file_cmp, true);
 #endif
   return 0;
 }
@@ -352,11 +352,11 @@ cl::Parser define_options() {
              "Filename used for performing I/O") |
          cl::Opt(args.directory, "dir")["-d"]["--directory"](
              "Directory used for performing I/O") |
-         cl::Opt(args.request_size, "request_size")["-s"]["--request_size"](
+         cl::Opt(TEST_INFO->request_size_, "request_size")["-s"]["--request_size"](
              "Request size used for performing I/O");
 }
 
-#include "stdio_adapter_basic_test.cpp"
-#include "stdio_adapter_func_test.cpp"
-#include "stdio_adapter_rs_test.cpp"
+#include "stdio_adapter_basic_test.cc"
+#include "stdio_adapter_func_test.cc"
+#include "stdio_adapter_rs_test.cc"
 // #include "stdio_adapter_shared_test.cpp"

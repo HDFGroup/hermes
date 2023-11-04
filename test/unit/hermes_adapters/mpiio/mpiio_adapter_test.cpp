@@ -168,6 +168,8 @@ int pretest() {
 void Clear() {
 #if HERMES_INTERCEPT == 1
   HERMES->Clear();
+//  RemoveFiles();
+//  HRUN_ADMIN->FlushRoot(DomainId::GetGlobal());
 #endif
 }
 

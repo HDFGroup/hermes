@@ -1,0 +1,13 @@
+name: hermes_unit_hermes_posix_basic_mpi_small
+env: hermes
+pkgs:
+  - pkg_type: asan
+    pkg_name: asan
+  - pkg_type: hermes_run
+    pkg_name: hermes_run
+    sleep: 2
+  - pkg_type: hermes_posix_tests
+    pkg_name: hermes_posix_tests
+    test_file: posix_basic_mpi
+    hermes: true
+    size: small

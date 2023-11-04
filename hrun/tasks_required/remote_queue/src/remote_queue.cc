@@ -108,14 +108,21 @@ class Server : public TaskLib {
 
   /** Duplicate operations */
   void Dup(DupTask *task, RunContext &ctx) {
-    for (size_t i = 0; i < task->dups_.size(); ++i) {
-      LPointer<Task> &dup = task->dups_[i];
-      dup->Wait<TASK_YIELD_CO>(task);
-      task->exec_->DupEnd(dup->method_, i, task->orig_task_, dup.ptr_);
-      HRUN_CLIENT->DelTask(task->exec_, dup.ptr_);
+    Task *orig_task = task->orig_task_;
+    if (!orig_task->IsFireAndForget()) {
+      for (size_t i = 0; i < task->dups_.size(); ++i) {
+        LPointer<Task> &dup = task->dups_[i];
+        dup->Wait<TASK_YIELD_CO>(task);
+        task->exec_->DupEnd(dup->method_, i, task->orig_task_, dup.ptr_);
+        HRUN_CLIENT->DelTask(task->exec_, dup.ptr_);
+      }
+      task->exec_->ReplicateEnd(task->exec_method_, task->orig_task_);
+      if (!orig_task->IsLongRunning()) {
+        orig_task->SetModuleComplete();
+      } else {
+        orig_task->UnsetStarted();
+      }
     }
-    task->exec_->ReplicateEnd(task->exec_method_, task->orig_task_);
-    task->orig_task_->SetModuleComplete();
     task->SetModuleComplete();
   }
   void MonitorDup(u32 mode, DupTask *task, RunContext &rctx) {
@@ -226,7 +233,6 @@ class Server : public TaskLib {
 
   /** Sync Push for I/O message */
   void SyncClientIoPush(std::vector<DataTransfer> &xfer, PushTask *task) {
-
     std::string params = std::string((char *) xfer[1].data_, xfer[1].data_size_);
     IoType io_type = IoType::kRead;
     if (xfer[0].flags_.Any(DT_RECEIVER_READ)) {

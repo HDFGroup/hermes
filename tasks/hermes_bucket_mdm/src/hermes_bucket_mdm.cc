@@ -104,7 +104,7 @@ class Server : public TaskLib {
           }
           append_info.emplace_back();
           AppendInfo &append = append_info.back();
-          append.blob_name_ = hshm::charbuf(std::to_string(cur_page));
+          append.blob_name_ = adapter::BlobPlacement::CreateBlobName(cur_page);
           append.data_size_ = update_size;
           append.blob_off_ = cur_page_off;
           append.blob_id_task_ = blob_mdm_.AsyncGetOrCreateBlobId(task->task_node_ + 1,
@@ -161,10 +161,16 @@ class Server : public TaskLib {
         size_t buf_off = 0;
         HILOG(kDebug, "(node {}) Got blob schema of size {} for tag {} (task_node={})",
               HRUN_CLIENT->node_id_, append_info.size(), task->tag_id_, task->task_node_)
+        TAG_MAP_T &tag_map = tag_map_[rctx.lane_id_];
+        TagInfo &tag_info = tag_map[task->tag_id_];
         for (AppendInfo &append : append_info) {
           HILOG(kDebug, "(node {}) Spawning blob {} of size {} for tag {} (task_node={} blob_mdm={})",
                 HRUN_CLIENT->node_id_, append.blob_name_.str(), append.data_size_,
                 task->tag_id_, task->task_node_, blob_mdm_.id_);
+          Context ctx;
+          if (tag_info.flags_.Any(HERMES_IS_FILE)) {
+            ctx.flags_.SetBits(HERMES_IS_FILE);
+          }
           append.put_task_ = blob_mdm_.AsyncPutBlob(task->task_node_ + 1,
                                                     task->tag_id_,
                                                     append.blob_name_,
@@ -173,7 +179,7 @@ class Server : public TaskLib {
                                                     append.data_size_,
                                                     task->data_ + buf_off,
                                                     task->score_, 0,
-                                                    Context(), 0).ptr_;
+                                                    ctx, 0).ptr_;
           HILOG(kDebug, "(node {}) Finished spawning blob {} of size {} for tag {} (task_node={} blob_mdm={})",
                 HRUN_CLIENT->node_id_, append.blob_name_.str(), append.data_size_,
                 task->tag_id_, task->task_node_, blob_mdm_.id_);
@@ -234,6 +240,7 @@ class Server : public TaskLib {
         stager_mdm_.AsyncRegisterStager(task->task_node_ + 1,
                                         tag_id,
                                         hshm::charbuf(task->tag_name_->str()));
+        tag_info.flags_.SetBits(HERMES_IS_FILE);
       }
     } else {
       if (tag_name.size()) {
@@ -309,7 +316,8 @@ class Server : public TaskLib {
         blob_tasks.reserve(tag.blobs_.size());
         for (BlobId &blob_id : tag.blobs_) {
           blob_mdm::DestroyBlobTask *blob_task =
-              blob_mdm_.AsyncDestroyBlob(task->task_node_ + 1, task->tag_id_, blob_id).ptr_;
+              blob_mdm_.AsyncDestroyBlob(task->task_node_ + 1,
+                                         task->tag_id_, blob_id, false).ptr_;
           blob_tasks.emplace_back(blob_task);
         }
         stager_mdm_.AsyncUnregisterStager(task->task_node_ + 1,
@@ -377,6 +385,11 @@ class Server : public TaskLib {
       return;
     }
     TagInfo &tag = it->second;
+    if (tag.owner_) {
+      for (BlobId &blob_id : tag.blobs_) {
+        blob_mdm_.AsyncDestroyBlob(task->task_node_ + 1, task->tag_id_, blob_id);
+      }
+    }
     tag.blobs_.clear();
     tag.internal_size_ = 0;
     task->SetModuleComplete();

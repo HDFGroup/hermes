@@ -386,7 +386,6 @@ class Worker {
           task->SetDisableRun();
           task->SetUnordered();
           task->UnsetCoroutine();
-          task->UnsetLaneAll();
         } else if (task->IsCoroutine()) {
           if (!task->IsStarted()) {
             rctx.stack_ptr_ = malloc(rctx.stack_size_);
@@ -411,12 +410,13 @@ class Worker {
           task->SetStarted();
         }
         task->DidRun(work_entry.cur_time_);
-        if (flush_.flushing_ && !task->IsModuleComplete() && !task->IsFlush()) {
-          if (task->IsLongRunning()) {
-            exec->Monitor(MonitorMode::kFlushStat, task, rctx);
-          } else {
-            flush_.pending_ += 1;
-          }
+      }
+      // Verify tasks
+      if (flush_.flushing_ && !task->IsModuleComplete() && !task->IsFlush()) {
+        if (task->IsLongRunning()) {
+          exec->Monitor(MonitorMode::kFlushStat, task, rctx);
+        } else {
+          flush_.pending_ += 1;
         }
       }
       // Cleanup on task completion

@@ -78,6 +78,7 @@ class BinaryFileStager : public AbstractStager {
     HILOG(kDebug, "Submitting put blob {} ({}) to blob mdm ({})",
           task->blob_name_->str(), task->bkt_id_, blob_mdm.id_)
     hapi::Context ctx;
+    ctx.flags_.SetBits(HERMES_IS_FILE);
     LPointer<blob_mdm::PutBlobTask> put_task =
         blob_mdm.AsyncPutBlob(task->task_node_ + 1,
                               task->bkt_id_,

@@ -68,22 +68,22 @@ int finalize() {
 int pretest() {
   stdfs::path fullpath = args.directory;
   fullpath /= args.filename;
-  info.new_file = fullpath.string() + "_new";
-  info.existing_file = fullpath.string() + "_ext";
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
-  if (!stdfs::exists(info.existing_file)) {
-    std::string cmd = "dd if=/dev/zero of=" + info.existing_file +
+  TEST_INFO->new_file = fullpath.string() + "_new";
+  TEST_INFO->existing_file = fullpath.string() + "_ext";
+  if (stdfs::exists(TEST_INFO->new_file)) stdfs::remove(TEST_INFO->new_file);
+  if (stdfs::exists(TEST_INFO->existing_file)) stdfs::remove(TEST_INFO->existing_file);
+  if (!stdfs::exists(TEST_INFO->existing_file)) {
+    std::string cmd = "dd if=/dev/zero of=" + TEST_INFO->existing_file +
                       " bs=1 count=0 seek=" +
-                      std::to_string(args.request_size * args.num_iterations) +
+                      std::to_string(TEST_INFO->request_size_ * args.num_iterations) +
                       " > /dev/null 2>&1";
     int status = system(cmd.c_str());
     REQUIRE(status != -1);
-    REQUIRE(stdfs::file_size(info.existing_file) ==
-            args.request_size * args.num_iterations);
-    info.total_size = stdfs::file_size(info.existing_file);
+    REQUIRE(stdfs::file_size(TEST_INFO->existing_file) ==
+            TEST_INFO->request_size_ * args.num_iterations);
+    TEST_INFO->total_size_ = stdfs::file_size(TEST_INFO->existing_file);
   }
-  REQUIRE(info.total_size > 0);
+  REQUIRE(TEST_INFO->total_size_ > 0);
   return 0;
 }
 
@@ -95,8 +95,8 @@ void Clear() {
 
 int posttest() {
   Clear();
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
+  if (stdfs::exists(TEST_INFO->new_file)) stdfs::remove(TEST_INFO->new_file);
+  if (stdfs::exists(TEST_INFO->existing_file)) stdfs::remove(TEST_INFO->existing_file);
   return 0;
 }
 
@@ -105,23 +105,23 @@ cl::Parser define_options() {
              "Filename used for performing I/O") |
          cl::Opt(args.directory, "dir")["-d"]["--directory"](
              "Directory used for performing I/O") |
-         cl::Opt(args.request_size, "request_size")["-s"]["--request_size"](
+         cl::Opt(TEST_INFO->request_size_, "request_size")["-s"]["--request_size"](
              "Request size used for performing I/O") |
          cl::Opt(args.num_iterations, "iterations")["-n"]["--iterations"](
              "Number of iterations of requests");
 }
 
-TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
+TEST_CASE("SingleWrite", "[process=" + std::to_string(TEST_INFO->comm_size_) +
                              "]"
                              "[operation=single_write]"
                              "[request_size=type-fixed][repetition=1]"
                              "[pattern=sequential][file=1]") {
-  pretest();
+  TEST_INFO->Pretest();
   const size_t kPageSize = MEGABYTES(1);
   SECTION("Map a one request") {
     auto mapper = MapperFactory().Get(kMapperType);
-    size_t total_size = args.request_size;
-    FILE* fp = fopen(info.new_file.c_str(), "w+");
+    size_t total_size = TEST_INFO->request_size_;
+    FILE* fp = fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 0;
     REQUIRE(kPageSize > total_size + offset);
@@ -136,8 +136,8 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
   }
   SECTION("Map a one big request") {
     auto mapper = MapperFactory().Get(kMapperType);
-    size_t total_size = args.request_size * args.num_iterations;
-    FILE* fp = fopen(info.new_file.c_str(), "w+");
+    size_t total_size = TEST_INFO->request_size_ * args.num_iterations;
+    FILE* fp = fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 0;
     BlobPlacements mapping;
@@ -156,8 +156,8 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
   }
   SECTION("Map a one large unaligned request") {
     auto mapper = MapperFactory().Get(kMapperType);
-    size_t total_size = args.request_size * args.num_iterations;
-    FILE* fp = fopen(info.new_file.c_str(), "w+");
+    size_t total_size = TEST_INFO->request_size_ * args.num_iterations;
+    FILE* fp = fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 1;
     BlobPlacements mapping;
@@ -191,8 +191,8 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
   }
   SECTION("Map a one small unaligned request") {
     auto mapper = MapperFactory().Get(kMapperType);
-    size_t total_size = args.request_size;
-    FILE* fp = fopen(info.new_file.c_str(), "w+");
+    size_t total_size = TEST_INFO->request_size_;
+    FILE* fp = fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 1;
     REQUIRE(kPageSize > total_size + offset);

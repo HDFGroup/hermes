@@ -52,6 +52,7 @@ class Server : public TaskLib {
   /** Unregister stager */
   void UnregisterStager(UnregisterStagerTask *task, RunContext &rctx) {
     if (url_map_[rctx.lane_id_].find(task->bkt_id_) == url_map_[rctx.lane_id_].end()) {
+      task->SetModuleComplete();
       return;
     }
     url_map_[rctx.lane_id_].erase(task->bkt_id_);
