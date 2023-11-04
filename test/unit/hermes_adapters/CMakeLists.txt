@@ -15,7 +15,7 @@ if(HERMES_ENABLE_POSIX_ADAPTER)
 endif()
 
 if(HERMES_ENABLE_STDIO_ADAPTER)
-  # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/stdio)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/stdio)
 endif()
 
 if(HERMES_ENABLE_MPIIO_ADAPTER)

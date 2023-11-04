@@ -62,8 +62,8 @@ int init(int* argc, char*** argv) {
   HERMES_CLIENT_CONF.flushing_mode_ = hermes::FlushingMode::kSync;
 #endif
   MPI_Init(argc, argv);
-  info.write_data = GenRandom(args.request_size);
-  info.read_data = std::string(args.request_size, 'r');
+  TEST_INFO->write_data_ = GenRandom(TEST_INFO->request_size_);
+  TEST_INFO->read_data_ = std::string(TEST_INFO->request_size_, 'r');
   return 0;
 }
 int finalize() {
@@ -74,38 +74,38 @@ int finalize() {
 int pretest() {
   stdfs::path fullpath = args.directory;
   fullpath /= args.filename;
-  info.new_file = fullpath.string() + "_new_" + std::to_string(getpid());
-  info.existing_file = fullpath.string() + "_ext_" + std::to_string(getpid());
-  info.new_file_cmp =
+  TEST_INFO->new_file = fullpath.string() + "_new_" + std::to_string(getpid());
+  TEST_INFO->existing_file = fullpath.string() + "_ext_" + std::to_string(getpid());
+  TEST_INFO->new_file_cmp =
       fullpath.string() + "_new_cmp" + "_" + std::to_string(getpid());
-  info.existing_file_cmp =
+  TEST_INFO->existing_file_cmp =
       fullpath.string() + "_ext_cmp" + "_" + std::to_string(getpid());
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.existing_file_cmp))
-    stdfs::remove(info.existing_file_cmp);
-  if (!stdfs::exists(info.existing_file)) {
+  if (stdfs::exists(TEST_INFO->new_file)) stdfs::remove(TEST_INFO->new_file);
+  if (stdfs::exists(TEST_INFO->new_file_cmp)) stdfs::remove(TEST_INFO->new_file_cmp);
+  if (stdfs::exists(TEST_INFO->existing_file)) stdfs::remove(TEST_INFO->existing_file);
+  if (stdfs::exists(TEST_INFO->existing_file_cmp))
+    stdfs::remove(TEST_INFO->existing_file_cmp);
+  if (!stdfs::exists(TEST_INFO->existing_file)) {
     std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
-                      std::to_string(args.request_size * info.num_iterations) +
-                      "; } > " + info.existing_file + " 2> /dev/null";
+                      std::to_string(TEST_INFO->request_size_ * TEST_INFO->num_iterations_) +
+                      "; } > " + TEST_INFO->existing_file + " 2> /dev/null";
     int status = system(cmd.c_str());
     REQUIRE(status != -1);
-    REQUIRE(stdfs::file_size(info.existing_file) ==
-            args.request_size * info.num_iterations);
-    info.total_size = stdfs::file_size(info.existing_file);
+    REQUIRE(stdfs::file_size(TEST_INFO->existing_file) ==
+            TEST_INFO->request_size_ * TEST_INFO->num_iterations_);
+    TEST_INFO->total_size_ = stdfs::file_size(TEST_INFO->existing_file);
   }
-  if (!stdfs::exists(info.existing_file_cmp)) {
-    std::string cmd = "cp " + info.existing_file + " " + info.existing_file_cmp;
+  if (!stdfs::exists(TEST_INFO->existing_file_cmp)) {
+    std::string cmd = "cp " + TEST_INFO->existing_file + " " + TEST_INFO->existing_file_cmp;
     int status = system(cmd.c_str());
     REQUIRE(status != -1);
-    REQUIRE(stdfs::file_size(info.existing_file_cmp) ==
-            args.request_size * info.num_iterations);
+    REQUIRE(stdfs::file_size(TEST_INFO->existing_file_cmp) ==
+            TEST_INFO->request_size_ * TEST_INFO->num_iterations_);
   }
-  REQUIRE(info.total_size > 0);
+  REQUIRE(TEST_INFO->total_size_ > 0);
 #if HERMES_INTERCEPT == 1
-  HERMES_CLIENT_CONF.SetAdapterPathTracking(info.existing_file_cmp, false);
-  HERMES_CLIENT_CONF.SetAdapterPathTracking(info.new_file_cmp, false);
+  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->existing_file_cmp, false);
+  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->new_file_cmp, false);
 #endif
   return 0;
 }
@@ -118,25 +118,25 @@ void Clear() {
 
 int posttest(bool compare_data = true) {
 #if HERMES_INTERCEPT == 1
-  HERMES_CLIENT_CONF.SetAdapterPathTracking(info.existing_file, false);
-  HERMES_CLIENT_CONF.SetAdapterPathTracking(info.new_file, false);
+  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->existing_file, false);
+  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->new_file, false);
 #endif
-  if (compare_data && stdfs::exists(info.new_file) &&
-      stdfs::exists(info.new_file_cmp)) {
-    size_t size = stdfs::file_size(info.new_file);
-    REQUIRE(size == stdfs::file_size(info.new_file_cmp));
+  if (compare_data && stdfs::exists(TEST_INFO->new_file) &&
+      stdfs::exists(TEST_INFO->new_file_cmp)) {
+    size_t size = stdfs::file_size(TEST_INFO->new_file);
+    REQUIRE(size == stdfs::file_size(TEST_INFO->new_file_cmp));
     if (size > 0) {
       std::vector<unsigned char> d1(size, '0');
       std::vector<unsigned char> d2(size, '1');
 
-      FILE* fh1 = fopen(info.new_file.c_str(), "r");
+      FILE* fh1 = fopen(TEST_INFO->new_file_.hermes_.c_str(), "r");
       REQUIRE(fh1 != nullptr);
       size_t read_d1 = fread(d1.data(), size, sizeof(unsigned char), fh1);
       REQUIRE(read_d1 == sizeof(unsigned char));
       int status = fclose(fh1);
       REQUIRE(status == 0);
 
-      FILE* fh2 = fopen(info.new_file_cmp.c_str(), "r");
+      FILE* fh2 = fopen(TEST_INFO->new_file_cmp.c_str(), "r");
       REQUIRE(fh2 != nullptr);
       size_t read_d2 = fread(d2.data(), size, sizeof(unsigned char), fh2);
       REQUIRE(read_d2 == sizeof(unsigned char));
@@ -153,23 +153,23 @@ int posttest(bool compare_data = true) {
       REQUIRE(char_mismatch == 0);
     }
   }
-  if (compare_data && stdfs::exists(info.existing_file) &&
-      stdfs::exists(info.existing_file_cmp)) {
-    size_t size = stdfs::file_size(info.existing_file);
-    if (size != stdfs::file_size(info.existing_file_cmp)) sleep(1);
-    REQUIRE(size == stdfs::file_size(info.existing_file_cmp));
+  if (compare_data && stdfs::exists(TEST_INFO->existing_file) &&
+      stdfs::exists(TEST_INFO->existing_file_cmp)) {
+    size_t size = stdfs::file_size(TEST_INFO->existing_file);
+    if (size != stdfs::file_size(TEST_INFO->existing_file_cmp)) sleep(1);
+    REQUIRE(size == stdfs::file_size(TEST_INFO->existing_file_cmp));
     if (size > 0) {
       std::vector<unsigned char> d1(size, '0');
       std::vector<unsigned char> d2(size, '1');
 
-      FILE* fh1 = fopen(info.existing_file.c_str(), "r");
+      FILE* fh1 = fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r");
       REQUIRE(fh1 != nullptr);
       size_t read_d1 = fread(d1.data(), size, sizeof(unsigned char), fh1);
       REQUIRE(read_d1 == sizeof(unsigned char));
       int status = fclose(fh1);
       REQUIRE(status == 0);
 
-      FILE* fh2 = fopen(info.existing_file_cmp.c_str(), "r");
+      FILE* fh2 = fopen(TEST_INFO->existing_file_cmp.c_str(), "r");
       REQUIRE(fh2 != nullptr);
       size_t read_d2 = fread(d2.data(), size, sizeof(unsigned char), fh2);
       REQUIRE(read_d2 == sizeof(unsigned char));
@@ -183,18 +183,18 @@ int posttest(bool compare_data = true) {
     }
   }
   /* Clean up. */
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file_cmp))
-    stdfs::remove(info.existing_file_cmp);
+  if (stdfs::exists(TEST_INFO->new_file)) stdfs::remove(TEST_INFO->new_file);
+  if (stdfs::exists(TEST_INFO->existing_file)) stdfs::remove(TEST_INFO->existing_file);
+  if (stdfs::exists(TEST_INFO->new_file_cmp)) stdfs::remove(TEST_INFO->new_file_cmp);
+  if (stdfs::exists(TEST_INFO->existing_file_cmp))
+    stdfs::remove(TEST_INFO->existing_file_cmp);
   Clear();
 
 #if HERMES_INTERCEPT == 1
-  HERMES_CLIENT_CONF.SetAdapterPathTracking(info.existing_file_cmp, true);
-  HERMES_CLIENT_CONF.SetAdapterPathTracking(info.new_file_cmp, true);
-  HERMES_CLIENT_CONF.SetAdapterPathTracking(info.new_file, true);
-  HERMES_CLIENT_CONF.SetAdapterPathTracking(info.existing_file, true);
+  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->existing_file_cmp, true);
+  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->new_file_cmp, true);
+  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->new_file, true);
+  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->existing_file, true);
 #endif
   return 0;
 }
@@ -204,7 +204,7 @@ cl::Parser define_options() {
              "Filename used for performing I/O") |
          cl::Opt(args.directory, "dir")["-d"]["--directory"](
              "Directory used for performing I/O") |
-         cl::Opt(args.request_size, "request_size")["-s"]["--request_size"](
+         cl::Opt(TEST_INFO->request_size_, "request_size")["-s"]["--request_size"](
              "Request size used for performing I/O");
 }
 
@@ -216,10 +216,10 @@ size_t size_read_orig;
 size_t size_written_orig;
 void test_fopen(const char* path, const char* mode) {
   std::string cmp_path;
-  if (strcmp(path, info.new_file.c_str()) == 0) {
-    cmp_path = info.new_file_cmp;
+  if (strcmp(path, TEST_INFO->new_file.c_str()) == 0) {
+    cmp_path = TEST_INFO->new_file_cmp;
   } else {
-    cmp_path = info.existing_file_cmp;
+    cmp_path = TEST_INFO->existing_file_cmp;
   }
   fh_orig = fopen(path, mode);
   fh_cmp = fopen(cmp_path.c_str(), mode);
@@ -261,37 +261,37 @@ void test_fseek(long offset, int whence) {
 }  // namespace test
 
 TEST_CASE("BatchedWriteSequential",
-          "[process=" + std::to_string(info.comm_size) +
+          "[process=" + std::to_string(TEST_INFO->comm_size_) +
               "]"
               "[operation=batched_write]"
               "[request_size=type-fixed][repetition=" +
-              std::to_string(info.num_iterations) +
+              std::to_string(TEST_INFO->num_iterations_) +
               "]"
               "[pattern=sequential][file=1]") {
-  pretest();
+  TEST_INFO->Pretest();
   SECTION("write to new file one big write") {
-    test::test_fopen(info.new_file.c_str(), "w+");
+    test::test_fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
     REQUIRE(test::fh_orig != nullptr);
-    auto write_size = args.request_size * (info.num_iterations + 1);
-    info.write_data = GenRandom(write_size);
-    test::test_fwrite(info.write_data.c_str(), write_size);
+    auto write_size = TEST_INFO->request_size_ * (TEST_INFO->num_iterations_ + 1);
+    TEST_INFO->write_data_ = GenRandom(write_size);
+    test::test_fwrite(TEST_INFO->write_data_.data(), write_size);
     REQUIRE(test::size_written_orig == write_size);
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(stdfs::file_size(info.new_file) == write_size);
+    REQUIRE(stdfs::file_size(TEST_INFO->new_file) == write_size);
   }
   SECTION("write to new file multiple write") {
-    test::test_fopen(info.new_file.c_str(), "w+");
+    test::test_fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
     REQUIRE(test::fh_orig != nullptr);
-    for (size_t i = 0; i <= info.num_iterations; ++i) {
-      test::test_fwrite(info.write_data.c_str(), args.request_size);
-      REQUIRE(test::size_written_orig == args.request_size);
+    for (size_t i = 0; i <= TEST_INFO->num_iterations_; ++i) {
+      test::test_fwrite(TEST_INFO->write_data_.data(), TEST_INFO->request_size_);
+      REQUIRE(test::size_written_orig == TEST_INFO->request_size_);
     }
-    REQUIRE(test::size_written_orig == args.request_size);
+    REQUIRE(test::size_written_orig == TEST_INFO->request_size_);
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(stdfs::file_size(info.new_file) ==
-            args.request_size * (info.num_iterations + 1));
+    REQUIRE(stdfs::file_size(TEST_INFO->new_file) ==
+            TEST_INFO->request_size_ * (TEST_INFO->num_iterations_ + 1));
   }
   posttest();
 }
