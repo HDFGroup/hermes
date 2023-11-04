@@ -78,7 +78,7 @@ class Server : public TaskLib {
       bdev::ConstructTask *create_task = client.AsyncCreate(
           task->task_node_ + 1,
           DomainId::GetLocal(),
-          "hermes_" + dev.dev_name_,
+          "hermes_" + dev.dev_name_ + std::to_string(HRUN_CLIENT->node_id_),
           dev_type,
           dev).ptr_;
       target_tasks_.emplace_back(create_task);
