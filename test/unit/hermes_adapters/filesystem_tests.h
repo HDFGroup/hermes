@@ -193,6 +193,7 @@ class FilesystemTests {
     /* Delete the files from both Hermes and the backend. */
     TrackAllFiles();
     RemoveAllFiles();
+    Flush();
   }
 
   virtual void RegisterFiles() = 0;

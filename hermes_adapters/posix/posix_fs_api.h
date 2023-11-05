@@ -98,8 +98,7 @@ class PosixFs : public hermes::adapter::fs::Filesystem {
     std::vector<char> filename(kMaxPathLen);
     snprintf(proclnk.data(), kMaxPathLen - 1, "/proc/self/fd/%d", fd);
     size_t r = readlink(proclnk.data(), filename.data(), kMaxPathLen);
-    filename[r] = '\0';
-    return std::string(filename.data(), filename.size());
+    return std::string(filename.data(), r);
   }
 };
 
