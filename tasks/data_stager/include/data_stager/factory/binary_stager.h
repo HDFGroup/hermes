@@ -12,7 +12,7 @@ namespace hermes::data_stager {
 
 class BinaryFileStager : public AbstractStager {
  public:
-  int fd_;
+  int fd_ = -1;
   size_t page_size_;
   std::string path_;
 
@@ -21,9 +21,7 @@ class BinaryFileStager : public AbstractStager {
   BinaryFileStager() = default;
 
   /** Destructor */
-  ~BinaryFileStager() {
-    HERMES_POSIX_API->close(fd_);
-  }
+  ~BinaryFileStager() {}
 
   /** Build file url */
   static hshm::charbuf BuildFileUrl(const std::string &path, size_t page_size) {
@@ -48,10 +46,6 @@ class BinaryFileStager : public AbstractStager {
   /** Create the data stager payload */
   void RegisterStager(RegisterStagerTask *task, RunContext &rctx) override {
     ParseFileUrl(task->url_->str(), path_, page_size_);
-    fd_ = HERMES_POSIX_API->open(path_.c_str(), O_RDWR);
-    if (fd_ < 0) {
-      HELOG(kError, "Failed to open file {}", path_);
-    }
   }
 
   /** Stage data in from remote source */
@@ -61,6 +55,11 @@ class BinaryFileStager : public AbstractStager {
     HILOG(kDebug, "Attempting to stage {} bytes from the backend file {} at offset {}",
           page_size_, url_, plcmnt.bucket_off_);
     LPointer<char> blob = HRUN_CLIENT->AllocateBuffer<TASK_YIELD_STD>(page_size_);
+    fd_ = HERMES_POSIX_API->open(path_.c_str(), O_CREAT | O_RDWR, 0666);
+    if (fd_ < 0) {
+      HELOG(kError, "Failed to open file {}", path_);
+      return;
+    }
     ssize_t real_size = HERMES_POSIX_API->pread(fd_,
                                                 blob.ptr_,
                                                 page_size_,
@@ -72,7 +71,6 @@ class BinaryFileStager : public AbstractStager {
     } else if (real_size == 0) {
       return;
     }
-    // memcpy(blob.ptr_ + plcmnt.blob_off_, blob.ptr_, real_size);
     HILOG(kDebug, "Staged {} bytes from the backend file {}",
           real_size, url_);
     HILOG(kDebug, "Submitting put blob {} ({}) to blob mdm ({})",
@@ -97,10 +95,16 @@ class BinaryFileStager : public AbstractStager {
     HILOG(kDebug, "Attempting to stage {} bytes to the backend file {} at offset {}",
           page_size_, url_, plcmnt.bucket_off_);
     char *data = HRUN_CLIENT->GetDataPointer(task->data_);
+    fd_ = HERMES_POSIX_API->open(path_.c_str(), O_CREAT | O_RDWR, 0666);
+    if (fd_ < 0) {
+      HELOG(kError, "Failed to open file {}", path_);
+      return;
+    }
     ssize_t real_size = HERMES_POSIX_API->pwrite(fd_,
                                                  data,
                                                  task->data_size_,
                                                  (off_t)plcmnt.bucket_off_);
+    HERMES_POSIX_API->close(fd_);
     if (real_size < 0) {
       HELOG(kError, "Failed to stage out {} bytes from {}",
             task->data_size_, url_);

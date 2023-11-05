@@ -81,10 +81,11 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(TEST_INFO->comm_size_) +
     REQUIRE(TEST_INFO->status_orig_ == 0);
   }
 
-  SECTION("write to new  file") {
+  SECTION("write to new file") {
     TEST_INFO->test_fopen(TEST_INFO->new_file_, "w+");
     REQUIRE(TEST_INFO->fh_orig_ != nullptr);
-    TEST_INFO->test_fwrite(TEST_INFO->write_data_.data(), TEST_INFO->request_size_);
+    TEST_INFO->test_fwrite(TEST_INFO->write_data_.data(),
+                           TEST_INFO->request_size_);
     REQUIRE(TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
     TEST_INFO->test_fclose();
     REQUIRE(TEST_INFO->status_orig_ == 0);

@@ -90,6 +90,10 @@ class Server : public TaskLib {
       client.AsyncCreateComplete(tgt_task);
       target_map_.emplace(client.id_, &client);
     }
+    std::sort(targets_.begin(), targets_.end(),
+              [](const bdev::Client &a, const bdev::Client &b) {
+                return a.bandwidth_ > b.bandwidth_;
+              });
     blob_mdm_.Init(id_);
     HILOG(kInfo, "(node {}) Created Blob MDM", HRUN_CLIENT->node_id_);
     task->SetModuleComplete();
