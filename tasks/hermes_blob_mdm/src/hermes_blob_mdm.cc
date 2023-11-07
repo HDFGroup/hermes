@@ -346,15 +346,14 @@ class Server : public TaskLib {
                                placement.size_,
                                blob_info.buffers_);
         alloc_task->Wait<TASK_YIELD_CO>(task);
-        HILOG(kInfo, "(node {}) Placing {}/{} bytes in target {} of bw {}",
-              HRUN_CLIENT->node_id_,
-              alloc_task->alloc_size_, task->data_size_,
-              placement.tid_, bdev.bandwidth_)
+//        HILOG(kInfo, "(node {}) Placing {}/{} bytes in target {} of bw {}",
+//              HRUN_CLIENT->node_id_,
+//              alloc_task->alloc_size_, task->data_size_,
+//              placement.tid_, bdev.bandwidth_)
         if (alloc_task->alloc_size_ < alloc_task->size_) {
           SubPlacement &next_placement = schema.plcmnts_[sub_idx + 1];
           size_t diff = alloc_task->size_ - alloc_task->alloc_size_;
           next_placement.size_ += diff;
-          HILOG(kInfo, "Delegating more space to the next task ({} bytes)", diff);
         }
         // bdev.monitor_task_->rem_cap_ -= alloc_task->alloc_size_;
         HRUN_CLIENT->DelTask(alloc_task);
