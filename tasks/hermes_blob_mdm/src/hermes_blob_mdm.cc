@@ -95,7 +95,7 @@ class Server : public TaskLib {
                 return a.bandwidth_ > b.bandwidth_;
               });
     float bw_max = targets_.front().bandwidth_;
-    float bw_min = targets_.front().bandwidth_;
+    float bw_min = targets_.back().bandwidth_;
     for (bdev::Client &client : targets_) {
       client.bw_score_ = (client.bandwidth_ - bw_min) / (bw_max - bw_min);
     }
