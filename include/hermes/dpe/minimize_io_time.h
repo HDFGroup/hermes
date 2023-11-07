@@ -44,6 +44,7 @@ class MinimizeIoTime : public Dpe {
         size_t rem_cap = target.GetRemCap();
         if (target.score_ > score || rem_cap < blob_size) {
           // TODO(llogan): add other considerations of this Dpe
+          HILOG(kInfo, "Not enough space or score in {} of bw {}", target.id_, target.bandwidth_)
           continue;
         }
         if (ctx.blob_score_ == -1) {

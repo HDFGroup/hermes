@@ -95,6 +95,10 @@ class Server : public TaskLib {
               [](const bdev::Client &a, const bdev::Client &b) {
                 return a.bandwidth_ > b.bandwidth_;
               });
+    for (bdev::Client &client : targets_) {
+      HILOG(kInfo, "(node {}) Target {} has bw {}", HRUN_CLIENT->node_id_,
+            client.id_, client.bandwidth_);
+    }
     fallback_target_ = &targets_.back();
     blob_mdm_.Init(id_);
     HILOG(kInfo, "(node {}) Created Blob MDM", HRUN_CLIENT->node_id_);
