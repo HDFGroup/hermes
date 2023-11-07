@@ -117,7 +117,7 @@ class Histogram {
    * @input score a number between 0 and 1
    * @return Percentile (a number between 0 and 100)
    * */
-  template<bool LESS_THAN_BIN>
+  template<bool LESS_THAN_EQUAL>
   u32 GetPercentileBase(float score) {
     if (score == 0) {
       return 0;
@@ -127,7 +127,7 @@ class Histogram {
     }
     u32 bin = GetBin(score);
     u32 count = 0;
-    if (LESS_THAN_BIN) {
+    if (LESS_THAN_EQUAL) {
       for (u32 i = 0; i <= bin; ++i) {
         count += histogram_[i].x_.load();
       }

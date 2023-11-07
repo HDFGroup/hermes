@@ -232,7 +232,6 @@ class Server : public TaskLib {
     for (auto &it : blob_map) {
       BlobInfo &blob_info = it.second;
       // Update blob scores
-      // TODO(llogan): Add back
       float new_score = MakeScore(blob_info, now);
       if (ShouldReorganize<true>(blob_info, new_score, task->task_node_)) {
         blob_mdm_.AsyncReorganizeBlob(task->task_node_ + 1,
