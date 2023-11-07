@@ -209,11 +209,8 @@ class Server : public TaskLib {
       }
       // Determine if the blob should be reorganized
       if (rem_cap <= max_cap * target.borg_min_thresh_) {
-        if (percentile < 10) {
+        if (percentile < 10 || precentile_lt > 90) {
           return true;
-        }
-        if (precentile_lt > 90) {
-          return false;
         }
       }
     }
