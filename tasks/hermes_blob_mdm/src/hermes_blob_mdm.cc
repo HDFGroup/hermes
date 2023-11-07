@@ -209,10 +209,12 @@ class Server : public TaskLib {
       }
       // Determine if the blob should be reorganized
       if (precentile_lt > 90) {
+        HILOG(kInfo, "Should reorganize based on max");
         return true;
       }
       if (rem_cap <= max_cap * target.borg_min_thresh_) {
         if (percentile < 10) {
+          HILOG(kInfo, "Should reorganize based on rem");
           return true;
         }
       }
