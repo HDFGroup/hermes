@@ -46,6 +46,7 @@ class Server : public TaskLib {
    * ===================================*/
   std::vector<bdev::ConstructTask*> target_tasks_;
   std::vector<bdev::Client> targets_;
+  bdev::Client *fallback_target_;
   std::unordered_map<TargetId, TargetInfo*> target_map_;
   Client blob_mdm_;
   bucket_mdm::Client bkt_mdm_;
@@ -94,6 +95,7 @@ class Server : public TaskLib {
               [](const bdev::Client &a, const bdev::Client &b) {
                 return a.bandwidth_ > b.bandwidth_;
               });
+    fallback_target_ = &targets_.back();
     blob_mdm_.Init(id_);
     HILOG(kInfo, "(node {}) Created Blob MDM", HRUN_CLIENT->node_id_);
     task->SetModuleComplete();
@@ -292,6 +294,7 @@ class Server : public TaskLib {
 
     // Allocate blob buffers
     for (PlacementSchema &schema : schema_vec) {
+      schema.plcmnts_.emplace_back(0, fallback_target_->id_);
       for (size_t sub_idx = 0; sub_idx < schema.plcmnts_.size(); ++sub_idx) {
         SubPlacement &placement = schema.plcmnts_[sub_idx];
         TargetInfo &bdev = *target_map_[placement.tid_];
@@ -301,11 +304,13 @@ class Server : public TaskLib {
                                placement.size_,
                                blob_info.buffers_);
         alloc_task->Wait<TASK_YIELD_CO>(task);
+        HILOG(kInfo, "Placing {}/{} bytes in target {} of bw {}",
+              alloc_task->alloc_size_, task->data_size_, placement.tid_, bdev.bandwidth_)
         if (alloc_task->alloc_size_ < alloc_task->size_) {
-          // SubPlacement &next_placement = schema.plcmnts_[sub_idx + 1];
-          // size_t diff = alloc_task->size_ - alloc_task->alloc_size_;
-          // next_placement.size_ += diff;
-          HELOG(kFatal, "Ran outta space in this tier -- will fix soon")
+          SubPlacement &next_placement = schema.plcmnts_[sub_idx + 1];
+          size_t diff = alloc_task->size_ - alloc_task->alloc_size_;
+          next_placement.size_ += diff;
+          HILOG(kInfo, "Delegating more space to the next task ({} bytes)", diff);
         }
         // bdev.monitor_task_->rem_cap_ -= alloc_task->alloc_size_;
         HRUN_CLIENT->DelTask(alloc_task);
