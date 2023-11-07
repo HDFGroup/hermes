@@ -26,7 +26,7 @@ class Server : public TaskLib, public bdev::Server {
     DeviceInfo &dev_info = task->info_;
     rem_cap_ = dev_info.capacity_;
     alloc_.Init(id_, dev_info.capacity_, dev_info.slab_sizes_);
-    // score_hist_.Resize(10);
+    score_hist_.Resize(10);
     std::string text = dev_info.mount_dir_ +
         "/" + "slab_" + dev_info.dev_name_;
     auto canon = stdfs::weakly_canonical(text).string();
@@ -56,7 +56,7 @@ class Server : public TaskLib, public bdev::Server {
     alloc_.Allocate(task->size_, *task->buffers_, task->alloc_size_);
     HILOG(kDebug, "Allocated {}/{} bytes ({})", task->alloc_size_, task->size_, path_);
     rem_cap_ -= task->alloc_size_;
-    // score_hist_.Increment(task->score_);
+    score_hist_.Increment(task->score_);
     task->SetModuleComplete();
   }
   void MonitorAllocate(u32 mode, AllocateTask *task, RunContext &rctx) {
@@ -65,7 +65,7 @@ class Server : public TaskLib, public bdev::Server {
   /** Free space from bdev */
   void Free(FreeTask *task, RunContext &rctx) {
     rem_cap_ += alloc_.Free(task->buffers_);
-    // score_hist_.Decrement(task->score_);
+    score_hist_.Decrement(task->score_);
     task->SetModuleComplete();
   }
   void MonitorFree(u32 mode, FreeTask *task, RunContext &rctx) {

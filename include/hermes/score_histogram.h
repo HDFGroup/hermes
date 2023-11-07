@@ -20,7 +20,7 @@
 namespace hermes {
 
 struct HistEntry {
-  std::atomic<int> x_;
+  std::atomic<u32> x_;
 
   /** Default constructor */
   HistEntry() : x_(0) {}
@@ -87,16 +87,25 @@ class Histogram {
     histogram_.resize(num_bins);
   }
 
+  /** Get the bin score belongs to */
+  u32 GetBin(float score) {
+    u32 bin = score * histogram_.size();
+    if (bin >= histogram_.size()) {
+      bin = histogram_.size() - 1;
+    }
+    return bin;
+  }
+
   /** Increment histogram */
   void Increment(float score) {
-    int bin = (int)(1.0/score - 1.0);
+    u32 bin = GetBin(score);
     histogram_[bin].increment();
     count_.fetch_add(1);
   }
 
   /** Decrement histogram */
   void Decrement(float score) {
-    int bin = (int)(1.0/score - 1.0);
+    u32 bin = GetBin(score);
     histogram_[bin].x_.fetch_sub(1);
     count_.fetch_sub(1);
   }
@@ -104,14 +113,41 @@ class Histogram {
   /**
    * Determine if a blob should be elevated (1),
    * stationary (0), or demoted (-1)
+   *
+   * @input score a number between 0 and 1
+   * @return Percentile (a number between 0 and 100)
    * */
-  u16 GetPercentile(float score) {
-    int bin = (int)(1.0/score - 1.0);
+  u32 GetPercentile(float score) {
+    if (score == 0) {
+      return 0;
+    }
+    if (count_ == 0) {
+      return 100;
+    }
+    u32 bin = GetBin(score);
     u32 count = 0;
     for (u32 i = 0; i <= bin; ++i) {
       count += histogram_[i].x_.load();
     }
     return count * 100 / count_;
+  }
+
+  /**
+   * Get quantile.
+   * @input percentile is a number between 0 and 100
+   * */
+  float GetQuantile(u32 percentile) {
+    u32 count = 0;
+    if (count_ == 0) {
+      return 0.0;
+    }
+    for (u32 i = 0; i < histogram_.size(); ++i) {
+      count += histogram_[i].x_.load();
+      if (count * 100 / count_ >= percentile && count > 0) {
+        return (i + 1) / histogram_.size();
+      }
+    }
+    return 0.0;
   }
 };
 

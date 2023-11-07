@@ -142,21 +142,37 @@ class Server : public TaskLib {
   }
 
   /** New score */
+  float NormalizeScore(float score) {
+    if (score > 1) {
+      return 1;
+    }
+    if (score < 0) {
+      return 0;
+    }
+    return score;
+  }
   float MakeScore(BlobInfo &blob_info, hshm::Timepoint &now) {
-    float freq_score = blob_info.access_freq_ / 5;
-    float access_score = (float)(1 - (blob_info.last_access_.GetSecFromStart(now) / 5));
-    if (freq_score > 1) {
-      freq_score = 1;
-    }
-    if (access_score > 1) {
-      access_score = 1;
-    }
-    float data_score = std::max(freq_score, access_score);
+    ServerConfig &server = HERMES_CONF->server_config_;
+    // Frequency score: how many times blob accessed?
+    float freq_min = server.borg_.freq_min_;
+    float freq_diff = server.borg_.freq_max_ - freq_min;
+    float freq_score = NormalizeScore((blob_info.access_freq_ - freq_min) / freq_diff);
+    // Temporal score: how recently the blob was accessed?
+    float time_diff = blob_info.last_access_.GetSecFromStart(now);
+    float rec_min = server.borg_.recency_min_;
+    float rec_max = server.borg_.recency_max_;
+    float rec_diff = rec_max - rec_min;
+    float temporal_score = NormalizeScore((time_diff - rec_min) / rec_diff);
+    temporal_score = 1 - temporal_score;
+    // Access score: was the blob accessed recently or frequently?
+    float access_score = std::max(freq_score, temporal_score);
     float user_score = blob_info.user_score_;
+    // Final scores
     if (!blob_info.flags_.Any(HERMES_USER_SCORE_STATIONARY)) {
-      user_score *= data_score;
+      return user_score * access_score;
+    } else {
+      return std::max(access_score, user_score);
     }
-    return std::max(data_score, user_score);
   }
 
   /** Check if blob should be reorganized */
@@ -164,22 +180,39 @@ class Server : public TaskLib {
   bool ShouldReorganize(BlobInfo &blob_info,
                         float score,
                         TaskNode &task_node) {
-//    for (BufferInfo &buf : blob_info.buffers_) {
-//      TargetInfo &target = *target_map_[buf.tid_];
-//      Histogram &hist = target.monitor_task_->score_hist_;
-//      if constexpr(UPDATE_SCORE) {
-//        target.AsyncUpdateScore(task_node + 1,
-//                                blob_info.score_, score);
-//      }
-//      u32 percentile = hist.GetPercentile(score);
-//      size_t rem_cap = target.monitor_task_->rem_cap_;
-//      size_t max_cap = target.max_cap_;
-//      if (rem_cap < max_cap / 10) {
-//        if (percentile < 10 || percentile > 90) {
-//          return true;
-//        }
-//      }
-//    }
+    ServerConfig &server = HERMES_CONF->server_config_;
+    for (BufferInfo &buf : blob_info.buffers_) {
+      TargetInfo &target = *target_map_[buf.tid_];
+      Histogram &hist = target.monitor_task_->score_hist_;
+      u32 percentile = hist.GetPercentile(score);
+      size_t rem_cap = target.monitor_task_->rem_cap_;
+      size_t max_cap = target.max_cap_;
+      float min_score = hist.GetQuantile(0);
+      // Update the target score
+      if (rem_cap < max_cap * .5) {
+        // Enough capacity has been used to make scoring important.
+        target.score_ = min_score;
+      } else {
+        // There's a lot of capacity left.
+        // Make DPE start placing data here.
+        target.score_ = 0;
+      }
+      // Update blob score
+      if constexpr(UPDATE_SCORE) {
+        u32 bin_orig = hist.GetBin(blob_info.score_);
+        u32 bin_new = hist.GetBin(score);
+        if (bin_orig != bin_new) {
+          target.AsyncUpdateScore(task_node + 1,
+                                  blob_info.score_, score);
+        }
+      }
+      // Determine if the blob should be reorganized
+      if (rem_cap <= max_cap * target.borg_min_thresh_) {
+        if (percentile < 10) {
+          return true;
+        }
+      }
+    }
     return false;
   }
 
@@ -196,15 +229,15 @@ class Server : public TaskLib {
       BlobInfo &blob_info = it.second;
       // Update blob scores
       // TODO(llogan): Add back
-//      float new_score = MakeScore(blob_info, now);
-//      if (ShouldReorganize<true>(blob_info, new_score, task->task_node_)) {
-//        blob_mdm_.AsyncReorganizeBlob(task->task_node_ + 1,
-//                                      blob_info.tag_id_,
-//                                      blob_info.blob_id_,
-//                                      new_score, 0, false);
-//      }
-//      blob_info.access_freq_ = 0;
-//      blob_info.score_ = new_score;
+      float new_score = MakeScore(blob_info, now);
+      if (ShouldReorganize<true>(blob_info, new_score, task->task_node_)) {
+        blob_mdm_.AsyncReorganizeBlob(task->task_node_ + 1,
+                                      blob_info.tag_id_,
+                                      blob_info.blob_id_,
+                                      new_score, 0, false);
+      }
+      blob_info.access_freq_ = 0;
+      blob_info.score_ = new_score;
 
       // Flush data
       size_t mod_count = blob_info.mod_count_;
@@ -256,6 +289,8 @@ class Server : public TaskLib {
     HILOG(kDebug, "Beginning PUT for {}", blob_name.str());
     BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     BlobInfo &blob_info = blob_map[task->blob_id_];
+    blob_info.score_ = task->score_;
+    blob_info.user_score_ = task->score_;
 
     // Stage Blob
     if (task->flags_.Any(HERMES_IS_FILE) && blob_info.last_flush_ == 0) {

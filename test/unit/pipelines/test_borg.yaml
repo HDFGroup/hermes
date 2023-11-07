@@ -1,0 +1,10 @@
+name: hermes_unit_ior
+env: hermes
+pkgs:
+  - pkg_type: hermes_run
+    pkg_name: hermes_run
+    ram: 10m
+    sleep: 5
+  - pkg_type: hermes_unit_tests
+    pkg_name: hermes_unit_tests
+    TEST_CASE: TestHermesPutGet
