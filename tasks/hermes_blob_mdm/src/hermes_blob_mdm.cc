@@ -89,13 +89,13 @@ class Server : public TaskLib {
       tgt_task->Wait<TASK_YIELD_CO>(task);
       bdev::Client &client = targets_[i];
       client.AsyncCreateComplete(tgt_task);
-      target_map_.emplace(client.id_, &client);
     }
     std::sort(targets_.begin(), targets_.end(),
               [](const bdev::Client &a, const bdev::Client &b) {
                 return a.bandwidth_ > b.bandwidth_;
               });
     for (bdev::Client &client : targets_) {
+      target_map_.emplace(client.id_, &client);
       HILOG(kInfo, "(node {}) Target {} has bw {}", HRUN_CLIENT->node_id_,
             client.id_, client.bandwidth_);
     }
