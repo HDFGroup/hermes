@@ -101,8 +101,8 @@ class Server : public TaskLib {
     }
     for (bdev::Client &client : targets_) {
       target_map_.emplace(client.id_, &client);
-      HILOG(kInfo, "(node {}) Target {} has bw {}", HRUN_CLIENT->node_id_,
-            client.id_, client.bandwidth_);
+      HILOG(kInfo, "(node {}) Target {} has bw {} and score {}", HRUN_CLIENT->node_id_,
+            client.id_, client.bandwidth_, client.bw_score_);
     }
     fallback_target_ = &targets_.back();
     blob_mdm_.Init(id_);
@@ -224,7 +224,7 @@ class Server : public TaskLib {
         }
         if (cmp_tgt.id_ != target.id_) {
           HILOG(kInfo, "Should move from {} to {} with score {} and tier score {}",
-                target.id_, cmp_tgt.score_, score, cmp_tgt.score_);
+                target.id_, cmp_tgt.id_, score, cmp_tgt.score_);
           return true;
         }
       }
