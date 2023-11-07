@@ -42,7 +42,9 @@ class MinimizeIoTime : public Dpe {
         // NOTE(llogan): We skip targets that are too high of priority or
         // targets that can't fit the ENTIRE blob
         size_t rem_cap = target.GetRemCap();
-        if (target.score_ > score || rem_cap < blob_size) {
+        // TODO(llogan): add back
+        // if (target.score_ > score || rem_cap < blob_size) {
+        if (rem_cap < blob_size) {
           // TODO(llogan): add other considerations of this Dpe
           continue;
         }

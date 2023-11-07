@@ -94,6 +94,11 @@ class Server : public TaskLib {
               [](const bdev::Client &a, const bdev::Client &b) {
                 return a.bandwidth_ > b.bandwidth_;
               });
+    float bw_max = targets_.front().bandwidth_;
+    float bw_min = targets_.front().bandwidth_;
+    for (bdev::Client &client : targets_) {
+      client.bw_score_ = (client.bandwidth_ - bw_min) / (bw_max - bw_min);
+    }
     for (bdev::Client &client : targets_) {
       target_map_.emplace(client.id_, &client);
       HILOG(kInfo, "(node {}) Target {} has bw {}", HRUN_CLIENT->node_id_,
@@ -188,16 +193,17 @@ class Server : public TaskLib {
       u32 precentile_lt = hist.GetPercentileLT(score);
       size_t rem_cap = target.monitor_task_->rem_cap_;
       size_t max_cap = target.max_cap_;
-      float min_score = hist.GetQuantile(0);
+      // float min_score = hist.GetQuantile(0);
       // Update the target score
-      if (rem_cap < max_cap * .5) {
-        // Enough capacity has been used to make scoring important.
-        target.score_ = min_score;
-      } else {
-        // There's a lot of capacity left.
-        // Make DPE start placing data here.
-        target.score_ = 0;
-      }
+      target.score_ = target.bw_score_;
+//      if (rem_cap < max_cap * .5) {
+//        // Enough capacity has been used to make scoring important.
+//        target.score_ = target.bw_score_;
+//      } else {
+//        // There's a lot of capacity left.
+//        // Make DPE start placing data here.
+//        target.score_ = 0;
+//      }
       // Update blob score
       if constexpr(UPDATE_SCORE) {
         u32 bin_orig = hist.GetBin(blob_info.score_);
@@ -208,16 +214,25 @@ class Server : public TaskLib {
         }
       }
       // Determine if the blob should be reorganized
-      if (rem_cap <= max_cap * target.borg_min_thresh_) {
-        if (precentile_lt > 90) {
-          HILOG(kInfo, "Should reorganize based on max");
-          return true;
+      // Get the target with minimum difference in score to this blob
+      for (const bdev::Client &cmp_tgt: targets_) {
+        if (cmp_tgt.score_ > score + .05) {
+          continue;
         }
-        if (percentile < 10) {
-          HILOG(kInfo, "Should reorganize based on rem");
+        if (cmp_tgt.id_ != target.id_) {
           return true;
         }
       }
+//      if (rem_cap <= max_cap * target.borg_min_thresh_) {
+//        if (precentile_lt > 90) {
+//          HILOG(kInfo, "Should reorganize based on max");
+//          return true;
+//        }
+//        if (percentile < 10) {
+//          HILOG(kInfo, "Should reorganize based on rem");
+//          return true;
+//        }
+//      }
     }
     return false;
   }

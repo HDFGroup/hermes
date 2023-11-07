@@ -21,6 +21,7 @@ class Client : public TaskLibClient {
   double bandwidth_;    /**< the bandwidth of the device */
   double latency_;      /**< the latency of the device */
   float score_;         /**< Relative importance of this tier */
+  float bw_score_;       /**< Relative importance of this tier */
   f32 borg_min_thresh_;  /**< Capacity percentage too low */
   f32 borg_max_thresh_;  /**< Capacity percentage too high */
 
