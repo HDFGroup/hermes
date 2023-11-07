@@ -98,6 +98,7 @@ class Server : public TaskLib {
     float bw_min = targets_.back().bandwidth_;
     for (bdev::Client &client : targets_) {
       client.bw_score_ = (client.bandwidth_ - bw_min) / (bw_max - bw_min);
+      client.score_ = client.bw_score_;
     }
     for (bdev::Client &client : targets_) {
       target_map_.emplace(client.id_, &client);
