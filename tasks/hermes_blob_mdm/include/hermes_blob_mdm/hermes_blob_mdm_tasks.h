@@ -23,6 +23,12 @@ using hrun::Task;
 using hrun::TaskFlags;
 using hrun::DataTransfer;
 
+static inline u32 HashBlobName(const TagId &tag_id, const hshm::charbuf &blob_name) {
+  u32 h2 = std::hash<TagId>{}(tag_id);
+  u32 h1 = std::hash<hshm::charbuf>{}(blob_name);
+  return std::hash<u32>{}(h1 ^ h2);
+}
+
 /** Phases of the construct task */
 using hrun::Admin::CreateTaskStatePhase;
 class ConstructTaskPhase : public CreateTaskStatePhase {
@@ -172,7 +178,7 @@ struct GetOrCreateBlobIdTask : public Task, TaskFlags<TF_SRL_SYM> {
                         const hshm::charbuf &blob_name) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = std::hash<hshm::charbuf>{}(blob_name);
+    lane_hash_ = HashBlobName(tag_id, blob_name);
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kGetOrCreateBlobId;
@@ -270,7 +276,7 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
       lane_hash_ = blob_id.hash_;
       domain_id_ = domain_id;
     } else {
-      lane_hash_ = std::hash<hshm::charbuf>{}(blob_name);
+      lane_hash_ = HashBlobName(tag_id, blob_name);
       domain_id_ = DomainId::GetNode(HASH_TO_NODE_ID(lane_hash_));
     }
 
@@ -377,7 +383,7 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
       lane_hash_ = blob_id.hash_;
       domain_id_ = domain_id;
     } else {
-      lane_hash_ = std::hash<hshm::charbuf>{}(blob_name);
+      lane_hash_ = HashBlobName(tag_id, blob_name);
       domain_id_ = DomainId::GetNode(HASH_TO_NODE_ID(lane_hash_));
     }
 
@@ -592,7 +598,7 @@ struct GetBlobIdTask : public Task, TaskFlags<TF_SRL_SYM> {
                 const hshm::charbuf &blob_name) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = std::hash<hshm::charbuf>{}(blob_name);
+    lane_hash_ = HashBlobName(tag_id, blob_name);
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kGetBlobId;
@@ -725,7 +731,7 @@ struct GetBlobSizeTask : public Task, TaskFlags<TF_SRL_SYM> {
       lane_hash_ = blob_id.hash_;
       domain_id_ = domain_id;
     } else {
-      lane_hash_ = std::hash<hshm::charbuf>{}(blob_name);
+      lane_hash_ = HashBlobName(tag_id, blob_name);
       domain_id_ = DomainId::GetNode(HASH_TO_NODE_ID(lane_hash_));
     }
 

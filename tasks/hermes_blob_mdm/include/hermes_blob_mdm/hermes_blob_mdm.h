@@ -94,7 +94,7 @@ class Client : public TaskLibClient {
                                        const TaskNode &task_node,
                                        TagId tag_id,
                                        const hshm::charbuf &blob_name) {
-    u32 hash = std::hash<hshm::charbuf>{}(blob_name);
+    u32 hash = HashBlobName(tag_id, blob_name);
     HRUN_CLIENT->ConstructTask<GetOrCreateBlobIdTask>(
         task, task_node, DomainId::GetNode(HASH_TO_NODE_ID(hash)), id_,
         tag_id, blob_name);
@@ -252,7 +252,7 @@ class Client : public TaskLibClient {
                                const TaskNode &task_node,
                                const TagId &tag_id,
                                const hshm::charbuf &blob_name) {
-    u32 hash = std::hash<hshm::charbuf>{}(blob_name);
+    u32 hash = HashBlobName(tag_id, blob_name);
     HRUN_CLIENT->ConstructTask<GetBlobIdTask>(
         task, task_node, DomainId::GetNode(HASH_TO_NODE_ID(hash)), id_,
         tag_id, blob_name);
