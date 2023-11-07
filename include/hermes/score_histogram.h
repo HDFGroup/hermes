@@ -117,7 +117,8 @@ class Histogram {
    * @input score a number between 0 and 1
    * @return Percentile (a number between 0 and 100)
    * */
-  u32 GetPercentile(float score) {
+  template<bool LESS_THAN_BIN>
+  u32 GetPercentileBase(float score) {
     if (score == 0) {
       return 0;
     }
@@ -126,10 +127,22 @@ class Histogram {
     }
     u32 bin = GetBin(score);
     u32 count = 0;
-    for (u32 i = 0; i <= bin; ++i) {
-      count += histogram_[i].x_.load();
+    if (LESS_THAN_BIN) {
+      for (u32 i = 0; i <= bin; ++i) {
+        count += histogram_[i].x_.load();
+      }
+    } else {
+      for (u32 i = 0; i < bin; ++i) {
+        count += histogram_[i].x_.load();
+      }
     }
     return count * 100 / count_;
+  }
+  u32 GetPercentile(float score) {
+    return GetPercentileBase<true>(score);
+  }
+  u32 GetPercentileLT(float score) {
+    return GetPercentileBase<false>(score);
   }
 
   /**

@@ -185,6 +185,7 @@ class Server : public TaskLib {
       TargetInfo &target = *target_map_[buf.tid_];
       Histogram &hist = target.monitor_task_->score_hist_;
       u32 percentile = hist.GetPercentile(score);
+      u32 precentile_lt = hist.GetPercentileLT(score);
       size_t rem_cap = target.monitor_task_->rem_cap_;
       size_t max_cap = target.max_cap_;
       float min_score = hist.GetQuantile(0);
@@ -210,6 +211,9 @@ class Server : public TaskLib {
       if (rem_cap <= max_cap * target.borg_min_thresh_) {
         if (percentile < 10) {
           return true;
+        }
+        if (precentile_lt > 90) {
+          return false;
         }
       }
     }
