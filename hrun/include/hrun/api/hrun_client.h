@@ -240,14 +240,18 @@ class Client : public ConfigurationManager {
   }
 
   /** Allocate a buffer in a task */
-  template<int THREAD_MODEL>
+  template<int THREAD_MODEL, bool IN_CLIENT=true>
   HSHM_ALWAYS_INLINE
   LPointer<char> AllocateBuffer(size_t size, Task *yield_task) {
     LPointer<char> p;
     // HILOG(kInfo, "Heap size: {}", data_alloc_->GetCurrentlyAllocatedSize());
     while (true) {
       try {
-        p = data_alloc_->AllocateLocalPtr<char>(size);
+        if constexpr(IN_CLIENT) {
+          p = data_alloc_->AllocateLocalPtr<char>(size);
+        } else {
+          p = main_alloc_->AllocateLocalPtr<char>(size);
+        }
       } catch (...) {
         p.shm_.SetNull();
       }
@@ -261,14 +265,18 @@ class Client : public ConfigurationManager {
   }
 
   /** Allocate a buffer */
-  template<int THREAD_MODEL>
+  template<int THREAD_MODEL, bool IN_CLIENT=true>
   HSHM_ALWAYS_INLINE
   LPointer<char> AllocateBuffer(size_t size) {
     // HILOG(kInfo, "{} Heap size: {}", THREAD_MODEL, data_alloc_->GetCurrentlyAllocatedSize());
     LPointer<char> p;
     while (true) {
       try {
-        p = data_alloc_->AllocateLocalPtr<char>(size);
+        if constexpr(IN_CLIENT) {
+          p = data_alloc_->AllocateLocalPtr<char>(size);
+        } else {
+          p = main_alloc_->AllocateLocalPtr<char>(size);
+        }
       } catch (...) {
         p.shm_.SetNull();
       }
@@ -285,21 +293,24 @@ class Client : public ConfigurationManager {
   HSHM_ALWAYS_INLINE
   void FreeBuffer(hipc::Pointer &p) {
     // HILOG(kInfo, "Heap size: {}", data_alloc_->GetCurrentlyAllocatedSize());
-    data_alloc_->Free(p);
+    auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(p.allocator_id_);
+    alloc->Free(p);
   }
 
   /** Free a buffer */
   HSHM_ALWAYS_INLINE
   void FreeBuffer(LPointer<char> &p) {
     // HILOG(kInfo, "Heap size: {}", data_alloc_->GetCurrentlyAllocatedSize());
-    data_alloc_->FreeLocalPtr(p);
+    auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(p.shm_.allocator_id_);
+    alloc->FreeLocalPtr(p);
   }
 
   /** Convert pointer to char* */
   template<typename T = char>
   HSHM_ALWAYS_INLINE
   T* GetDataPointer(const hipc::Pointer &p) {
-    return data_alloc_->Convert<T, hipc::Pointer>(p);
+    auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(p.allocator_id_);
+    return alloc->Convert<T, hipc::Pointer>(p);
   }
 
   /** Get a queue by its ID */

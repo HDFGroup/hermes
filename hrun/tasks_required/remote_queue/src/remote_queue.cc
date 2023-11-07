@@ -379,7 +379,7 @@ class Server : public TaskLib {
                    size_t data_size,
                    IoType io_type) {
     LPointer<char> data =
-        HRUN_CLIENT->AllocateBuffer<TASK_YIELD_ABT>(data_size);
+        HRUN_CLIENT->AllocateBuffer<TASK_YIELD_ABT, true>(data_size);
 
     // Create the input data transfer object
     std::vector<DataTransfer> xfer(2);
