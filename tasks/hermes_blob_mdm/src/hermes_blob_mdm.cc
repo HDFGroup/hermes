@@ -174,7 +174,8 @@ class Server : public TaskLib {
     float user_score = blob_info.user_score_;
     // Final scores
     if (!blob_info.flags_.Any(HERMES_USER_SCORE_STATIONARY)) {
-      return user_score * access_score;
+      // return user_score * access_score;
+      return user_score;
     } else {
       return std::max(access_score, user_score);
     }
@@ -215,17 +216,17 @@ class Server : public TaskLib {
       }
       // Determine if the blob should be reorganized
       // Get the target with minimum difference in score to this blob
-      if (abs(target.score_ - score) < .1) {
-        return false;
+      if (abs(target.score_ - score) > .1) {
+        return true;
       }
-      for (const bdev::Client &cmp_tgt: targets_) {
-        if (cmp_tgt.score_ > score + .05) {
-          continue;
-        }
-        if (cmp_tgt.id_ != target.id_) {
-          return true;
-        }
-      }
+//      for (const bdev::Client &cmp_tgt: targets_) {
+//        if (cmp_tgt.score_ > score + .05) {
+//          continue;
+//        }
+//        if (cmp_tgt.id_ != target.id_) {
+//          return true;
+//        }
+//      }
 //      if (rem_cap <= max_cap * target.borg_min_thresh_) {
 //        if (precentile_lt > 90) {
 //          HILOG(kInfo, "Should reorganize based on max");
