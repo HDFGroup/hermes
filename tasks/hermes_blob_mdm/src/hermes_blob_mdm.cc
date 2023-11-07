@@ -174,8 +174,7 @@ class Server : public TaskLib {
     float user_score = blob_info.user_score_;
     // Final scores
     if (!blob_info.flags_.Any(HERMES_USER_SCORE_STATIONARY)) {
-      // return user_score * access_score;
-      return user_score;
+      return user_score * access_score;
     } else {
       return std::max(access_score, user_score);
     }
