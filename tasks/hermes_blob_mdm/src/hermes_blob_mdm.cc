@@ -215,6 +215,9 @@ class Server : public TaskLib {
       }
       // Determine if the blob should be reorganized
       // Get the target with minimum difference in score to this blob
+      if (abs(target.score_ - score) < .1) {
+        return false;
+      }
       for (const bdev::Client &cmp_tgt: targets_) {
         if (cmp_tgt.score_ > score + .05) {
           continue;
