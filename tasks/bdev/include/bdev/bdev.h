@@ -52,7 +52,7 @@ class Client : public TaskLibClient {
     std::vector<PriorityInfo> queue_info = {
         {1, 1, qm.queue_depth_, 0},
         {1, 1, qm.queue_depth_, QUEUE_LONG_RUNNING},
-        {4, 4, qm.queue_depth_, QUEUE_LOW_LATENCY}
+        {qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, 0}
     };
     return HRUN_ADMIN->AsyncCreateTaskState<ConstructTask>(
         task_node, domain_id, state_name, lib_name, id_,

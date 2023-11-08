@@ -75,6 +75,12 @@ struct LaneGroup : public PriorityInfo {
     return flags_.Any(QUEUE_LONG_RUNNING) || prio_ == 0;
   }
 
+  /** Check if this group is long-running or ADMIN */
+  HSHM_ALWAYS_INLINE
+  bool IsLowLatency() {
+    return flags_.Any(QUEUE_LOW_LATENCY);
+  }
+
   /** Get lane */
   Lane& GetLane(u32 lane_id) {
     return (*lanes_)[lane_id];

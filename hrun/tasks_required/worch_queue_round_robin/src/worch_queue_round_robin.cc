@@ -44,7 +44,7 @@ class Server : public TaskLib {
         continue;
       }
       for (LaneGroup &lane_group : *queue.groups_) {
-        // NOTE(llogan): Assumes a minimum of two workers, admin on worker 0.
+        // NOTE(llogan): Assumes a minimum of three workers, admin on worker 0.
         if (lane_group.IsLowPriority()) {
           for (u32 lane_id = lane_group.num_scheduled_; lane_id < lane_group.num_lanes_; ++lane_id) {
             // HILOG(kDebug, "Scheduling the queue {} (lane {})", queue.id_, lane_id);
@@ -53,9 +53,20 @@ class Server : public TaskLib {
           }
           lane_group.num_scheduled_ = lane_group.num_lanes_;
         } else {
+          u32 rem_workers = HRUN_WORK_ORCHESTRATOR->workers_.size() - 1;
+          u32 off_lowlat = 1;
+          u32 count_lowlat = rem_workers / 2;
+          rem_workers -= count_lowlat;
+          u32 off_highlat = off_lowlat + count_lowlat;
+          u32 count_highlat = rem_workers;
           for (u32 lane_id = lane_group.num_scheduled_; lane_id < lane_group.num_lanes_; ++lane_id) {
             // HILOG(kDebug, "Scheduling the queue {} (lane {})", queue.id_, lane_id);
-            u32 worker_id = (count_ % (HRUN_WORK_ORCHESTRATOR->workers_.size() - 1)) + 1;
+            u32 worker_id;
+            if (lane_group.IsLowLatency()) {
+              worker_id = (count_ % count_lowlat) + off_lowlat;
+            } else {
+              worker_id = (count_ % count_highlat) + off_highlat;
+            }
             Worker &worker = *HRUN_WORK_ORCHESTRATOR->workers_[worker_id];
             worker.PollQueues({WorkEntry(lane_group.prio_, lane_id, &queue)});
             count_ += 1;
