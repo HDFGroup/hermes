@@ -298,10 +298,10 @@ class Client : public ConfigurationManager {
   HSHM_ALWAYS_INLINE
   void FreeBuffer(hipc::Pointer &p) {
     auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(p.allocator_id_);
-//    HILOG(kInfo, "Heap size for {}/{}: {}",
-//          p.allocator_id_.bits_.major_,
-//          p.allocator_id_.bits_.minor_,
-//          data_alloc_->GetCurrentlyAllocatedSize());
+    HILOG(kInfo, "Heap size for {}/{}: {}",
+          p.allocator_id_.bits_.major_,
+          p.allocator_id_.bits_.minor_,
+          data_alloc_->GetCurrentlyAllocatedSize());
     alloc->Free(p);
   }
 
