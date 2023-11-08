@@ -297,6 +297,7 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     HILOG(kInfo, "Freeing PUT of size {}", data_size_);
     HSHM_DESTROY_AR(blob_name_);
     if (IsDataOwner()) {
+      HILOG(kInfo, "Actually freeing PUT of size {}", data_size_);
       HRUN_CLIENT->FreeBuffer(data_);
     }
   }
