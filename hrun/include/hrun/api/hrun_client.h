@@ -274,10 +274,10 @@ class Client : public ConfigurationManager {
       try {
         if constexpr(IN_CLIENT) {
           auto id = data_alloc_->GetId();
-          HILOG(kInfo, "{} Alloc {}/{} Heap size: {}", THREAD_MODEL,
-                id.bits_.major_,
-                id.bits_.minor_,
-                data_alloc_->GetCurrentlyAllocatedSize());
+//          HILOG(kInfo, "{} Alloc {}/{} Heap size: {}", THREAD_MODEL,
+//                id.bits_.major_,
+//                id.bits_.minor_,
+//                data_alloc_->GetCurrentlyAllocatedSize());
           p = data_alloc_->AllocateLocalPtr<char>(size);
         } else {
           p = main_alloc_->AllocateLocalPtr<char>(size);
@@ -298,10 +298,10 @@ class Client : public ConfigurationManager {
   HSHM_ALWAYS_INLINE
   void FreeBuffer(hipc::Pointer &p) {
     auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(p.allocator_id_);
-    HILOG(kInfo, "Heap size for {}/{}: {}",
-          p.allocator_id_.bits_.major_,
-          p.allocator_id_.bits_.minor_,
-          data_alloc_->GetCurrentlyAllocatedSize());
+//    HILOG(kInfo, "Heap size for {}/{}: {}",
+//          p.allocator_id_.bits_.major_,
+//          p.allocator_id_.bits_.minor_,
+//          data_alloc_->GetCurrentlyAllocatedSize());
     alloc->Free(p);
   }
 
@@ -309,9 +309,9 @@ class Client : public ConfigurationManager {
   HSHM_ALWAYS_INLINE
   void FreeBuffer(LPointer<char> &p) {
     auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(p.shm_.allocator_id_);
-    HILOG(kInfo, "Heap size: {}", data_alloc_->GetCurrentlyAllocatedSize());
+//    HILOG(kInfo, "Heap size: {}", data_alloc_->GetCurrentlyAllocatedSize());
     alloc->FreeLocalPtr(p);
-    HILOG(kInfo, "Heap size after: {}", data_alloc_->GetCurrentlyAllocatedSize());
+//    HILOG(kInfo, "Heap size after: {}", data_alloc_->GetCurrentlyAllocatedSize());
   }
 
   /** Convert pointer to char* */
