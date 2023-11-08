@@ -289,10 +289,12 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     data_ = data;
     score_ = score;
     flags_ = bitfield32_t(flags | ctx.flags_.bits_);
+    HILOG(kInfo, "Creating PUT of size {}", data_size_);
   }
 
   /** Destructor */
   ~PutBlobTask() {
+    HILOG(kInfo, "Freeing PUT of size {}", data_size_);
     HSHM_DESTROY_AR(blob_name_);
     if (IsDataOwner()) {
       HRUN_CLIENT->FreeBuffer(data_);
