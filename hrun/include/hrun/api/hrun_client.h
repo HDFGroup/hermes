@@ -258,7 +258,7 @@ class Client : public ConfigurationManager {
       if (!p.shm_.IsNull()) {
         break;
       }
-      HILOG(kInfo, "{} Could not allocate buffer of size {} (2)?", THREAD_MODEL, size);
+      // HILOG(kInfo, "{} Could not allocate buffer of size {} (2)?", THREAD_MODEL, size);
       Yield<THREAD_MODEL>(yield_task);
     }
     return p;
@@ -284,7 +284,7 @@ class Client : public ConfigurationManager {
         break;
       }
       Yield<THREAD_MODEL>();
-      HILOG(kInfo, "{} Could not allocate buffer of size {} (1)?", THREAD_MODEL, size);
+      // HILOG(kInfo, "{} Could not allocate buffer of size {} (1)?", THREAD_MODEL, size);
     }
     return p;
   }
@@ -292,16 +292,16 @@ class Client : public ConfigurationManager {
   /** Free a buffer */
   HSHM_ALWAYS_INLINE
   void FreeBuffer(hipc::Pointer &p) {
-    // HILOG(kInfo, "Heap size: {}", data_alloc_->GetCurrentlyAllocatedSize());
     auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(p.allocator_id_);
+    HILOG(kInfo, "Heap size: {}", data_alloc_->GetCurrentlyAllocatedSize());
     alloc->Free(p);
   }
 
   /** Free a buffer */
   HSHM_ALWAYS_INLINE
   void FreeBuffer(LPointer<char> &p) {
-    // HILOG(kInfo, "Heap size: {}", data_alloc_->GetCurrentlyAllocatedSize());
     auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(p.shm_.allocator_id_);
+    HILOG(kInfo, "Heap size: {}", data_alloc_->GetCurrentlyAllocatedSize());
     alloc->FreeLocalPtr(p);
   }
 
