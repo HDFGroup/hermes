@@ -311,7 +311,7 @@ class Client : public ConfigurationManager {
     auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(p.shm_.allocator_id_);
 //    HILOG(kInfo, "Heap size: {}", data_alloc_->GetCurrentlyAllocatedSize());
     alloc->FreeLocalPtr(p);
-//    HILOG(kInfo, "Heap size after: {}", data_alloc_->GetCurrentlyAllocatedSize());
+    HILOG(kInfo, "Heap size after: {}", data_alloc_->GetCurrentlyAllocatedSize());
   }
 
   /** Convert pointer to char* */
