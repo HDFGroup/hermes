@@ -283,7 +283,6 @@ class Client : public ConfigurationManager {
           p = main_alloc_->AllocateLocalPtr<char>(size);
         }
       } catch (hshm::Error &e) {
-        e.print();
         p.shm_.SetNull();
       }
       if (!p.shm_.IsNull()) {
