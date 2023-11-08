@@ -183,7 +183,7 @@ struct WriteTask : public Task, TaskFlags<TF_LOCAL> {
             size_t size) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = 0;
+    lane_hash_ = disk_off;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kWrite;
@@ -228,7 +228,7 @@ struct ReadTask : public Task, TaskFlags<TF_LOCAL> {
            size_t size) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = 0;
+    lane_hash_ = disk_off;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kRead;
