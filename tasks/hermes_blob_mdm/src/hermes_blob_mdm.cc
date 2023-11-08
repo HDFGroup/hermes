@@ -180,6 +180,14 @@ class Server : public TaskLib {
       return std::max(access_score, user_score);
     }
   }
+  const bdev::Client& FindNearestTarget(float score) {
+    for (const bdev::Client &cmp_tgt: targets_) {
+      if (cmp_tgt.score_ > score + .05) {
+        continue;
+      }
+      return cmp_tgt;
+    }
+  }
 
   /** Check if blob should be reorganized */
   template<bool UPDATE_SCORE=false>
@@ -194,17 +202,11 @@ class Server : public TaskLib {
       u32 precentile_lt = hist.GetPercentileLT(score);
       size_t rem_cap = target.monitor_task_->rem_cap_;
       size_t max_cap = target.max_cap_;
+      float borg_cap_min = target.borg_min_thresh_;
+      float borg_cap_max = target.borg_max_thresh_;
       // float min_score = hist.GetQuantile(0);
       // Update the target score
       target.score_ = target.bw_score_;
-//      if (rem_cap < max_cap * .5) {
-//        // Enough capacity has been used to make scoring important.
-//        target.score_ = target.bw_score_;
-//      } else {
-//        // There's a lot of capacity left.
-//        // Make DPE start placing data here.
-//        target.score_ = 0;
-//      }
       // Update blob score
       if constexpr(UPDATE_SCORE) {
         u32 bin_orig = hist.GetBin(blob_info.score_);
@@ -217,29 +219,32 @@ class Server : public TaskLib {
       // Determine if the blob should be reorganized
       // Get the target with minimum difference in score to this blob
       if (abs(target.score_ - score) < .1) {
-        return false;
+        continue;
       }
-      for (const bdev::Client &cmp_tgt: targets_) {
-        if (cmp_tgt.score_ > score + .05) {
-          continue;
-        }
-        if (cmp_tgt.id_ != target.id_) {
-          HILOG(kInfo, "Should move {} from {} to {} with score {} and tier score {}",
-                blob_info.blob_id_, target.id_, cmp_tgt.id_, score, cmp_tgt.score_);
+      const bdev::Client &cmp_tgt = FindNearestTarget(score);
+      if (cmp_tgt.id_ == target.id_) {
+        continue;
+      }
+      if (cmp_tgt.score_ <= target.score_) {
+        // Demote if we have sufficiently low capacity
+        if (rem_cap < max_cap * borg_cap_min) {
+          HILOG(kInfo, "Demoting blob {} of score {} from tgt={} tgt_score={} to tgt={} tgt_score={}",
+                blob_info.blob_id_, blob_info.score_,
+                target.id_, target.score_,
+                cmp_tgt.id_, cmp_tgt.score_);
           return true;
         }
-        return false;
+      } else {
+        // Promote if the guy above us has sufficiently high capacity
+        float cmp_rem_cap = cmp_tgt.monitor_task_->rem_cap_;
+        if (cmp_rem_cap > blob_info.blob_size_) {
+          HILOG(kInfo, "Promoting blob {} of score {} from tgt={} tgt_score={} to tgt={} tgt_score={}",
+                blob_info.blob_id_, blob_info.score_,
+                target.id_, target.score_,
+                cmp_tgt.id_, cmp_tgt.score_);
+          return true;
+        }
       }
-//      if (rem_cap <= max_cap * target.borg_min_thresh_) {
-//        if (precentile_lt > 90) {
-//          HILOG(kInfo, "Should reorganize based on max");
-//          return true;
-//        }
-//        if (percentile < 10) {
-//          HILOG(kInfo, "Should reorganize based on rem");
-//          return true;
-//        }
-//      }
     }
     return false;
   }
