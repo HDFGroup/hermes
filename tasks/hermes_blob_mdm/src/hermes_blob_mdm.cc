@@ -358,6 +358,7 @@ class Server : public TaskLib {
     if (size_diff > 0) {
       Context ctx;
       auto *dpe = DpeFactory::Get(ctx.dpe_);
+      ctx.blob_score_ = task->score_;
       dpe->Placement({size_diff}, targets_, ctx, schema_vec);
     }
 
