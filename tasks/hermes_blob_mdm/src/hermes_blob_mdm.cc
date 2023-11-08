@@ -187,6 +187,7 @@ class Server : public TaskLib {
       }
       return cmp_tgt;
     }
+    return targets_.back();
   }
 
   /** Check if blob should be reorganized */
