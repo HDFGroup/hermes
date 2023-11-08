@@ -289,15 +289,14 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     data_ = data;
     score_ = score;
     flags_ = bitfield32_t(flags | ctx.flags_.bits_);
-    HILOG(kInfo, "Creating PUT of size {}", data_size_);
+    HILOG(kInfo, "Creating PUT {} of size {}", task_node_, data_size_);
   }
 
   /** Destructor */
   ~PutBlobTask() {
-    HILOG(kInfo, "Freeing PUT of size {}", data_size_);
     HSHM_DESTROY_AR(blob_name_);
     if (IsDataOwner()) {
-      HILOG(kInfo, "Actually freeing PUT of size {}", data_size_);
+      HILOG(kInfo, "Actually freeing PUT {} of size {}", task_node_, data_size_);
       HRUN_CLIENT->FreeBuffer(data_);
     }
   }
