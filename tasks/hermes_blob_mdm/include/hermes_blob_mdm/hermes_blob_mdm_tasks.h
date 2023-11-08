@@ -1104,14 +1104,15 @@ struct ReorganizeBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
                      const BlobId &blob_id,
                      float score,
                      u32 node_id,
-                     bool is_user_score) : Task(alloc) {
+                     bool is_user_score,
+                     u32 task_flags = TASK_LOW_LATENCY | TASK_FIRE_AND_FORGET) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = blob_id.hash_;
     prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kReorganizeBlob;
-    task_flags_.SetBits(TASK_LOW_LATENCY | TASK_FIRE_AND_FORGET);
+    task_flags_.SetBits(task_flags);
     domain_id_ = domain_id;
 
     // Custom params

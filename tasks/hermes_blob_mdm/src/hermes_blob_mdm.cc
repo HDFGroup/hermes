@@ -258,10 +258,14 @@ class Server : public TaskLib {
       float new_score = MakeScore(blob_info, now);
       blob_info.score_ = new_score;
       if (ShouldReorganize<true>(blob_info, new_score, task->task_node_)) {
-        blob_mdm_.AsyncReorganizeBlob(task->task_node_ + 1,
-                                      blob_info.tag_id_,
-                                      blob_info.blob_id_,
-                                      new_score, 0, false);
+        LPointer<ReorganizeBlobTask> reorg_task =
+            blob_mdm_.AsyncReorganizeBlob(task->task_node_ + 1,
+                                          blob_info.tag_id_,
+                                          blob_info.blob_id_,
+                                          new_score, 0, false,
+                                          TASK_LOW_LATENCY);
+        reorg_task->Wait<TASK_YIELD_CO>(task);
+        HRUN_CLIENT->DelTask(reorg_task);
       }
       blob_info.access_freq_ = 0;
 
