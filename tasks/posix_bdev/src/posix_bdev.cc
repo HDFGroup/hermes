@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <libaio.h>
 
 namespace hermes::posix_bdev {
 
@@ -74,11 +75,49 @@ class Server : public TaskLib, public bdev::Server {
   /** Write to bdev */
   void Write(WriteTask *task, RunContext &rctx) {
     HILOG(kDebug, "Writing {} bytes to {}", task->size_, path_);
-    ssize_t count = pwrite(fd_, task->buf_, task->size_, (off_t)task->disk_off_);
-    if (count != task->size_) {
-      HELOG(kError, "BORG: wrote {} bytes, but expected {}: {}",
-            count, task->size_, strerror(errno));
+    switch (task->phase_) {
+      case 0: {
+        int ret = io_setup(1, &task->ctx_);
+        if (ret < 0) {
+          perror("io_setup");
+          HELOG(kError, "Libaio failed for write (1)");
+          task->SetModuleComplete();
+          return;
+        }
+        struct iocb xfer_iocb;
+        struct iocb *iocb_list[1];
+        io_prep_pwrite(&xfer_iocb, fd_, (void*)task->buf_, task->size_, task->disk_off_);
+        xfer_iocb.data = (void*) task->buf_;
+        iocb_list[0] = &xfer_iocb;
+        ret = io_submit(task->ctx_, 1, iocb_list);
+        if (ret != 1) {
+          perror("io_submit");
+          HELOG(kError, "Libaio failed for write (2)");
+          task->SetModuleComplete();
+          return;
+        }
+        task->phase_ = 1;
+      }
+      case 1: {
+        struct io_event events[1];
+        struct timespec timeout{0, 0};
+        int ret = io_getevents(task->ctx_, 1, 1, events, &timeout);
+        if (ret == -EAGAIN) {
+          return;
+        } else if (ret < 0) {
+          perror("io_getevents");
+          HELOG(kError, "Libaio failed for write (3)");
+          task->SetModuleComplete();
+          return;
+        }
+        io_destroy(task->ctx_);
+      }
     }
+//    ssize_t count = pwrite(fd_, task->buf_, task->size_, (off_t)task->disk_off_);
+//    if (count != task->size_) {
+//      HELOG(kError, "BORG: wrote {} bytes, but expected {}: {}",
+//            count, task->size_, strerror(errno));
+//    }
     task->SetModuleComplete();
   }
   void MonitorWrite(u32 mode, WriteTask *task, RunContext &rctx) {
@@ -87,11 +126,49 @@ class Server : public TaskLib, public bdev::Server {
   /** Read from bdev */
   void Read(ReadTask *task, RunContext &rctx) {
     HILOG(kDebug, "Reading {} bytes from {}", task->size_, path_);
-    ssize_t count = pread(fd_, task->buf_, task->size_, (off_t)task->disk_off_);
-    if (count != task->size_) {
-      HELOG(kError, "BORG: read {} bytes, but expected {}",
-            count, task->size_);
+    switch (task->phase_) {
+      case 0: {
+        int ret = io_setup(1, &task->ctx_);
+        if (ret < 0) {
+          perror("io_setup");
+          HELOG(kError, "Libaio failed for write (1)");
+          task->SetModuleComplete();
+          return;
+        }
+        struct iocb xfer_iocb;
+        struct iocb *iocb_list[1];
+        io_prep_pread(&xfer_iocb, fd_, (void*)task->buf_, task->size_, task->disk_off_);
+        xfer_iocb.data = (void*) task->buf_;
+        iocb_list[0] = &xfer_iocb;
+        ret = io_submit(task->ctx_, 1, iocb_list);
+        if (ret != 1) {
+          perror("io_submit");
+          HELOG(kError, "Libaio failed for write (2)");
+          task->SetModuleComplete();
+          return;
+        }
+        task->phase_ = 1;
+      }
+      case 1: {
+        struct io_event events[1];
+        struct timespec timeout{0, 0};
+        int ret = io_getevents(task->ctx_, 1, 1, events, &timeout);
+        if (ret == -EAGAIN) {
+          return;
+        } else if (ret < 0) {
+          perror("io_getevents");
+          HELOG(kError, "Libaio failed for write (3)");
+          task->SetModuleComplete();
+          return;
+        }
+        io_destroy(task->ctx_);
+      }
     }
+//    ssize_t count = pread(fd_, task->buf_, task->size_, (off_t)task->disk_off_);
+//    if (count != task->size_) {
+//      HELOG(kError, "BORG: read {} bytes, but expected {}",
+//            count, task->size_);
+//    }
     task->SetModuleComplete();
   }
   void MonitorRead(u32 mode, ReadTask *task, RunContext &rctx) {

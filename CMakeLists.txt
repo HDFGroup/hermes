@@ -86,6 +86,14 @@ if(PkgConfig)
     message(STATUS "found pkg config")
 endif()
 
+# LIBAIO
+find_library(LIBAIO_LIBRARY NAMES aio)
+if(LIBAIO_LIBRARY)
+    message(STATUS "found libaio at ${LIBAIO_LIBRARY}")
+else()
+    message(FATAL_ERROR "Could not find libaio, please install libaio-dev.")
+endif()
+
 # Zeromq
 #pkg_check_modules(ZMQ REQUIRED libzmq)
 #include_directories(${ZMQ_INCLUDE_DIRS})
