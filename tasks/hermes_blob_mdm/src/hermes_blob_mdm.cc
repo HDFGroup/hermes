@@ -220,8 +220,6 @@ class Server : public TaskLib {
         return false;
       }
       for (const bdev::Client &cmp_tgt: targets_) {
-        HILOG(kInfo, "Move {} from {} to {} with score {} and tier score {}?",
-              blob_info.blob_id_, target.id_, cmp_tgt.id_, score, cmp_tgt.score_);
         if (cmp_tgt.score_ > score + .05) {
           continue;
         }
