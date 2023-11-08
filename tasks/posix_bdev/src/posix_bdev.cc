@@ -75,6 +75,7 @@ class Server : public TaskLib, public bdev::Server {
   /** Write to bdev */
   void Write(WriteTask *task, RunContext &rctx) {
     HILOG(kDebug, "Writing {} bytes to {}", task->size_, path_);
+#ifdef HERMES_LIBAIO
     switch (task->phase_) {
       case 0: {
         int ret = io_setup(1, &task->ctx_);
@@ -113,11 +114,13 @@ class Server : public TaskLib, public bdev::Server {
         io_destroy(task->ctx_);
       }
     }
-//    ssize_t count = pwrite(fd_, task->buf_, task->size_, (off_t)task->disk_off_);
-//    if (count != task->size_) {
-//      HELOG(kError, "BORG: wrote {} bytes, but expected {}: {}",
-//            count, task->size_, strerror(errno));
-//    }
+#else
+    ssize_t count = pwrite(fd_, task->buf_, task->size_, (off_t)task->disk_off_);
+    if (count != task->size_) {
+      HELOG(kError, "BORG: wrote {} bytes, but expected {}: {}",
+            count, task->size_, strerror(errno));
+    }
+#endif
     task->SetModuleComplete();
   }
   void MonitorWrite(u32 mode, WriteTask *task, RunContext &rctx) {
@@ -126,6 +129,7 @@ class Server : public TaskLib, public bdev::Server {
   /** Read from bdev */
   void Read(ReadTask *task, RunContext &rctx) {
     HILOG(kDebug, "Reading {} bytes from {}", task->size_, path_);
+#ifdef HERMES_LIBAIO
     switch (task->phase_) {
       case 0: {
         int ret = io_setup(1, &task->ctx_);
@@ -164,11 +168,13 @@ class Server : public TaskLib, public bdev::Server {
         io_destroy(task->ctx_);
       }
     }
-//    ssize_t count = pread(fd_, task->buf_, task->size_, (off_t)task->disk_off_);
-//    if (count != task->size_) {
-//      HELOG(kError, "BORG: read {} bytes, but expected {}",
-//            count, task->size_);
-//    }
+#else
+    ssize_t count = pread(fd_, task->buf_, task->size_, (off_t)task->disk_off_);
+    if (count != task->size_) {
+      HELOG(kError, "BORG: read {} bytes, but expected {}",
+            count, task->size_);
+    }
+#endif
     task->SetModuleComplete();
   }
   void MonitorRead(u32 mode, ReadTask *task, RunContext &rctx) {
