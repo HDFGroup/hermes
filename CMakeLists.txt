@@ -91,7 +91,8 @@ find_library(LIBAIO_LIBRARY NAMES aio)
 if(LIBAIO_LIBRARY)
     message(STATUS "found libaio at ${LIBAIO_LIBRARY}")
 else()
-    message(FATAL_ERROR "Could not find libaio, please install libaio-dev.")
+    set(LIBAIO_LIBRARY aio)
+    message(STATUS "Assuming it was installed with our aio spack")
 endif()
 
 # Zeromq
