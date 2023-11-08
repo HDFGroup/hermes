@@ -256,6 +256,7 @@ class Server : public TaskLib {
       BlobInfo &blob_info = it.second;
       // Update blob scores
       float new_score = MakeScore(blob_info, now);
+      blob_info.score_ = new_score;
       if (ShouldReorganize<true>(blob_info, new_score, task->task_node_)) {
         blob_mdm_.AsyncReorganizeBlob(task->task_node_ + 1,
                                       blob_info.tag_id_,
@@ -263,7 +264,6 @@ class Server : public TaskLib {
                                       new_score, 0, false);
       }
       blob_info.access_freq_ = 0;
-      blob_info.score_ = new_score;
 
       // Flush data
       size_t mod_count = blob_info.mod_count_;
@@ -829,8 +829,7 @@ class Server : public TaskLib {
         BlobInfo &blob_info = it->second;
         if (task->is_user_score_) {
           blob_info.user_score_ = task->score_;
-          blob_info.score_ = std::max(blob_info.user_score_,
-                                      blob_info.score_);
+          blob_info.score_ = blob_info.user_score_;
         } else {
           blob_info.score_ = task->score_;
         }
