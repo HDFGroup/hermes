@@ -224,8 +224,8 @@ class Server : public TaskLib {
           continue;
         }
         if (cmp_tgt.id_ != target.id_) {
-          HILOG(kInfo, "Should move from {} to {} with score {} and tier score {}",
-                target.id_, cmp_tgt.id_, score, cmp_tgt.score_);
+          HILOG(kInfo, "Should move {} from {} to {} with score {} and tier score {}",
+                blob_info.blob_id_, target.id_, cmp_tgt.id_, score, cmp_tgt.score_);
           return true;
         }
       }
