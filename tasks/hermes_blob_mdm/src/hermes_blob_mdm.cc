@@ -230,6 +230,7 @@ class Server : public TaskLib {
                 blob_info.blob_id_, target.id_, cmp_tgt.id_, score, cmp_tgt.score_);
           return true;
         }
+        return false;
       }
 //      if (rem_cap <= max_cap * target.borg_min_thresh_) {
 //        if (precentile_lt > 90) {
