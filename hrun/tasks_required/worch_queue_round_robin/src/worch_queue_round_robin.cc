@@ -62,7 +62,7 @@ class Server : public TaskLib {
           u32 off_highlat = off_lowlat + count_lowlat;
           u32 count_highlat = rem_workers;
           for (u32 lane_id = lane_group.num_scheduled_; lane_id < lane_group.num_lanes_; ++lane_id) {
-            // HILOG(kDebug, "Scheduling the queue {} (lane {})", queue.id_, lane_id);
+            HILOG(kDebug, "Scheduling the queue {} (lane {})", queue.id_, lane_id);
             if (lane_group.IsLowLatency()) {
               u32 worker_id = (count_lowlat_ % count_lowlat) + off_lowlat;
               count_lowlat_ += 1;
