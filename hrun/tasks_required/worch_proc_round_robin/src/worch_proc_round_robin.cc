@@ -34,11 +34,13 @@ class Server : public TaskLib {
 
   /** Schedule running processes */
   void Schedule(ScheduleTask *task, RunContext &rctx) {
-    int rr = 0;
-    for (std::unique_ptr<Worker> &worker : HRUN_WORK_ORCHESTRATOR->workers_) {
-      worker->SetCpuAffinity(rr % HERMES_SYSTEM_INFO->ncpu_);
-      ++rr;
-    }
+//    int rr = 0;
+//    ProcessAffiner affiner;
+//    affiner.AffineAll();
+//    for (std::unique_ptr<Worker> &worker : HRUN_WORK_ORCHESTRATOR->workers_) {
+//      worker->SetCpuAffinity(rr % HERMES_SYSTEM_INFO->ncpu_);
+//      ++rr;
+//    }
   }
   void MonitorSchedule(u32 mode, ScheduleTask *task, RunContext &rctx) {
   }

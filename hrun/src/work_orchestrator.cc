@@ -32,6 +32,8 @@ void WorkOrchestrator::ServerInit(ServerConfig *config, QueueManager &qm) {
   workers_.reserve(num_workers);
   for (u32 worker_id = 0; worker_id < num_workers; ++worker_id) {
     workers_.emplace_back(std::make_unique<Worker>(worker_id, xstream_));
+    Worker &worker = *workers_.back();
+    worker.SetCpuAffinity(worker_id % HERMES_SYSTEM_INFO->ncpu_);
   }
   stop_runtime_ = false;
   kill_requested_ = false;

@@ -18,12 +18,14 @@ namespace hrun::worch_queue_round_robin {
 
 class Server : public TaskLib {
  public:
-  u32 count_;
+  u32 count_lowlat_;
+  u32 count_highlat_;
 
  public:
   /** Construct work orchestrator queue scheduler */
   void Construct(ConstructTask *task, RunContext &rctx) {
-    count_ = 0;
+    count_lowlat_ = 0;
+    count_highlat_ = 0;
     task->SetModuleComplete();
   }
   void MonitorConstruct(u32 mode, ConstructTask *task, RunContext &rctx) {
@@ -61,15 +63,17 @@ class Server : public TaskLib {
           u32 count_highlat = rem_workers;
           for (u32 lane_id = lane_group.num_scheduled_; lane_id < lane_group.num_lanes_; ++lane_id) {
             // HILOG(kDebug, "Scheduling the queue {} (lane {})", queue.id_, lane_id);
-            u32 worker_id;
             if (lane_group.IsLowLatency()) {
-              worker_id = (count_ % count_lowlat) + off_lowlat;
+              u32 worker_id = (count_lowlat_ % count_lowlat) + off_lowlat;
+              count_lowlat_ += 1;
+              Worker &worker = *HRUN_WORK_ORCHESTRATOR->workers_[worker_id];
+              worker.PollQueues({WorkEntry(lane_group.prio_, lane_id, &queue)});
             } else {
-              worker_id = (count_ % count_highlat) + off_highlat;
+              u32 worker_id = (count_highlat_ % count_highlat) + off_highlat;
+              count_highlat_ += 1;
+              Worker &worker = *HRUN_WORK_ORCHESTRATOR->workers_[worker_id];
+              worker.PollQueues({WorkEntry(lane_group.prio_, lane_id, &queue)});
             }
-            Worker &worker = *HRUN_WORK_ORCHESTRATOR->workers_[worker_id];
-            worker.PollQueues({WorkEntry(lane_group.prio_, lane_id, &queue)});
-            count_ += 1;
           }
           lane_group.num_scheduled_ = lane_group.num_lanes_;
         }
