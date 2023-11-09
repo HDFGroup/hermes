@@ -244,7 +244,7 @@ class Client : public ConfigurationManager {
   HSHM_ALWAYS_INLINE
   LPointer<char> AllocateBufferServer(size_t size, Task *yield_task) {
     LPointer<char> p;
-    p = data_alloc_->AllocateLocalPtr<char>(size);
+    p = main_alloc_->AllocateLocalPtr<char>(size);
     return p;
   }
 
@@ -253,7 +253,7 @@ class Client : public ConfigurationManager {
   HSHM_ALWAYS_INLINE
   LPointer<char> AllocateBufferServer(size_t size) {
     LPointer<char> p;
-    p = data_alloc_->AllocateLocalPtr<char>(size);
+    p = main_alloc_->AllocateLocalPtr<char>(size);
     return p;
   }
 
