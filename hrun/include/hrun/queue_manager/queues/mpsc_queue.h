@@ -56,6 +56,7 @@ class mpsc_queue : public ShmContainer {
   std::atomic<_qtok_t> tail_;
   std::atomic<_qtok_t> head_;
   bitfield32_t flags_;
+  QueueId id_;
 
  public:
   /**====================================
@@ -64,10 +65,12 @@ class mpsc_queue : public ShmContainer {
 
   /** SHM constructor. Default. */
   explicit mpsc_queue(Allocator *alloc,
-                      size_t depth = 1024) {
+                      size_t depth = 1024,
+                      QueueId id = QueueId::GetNull()) {
     shm_init_container(alloc);
     HSHM_MAKE_AR(queue_, GetAllocator(), depth);
     flags_.Clear();
+    id_ = id;
     SetNull();
   }
 
@@ -171,7 +174,7 @@ class mpsc_queue : public ShmContainer {
 
     // Check if there's space in the queue.
     if (size > queue.size()) {
-      HILOG(kInfo, "Queue is full, waiting for space")
+      HILOG(kInfo, "Queue {}/{} is full, waiting for space", id_, queue_->size());
       while (true) {
         head = head_.load();
         size = tail - head + 1;

@@ -128,7 +128,7 @@ struct MultiQueueT<Hshm> : public hipc::ShmContainer {
       lane_group.lanes_->reserve(prio_info.max_lanes_);
       lane_group.prio_ = prio;
       for (u32 lane_id = 0; lane_id < lane_group.num_lanes_; ++lane_id) {
-        lane_group.lanes_->emplace_back(lane_group.depth_);
+        lane_group.lanes_->emplace_back(lane_group.depth_, id_);
         Lane &lane = lane_group.lanes_->back();
         lane.flags_ = prio_info.flags_;
       }
