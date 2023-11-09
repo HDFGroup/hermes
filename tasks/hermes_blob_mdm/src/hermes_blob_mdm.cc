@@ -282,7 +282,7 @@ class Server : public TaskLib {
           mod_count > blob_info.last_flush_) {
         HILOG(kDebug, "Flushing blob {} (mod_count={}, last_flush={})",
               blob_info.blob_id_, blob_info.mod_count_, blob_info.last_flush_);
-        LPointer<char> data = HRUN_CLIENT->AllocateBuffer<TASK_YIELD_CO, true>(
+        LPointer<char> data = HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_CO>(
             blob_info.blob_size_, task);
         LPointer<GetBlobTask> get_blob =
             blob_mdm_.AsyncGetBlob(task->task_node_ + 1,
@@ -849,7 +849,7 @@ class Server : public TaskLib {
           task->SetModuleComplete();
           return;
         }
-        task->data_ = HRUN_CLIENT->AllocateBuffer<TASK_YIELD_STD, true>(
+        task->data_ = HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_STD>(
             blob_info.blob_size_, task).shm_;
         task->data_size_ = blob_info.blob_size_;
         task->get_task_ = blob_mdm_.AsyncGetBlob(task->task_node_ + 1,

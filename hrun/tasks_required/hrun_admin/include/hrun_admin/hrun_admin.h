@@ -229,7 +229,7 @@ class Client : public TaskLibClient {
 
   /** Allocate a buffer */
   HSHM_ALWAYS_INLINE
-  LPointer<char> AllocateBuffer(size_t size) {
+  LPointer<char> AllocateBufferClient(size_t size) {
     LPointer<char> p;
     while (true) {
       try {

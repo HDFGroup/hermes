@@ -240,57 +240,20 @@ class Client : public ConfigurationManager {
   }
 
   /** Allocate a buffer in a task */
-  template<int THREAD_MODEL, bool IN_CLIENT=true>
+  template<int THREAD_MODEL>
   HSHM_ALWAYS_INLINE
-  LPointer<char> AllocateBuffer(size_t size, Task *yield_task) {
+  LPointer<char> AllocateBufferServer(size_t size, Task *yield_task) {
     LPointer<char> p;
-    // HILOG(kInfo, "Heap size: {}", data_alloc_->GetCurrentlyAllocatedSize());
-    while (true) {
-      try {
-        if constexpr(IN_CLIENT) {
-          p = data_alloc_->AllocateLocalPtr<char>(size);
-        } else {
-          p = data_alloc_->AllocateLocalPtr<char>(size);
-        }
-      } catch (...) {
-        p.shm_.SetNull();
-      }
-      if (!p.shm_.IsNull()) {
-        break;
-      }
-      // HILOG(kInfo, "{} Could not allocate buffer of size {} (2)?", THREAD_MODEL, size);
-      Yield<THREAD_MODEL>(yield_task);
-    }
+    p = main_alloc_->AllocateLocalPtr<char>(size);
     return p;
   }
 
   /** Allocate a buffer */
-  template<int THREAD_MODEL, bool IN_CLIENT=true>
+  template<int THREAD_MODEL>
   HSHM_ALWAYS_INLINE
-  LPointer<char> AllocateBuffer(size_t size) {
-    //
+  LPointer<char> AllocateBufferServer(size_t size) {
     LPointer<char> p;
-    while (true) {
-      try {
-        if constexpr(IN_CLIENT) {
-          auto id = data_alloc_->GetId();
-//          HILOG(kInfo, "{} Alloc {}/{} Heap size: {}", THREAD_MODEL,
-//                id.bits_.major_,
-//                id.bits_.minor_,
-//                data_alloc_->GetCurrentlyAllocatedSize());
-          p = data_alloc_->AllocateLocalPtr<char>(size);
-        } else {
-          p = data_alloc_->AllocateLocalPtr<char>(size);
-        }
-      } catch (hshm::Error &e) {
-        p.shm_.SetNull();
-      }
-      if (!p.shm_.IsNull()) {
-        break;
-      }
-      Yield<THREAD_MODEL>();
-      // HILOG(kInfo, "{} Could not allocate buffer of size {} (1)?", THREAD_MODEL, size);
-    }
+    p = main_alloc_->AllocateLocalPtr<char>(size);
     return p;
   }
 
