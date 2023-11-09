@@ -18,6 +18,7 @@
 #include "hermes_shm/data_structures/ipc/vector.h"
 #include "hermes_shm/data_structures/ipc/pair.h"
 #include "hermes_shm/types/qtok.h"
+#include "hrun/hrun_types.h"
 
 namespace hrun {
 
@@ -170,6 +171,7 @@ class mpsc_queue : public ShmContainer {
 
     // Check if there's space in the queue.
     if (size > queue.size()) {
+      HILOG(kInfo, "Queue is full, waiting for space")
       while (true) {
         head = head_.load();
         size = tail - head + 1;
