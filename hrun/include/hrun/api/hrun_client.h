@@ -250,7 +250,7 @@ class Client : public ConfigurationManager {
         if constexpr(IN_CLIENT) {
           p = data_alloc_->AllocateLocalPtr<char>(size);
         } else {
-          p = main_alloc_->AllocateLocalPtr<char>(size);
+          p = data_alloc_->AllocateLocalPtr<char>(size);
         }
       } catch (...) {
         p.shm_.SetNull();
@@ -280,7 +280,7 @@ class Client : public ConfigurationManager {
 //                data_alloc_->GetCurrentlyAllocatedSize());
           p = data_alloc_->AllocateLocalPtr<char>(size);
         } else {
-          p = main_alloc_->AllocateLocalPtr<char>(size);
+          p = data_alloc_->AllocateLocalPtr<char>(size);
         }
       } catch (hshm::Error &e) {
         p.shm_.SetNull();
