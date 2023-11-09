@@ -32,11 +32,12 @@ class Client : public TaskLibClient {
                                       const TaskStateId &state_id) {
     id_ = state_id;
     QueueManagerInfo &qm = HRUN_CLIENT->server_config_.queue_manager_;
+    // NOTE(llogan): 32x queue depth b/c default num rpc threads is 32
     std::vector<PriorityInfo> queue_info = {
         {1, 1, qm.queue_depth_, 0},
-        {1, 1, 4 * qm.queue_depth_, QUEUE_LONG_RUNNING},
+        {1, 1, 32 * qm.queue_depth_, QUEUE_LONG_RUNNING},
         // {qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY}
-        {1, 1, 4 * qm.queue_depth_, QUEUE_LOW_LATENCY},
+        {1, 1, 32 * qm.queue_depth_, QUEUE_LOW_LATENCY},
     };
     return HRUN_ADMIN->AsyncCreateTaskState<ConstructTask>(
         task_node, domain_id, state_name, id_, queue_info);

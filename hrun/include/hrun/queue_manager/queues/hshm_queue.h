@@ -6,6 +6,7 @@
 #define HRUN_INCLUDE_HRUN_QUEUE_MANAGER_HSHM_QUEUE_H_
 
 #include "hrun/queue_manager/queue.h"
+#include "mpsc_queue.h"
 
 namespace hrun {
 
@@ -24,7 +25,7 @@ struct LaneData {
 };
 
 /** Represents a lane tasks can be stored */
-typedef hipc::mpsc_queue<LaneData> Lane;
+typedef hrun::mpsc_queue<LaneData> Lane;
 
 /** Prioritization of different lanes in the queue */
 struct LaneGroup : public PriorityInfo {
