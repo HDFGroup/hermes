@@ -146,7 +146,7 @@ class Worker {
   std::unique_ptr<std::thread> thread_;  /**< The worker thread handle */
   ABT_thread tl_thread_;  /**< The worker argobots thread handle */
   int pthread_id_;      /**< The worker pthread handle */
-  int pid_;             /**< The worker process id */
+  std::atomic<int> pid_;  /**< The worker process id */
   int affinity_;        /**< The worker CPU affinity */
   u32 numa_node_;       // TODO(llogan): track NUMA affinity
   ABT_xstream xstream_;

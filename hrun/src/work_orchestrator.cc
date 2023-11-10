@@ -49,6 +49,21 @@ void WorkOrchestrator::ServerInit(ServerConfig *config, QueueManager &qm) {
   stop_runtime_ = false;
   kill_requested_ = false;
 
+  // Wait for pids to become non-zero
+  while (true) {
+    bool all_pids_nonzero = true;
+    for (std::unique_ptr<Worker> &worker : workers_) {
+      if (worker->pid_ == 0) {
+        all_pids_nonzero = false;
+        break;
+      }
+    }
+    if (all_pids_nonzero) {
+      break;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  }
+
   // Schedule admin queue on first overlapping worker
   MultiQueue *admin_queue = qm.GetQueue(qm.admin_queue_);
   LaneGroup *admin_group = &admin_queue->GetGroup(0);
@@ -57,6 +72,9 @@ void WorkOrchestrator::ServerInit(ServerConfig *config, QueueManager &qm) {
     worker.PollQueues({WorkEntry(0, lane_id, admin_queue)});
   }
   admin_group->num_scheduled_ = admin_group->num_lanes_;
+
+  // Dedicate CPU cores to this runtime
+  DedicateCores();
 
   HILOG(kInfo, "Started {} workers", num_workers);
 }
@@ -101,6 +119,17 @@ std::vector<int> WorkOrchestrator::GetWorkerCoresComplement() {
     cores.erase(std::remove(cores.begin(), cores.end(), worker->affinity_), cores.end());
   }
   return cores;
+}
+
+/** Dedicate cores */
+void WorkOrchestrator::DedicateCores() {
+  ProcessAffiner affiner;
+  std::vector<int> worker_pids = GetWorkerPids();
+  std::vector<int> cpu_ids = GetWorkerCoresComplement();
+  affiner.IgnorePids(worker_pids);
+  affiner.SetCpus(cpu_ids);
+  int count = affiner.AffineAll();
+  HILOG(kInfo, "Affining {} processes to {} cores", count, cpu_ids.size());
 }
 
 }  // namespace hrun

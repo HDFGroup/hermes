@@ -263,8 +263,8 @@ TEST_CASE("TestRoundTripLatency") {
   client.CreateRoot(hrun::DomainId::GetLocal(), "ipc_test");
   hshm::Timer t;
 
-  int pid = getpid();
-  ProcessAffiner::SetCpuAffinity(pid, 8);
+  // int pid = getpid();
+  // ProcessAffiner::SetCpuAffinity(pid, 8);
 
   t.Resume();
   size_t ops = (1 << 20);

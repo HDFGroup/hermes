@@ -57,6 +57,9 @@ class WorkOrchestrator {
   /** Get the complement of worker cores */
   std::vector<int> GetWorkerCoresComplement();
 
+  /** Begin dedicating core s*/
+  void DedicateCores();
+
   /** Begin finalizing the runtime */
   HSHM_ALWAYS_INLINE
   void FinalizeRuntime() {
