@@ -252,8 +252,7 @@ TEST_CASE("TestWorkerLatency") {
 
 /** Time to process a request */
 TEST_CASE("TestRoundTripLatency") {
-  TRANSPARENT_HRUN();
-  HERMES->ClientInit();
+  TRANSPARENT_HERMES();
   hrun::small_message::Client client;
   HRUN_ADMIN->RegisterTaskLibRoot(hrun::DomainId::GetLocal(), "small_message");
 //  int count = 25;
@@ -271,7 +270,8 @@ TEST_CASE("TestRoundTripLatency") {
   size_t ops = (1 << 20);
   // size_t ops = 1024;
   for (size_t i = 0; i < ops; ++i) {
-    client.MdPushRoot(hrun::DomainId::GetLocal());
+    client.MdRoot(hrun::DomainId::GetLocal());
+    // client.MdPushRoot(hrun::DomainId::GetLocal());
   }
   t.Pause();
 

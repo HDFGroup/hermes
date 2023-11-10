@@ -276,6 +276,13 @@ class Worker {
     ProcessAffiner::SetCpuAffinity(pid_, affinity_);
   }
 
+  /** Make maximum priority process */
+  void MakeDedicated() {
+    int policy = SCHED_FIFO;
+    struct sched_param param = { .sched_priority = 1 };
+    sched_setscheduler(0, policy, &param);
+  }
+
   /** Worker yields for a period of time */
   void Yield() {
     if (flags_.Any(WORKER_CONTINUOUS_POLLING)) {
@@ -296,18 +303,21 @@ class Worker {
   void Loop() {
     pid_ = GetLinuxTid();
     SetCpuAffinity(affinity_);
+    if (IsContinuousPolling()) {
+      MakeDedicated();
+    }
     WorkOrchestrator *orchestrator = HRUN_WORK_ORCHESTRATOR;
     now_.Now();
     while (orchestrator->IsAlive()) {
-//      try {
+      try {
         flush_.pending_ = 0;
         Run();
         if (flush_.flushing_ && flush_.pending_ == 0) {
           flush_.flushing_ = false;
         }
-//      } catch (hshm::Error &e) {
-//        HELOG(kFatal, "(node {}) Worker {} caught an error: {}", HRUN_CLIENT->node_id_, id_, e.what());
-//      }
+      } catch (hshm::Error &e) {
+        HELOG(kFatal, "(node {}) Worker {} caught an error: {}", HRUN_CLIENT->node_id_, id_, e.what());
+      }
       if (!IsContinuousPolling()) {
         Yield();
       }

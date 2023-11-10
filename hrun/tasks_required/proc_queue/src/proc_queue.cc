@@ -48,6 +48,8 @@ class Server : public TaskLib {
           task->is_fire_forget_ = true;
         }
         MultiQueue *real_queue = HRUN_CLIENT->GetQueue(QueueId(ptr->task_state_));
+        task->SetModuleComplete();
+        return;
         real_queue->Emplace(ptr->prio_, ptr->lane_hash_, task->sub_run_.shm_);
         task->phase_ = PushTaskPhase::kWaitSchedule;
       }
