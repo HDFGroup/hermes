@@ -37,10 +37,10 @@ class Server : public TaskLib {
     ProcessAffiner affiner;
     std::vector<int> worker_pids = HRUN_WORK_ORCHESTRATOR->GetWorkerPids();
     std::vector<int> cpu_ids = HRUN_WORK_ORCHESTRATOR->GetWorkerCoresComplement();
-    HILOG(kInfo, "Affining {} processes to {} cores", worker_pids.size(), cpu_ids.size());
     affiner.IgnorePids(worker_pids);
     affiner.SetCpus(cpu_ids);
-    affiner.AffineAll();
+    int count = affiner.AffineAll();
+    HILOG(kInfo, "Affining {} processes to {} cores", count, cpu_ids.size());
   }
   void MonitorSchedule(u32 mode, ScheduleTask *task, RunContext &rctx) {
   }
