@@ -262,7 +262,7 @@ class Client : public ConfigurationManager {
   void FreeBuffer(hipc::Pointer &p) {
     auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(p.allocator_id_);
     alloc->Free(p);
-    HILOG(kInfo, "Heap size (1) for {}/{}: {}",
+    HILOG(kDebug, "Heap size (1) for {}/{}: {}",
           p.allocator_id_.bits_.major_,
           p.allocator_id_.bits_.minor_,
           data_alloc_->GetCurrentlyAllocatedSize());
@@ -273,7 +273,7 @@ class Client : public ConfigurationManager {
   void FreeBuffer(LPointer<char> &p) {
     auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(p.shm_.allocator_id_);
     alloc->FreeLocalPtr(p);
-    HILOG(kInfo, "Heap size (2) for {}/{}: {}",
+    HILOG(kDebug, "Heap size (2) for {}/{}: {}",
           alloc->GetId().bits_.major_,
           alloc->GetId().bits_.minor_,
           data_alloc_->GetCurrentlyAllocatedSize());

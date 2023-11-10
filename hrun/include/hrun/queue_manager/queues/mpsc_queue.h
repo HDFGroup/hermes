@@ -174,7 +174,7 @@ class mpsc_queue : public ShmContainer {
 
     // Check if there's space in the queue.
     if (size > queue.size()) {
-      HILOG(kInfo, "Queue {}/{} is full, waiting for space", id_, queue_->size());
+      HILOG(kDebug, "Queue {}/{} is full, waiting for space", id_, queue_->size());
       while (true) {
         head = head_.load();
         size = tail - head + 1;
