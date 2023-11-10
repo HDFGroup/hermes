@@ -34,7 +34,7 @@ class Server : public TaskLib {
 
   /** Schedule running processes */
   void Schedule(ScheduleTask *task, RunContext &rctx) {
-    HRUN_WORK_ORCHESTRATOR->DedicateCores();
+    // HRUN_WORK_ORCHESTRATOR->DedicateCores();
   }
   void MonitorSchedule(u32 mode, ScheduleTask *task, RunContext &rctx) {
   }
