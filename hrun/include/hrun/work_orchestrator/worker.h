@@ -348,6 +348,7 @@ class Worker {
   }
 
   /** Run an iteration over a particular queue */
+  HSHM_ALWAYS_INLINE
   void PollGrouped(WorkEntry &work_entry) {
     int off = 0;
     Lane *&lane = work_entry.lane_;
