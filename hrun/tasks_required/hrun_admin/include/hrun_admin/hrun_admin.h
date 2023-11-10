@@ -240,7 +240,8 @@ class Client : public TaskLibClient {
       if (!p.shm_.IsNull()) {
         break;
       }
-      FlushRoot(DomainId::GetLocal());
+      // FlushRoot(DomainId::GetLocal());
+      HRUN_CLIENT->Yield<TASK_YIELD_STD>();
       // HILOG(kInfo, "{} Could not allocate buffer of size {} (1)?", THREAD_MODEL, size);
     }
     return p;
