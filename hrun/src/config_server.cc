@@ -23,8 +23,14 @@ namespace hrun::config {
 
 /** parse work orchestrator info from YAML config */
 void ServerConfig::ParseWorkOrchestrator(YAML::Node yaml_conf) {
-  if (yaml_conf["max_workers"]) {
-    wo_.max_workers_ = yaml_conf["max_workers"].as<size_t>();
+  if (yaml_conf["max_dworkers"]) {
+    wo_.max_dworkers_ = yaml_conf["max_dworkers"].as<size_t>();
+  }
+  if (yaml_conf["max_oworkers"]) {
+    wo_.max_oworkers_ = yaml_conf["max_oworkers"].as<size_t>();
+  }
+  if (yaml_conf["owork_per_core"]) {
+    wo_.owork_per_core_ = yaml_conf["owork_per_core"].as<size_t>();
   }
 }
 

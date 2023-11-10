@@ -22,8 +22,12 @@ namespace hrun::config {
  * Work orchestrator information defined in server config
  * */
 struct WorkOrchestratorInfo {
-  /** Maximum number of workers to spawn */
-  size_t max_workers_;
+  /** Maximum number of dedicated workers */
+  size_t max_dworkers_;
+  /** Maximum number of overlapping workers */
+  size_t max_oworkers_;
+  /** Overlapped workers per core */
+  size_t owork_per_core_;
 };
 
 /**

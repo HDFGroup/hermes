@@ -173,7 +173,6 @@ class Worker {
     relinquish_queues_.Resize(1024);
     id_ = id;
     sleep_us_ = 0;
-    EnableContinuousPolling();
     retries_ = 1;
     pid_ = 0;
     thread_ = std::make_unique<std::thread>(&Worker::Loop, this);
@@ -262,6 +261,11 @@ class Worker {
     flags_.UnsetBits(WORKER_CONTINUOUS_POLLING);
   }
 
+  /** Check if continuously polling */
+  bool IsContinuousPolling() {
+    return flags_.Any(WORKER_CONTINUOUS_POLLING);
+  }
+
   /** Set the CPU affinity of this worker */
   void SetCpuAffinity(int cpu_id) {
     ProcessAffiner::SetCpuAffinity(pid_, cpu_id);
@@ -297,7 +301,9 @@ class Worker {
       } catch (hshm::Error &e) {
         HELOG(kFatal, "(node {}) Worker {} caught an error: {}", HRUN_CLIENT->node_id_, id_, e.what());
       }
-      // Yield();
+      if (!IsContinuousPolling()) {
+        Yield();
+      }
     }
     Run();
   }

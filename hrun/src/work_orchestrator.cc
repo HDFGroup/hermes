@@ -28,12 +28,23 @@ void WorkOrchestrator::ServerInit(ServerConfig *config, QueueManager &qm) {
   }
 
   // Spawn workers on the stream
-  size_t num_workers = config_->wo_.max_workers_;
+  size_t num_workers = config_->wo_.max_dworkers_ + config->wo_.max_oworkers_;
   workers_.reserve(num_workers);
-  for (u32 worker_id = 0; worker_id < num_workers; ++worker_id) {
+  int worker_id = 0;
+  u32 last_cpu = config_->wo_.max_dworkers_;
+  for (; worker_id < config_->wo_.max_dworkers_; ++worker_id) {
     workers_.emplace_back(std::make_unique<Worker>(worker_id, xstream_));
     Worker &worker = *workers_.back();
     worker.SetCpuAffinity(worker_id % HERMES_SYSTEM_INFO->ncpu_);
+    worker.EnableContinuousPolling();
+    dworkers_.emplace_back(&worker);
+  }
+  for (; worker_id < num_workers; ++worker_id) {
+    workers_.emplace_back(std::make_unique<Worker>(worker_id, xstream_));
+    Worker &worker = *workers_.back();
+    worker.SetCpuAffinity((int)(last_cpu + worker_id / config->wo_.owork_per_core_));
+    worker.DisableContinuousPolling();
+    oworkers_.emplace_back(&worker);
   }
   stop_runtime_ = false;
   kill_requested_ = false;
