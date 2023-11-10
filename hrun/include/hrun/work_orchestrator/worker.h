@@ -147,6 +147,7 @@ class Worker {
   ABT_thread tl_thread_;  /**< The worker argobots thread handle */
   int pthread_id_;      /**< The worker pthread handle */
   int pid_;             /**< The worker process id */
+  int affinity_;        /**< The worker CPU affinity */
   u32 numa_node_;       // TODO(llogan): track NUMA affinity
   ABT_xstream xstream_;
   std::vector<WorkEntry> work_queue_;  /**< The set of queues to poll */
@@ -161,6 +162,7 @@ class Worker {
       group_map_;        /** Determine if a task can be executed right now */
   hshm::charbuf group_;  /** The current group */
   WorkPending flush_;    /** Info needed for flushing ops */
+  hshm::Timepoint now_;  /** The current timepoint */
 
  public:
   /**===============================================================
@@ -168,13 +170,14 @@ class Worker {
    * =============================================================== */
 
   /** Constructor */
-  Worker(u32 id, ABT_xstream &xstream) {
+  Worker(u32 id, int cpu_id, ABT_xstream &xstream) {
     poll_queues_.Resize(1024);
     relinquish_queues_.Resize(1024);
     id_ = id;
     sleep_us_ = 0;
     retries_ = 1;
     pid_ = 0;
+    affinity_ = cpu_id;
     thread_ = std::make_unique<std::thread>(&Worker::Loop, this);
     pthread_id_ = thread_->native_handle();
     // TODO(llogan): implement reserve for group
@@ -268,8 +271,9 @@ class Worker {
 
   /** Set the CPU affinity of this worker */
   void SetCpuAffinity(int cpu_id) {
-    ProcessAffiner::SetCpuAffinity(pid_, cpu_id);
-    HILOG(kInfo, "Affining worker {} to {}", id_, cpu_id);
+    HILOG(kInfo, "Affining worker {} (pid={}) to {}", id_, pid_, cpu_id);
+    affinity_ = cpu_id;
+    ProcessAffiner::SetCpuAffinity(pid_, affinity_);
   }
 
   /** Worker yields for a period of time */
@@ -291,17 +295,19 @@ class Worker {
   /** Worker loop iteration */
   void Loop() {
     pid_ = GetLinuxTid();
+    SetCpuAffinity(affinity_);
     WorkOrchestrator *orchestrator = HRUN_WORK_ORCHESTRATOR;
+    now_.Now();
     while (orchestrator->IsAlive()) {
-      try {
+//      try {
         flush_.pending_ = 0;
         Run();
         if (flush_.flushing_ && flush_.pending_ == 0) {
           flush_.flushing_ = false;
         }
-      } catch (hshm::Error &e) {
-        HELOG(kFatal, "(node {}) Worker {} caught an error: {}", HRUN_CLIENT->node_id_, id_, e.what());
-      }
+//      } catch (hshm::Error &e) {
+//        HELOG(kFatal, "(node {}) Worker {} caught an error: {}", HRUN_CLIENT->node_id_, id_, e.what());
+//      }
       if (!IsContinuousPolling()) {
         Yield();
       }
@@ -317,18 +323,18 @@ class Worker {
     if (relinquish_queues_.size() > 0) {
       _RelinquishQueues();
     }
-    hshm::Timepoint now;
-    now.Now();
-    for (WorkEntry &work_entry : work_queue_) {
-//    if (!work_entry.lane_->flags_.Any(QUEUE_LOW_LATENCY)) {
-//      work_entry.count_ += 1;
-//      if (work_entry.count_ % 4096 != 0) {
-//        continue;
-//      }
-//    }
-      work_entry.cur_time_ = now;
-      PollGrouped(work_entry);
+    if (!IsContinuousPolling()) {
+      now_.Now();
+      for (WorkEntry &work_entry : work_queue_) {
+        work_entry.cur_time_ = now_;
+        PollGrouped(work_entry);
+      }
+    } else {
+      for (WorkEntry &work_entry : work_queue_) {
+        PollGrouped(work_entry);
+      }
     }
+
   }
 
   /** Run an iteration over a particular queue */

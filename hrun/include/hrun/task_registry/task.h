@@ -440,15 +440,14 @@ struct Task : public hipc::ShmContainer {
 
   /** Determine if time has elapsed */
   HSHM_ALWAYS_INLINE bool ShouldRun(hshm::Timepoint &cur_time, bool flushing) {
+    if (!IsLongRunning()) {
+      return true;
+    }
     if (!IsStarted() || flushing) {
       start_ = cur_time;
       return true;
     }
-    if (IsLongRunning()) {
-      return start_.GetNsecFromStart(cur_time) >= period_ns_;
-    } else {
-      return true;
-    }
+    return start_.GetNsecFromStart(cur_time) >= period_ns_;
   }
 
   /** Mark this task as having been run */

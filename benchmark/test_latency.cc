@@ -138,6 +138,7 @@ TEST_CASE("TestHshmQueueGetLane") {
 
 /** Single-thread performance of getting, emplacing, and popping a queue */
 TEST_CASE("TestHshmQueueAllocateEmplacePop") {
+  TRANSPARENT_HERMES();
   hrun::QueueId qid(0, 3);
   std::vector<PriorityInfo> queue_info = {
       {16, 16, 256, 0}

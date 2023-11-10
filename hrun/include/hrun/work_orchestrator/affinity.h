@@ -39,6 +39,7 @@ class ProcessAffiner {
  private:
   int n_cpu_;
   cpu_set_t *cpus_;
+  std::vector<int> ignore_pids_;
 
  public:
   ProcessAffiner() {
@@ -69,8 +70,18 @@ class ProcessAffiner {
     }
   }
 
+  inline void SetCpus(const std::vector<int> &cpu_ids) {
+    for (int cpu_id : cpu_ids) {
+      SetCpu(cpu_id);
+    }
+  }
+
   inline void ClearCpu(int cpu) {
     CPU_CLR(cpu, cpus_);
+  }
+
+  void IgnorePids(const std::vector<int> &pids) {
+    ignore_pids_ = pids;
   }
 
   inline void ClearCpus(int off, int len) {
@@ -98,10 +109,15 @@ class ProcessAffiner {
     // Iterate through all files and folders of /proc.
     while ((entry = readdir(procdir))) {
       // Skip anything that is not a PID folder.
-      if (!is_pid_folder(entry))
+      if (!is_pid_folder(entry)) {
         continue;
+      }
       // Get the PID of the running process
       int proc_pid = atoi(entry->d_name);
+      if (std::find(ignore_pids_.begin(), ignore_pids_.end(), proc_pid) !=
+          ignore_pids_.end()) {
+        continue;
+      }
       // Set the affinity of all running process to this mask
       count += Affine(proc_pid);
     }

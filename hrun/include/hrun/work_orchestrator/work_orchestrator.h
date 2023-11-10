@@ -51,6 +51,12 @@ class WorkOrchestrator {
   /** Get the number of workers */
   size_t GetNumWorkers();
 
+  /** Get all PIDs of active workers */
+  std::vector<int> GetWorkerPids();
+
+  /** Get the complement of worker cores */
+  std::vector<int> GetWorkerCoresComplement();
+
   /** Begin finalizing the runtime */
   HSHM_ALWAYS_INLINE
   void FinalizeRuntime() {

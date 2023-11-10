@@ -33,27 +33,27 @@ void WorkOrchestrator::ServerInit(ServerConfig *config, QueueManager &qm) {
   int worker_id = 0;
   u32 last_cpu = config_->wo_.max_dworkers_;
   for (; worker_id < config_->wo_.max_dworkers_; ++worker_id) {
-    workers_.emplace_back(std::make_unique<Worker>(worker_id, xstream_));
+    int cpu_id = worker_id % HERMES_SYSTEM_INFO->ncpu_;
+    workers_.emplace_back(std::make_unique<Worker>(worker_id, cpu_id, xstream_));
     Worker &worker = *workers_.back();
-    worker.SetCpuAffinity(worker_id % HERMES_SYSTEM_INFO->ncpu_);
     worker.EnableContinuousPolling();
     dworkers_.emplace_back(&worker);
   }
   for (; worker_id < num_workers; ++worker_id) {
-    workers_.emplace_back(std::make_unique<Worker>(worker_id, xstream_));
+    int cpu_id = (int)(last_cpu + (worker_id - last_cpu) / config->wo_.owork_per_core_);
+    workers_.emplace_back(std::make_unique<Worker>(worker_id, cpu_id, xstream_));
     Worker &worker = *workers_.back();
-    worker.SetCpuAffinity((int)(last_cpu + worker_id / config->wo_.owork_per_core_));
     worker.DisableContinuousPolling();
     oworkers_.emplace_back(&worker);
   }
   stop_runtime_ = false;
   kill_requested_ = false;
 
-  // Schedule admin queue on worker 0
+  // Schedule admin queue on first overlapping worker
   MultiQueue *admin_queue = qm.GetQueue(qm.admin_queue_);
   LaneGroup *admin_group = &admin_queue->GetGroup(0);
   for (u32 lane_id = 0; lane_id < admin_group->num_lanes_; ++lane_id) {
-    Worker &worker = *workers_[0];
+    Worker &worker = *oworkers_[0];
     worker.PollQueues({WorkEntry(0, lane_id, admin_queue)});
   }
   admin_group->num_scheduled_ = admin_group->num_lanes_;
@@ -78,6 +78,29 @@ Worker& WorkOrchestrator::GetWorker(u32 worker_id) {
 /** Get the number of workers */
 size_t WorkOrchestrator::GetNumWorkers() {
   return workers_.size();
+}
+
+/** Get all PIDs of active workers */
+std::vector<int> WorkOrchestrator::GetWorkerPids() {
+  std::vector<int> pids;
+  pids.reserve(workers_.size());
+  for (std::unique_ptr<Worker> &worker : workers_) {
+    pids.push_back(worker->pid_);
+  }
+  return pids;
+}
+
+/** Get the complement of worker cores */
+std::vector<int> WorkOrchestrator::GetWorkerCoresComplement() {
+  std::vector<int> cores;
+  cores.reserve(HERMES_SYSTEM_INFO->ncpu_);
+  for (int i = 0; i < HERMES_SYSTEM_INFO->ncpu_; ++i) {
+    cores.push_back(i);
+  }
+  for (std::unique_ptr<Worker> &worker : workers_) {
+    cores.erase(std::remove(cores.begin(), cores.end(), worker->affinity_), cores.end());
+  }
+  return cores;
 }
 
 }  // namespace hrun
