@@ -269,6 +269,7 @@ class Worker {
   /** Set the CPU affinity of this worker */
   void SetCpuAffinity(int cpu_id) {
     ProcessAffiner::SetCpuAffinity(pid_, cpu_id);
+    HILOG(kInfo, "Affining worker {} to {}", id_, cpu_id);
   }
 
   /** Worker yields for a period of time */
