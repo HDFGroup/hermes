@@ -232,6 +232,7 @@ class TaskPrio {
   TASK_PRIO_T kAdmin = 0;
   TASK_PRIO_T kLongRunning = 1;
   TASK_PRIO_T kLowLatency = 2;
+  TASK_PRIO_T kHighLatency = 3;
 };
 
 
