@@ -184,7 +184,7 @@ struct WriteTask : public Task, TaskFlags<TF_LOCAL> {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = disk_off;
-    if (size < KILOBYTES(4)) {
+    if (size < KILOBYTES(8)) {
       prio_ = TaskPrio::kLowLatency;
     } else {
       prio_ = TaskPrio::kHighLatency;
