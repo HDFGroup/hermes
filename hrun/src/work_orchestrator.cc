@@ -31,16 +31,20 @@ void WorkOrchestrator::ServerInit(ServerConfig *config, QueueManager &qm) {
   size_t num_workers = config_->wo_.max_dworkers_ + config->wo_.max_oworkers_;
   workers_.reserve(num_workers);
   int worker_id = 0;
-  u32 last_cpu = config_->wo_.max_dworkers_;
-  for (; worker_id < config_->wo_.max_dworkers_; ++worker_id) {
-    int cpu_id = worker_id % HERMES_SYSTEM_INFO->ncpu_;
+  u32 num_dworkers = config_->wo_.max_dworkers_ + 1;
+  for (; worker_id < num_dworkers; ++worker_id) {
+    int cpu_id = worker_id;
     workers_.emplace_back(std::make_unique<Worker>(worker_id, cpu_id, xstream_));
     Worker &worker = *workers_.back();
     worker.EnableContinuousPolling();
-    dworkers_.emplace_back(&worker);
+    if (worker_id > 0) {
+      dworkers_.emplace_back(&worker);
+    } else {
+      admin_worker_ = &worker;
+    }
   }
   for (; worker_id < num_workers; ++worker_id) {
-    int cpu_id = (int)(last_cpu + (worker_id - last_cpu) / config->wo_.owork_per_core_);
+    int cpu_id = (int)(num_dworkers + (worker_id - num_dworkers) / config->wo_.owork_per_core_);
     workers_.emplace_back(std::make_unique<Worker>(worker_id, cpu_id, xstream_));
     Worker &worker = *workers_.back();
     worker.DisableContinuousPolling();
@@ -68,8 +72,7 @@ void WorkOrchestrator::ServerInit(ServerConfig *config, QueueManager &qm) {
   MultiQueue *admin_queue = qm.GetQueue(qm.admin_queue_);
   LaneGroup *admin_group = &admin_queue->GetGroup(0);
   for (u32 lane_id = 0; lane_id < admin_group->num_lanes_; ++lane_id) {
-    Worker &worker = *oworkers_[0];
-    worker.PollQueues({WorkEntry(0, lane_id, admin_queue)});
+    admin_worker_->PollQueues({WorkEntry(0, lane_id, admin_queue)});
   }
   admin_group->num_scheduled_ = admin_group->num_lanes_;
 

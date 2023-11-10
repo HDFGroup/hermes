@@ -28,6 +28,7 @@ class WorkOrchestrator {
   std::vector<std::unique_ptr<Worker>> workers_;  /**< Workers execute tasks */
   std::vector<Worker*> dworkers_;   /**< Core-dedicated workers */
   std::vector<Worker*> oworkers_;   /**< Undedicated workers */
+  Worker* admin_worker_;   /**< Constantly polled admin worker */
   std::atomic<bool> stop_runtime_;  /**< Begin killing the runtime */
   std::atomic<bool> kill_requested_;  /**< Kill flushing threads eventually */
   ABT_xstream xstream_;
