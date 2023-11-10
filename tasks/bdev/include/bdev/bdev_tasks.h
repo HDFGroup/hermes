@@ -184,11 +184,7 @@ struct WriteTask : public Task, TaskFlags<TF_LOCAL> {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = disk_off;
-    if (size < KILOBYTES(8)) {
-      prio_ = TaskPrio::kLowLatency;
-    } else {
-      prio_ = TaskPrio::kHighLatency;
-    }
+    prio_ = TaskPrio::kHighLatency;
     task_state_ = state_id;
     method_ = Method::kWrite;
     task_flags_.SetBits(TASK_UNORDERED | TASK_REMOTE_DEBUG_MARK);
@@ -233,7 +229,11 @@ struct ReadTask : public Task, TaskFlags<TF_LOCAL> {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = disk_off;
-    prio_ = TaskPrio::kLowLatency;
+    if (size < KILOBYTES(8)) {
+      prio_ = TaskPrio::kLowLatency;
+    } else {
+      prio_ = TaskPrio::kHighLatency;
+    }
     task_state_ = state_id;
     method_ = Method::kRead;
     task_flags_.SetBits(TASK_UNORDERED | TASK_REMOTE_DEBUG_MARK);
