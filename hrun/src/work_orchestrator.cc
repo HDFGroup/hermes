@@ -28,21 +28,23 @@ void WorkOrchestrator::ServerInit(ServerConfig *config, QueueManager &qm) {
   }
 
   // Spawn workers on the stream
-  size_t num_workers = config_->wo_.max_dworkers_ + config->wo_.max_oworkers_;
+  size_t num_workers = config_->wo_.max_dworkers_ + config->wo_.max_oworkers_ + 1;
   workers_.reserve(num_workers);
   int worker_id = 0;
-  u32 num_dworkers = config_->wo_.max_dworkers_ + 1;
+  // Spawn admin worker
+  workers_.emplace_back(std::make_unique<Worker>(worker_id, 0, xstream_));
+  admin_worker_ = workers_.back().get();
+  ++worker_id;
+  // Spawn dedicated workers (dworkers)
+  u32 num_dworkers = config_->wo_.max_dworkers_;
   for (; worker_id < num_dworkers; ++worker_id) {
     int cpu_id = worker_id;
     workers_.emplace_back(std::make_unique<Worker>(worker_id, cpu_id, xstream_));
     Worker &worker = *workers_.back();
     worker.EnableContinuousPolling();
-    if (worker_id > 0) {
-      dworkers_.emplace_back(&worker);
-    } else {
-      admin_worker_ = &worker;
-    }
+    dworkers_.emplace_back(&worker);
   }
+  // Spawn overlapped workers (oworkers)
   for (; worker_id < num_workers; ++worker_id) {
     int cpu_id = (int)(num_dworkers + (worker_id - num_dworkers) / config->wo_.owork_per_core_);
     workers_.emplace_back(std::make_unique<Worker>(worker_id, cpu_id, xstream_));
