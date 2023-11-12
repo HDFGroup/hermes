@@ -77,6 +77,7 @@ void GetTest(int nprocs, int rank,
 void PutGetTest(int nprocs, int rank, int repeat,
                 size_t blobs_per_rank, size_t blob_size) {
   PutTest(nprocs, rank, repeat, blobs_per_rank, blob_size);
+  HILOG(kInfo, "Beginning barrier")
   MPI_Barrier(MPI_COMM_WORLD);
   HILOG(kInfo, "Beginning flushing")
   HRUN_ADMIN->FlushRoot(DomainId::GetGlobal());
