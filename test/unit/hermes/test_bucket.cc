@@ -673,27 +673,34 @@ TEST_CASE("TestHermesDataPlacement") {
   size_t proc_count = off + count_per_proc;
 
   // Put a few blobs in the bucket
+  HILOG(kInfo, "Initially placing blobs")
   for (size_t i = off; i < proc_count; ++i) {
       HILOG(kInfo, "Iteration: {}", i);
       hermes::Blob blob(MEGABYTES(1));
       memset(blob.data(), i % 256, blob.size());
       bkt.AsyncPut(std::to_string(i), blob, ctx);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
   sleep(5);
 
+
   // Demote half of blobs
+  HILOG(kInfo, "Demoting blobs")
   for (size_t i = off; i < proc_count - count_per_proc; ++i) {
     HILOG(kInfo, "Iteration: {}", i);
     hermes::BlobId blob_id = bkt.GetBlobId(std::to_string(i));
     bkt.ReorganizeBlob(blob_id, .5, 0, ctx);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
   sleep(5);
 
   // Promote half of blobs
+  HILOG(kInfo, "Promoting blobs")
   for (size_t i = off; i < proc_count - count_per_proc; ++i) {
     HILOG(kInfo, "Iteration: {}", i);
     hermes::BlobId blob_id = bkt.GetBlobId(std::to_string(i));
     bkt.ReorganizeBlob(blob_id, 1, 0, ctx);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
   sleep(5);
 }
