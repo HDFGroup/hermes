@@ -443,7 +443,7 @@ class Worker {
         } else {
           flush_.pending_ += 1;
         }
-        if (pend_prior == flush_.pending_) {
+        if (pend_prior != flush_.pending_) {
           HILOG(kInfo, "(node {}) Pending on task={} state={} method={}",
                 HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, task->method_)
         }
