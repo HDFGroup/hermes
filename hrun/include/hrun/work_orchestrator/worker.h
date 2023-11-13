@@ -444,8 +444,9 @@ class Worker {
           flush_.pending_ += 1;
         }
         if (pend_prior != flush_.pending_) {
-          HILOG(kInfo, "(node {}) Pending on task={} state={} method={}",
-                HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, task->method_)
+          HILOG(kInfo, "(node {}) Pending on task={} state={} method={} is_remote={}",
+                HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, task->method_,
+                is_remote)
         }
       }
       // Cleanup on task completion
