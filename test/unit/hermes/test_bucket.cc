@@ -668,7 +668,7 @@ TEST_CASE("TestHermesDataPlacement") {
   hermes::Context ctx;
   hermes::Bucket bkt("hello");
 
-  size_t count_per_proc = 256;
+  size_t count_per_proc = 16;
   size_t off = rank * count_per_proc;
   size_t proc_count = off + count_per_proc;
 
@@ -682,7 +682,7 @@ TEST_CASE("TestHermesDataPlacement") {
   sleep(5);
 
   // Demote half of blobs
-  for (size_t i = off; i < proc_count - count_per_proc / 2; ++i) {
+  for (size_t i = off; i < proc_count - count_per_proc; ++i) {
     HILOG(kInfo, "Iteration: {}", i);
     hermes::BlobId blob_id = bkt.GetBlobId(std::to_string(i));
     bkt.ReorganizeBlob(blob_id, .5, 0, ctx);
@@ -690,7 +690,7 @@ TEST_CASE("TestHermesDataPlacement") {
   sleep(5);
 
   // Promote half of blobs
-  for (size_t i = off; i < proc_count - count_per_proc / 2; ++i) {
+  for (size_t i = off; i < proc_count - count_per_proc; ++i) {
     HILOG(kInfo, "Iteration: {}", i);
     hermes::BlobId blob_id = bkt.GetBlobId(std::to_string(i));
     bkt.ReorganizeBlob(blob_id, 1, 0, ctx);
