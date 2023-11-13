@@ -437,10 +437,15 @@ class Worker {
       }
       // Verify tasks
       if (flush_.flushing_ && !task->IsModuleComplete() && !task->IsFlush()) {
+        int pend_prior = flush_.pending_;
         if (task->IsLongRunning()) {
           exec->Monitor(MonitorMode::kFlushStat, task, rctx);
         } else {
           flush_.pending_ += 1;
+        }
+        if (pend_prior == flush_.pending_) {
+          HILOG(kInfo, "(node {}) Pending on task={} state={} method={}",
+                HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, task->method_)
         }
       }
       // Cleanup on task completion
