@@ -686,7 +686,7 @@ TEST_CASE("TestHermesDataPlacement") {
 
   // Demote half of blobs
   HILOG(kInfo, "Demoting blobs")
-  for (size_t i = off; i < proc_count - count_per_proc; ++i) {
+  for (size_t i = off; i < proc_count; ++i) {
     HILOG(kInfo, "Iteration: {}", i);
     hermes::BlobId blob_id = bkt.GetBlobId(std::to_string(i));
     bkt.ReorganizeBlob(blob_id, .5, 0, ctx);
@@ -696,7 +696,7 @@ TEST_CASE("TestHermesDataPlacement") {
 
   // Promote half of blobs
   HILOG(kInfo, "Promoting blobs")
-  for (size_t i = off; i < proc_count - count_per_proc; ++i) {
+  for (size_t i = off; i < proc_count; ++i) {
     HILOG(kInfo, "Iteration: {}", i);
     hermes::BlobId blob_id = bkt.GetBlobId(std::to_string(i));
     bkt.ReorganizeBlob(blob_id, 1, 0, ctx);
