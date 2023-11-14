@@ -618,7 +618,7 @@ class Server : public TaskLib {
       blob_info.tag_id_ = tag_id;
       blob_info.blob_size_ = 0;
       blob_info.max_blob_size_ = 0;
-      blob_info.score_ = 0;
+      blob_info.score_ = 1;
       blob_info.mod_count_ = 0;
       blob_info.access_freq_ = 0;
       blob_info.last_flush_ = 0;
