@@ -845,10 +845,10 @@ class Server : public TaskLib {
         } else {
           blob_info.score_ = task->score_;
         }
-        if (!ShouldReorganize(blob_info, task->score_, task->task_node_)) {
-          task->SetModuleComplete();
-          return;
-        }
+//        if (!ShouldReorganize(blob_info, task->score_, task->task_node_)) {
+//          task->SetModuleComplete();
+//          return;
+//        }
         task->data_ = HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_STD>(
             blob_info.blob_size_, task).shm_;
         task->data_size_ = blob_info.blob_size_;
