@@ -749,7 +749,7 @@ TEST_CASE("TestHermesDataPlacementFancy") {
       bkt.ReorganizeBlob(blob_id, scores[score_id], 0, ctx);
     }
     MPI_Barrier(MPI_COMM_WORLD);
-    sleep(20);
+    sleep(5);
     count += 1;
   }
 }
