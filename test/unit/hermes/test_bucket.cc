@@ -705,3 +705,51 @@ TEST_CASE("TestHermesDataPlacement") {
     sleep(20);
   }
 }
+
+TEST_CASE("TestHermesDataPlacementFancy") {
+  int rank, nprocs;
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+
+  // Initialize Hermes on all nodes
+  HERMES->ClientInit();
+
+  // Create a bucket
+  hermes::Context ctx;
+  hermes::Bucket bkt("hello");
+
+  size_t count_per_proc = 16;
+  size_t off = rank * count_per_proc;
+  size_t proc_count = off + count_per_proc;
+
+  // Put a few blobs in the bucket
+  HILOG(kInfo, "Initially placing blobs")
+  for (size_t i = off; i < proc_count; ++i) {
+    HILOG(kInfo, "Iteration: {}", i);
+    hermes::Blob blob(MEGABYTES(1));
+    memset(blob.data(), i % 256, blob.size());
+    bkt.AsyncPut(std::to_string(i), blob, ctx);
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+  sleep(20);
+
+  std::vector<float> scores = {
+      1.0, .5, .01, 0
+  };
+  int count = 0;
+
+  while (true) {
+    int score_id = count % scores.size();
+    // Demote half of blobs
+    HILOG(kInfo, "Demoting blobs")
+    for (size_t i = off; i < proc_count; ++i) {
+      HILOG(kInfo, "Iteration: {}", i);
+      hermes::BlobId blob_id = bkt.GetBlobId(std::to_string(i));
+      bkt.ReorganizeBlob(blob_id, scores[score_id], 0, ctx);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    sleep(20);
+    count += 1;
+  }
+}
