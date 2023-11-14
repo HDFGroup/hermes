@@ -325,8 +325,10 @@ struct BlobInfo {
   }
 
   /** Get name as std::string */
-  std::string GetName() {
-    return name_.str();
+  std::vector<char> GetName() {
+    std::vector<char> data(name_.size());
+    memcpy(data.data(), name_.data(), name_.size());
+    return data;
   }
 };
 
@@ -348,8 +350,10 @@ struct TagInfo {
   }
 
   /** Get std::string of name */
-  std::string GetName() {
-    return name_.str();
+  std::vector<char> GetName() {
+    std::vector<char> data(name_.size());
+    memcpy(data.data(), name_.data(), name_.size());
+    return data;
   }
 };
 
