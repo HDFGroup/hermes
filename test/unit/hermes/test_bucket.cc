@@ -681,7 +681,7 @@ TEST_CASE("TestHermesDataPlacement") {
       bkt.AsyncPut(std::to_string(i), blob, ctx);
   }
   MPI_Barrier(MPI_COMM_WORLD);
-  sleep(5);
+  sleep(20);
 
 
   // Demote half of blobs
@@ -692,7 +692,7 @@ TEST_CASE("TestHermesDataPlacement") {
     bkt.ReorganizeBlob(blob_id, .5, 0, ctx);
   }
   MPI_Barrier(MPI_COMM_WORLD);
-  sleep(5);
+  sleep(20);
 
   // Promote half of blobs
   HILOG(kInfo, "Promoting blobs")
@@ -702,5 +702,5 @@ TEST_CASE("TestHermesDataPlacement") {
     bkt.ReorganizeBlob(blob_id, 1, 0, ctx);
   }
   MPI_Barrier(MPI_COMM_WORLD);
-  sleep(5);
+  sleep(20);
 }
