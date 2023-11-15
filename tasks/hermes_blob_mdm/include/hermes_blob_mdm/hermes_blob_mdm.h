@@ -94,7 +94,7 @@ class Client : public TaskLibClient {
                                        const TaskNode &task_node,
                                        TagId tag_id,
                                        const hshm::charbuf &blob_name) {
-    u32 hash = std::hash<hshm::charbuf>{}(blob_name);
+    u32 hash = HashBlobName(tag_id, blob_name);
     HRUN_CLIENT->ConstructTask<GetOrCreateBlobIdTask>(
         task, task_node, DomainId::GetNode(HASH_TO_NODE_ID(hash)), id_,
         tag_id, blob_name);
@@ -187,11 +187,12 @@ class Client : public TaskLibClient {
                                     const BlobId &blob_id,
                                     float score,
                                     u32 node_id,
-                                    bool user_score) {
+                                    bool user_score,
+                                    u32 task_flags = TASK_LOW_LATENCY | TASK_FIRE_AND_FORGET) {
     // HILOG(kDebug, "Beginning REORGANIZE (task_node={})", task_node);
     HRUN_CLIENT->ConstructTask<ReorganizeBlobTask>(
         task, task_node, DomainId::GetNode(blob_id.node_id_), id_,
-        tag_id, blob_id, score, node_id, user_score);
+        tag_id, blob_id, score, node_id, user_score, task_flags);
   }
   HRUN_TASK_NODE_PUSH_ROOT(ReorganizeBlob);
 
@@ -252,7 +253,7 @@ class Client : public TaskLibClient {
                                const TaskNode &task_node,
                                const TagId &tag_id,
                                const hshm::charbuf &blob_name) {
-    u32 hash = std::hash<hshm::charbuf>{}(blob_name);
+    u32 hash = HashBlobName(tag_id, blob_name);
     HRUN_CLIENT->ConstructTask<GetBlobIdTask>(
         task, task_node, DomainId::GetNode(HASH_TO_NODE_ID(hash)), id_,
         tag_id, blob_name);

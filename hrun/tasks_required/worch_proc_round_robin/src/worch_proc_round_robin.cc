@@ -34,11 +34,7 @@ class Server : public TaskLib {
 
   /** Schedule running processes */
   void Schedule(ScheduleTask *task, RunContext &rctx) {
-    int rr = 0;
-    for (std::unique_ptr<Worker> &worker : HRUN_WORK_ORCHESTRATOR->workers_) {
-      worker->SetCpuAffinity(rr % HERMES_SYSTEM_INFO->ncpu_);
-      ++rr;
-    }
+    // HRUN_WORK_ORCHESTRATOR->DedicateCores();
   }
   void MonitorSchedule(u32 mode, ScheduleTask *task, RunContext &rctx) {
   }

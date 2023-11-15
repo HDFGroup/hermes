@@ -241,7 +241,10 @@ class FilesystemTests {
     if (fd == -1) {
       HELOG(kFatal, "Failed to open file: {}", path);
     }
-    write(fd, data.data(), data.size());
+    int ret = write(fd, data.data(), data.size());
+    if (ret != data.size()) {
+      return;
+    }
     close(fd);
     REQUIRE(stdfs::file_size(path) == data.size());
   }

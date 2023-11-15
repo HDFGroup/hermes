@@ -86,6 +86,15 @@ if(PkgConfig)
     message(STATUS "found pkg config")
 endif()
 
+# LIBAIO
+find_library(LIBAIO_LIBRARY NAMES aio)
+if(LIBAIO_LIBRARY)
+    message(STATUS "found libaio at ${LIBAIO_LIBRARY}")
+else()
+    set(LIBAIO_LIBRARY aio)
+    message(STATUS "Assuming it was installed with our aio spack")
+endif()
+
 # Zeromq
 #pkg_check_modules(ZMQ REQUIRED libzmq)
 #include_directories(${ZMQ_INCLUDE_DIRS})

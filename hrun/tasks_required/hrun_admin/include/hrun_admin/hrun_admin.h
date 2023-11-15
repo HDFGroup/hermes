@@ -226,6 +226,26 @@ class Client : public TaskLibClient {
     HRUN_CLIENT->DelTask(task);
   }
   HRUN_TASK_NODE_ADMIN_ROOT(Flush);
+
+  /** Allocate a buffer */
+  HSHM_ALWAYS_INLINE
+  LPointer<char> AllocateBufferClient(size_t size) {
+    LPointer<char> p;
+    while (true) {
+      try {
+        p = HRUN_CLIENT->data_alloc_->AllocateLocalPtr<char>(size);
+      } catch (hshm::Error &e) {
+        p.shm_.SetNull();
+      }
+      if (!p.shm_.IsNull()) {
+        break;
+      }
+      // FlushRoot(DomainId::GetLocal());
+      HRUN_CLIENT->Yield<TASK_YIELD_STD>();
+      // HILOG(kInfo, "{} Could not allocate buffer of size {} (1)?", THREAD_MODEL, size);
+    }
+    return p;
+  }
 };
 
 }  // namespace hrun::Admin

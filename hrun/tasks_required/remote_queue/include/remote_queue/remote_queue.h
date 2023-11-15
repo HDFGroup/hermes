@@ -32,6 +32,7 @@ class Client : public TaskLibClient {
                                       const TaskStateId &state_id) {
     id_ = state_id;
     QueueManagerInfo &qm = HRUN_CLIENT->server_config_.queue_manager_;
+    // NOTE(llogan): 32x queue depth b/c default num rpc threads is 32
     std::vector<PriorityInfo> queue_info = {
         {1, 1, qm.queue_depth_, 0},
         {1, 1, qm.queue_depth_, QUEUE_LONG_RUNNING},
@@ -78,7 +79,7 @@ class Client : public TaskLibClient {
         orig_task->task_node_ + 1, DomainId::GetLocal(), id_,
         domain_ids, orig_task, exec, orig_task->method_, xfer);
     MultiQueue *queue = HRUN_CLIENT->GetQueue(queue_id_);
-    queue->Emplace(TaskPrio::kLowLatency, orig_task->lane_hash_, push_task.shm_);
+    queue->Emplace(push_task->prio_, orig_task->lane_hash_, push_task.shm_);
     HILOG(kDebug, "Did dispersion for (task_node={}, task_state={}, method={})",
           orig_task->task_node_ + 1, orig_task->task_state_, orig_task->method_)
   }
@@ -106,7 +107,7 @@ class Client : public TaskLibClient {
         orig_task->task_node_ + 1, id_,
         orig_task, exec, orig_task->method_, dups);
     MultiQueue *queue = HRUN_CLIENT->GetQueue(queue_id_);
-    queue->Emplace(TaskPrio::kLowLatency, orig_task->lane_hash_, dup_task.shm_);
+    queue->Emplace(dup_task->prio_, orig_task->lane_hash_, dup_task.shm_);
   }
 
   /** Spawn task to accept new connections */

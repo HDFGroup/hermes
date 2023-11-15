@@ -26,6 +26,9 @@ class WorkOrchestrator {
  public:
   ServerConfig *config_;  /**< The server configuration */
   std::vector<std::unique_ptr<Worker>> workers_;  /**< Workers execute tasks */
+  std::vector<Worker*> dworkers_;   /**< Core-dedicated workers */
+  std::vector<Worker*> oworkers_;   /**< Undedicated workers */
+  Worker* admin_worker_;   /**< Constantly polled admin worker */
   std::atomic<bool> stop_runtime_;  /**< Begin killing the runtime */
   std::atomic<bool> kill_requested_;  /**< Kill flushing threads eventually */
   ABT_xstream xstream_;
@@ -48,6 +51,15 @@ class WorkOrchestrator {
 
   /** Get the number of workers */
   size_t GetNumWorkers();
+
+  /** Get all PIDs of active workers */
+  std::vector<int> GetWorkerPids();
+
+  /** Get the complement of worker cores */
+  std::vector<int> GetWorkerCoresComplement();
+
+  /** Begin dedicating core s*/
+  void DedicateCores();
 
   /** Begin finalizing the runtime */
   HSHM_ALWAYS_INLINE

@@ -226,7 +226,7 @@ class Bucket {
     bitfield32_t flags, task_flags(
         TASK_FIRE_AND_FORGET | TASK_DATA_OWNER | TASK_LOW_LATENCY);
     // Copy data to shared memory
-    LPointer<char> p = HRUN_CLIENT->AllocateBuffer<TASK_YIELD_STD>(blob.size());
+    LPointer<char> p = HRUN_ADMIN->AllocateBufferClient(blob.size());
     char *data = p.ptr_;
     memcpy(data, blob.data(), blob.size());
     // Put to shared memory
@@ -378,7 +378,7 @@ class Bucket {
    * Append \a blob_name Blob into the bucket (fully asynchronous)
    * */
   void Append(const Blob &blob, size_t page_size, Context &ctx) {
-    LPointer<char> p = HRUN_CLIENT->AllocateBuffer<TASK_YIELD_STD>(blob.size());
+    LPointer<char> p = HRUN_ADMIN->AllocateBufferClient(blob.size());
     char *data = p.ptr_;
     memcpy(data, blob.data(), blob.size());
     bkt_mdm_->AppendBlobRoot(
@@ -445,7 +445,7 @@ class Bucket {
     }
     // Get from shared memory
     size_t data_size = blob.size();
-    LPointer data_p = HRUN_CLIENT->AllocateBuffer<TASK_YIELD_STD>(data_size);
+    LPointer data_p = HRUN_ADMIN->AllocateBufferClient(blob.size());
     LPointer<hrunpq::TypedPushTask<GetBlobTask>> push_task;
     push_task = blob_mdm_->AsyncGetBlobRoot(id_, hshm::to_charbuf(blob_name),
                                             blob_id, blob_off,

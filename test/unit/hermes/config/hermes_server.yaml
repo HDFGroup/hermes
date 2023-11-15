@@ -90,8 +90,9 @@ system_view_state_update_interval_ms: 1000
 
 ### Runtime orchestration settings
 work_orchestrator:
-  # The number of worker threads to spawn
-  max_workers: 4
+  max_dworkers: 4
+  max_oworkers: 32
+  owork_per_core: 32
 
 ### Queue Manager settings
 queue_manager:

@@ -54,7 +54,7 @@ class BinaryFileStager : public AbstractStager {
     plcmnt.DecodeBlobName(*task->blob_name_, page_size_);
     HILOG(kDebug, "Attempting to stage {} bytes from the backend file {} at offset {}",
           page_size_, url_, plcmnt.bucket_off_);
-    LPointer<char> blob = HRUN_CLIENT->AllocateBuffer<TASK_YIELD_STD>(page_size_);
+    LPointer<char> blob = HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_STD>(page_size_);
     fd_ = HERMES_POSIX_API->open(path_.c_str(), O_CREAT | O_RDWR, 0666);
     if (fd_ < 0) {
       HELOG(kError, "Failed to open file {}", path_);

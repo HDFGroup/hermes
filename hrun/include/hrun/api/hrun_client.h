@@ -242,64 +242,49 @@ class Client : public ConfigurationManager {
   /** Allocate a buffer in a task */
   template<int THREAD_MODEL>
   HSHM_ALWAYS_INLINE
-  LPointer<char> AllocateBuffer(size_t size, Task *yield_task) {
+  LPointer<char> AllocateBufferServer(size_t size, Task *yield_task) {
     LPointer<char> p;
-    // HILOG(kInfo, "Heap size: {}", data_alloc_->GetCurrentlyAllocatedSize());
-    while (true) {
-      try {
-        p = data_alloc_->AllocateLocalPtr<char>(size);
-      } catch (...) {
-        p.shm_.SetNull();
-      }
-      if (!p.shm_.IsNull()) {
-        break;
-      }
-      HILOG(kInfo, "{} Could not allocate buffer of size {} (2)?", THREAD_MODEL, size);
-      Yield<THREAD_MODEL>(yield_task);
-    }
+    p = main_alloc_->AllocateLocalPtr<char>(size);
     return p;
   }
 
   /** Allocate a buffer */
   template<int THREAD_MODEL>
   HSHM_ALWAYS_INLINE
-  LPointer<char> AllocateBuffer(size_t size) {
-    // HILOG(kInfo, "{} Heap size: {}", THREAD_MODEL, data_alloc_->GetCurrentlyAllocatedSize());
+  LPointer<char> AllocateBufferServer(size_t size) {
     LPointer<char> p;
-    while (true) {
-      try {
-        p = data_alloc_->AllocateLocalPtr<char>(size);
-      } catch (...) {
-        p.shm_.SetNull();
-      }
-      if (!p.shm_.IsNull()) {
-        break;
-      }
-      Yield<THREAD_MODEL>();
-      HILOG(kInfo, "{} Could not allocate buffer of size {} (1)?", THREAD_MODEL, size);
-    }
+    p = main_alloc_->AllocateLocalPtr<char>(size);
     return p;
   }
 
   /** Free a buffer */
   HSHM_ALWAYS_INLINE
   void FreeBuffer(hipc::Pointer &p) {
-    // HILOG(kInfo, "Heap size: {}", data_alloc_->GetCurrentlyAllocatedSize());
-    data_alloc_->Free(p);
+    auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(p.allocator_id_);
+    alloc->Free(p);
+    HILOG(kDebug, "Heap size (1) for {}/{}: {}",
+          p.allocator_id_.bits_.major_,
+          p.allocator_id_.bits_.minor_,
+          data_alloc_->GetCurrentlyAllocatedSize());
   }
 
   /** Free a buffer */
   HSHM_ALWAYS_INLINE
   void FreeBuffer(LPointer<char> &p) {
-    // HILOG(kInfo, "Heap size: {}", data_alloc_->GetCurrentlyAllocatedSize());
-    data_alloc_->FreeLocalPtr(p);
+    auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(p.shm_.allocator_id_);
+    alloc->FreeLocalPtr(p);
+    HILOG(kDebug, "Heap size (2) for {}/{}: {}",
+          alloc->GetId().bits_.major_,
+          alloc->GetId().bits_.minor_,
+          data_alloc_->GetCurrentlyAllocatedSize());
   }
 
   /** Convert pointer to char* */
   template<typename T = char>
   HSHM_ALWAYS_INLINE
   T* GetDataPointer(const hipc::Pointer &p) {
-    return data_alloc_->Convert<T, hipc::Pointer>(p);
+    auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(p.allocator_id_);
+    return alloc->Convert<T, hipc::Pointer>(p);
   }
 
   /** Get a queue by its ID */

@@ -21,6 +21,9 @@ class Client : public TaskLibClient {
   double bandwidth_;    /**< the bandwidth of the device */
   double latency_;      /**< the latency of the device */
   float score_;         /**< Relative importance of this tier */
+  float bw_score_;       /**< Relative importance of this tier */
+  f32 borg_min_thresh_;  /**< Capacity percentage too low */
+  f32 borg_max_thresh_;  /**< Capacity percentage too high */
 
  public:
   Client() : score_(0) {}
@@ -31,6 +34,8 @@ class Client : public TaskLibClient {
     bandwidth_ = dev_info.bandwidth_;
     latency_ = dev_info.latency_;
     score_ = 0;
+    borg_min_thresh_ = dev_info.borg_min_thresh_;
+    borg_max_thresh_ = dev_info.borg_max_thresh_;
   }
 
   /** Async create task state */
@@ -47,7 +52,8 @@ class Client : public TaskLibClient {
     std::vector<PriorityInfo> queue_info = {
         {1, 1, qm.queue_depth_, 0},
         {1, 1, qm.queue_depth_, QUEUE_LONG_RUNNING},
-        {4, 4, qm.queue_depth_, QUEUE_LOW_LATENCY}
+        {qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY},
+        {qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, 0}
     };
     return HRUN_ADMIN->AsyncCreateTaskState<ConstructTask>(
         task_node, domain_id, state_name, lib_name, id_,
@@ -153,15 +159,15 @@ class Client : public TaskLibClient {
 class Server {
  public:
   ssize_t rem_cap_;       /**< Remaining capacity */
-  // Histogram score_hist_;  /**< Score distribution */
+  Histogram score_hist_;  /**< Score distribution */
 
  public:
   /** Update the blob score in this tier */
   void UpdateScore(UpdateScoreTask *task, RunContext &ctx) {
-//    if (task->old_score_ >= 0) {
-//      score_hist_.Decrement(task->old_score_);
-//    }
-//    score_hist_.Increment(task->new_score_);
+    if (task->old_score_ >= 0) {
+      score_hist_.Decrement(task->old_score_);
+    }
+    score_hist_.Increment(task->new_score_);
   }
   void MonitorUpdateScore(u32 mode, UpdateScoreTask *task, RunContext &ctx) {
   }
@@ -169,7 +175,7 @@ class Server {
   /** Stat capacity and scores */
   void StatBdev(StatBdevTask *task, RunContext &ctx) {
     task->rem_cap_ = rem_cap_;
-//    task->score_hist_ = score_hist_;
+    task->score_hist_ = score_hist_;
   }
   void MonitorStatBdev(u32 mode, StatBdevTask *task, RunContext &ctx) {
   }

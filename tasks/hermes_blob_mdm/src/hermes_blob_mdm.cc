@@ -46,6 +46,7 @@ class Server : public TaskLib {
    * ===================================*/
   std::vector<bdev::ConstructTask*> target_tasks_;
   std::vector<bdev::Client> targets_;
+  bdev::Client *fallback_target_;
   std::unordered_map<TargetId, TargetInfo*> target_map_;
   Client blob_mdm_;
   bucket_mdm::Client bkt_mdm_;
@@ -88,12 +89,23 @@ class Server : public TaskLib {
       tgt_task->Wait<TASK_YIELD_CO>(task);
       bdev::Client &client = targets_[i];
       client.AsyncCreateComplete(tgt_task);
-      target_map_.emplace(client.id_, &client);
     }
     std::sort(targets_.begin(), targets_.end(),
               [](const bdev::Client &a, const bdev::Client &b) {
                 return a.bandwidth_ > b.bandwidth_;
               });
+    float bw_max = targets_.front().bandwidth_;
+    float bw_min = targets_.back().bandwidth_;
+    for (bdev::Client &client : targets_) {
+      client.bw_score_ = (client.bandwidth_ - bw_min) / (bw_max - bw_min);
+      client.score_ = client.bw_score_;
+    }
+    for (bdev::Client &client : targets_) {
+      target_map_.emplace(client.id_, &client);
+      HILOG(kInfo, "(node {}) Target {} has bw {} and score {}", HRUN_CLIENT->node_id_,
+            client.id_, client.bandwidth_, client.bw_score_);
+    }
+    fallback_target_ = &targets_.back();
     blob_mdm_.Init(id_);
     HILOG(kInfo, "(node {}) Created Blob MDM", HRUN_CLIENT->node_id_);
     task->SetModuleComplete();
@@ -136,21 +148,46 @@ class Server : public TaskLib {
   }
 
   /** New score */
+  float NormalizeScore(float score) {
+    if (score > 1) {
+      return 1;
+    }
+    if (score < 0) {
+      return 0;
+    }
+    return score;
+  }
   float MakeScore(BlobInfo &blob_info, hshm::Timepoint &now) {
-    float freq_score = blob_info.access_freq_ / 5;
-    float access_score = (float)(1 - (blob_info.last_access_.GetSecFromStart(now) / 5));
-    if (freq_score > 1) {
-      freq_score = 1;
-    }
-    if (access_score > 1) {
-      access_score = 1;
-    }
-    float data_score = std::max(freq_score, access_score);
+    ServerConfig &server = HERMES_CONF->server_config_;
+    // Frequency score: how many times blob accessed?
+    float freq_min = server.borg_.freq_min_;
+    float freq_diff = server.borg_.freq_max_ - freq_min;
+    float freq_score = NormalizeScore((blob_info.access_freq_ - freq_min) / freq_diff);
+    // Temporal score: how recently the blob was accessed?
+    float time_diff = blob_info.last_access_.GetSecFromStart(now);
+    float rec_min = server.borg_.recency_min_;
+    float rec_max = server.borg_.recency_max_;
+    float rec_diff = rec_max - rec_min;
+    float temporal_score = NormalizeScore((time_diff - rec_min) / rec_diff);
+    temporal_score = 1 - temporal_score;
+    // Access score: was the blob accessed recently or frequently?
+    float access_score = std::max(freq_score, temporal_score);
     float user_score = blob_info.user_score_;
+    // Final scores
     if (!blob_info.flags_.Any(HERMES_USER_SCORE_STATIONARY)) {
-      user_score *= data_score;
+      return user_score * access_score;
+    } else {
+      return std::max(access_score, user_score);
     }
-    return std::max(data_score, user_score);
+  }
+  const bdev::Client& FindNearestTarget(float score) {
+    for (const bdev::Client &cmp_tgt: targets_) {
+      if (cmp_tgt.score_ > score + .05) {
+        continue;
+      }
+      return cmp_tgt;
+    }
+    return targets_.back();
   }
 
   /** Check if blob should be reorganized */
@@ -158,22 +195,58 @@ class Server : public TaskLib {
   bool ShouldReorganize(BlobInfo &blob_info,
                         float score,
                         TaskNode &task_node) {
-//    for (BufferInfo &buf : blob_info.buffers_) {
-//      TargetInfo &target = *target_map_[buf.tid_];
-//      Histogram &hist = target.monitor_task_->score_hist_;
-//      if constexpr(UPDATE_SCORE) {
-//        target.AsyncUpdateScore(task_node + 1,
-//                                blob_info.score_, score);
-//      }
-//      u32 percentile = hist.GetPercentile(score);
-//      size_t rem_cap = target.monitor_task_->rem_cap_;
-//      size_t max_cap = target.max_cap_;
-//      if (rem_cap < max_cap / 10) {
-//        if (percentile < 10 || percentile > 90) {
-//          return true;
-//        }
-//      }
-//    }
+    ServerConfig &server = HERMES_CONF->server_config_;
+    for (BufferInfo &buf : blob_info.buffers_) {
+      TargetInfo &target = *target_map_[buf.tid_];
+      Histogram &hist = target.monitor_task_->score_hist_;
+      u32 percentile = hist.GetPercentile(score);
+      u32 precentile_lt = hist.GetPercentileLT(score);
+      size_t rem_cap = target.monitor_task_->rem_cap_;
+      size_t max_cap = target.max_cap_;
+      float borg_cap_min = target.borg_min_thresh_;
+      float borg_cap_max = target.borg_max_thresh_;
+      // float min_score = hist.GetQuantile(0);
+      // Update the target score
+      target.score_ = target.bw_score_;
+      // Update blob score
+      if constexpr(UPDATE_SCORE) {
+        u32 bin_orig = hist.GetBin(blob_info.score_);
+        u32 bin_new = hist.GetBin(score);
+        if (bin_orig != bin_new) {
+          target.AsyncUpdateScore(task_node + 1,
+                                  blob_info.score_, score);
+        }
+      }
+      // Determine if the blob should be reorganized
+      // Get the target with minimum difference in score to this blob
+      if (abs(target.score_ - score) < .1) {
+        continue;
+      }
+      const bdev::Client &cmp_tgt = FindNearestTarget(score);
+      if (cmp_tgt.id_ == target.id_) {
+        continue;
+      }
+      if (cmp_tgt.score_ <= target.score_) {
+        // Demote if we have sufficiently low capacity
+        if (rem_cap < max_cap * borg_cap_min) {
+          HILOG(kInfo, "Demoting blob {} of score {} from tgt={} tgt_score={} to tgt={} tgt_score={}",
+                blob_info.blob_id_, blob_info.score_,
+                target.id_, target.score_,
+                cmp_tgt.id_, cmp_tgt.score_);
+          return true;
+        }
+      } else {
+        // Promote if the guy above us has sufficiently high capacity
+        float cmp_rem_cap = cmp_tgt.monitor_task_->rem_cap_;
+        if (cmp_rem_cap > blob_info.blob_size_) {
+          HILOG(kInfo, "Promoting blob {} of score {} from tgt={} tgt_score={} to tgt={} tgt_score={}",
+                blob_info.blob_id_, blob_info.score_,
+                target.id_, target.score_,
+                cmp_tgt.id_, cmp_tgt.score_);
+          return true;
+        }
+      }
+    }
     return false;
   }
 
@@ -189,16 +262,19 @@ class Server : public TaskLib {
     for (auto &it : blob_map) {
       BlobInfo &blob_info = it.second;
       // Update blob scores
-      // TODO(llogan): Add back
-//      float new_score = MakeScore(blob_info, now);
-//      if (ShouldReorganize<true>(blob_info, new_score, task->task_node_)) {
-//        blob_mdm_.AsyncReorganizeBlob(task->task_node_ + 1,
-//                                      blob_info.tag_id_,
-//                                      blob_info.blob_id_,
-//                                      new_score, 0, false);
-//      }
-//      blob_info.access_freq_ = 0;
-//      blob_info.score_ = new_score;
+      float new_score = MakeScore(blob_info, now);
+      blob_info.score_ = new_score;
+      if (ShouldReorganize<true>(blob_info, new_score, task->task_node_)) {
+        LPointer<ReorganizeBlobTask> reorg_task =
+            blob_mdm_.AsyncReorganizeBlob(task->task_node_ + 1,
+                                          blob_info.tag_id_,
+                                          blob_info.blob_id_,
+                                          new_score, 0, false,
+                                          TASK_LOW_LATENCY);
+        reorg_task->Wait<TASK_YIELD_CO>(task);
+        HRUN_CLIENT->DelTask(reorg_task);
+      }
+      blob_info.access_freq_ = 0;
 
       // Flush data
       size_t mod_count = blob_info.mod_count_;
@@ -206,8 +282,8 @@ class Server : public TaskLib {
           mod_count > blob_info.last_flush_) {
         HILOG(kDebug, "Flushing blob {} (mod_count={}, last_flush={})",
               blob_info.blob_id_, blob_info.mod_count_, blob_info.last_flush_);
-        LPointer<char> data = HRUN_CLIENT->AllocateBuffer<TASK_YIELD_CO>(blob_info.blob_size_,
-                                                                         task);
+        LPointer<char> data = HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_CO>(
+            blob_info.blob_size_, task);
         LPointer<GetBlobTask> get_blob =
             blob_mdm_.AsyncGetBlob(task->task_node_ + 1,
                                    blob_info.tag_id_,
@@ -250,6 +326,8 @@ class Server : public TaskLib {
     HILOG(kDebug, "Beginning PUT for {}", blob_name.str());
     BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     BlobInfo &blob_info = blob_map[task->blob_id_];
+    blob_info.score_ = task->score_;
+    blob_info.user_score_ = task->score_;
 
     // Stage Blob
     if (task->flags_.Any(HERMES_IS_FILE) && blob_info.last_flush_ == 0) {
@@ -287,11 +365,13 @@ class Server : public TaskLib {
     if (size_diff > 0) {
       Context ctx;
       auto *dpe = DpeFactory::Get(ctx.dpe_);
+      ctx.blob_score_ = task->score_;
       dpe->Placement({size_diff}, targets_, ctx, schema_vec);
     }
 
     // Allocate blob buffers
     for (PlacementSchema &schema : schema_vec) {
+      schema.plcmnts_.emplace_back(0, fallback_target_->id_);
       for (size_t sub_idx = 0; sub_idx < schema.plcmnts_.size(); ++sub_idx) {
         SubPlacement &placement = schema.plcmnts_[sub_idx];
         TargetInfo &bdev = *target_map_[placement.tid_];
@@ -301,11 +381,14 @@ class Server : public TaskLib {
                                placement.size_,
                                blob_info.buffers_);
         alloc_task->Wait<TASK_YIELD_CO>(task);
+//        HILOG(kInfo, "(node {}) Placing {}/{} bytes in target {} of bw {}",
+//              HRUN_CLIENT->node_id_,
+//              alloc_task->alloc_size_, task->data_size_,
+//              placement.tid_, bdev.bandwidth_)
         if (alloc_task->alloc_size_ < alloc_task->size_) {
-          // SubPlacement &next_placement = schema.plcmnts_[sub_idx + 1];
-          // size_t diff = alloc_task->size_ - alloc_task->alloc_size_;
-          // next_placement.size_ += diff;
-          HELOG(kFatal, "Ran outta space in this tier -- will fix soon")
+          SubPlacement &next_placement = schema.plcmnts_[sub_idx + 1];
+          size_t diff = alloc_task->size_ - alloc_task->alloc_size_;
+          next_placement.size_ += diff;
         }
         // bdev.monitor_task_->rem_cap_ -= alloc_task->alloc_size_;
         HRUN_CLIENT->DelTask(alloc_task);
@@ -399,9 +482,9 @@ class Server : public TaskLib {
     for (BufferInfo &buf : blob_info.buffers_) {
       TargetInfo &target = *target_map_[buf.tid_];
       std::vector<BufferInfo> buf_vec = {buf};
-//      target.AsyncFree(task->task_node_ + 1,
-//                       blob_info.score_,
-//                       std::move(buf_vec), true);
+      target.AsyncFree(task->task_node_ + 1,
+                       blob_info.score_,
+                       std::move(buf_vec), true);
     }
     blob_info.buffers_.clear();
     blob_info.max_blob_size_ = 0;
@@ -535,7 +618,7 @@ class Server : public TaskLib {
       blob_info.tag_id_ = tag_id;
       blob_info.blob_size_ = 0;
       blob_info.max_blob_size_ = 0;
-      blob_info.score_ = 0;
+      blob_info.score_ = 1;
       blob_info.mod_count_ = 0;
       blob_info.access_freq_ = 0;
       blob_info.last_flush_ = 0;
@@ -758,17 +841,16 @@ class Server : public TaskLib {
         BlobInfo &blob_info = it->second;
         if (task->is_user_score_) {
           blob_info.user_score_ = task->score_;
-          blob_info.score_ = std::max(blob_info.user_score_,
-                                      blob_info.score_);
+          blob_info.score_ = blob_info.user_score_;
         } else {
           blob_info.score_ = task->score_;
         }
-        if (!ShouldReorganize(blob_info, task->score_, task->task_node_)) {
-          task->SetModuleComplete();
-          return;
-        }
-        task->data_ = HRUN_CLIENT->AllocateBuffer<TASK_YIELD_STD>(blob_info.blob_size_,
-                                                                  task).shm_;
+//        if (!ShouldReorganize(blob_info, task->score_, task->task_node_)) {
+//          task->SetModuleComplete();
+//          return;
+//        }
+        task->data_ = HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_STD>(
+            blob_info.blob_size_, task).shm_;
         task->data_size_ = blob_info.blob_size_;
         task->get_task_ = blob_mdm_.AsyncGetBlob(task->task_node_ + 1,
                                                  task->tag_id_,

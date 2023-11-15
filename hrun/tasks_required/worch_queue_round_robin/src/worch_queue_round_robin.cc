@@ -18,12 +18,14 @@ namespace hrun::worch_queue_round_robin {
 
 class Server : public TaskLib {
  public:
-  u32 count_;
+  u32 count_lowlat_;
+  u32 count_highlat_;
 
  public:
   /** Construct work orchestrator queue scheduler */
   void Construct(ConstructTask *task, RunContext &rctx) {
-    count_ = 0;
+    count_lowlat_ = 0;
+    count_highlat_ = 0;
     task->SetModuleComplete();
   }
   void MonitorConstruct(u32 mode, ConstructTask *task, RunContext &rctx) {
@@ -44,24 +46,24 @@ class Server : public TaskLib {
         continue;
       }
       for (LaneGroup &lane_group : *queue.groups_) {
-        // NOTE(llogan): Assumes a minimum of two workers, admin on worker 0.
-        if (lane_group.IsLowPriority()) {
-          for (u32 lane_id = lane_group.num_scheduled_; lane_id < lane_group.num_lanes_; ++lane_id) {
-            // HILOG(kDebug, "Scheduling the queue {} (lane {})", queue.id_, lane_id);
-            Worker &worker = *HRUN_WORK_ORCHESTRATOR->workers_[0];
+        for (u32 lane_id = lane_group.num_scheduled_; lane_id < lane_group.num_lanes_; ++lane_id) {
+          if (lane_group.IsLowLatency()) {
+            u32 worker_off = count_lowlat_ % HRUN_WORK_ORCHESTRATOR->dworkers_.size();
+            count_lowlat_ += 1;
+            Worker &worker = *HRUN_WORK_ORCHESTRATOR->dworkers_[worker_off];
             worker.PollQueues({WorkEntry(lane_group.prio_, lane_id, &queue)});
-          }
-          lane_group.num_scheduled_ = lane_group.num_lanes_;
-        } else {
-          for (u32 lane_id = lane_group.num_scheduled_; lane_id < lane_group.num_lanes_; ++lane_id) {
-            // HILOG(kDebug, "Scheduling the queue {} (lane {})", queue.id_, lane_id);
-            u32 worker_id = (count_ % (HRUN_WORK_ORCHESTRATOR->workers_.size() - 1)) + 1;
-            Worker &worker = *HRUN_WORK_ORCHESTRATOR->workers_[worker_id];
+            HILOG(kDebug, "(node {}) Scheduling the queue {} (lane {}, worker {})",
+                  HRUN_CLIENT->node_id_, queue.id_, lane_id, worker.id_);
+          } else {
+            u32 worker_off = count_highlat_ % HRUN_WORK_ORCHESTRATOR->oworkers_.size();
+            count_highlat_ += 1;
+            Worker &worker = *HRUN_WORK_ORCHESTRATOR->oworkers_[worker_off];
             worker.PollQueues({WorkEntry(lane_group.prio_, lane_id, &queue)});
-            count_ += 1;
+            HILOG(kDebug, "(node {}) Scheduling the queue {} (lane {}, worker {})",
+                  HRUN_CLIENT->node_id_, queue.id_, lane_id, worker_off);
           }
-          lane_group.num_scheduled_ = lane_group.num_lanes_;
         }
+        lane_group.num_scheduled_ = lane_group.num_lanes_;
       }
     }
   }

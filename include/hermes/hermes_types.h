@@ -305,6 +305,7 @@ struct BlobInfo {
     blob_size_ = other.blob_size_;
     max_blob_size_ = other.max_blob_size_;
     score_ = other.score_;
+    user_score_ = other.user_score_;
     access_freq_ = other.access_freq_.load();
     last_access_ = other.last_access_;
     mod_count_ = other.mod_count_.load();
@@ -324,8 +325,10 @@ struct BlobInfo {
   }
 
   /** Get name as std::string */
-  std::string GetName() {
-    return name_.str();
+  std::vector<char> GetName() {
+    std::vector<char> data(name_.size());
+    memcpy(data.data(), name_.data(), name_.size());
+    return data;
   }
 };
 
@@ -347,8 +350,10 @@ struct TagInfo {
   }
 
   /** Get std::string of name */
-  std::string GetName() {
-    return name_.str();
+  std::vector<char> GetName() {
+    std::vector<char> data(name_.size());
+    memcpy(data.data(), name_.data(), name_.size());
+    return data;
   }
 };
 

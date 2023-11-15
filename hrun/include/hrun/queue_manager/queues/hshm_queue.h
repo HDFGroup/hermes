@@ -6,6 +6,7 @@
 #define HRUN_INCLUDE_HRUN_QUEUE_MANAGER_HSHM_QUEUE_H_
 
 #include "hrun/queue_manager/queue.h"
+#include "mpsc_queue.h"
 
 namespace hrun {
 
@@ -24,7 +25,7 @@ struct LaneData {
 };
 
 /** Represents a lane tasks can be stored */
-typedef hipc::mpsc_queue<LaneData> Lane;
+typedef hrun::mpsc_queue<LaneData> Lane;
 
 /** Prioritization of different lanes in the queue */
 struct LaneGroup : public PriorityInfo {
@@ -75,6 +76,12 @@ struct LaneGroup : public PriorityInfo {
     return flags_.Any(QUEUE_LONG_RUNNING) || prio_ == 0;
   }
 
+  /** Check if this group is long-running or ADMIN */
+  HSHM_ALWAYS_INLINE
+  bool IsLowLatency() {
+    return flags_.Any(QUEUE_LOW_LATENCY);
+  }
+
   /** Get lane */
   Lane& GetLane(u32 lane_id) {
     return (*lanes_)[lane_id];
@@ -121,7 +128,7 @@ struct MultiQueueT<Hshm> : public hipc::ShmContainer {
       lane_group.lanes_->reserve(prio_info.max_lanes_);
       lane_group.prio_ = prio;
       for (u32 lane_id = 0; lane_id < lane_group.num_lanes_; ++lane_id) {
-        lane_group.lanes_->emplace_back(lane_group.depth_);
+        lane_group.lanes_->emplace_back(lane_group.depth_, id_);
         Lane &lane = lane_group.lanes_->back();
         lane.flags_ = prio_info.flags_;
       }
