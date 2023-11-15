@@ -582,10 +582,10 @@ TEST_CASE("TestHermesDataOp") {
   op_graph.ops_.emplace_back(op);
   HERMES->RegisterOp(op_graph);
 
-  size_t count_per_proc = 16;
+  size_t count_per_proc = 256;
   size_t off = rank * count_per_proc;
   size_t proc_count = off + count_per_proc;
-  size_t page_size = KILOBYTES(4);
+  size_t page_size = MEGABYTES(1);
 
   HILOG(kInfo, "GENERATING VALUES BETWEEN 5 and 261");
 
