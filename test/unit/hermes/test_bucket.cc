@@ -587,6 +587,8 @@ TEST_CASE("TestHermesDataOp") {
   size_t proc_count = off + count_per_proc;
   size_t page_size = KILOBYTES(4);
 
+  HILOG(kInfo, "GENERATING VALUES BETWEEN 5 and 261");
+
   // Put a few blobs in the bucket
   for (size_t i = off; i < proc_count; ++i) {
     HILOG(kInfo, "Iteration: {}", i);
@@ -622,6 +624,8 @@ TEST_CASE("TestHermesDataOp") {
   float min = *(float *)blob2.data();
   REQUIRE(size == sizeof(float) * count_per_proc * nprocs);
   REQUIRE(min == 5);
+
+  HILOG(kInfo, "MINIMUM VALUE QUERY FROM EMPRESS: {}", min);
 }
 
 TEST_CASE("TestHermesCollectMetadata") {
