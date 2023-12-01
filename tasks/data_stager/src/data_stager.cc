@@ -63,6 +63,7 @@ class Server : public TaskLib {
 
   /** Stage in data */
   void StageIn(StageInTask *task, RunContext &rctx) {
+    HILOG(kDebug, "Beginning stage in");
     std::unordered_map<hermes::BucketId, std::unique_ptr<AbstractStager>>::iterator it =
         url_map_[rctx.lane_id_].find(task->bkt_id_);
     if (it == url_map_[rctx.lane_id_].end()) {

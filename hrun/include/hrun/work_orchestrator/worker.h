@@ -436,7 +436,7 @@ class Worker {
         task->DidRun(work_entry.cur_time_);
       }
       // Verify tasks
-      if (flush_.flushing_ && !task->IsModuleComplete() && !task->IsFlush()) {
+      if (flush_.flushing_ && !task->IsFlush()) {
         int pend_prior = flush_.pending_;
         if (task->IsLongRunning()) {
           exec->Monitor(MonitorMode::kFlushStat, task, rctx);

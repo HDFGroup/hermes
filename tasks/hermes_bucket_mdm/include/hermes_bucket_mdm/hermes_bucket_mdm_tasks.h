@@ -407,6 +407,7 @@ struct GetOrCreateTagTask : public Task, TaskFlags<TF_SRL_SYM> {
   /** Create group */
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
+    hshm::LocalSrl srl(group);
     group.resize(tag_name_->size());
     memcpy(group.data(), tag_name_->data(), tag_name_->size());
     return 0;

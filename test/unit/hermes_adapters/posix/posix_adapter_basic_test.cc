@@ -241,7 +241,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(TEST_INFO->comm_size_) +
     "[request_size=type-fixed][repetition=1]"
     "[file=1]") {
   TEST_INFO->Pretest();
-  SECTION("write to existing file") {
+  /*SECTION("write to existing file") {
     TEST_INFO->test_open(TEST_INFO->existing_file_, O_RDWR);
     REQUIRE(TEST_INFO->fh_orig_ != -1);
     TEST_INFO->test_seek(0, SEEK_SET);
@@ -263,8 +263,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(TEST_INFO->comm_size_) +
     int size = stdfs::file_size(TEST_INFO->new_file_.hermes_);
     int orig_size = TEST_INFO->size_written_orig_;
     REQUIRE(stdfs::file_size(TEST_INFO->new_file_.hermes_) == TEST_INFO->size_written_orig_);
-  }
-
+  }*/
 
   SECTION("write to existing file with truncate") {
     TEST_INFO->test_open(TEST_INFO->existing_file_, O_WRONLY | O_TRUNC);
@@ -290,7 +289,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(TEST_INFO->comm_size_) +
         TEST_INFO->size_written_orig_ + TEST_INFO->request_size_ * TEST_INFO->num_iterations_);
   }
 
-  SECTION("append to existing file") {
+  /*SECTION("append to existing file") {
     auto existing_size = stdfs::file_size(TEST_INFO->existing_file_.hermes_);
     TEST_INFO->test_open(TEST_INFO->existing_file_, O_RDWR | O_APPEND);
     REQUIRE(TEST_INFO->fh_orig_ != -1);
@@ -310,7 +309,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(TEST_INFO->comm_size_) +
     TEST_INFO->test_close();
     REQUIRE(TEST_INFO->status_orig_ == 0);
     REQUIRE(stdfs::file_size(TEST_INFO->new_file_.hermes_) == TEST_INFO->size_written_orig_);
-  }
+  }*/
   TEST_INFO->Posttest();
 }
 

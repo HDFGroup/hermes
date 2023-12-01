@@ -281,7 +281,7 @@ class Server : public TaskLib {
       if (blob_info.last_flush_ > 0 &&
           mod_count > blob_info.last_flush_) {
         HILOG(kDebug, "Flushing blob {} (mod_count={}, last_flush={})",
-              blob_info.blob_id_, blob_info.mod_count_, blob_info.last_flush_);
+              blob_info.blob_id_, mod_count, blob_info.last_flush_);
         LPointer<char> data = HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_CO>(
             blob_info.blob_size_, task);
         LPointer<GetBlobTask> get_blob =
@@ -323,7 +323,8 @@ class Server : public TaskLib {
       task->blob_id_ = GetOrCreateBlobId(task->tag_id_, task->lane_hash_,
                                          blob_name, rctx, task->flags_);
     }
-    HILOG(kDebug, "Beginning PUT for {}", blob_name.str());
+    HILOG(kDebug, "Beginning PUT for (hash: {}) {}",
+          std::hash<hshm::charbuf>{}(blob_name), blob_name.str());
     BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     BlobInfo &blob_info = blob_map[task->blob_id_];
     blob_info.score_ = task->score_;
@@ -331,7 +332,7 @@ class Server : public TaskLib {
 
     // Stage Blob
     if (task->flags_.Any(HERMES_IS_FILE) && blob_info.last_flush_ == 0) {
-      blob_info.mod_count_ = 1;
+      HILOG(kDebug, "This file has not yet been flushed");
       blob_info.last_flush_ = 1;
       LPointer<data_stager::StageInTask> stage_task =
           stager_mdm_.AsyncStageIn(task->task_node_ + 1,
@@ -339,7 +340,12 @@ class Server : public TaskLib {
                                    blob_info.name_,
                                    task->score_, 0);
       stage_task->Wait<TASK_YIELD_CO>(task);
+      blob_info.mod_count_ = 1;
       HRUN_CLIENT->DelTask(stage_task);
+    }
+    if (task->flags_.Any(HERMES_IS_FILE)) {
+      HILOG(kDebug, "This is marked as a file: {} {}",
+            blob_info.mod_count_, blob_info.last_flush_);
     }
     ssize_t bkt_size_diff = 0;
     if (task->flags_.Any(HERMES_BLOB_REPLACE)) {
@@ -504,7 +510,6 @@ class Server : public TaskLib {
     // Stage Blob
     if (task->flags_.Any(HERMES_IS_FILE) && blob_info.last_flush_ == 0) {
       // TODO(llogan): Don't hardcore score = 1
-      blob_info.mod_count_ = 1;
       blob_info.last_flush_ = 1;
       LPointer<data_stager::StageInTask> stage_task =
           stager_mdm_.AsyncStageIn(task->task_node_ + 1,
@@ -622,7 +627,6 @@ class Server : public TaskLib {
       blob_info.mod_count_ = 0;
       blob_info.access_freq_ = 0;
       blob_info.last_flush_ = 0;
-      blob_info.UpdateWriteStats();
       return blob_id;
     }
     return it->second;
