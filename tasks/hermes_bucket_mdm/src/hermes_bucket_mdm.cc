@@ -339,6 +339,7 @@ class Server : public TaskLib {
         HSHM_DESTROY_AR(task->destroy_blob_tasks_);
         TAG_MAP_T &tag_map = tag_map_[rctx.lane_id_];
         tag_map.erase(task->tag_id_);
+        HILOG(kInfo, "Finished destroying the tag");
         task->SetModuleComplete();
       }
     }

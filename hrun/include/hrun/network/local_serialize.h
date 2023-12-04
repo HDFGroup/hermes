@@ -28,6 +28,15 @@ class LocalSerialize {
   }
 
   /** left shift operator */
+  template<int T>
+  HSHM_ALWAYS_INLINE
+  LocalSerialize& operator<<(const UniqueId<T> &obj) {
+    (*this) << obj.unique_;
+    (*this) << obj.node_id_;
+    return *this;
+  }
+
+  /** left shift operator */
   template<typename T>
   HSHM_ALWAYS_INLINE
   LocalSerialize& operator<<(const T &obj) {
@@ -57,6 +66,15 @@ class LocalDeserialize {
  public:
   LocalDeserialize(const DataT &data) : data_(data) {
     cur_off_ = 0;
+  }
+
+  /** right shift operator */
+  template<int T>
+  HSHM_ALWAYS_INLINE
+  LocalDeserialize& operator<<(const UniqueId<T> &obj) {
+    (*this) >> obj.unique_;
+    (*this) >> obj.node_id_;
+    return *this;
   }
 
   /** right shift operator */

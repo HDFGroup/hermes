@@ -70,7 +70,7 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
       stat.file_size_ = io_client_->GetSize(*path_shm);
       stat.bkt_id_ = HERMES->GetBucket(url.str(), ctx, stat.file_size_, HERMES_IS_FILE);
     }
-    HILOG(kDebug, "File has size: {}", stat.bkt_id_.GetSize());
+    HILOG(kDebug, "BKT vs file size: {} {}", stat.bkt_id_.GetSize(), stat.file_size_);
     // Update file position pointer
     if (stat.hflags_.Any(HERMES_FS_APPEND)) {
       stat.st_ptr_ = std::numeric_limits<size_t>::max();
@@ -329,9 +329,9 @@ int Filesystem::Close(File &f, AdapterStat &stat) {
 int Filesystem::Remove(const std::string &pathname) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
   int ret = io_client_->RealRemove(pathname);
-  // Destroy the bucket. It's created if it doesn't exist
-  auto bkt = HERMES->GetBucket(pathname);
-  HILOG(kDebug, "Destroying the bucket: {}", bkt.GetName());
+  // Destroy the bucket
+  std::string canon_path = stdfs::absolute(pathname).string();
+  Bucket bkt = HERMES->GetBucket(canon_path);
   bkt.Destroy();
   // Destroy all file descriptors
   std::list<File>* filesp = mdm->Find(pathname);
@@ -341,7 +341,7 @@ int Filesystem::Remove(const std::string &pathname) {
   HILOG(kDebug, "Destroying the file descriptors: {}", pathname);
   std::list<File> files = *filesp;
   for (File &f : files) {
-    auto stat = mdm->Find(f);
+    std::shared_ptr<AdapterStat> stat = mdm->Find(f);
     if (stat == nullptr) { continue; }
     auto mdm = HERMES_FS_METADATA_MANAGER;
     FilesystemIoClientState fs_ctx(&mdm->fs_mdm_, (void *)&stat);

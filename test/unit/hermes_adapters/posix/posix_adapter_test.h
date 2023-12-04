@@ -48,7 +48,7 @@ class PosixTest : public FilesystemTests {
     RegisterPath("new", 0, new_file_);
     RegisterPath("ext", TEST_DO_CREATE, existing_file_);
     if constexpr(WITH_MPI) {
-      RegisterPath("shared_new", TEST_DO_CREATE | TEST_FILE_SHARED, shared_new_file_);
+      RegisterPath("shared_new", TEST_FILE_SHARED, shared_new_file_);
       RegisterPath("shared_ext", TEST_DO_CREATE | TEST_FILE_SHARED, shared_existing_file_);
     }
     RegisterTmpPath(tmp_file_);

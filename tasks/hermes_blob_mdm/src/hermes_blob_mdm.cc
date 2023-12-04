@@ -125,8 +125,7 @@ class Server : public TaskLib {
   const hshm::charbuf GetBlobNameWithBucket(TagId tag_id, const hshm::charbuf &blob_name) {
     hshm::charbuf new_name(sizeof(TagId) + blob_name.size());
     hrun::LocalSerialize srl(new_name);
-    srl << tag_id.node_id_;
-    srl << tag_id.unique_;
+    srl << tag_id;
     srl << blob_name;
     return new_name;
   }

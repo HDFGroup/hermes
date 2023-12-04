@@ -133,7 +133,7 @@ class FilesystemTests {
       if (info.flags_.Any(TEST_WITH_HERMES)) {
         RemoveFile(info.hermes_);
         RemoveFile(info.cmp_);
-        // HILOG(kInfo, "Removing files: {} {}", info.hermes_, info.cmp_);
+        HILOG(kInfo, "Removing files: {} {}", info.hermes_, info.cmp_);
       }
     }
   }
