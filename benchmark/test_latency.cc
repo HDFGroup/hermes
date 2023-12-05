@@ -233,7 +233,7 @@ void TestWorkerIterationLatency(u32 num_queues, u32 num_lanes) {
     task = client.AsyncMdPushEmplace(queues[num_queues - 1].get(),
                                      task_node,
                                      hrun::DomainId::GetLocal());
-    worker.Run();
+    worker.Run(false);
     HRUN_CLIENT->DelTask(task);
   }
   t.Pause();

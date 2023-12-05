@@ -310,9 +310,10 @@ class Worker {
     now_.Now();
     while (orchestrator->IsAlive()) {
       try {
+        bool flushing = flush_.flushing_;
         flush_.pending_ = 0;
-        Run();
-        if (flush_.flushing_ && flush_.pending_ == 0) {
+        Run(flushing);
+        if (flushing && flush_.pending_ == 0) {
           flush_.flushing_ = false;
         }
       } catch (hshm::Error &e) {
@@ -322,11 +323,11 @@ class Worker {
         Yield();
       }
     }
-    Run();
+    Run(true);
   }
 
   /** Run a single iteration over all queues */
-  void Run() {
+  void Run(bool flushing) {
     if (poll_queues_.size() > 0) {
       _PollQueues();
     }
@@ -337,11 +338,11 @@ class Worker {
       now_.Now();
       for (WorkEntry &work_entry : work_queue_) {
         work_entry.cur_time_ = now_;
-        PollGrouped(work_entry);
+        PollGrouped(work_entry, flushing);
       }
     } else {
       for (WorkEntry &work_entry : work_queue_) {
-        PollGrouped(work_entry);
+        PollGrouped(work_entry, flushing);
       }
     }
 
@@ -349,7 +350,7 @@ class Worker {
 
   /** Run an iteration over a particular queue */
   HSHM_ALWAYS_INLINE
-  void PollGrouped(WorkEntry &work_entry) {
+  void PollGrouped(WorkEntry &work_entry, bool flushing) {
     int off = 0;
     Lane *&lane = work_entry.lane_;
     Task *task;
@@ -387,7 +388,7 @@ class Worker {
       bool is_remote = task->domain_id_.IsRemote(HRUN_RPC->GetNumHosts(), HRUN_CLIENT->node_id_);
       if (!task->IsRunDisabled() &&
           CheckTaskGroup(task, exec, work_entry.lane_id_, task->task_node_, is_remote) &&
-          task->ShouldRun(work_entry.cur_time_, flush_.flushing_)) {
+          task->ShouldRun(work_entry.cur_time_, flushing)) {
 // #define REMOTE_DEBUG
 #ifdef REMOTE_DEBUG
         if (task->task_state_ != HRUN_QM_CLIENT->admin_task_state_ &&
@@ -436,7 +437,7 @@ class Worker {
         task->DidRun(work_entry.cur_time_);
       }
       // Verify tasks
-      if (flush_.flushing_ && !task->IsFlush()) {
+      if (flushing && !task->IsFlush()) {
         int pend_prior = flush_.pending_;
         if (task->IsLongRunning()) {
           exec->Monitor(MonitorMode::kFlushStat, task, rctx);
