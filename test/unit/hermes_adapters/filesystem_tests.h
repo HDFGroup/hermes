@@ -256,6 +256,10 @@ class FilesystemTests {
     if (stdfs::exists(path)) {
       HELOG(kFatal, "Failed to remove: {}", path)
     }
+#ifdef HERMES_INTERCEPT
+    hermes::Bucket bkt = HERMES->GetBucket(path);
+    bkt.Destroy();
+#endif
   }
 
   bool FilesystemSupportsTmpfile() {

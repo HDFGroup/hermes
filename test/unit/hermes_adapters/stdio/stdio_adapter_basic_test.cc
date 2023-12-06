@@ -994,7 +994,25 @@ TEST_CASE("BatchedWriteTemporalFixed",
               "[pattern=sequential][file=1][temporal=fixed]") {
   TEST_INFO->Pretest();
 
-  SECTION("write to existing file") {
+  SECTION("write to existing file always at start") {
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "w+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
+
+    for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
+      usleep(TEST_INFO->temporal_interval_ms_ * 1000);
+      TEST_INFO->test_fseek(0, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
+      size_t offset = ftell(TEST_INFO->fh_orig_);
+      REQUIRE(offset == 0);
+      TEST_INFO->test_fwrite(TEST_INFO->write_data_.data(), TEST_INFO->request_size_);
+      REQUIRE(TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
+    }
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
+    REQUIRE(stdfs::file_size(TEST_INFO->existing_file_.hermes_) == TEST_INFO->request_size_);
+  }
+
+  SECTION("write to new file always at start") {
     TEST_INFO->test_fopen(TEST_INFO->new_file_, "w+");
     REQUIRE(TEST_INFO->fh_orig_ != nullptr);
 
@@ -1010,21 +1028,6 @@ TEST_CASE("BatchedWriteTemporalFixed",
     TEST_INFO->test_fclose();
     REQUIRE(TEST_INFO->status_orig_ == 0);
     REQUIRE(stdfs::file_size(TEST_INFO->new_file_.hermes_) == TEST_INFO->request_size_);
-  }
-
-  SECTION("write to new file always at start") {
-    TEST_INFO->test_fopen(TEST_INFO->new_file_, "w+");
-    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
-
-    for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      usleep(TEST_INFO->temporal_interval_ms_ * 1000);
-      TEST_INFO->test_fwrite(TEST_INFO->write_data_.data(), TEST_INFO->request_size_);
-      REQUIRE(TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
-    }
-    TEST_INFO->test_fclose();
-    REQUIRE(TEST_INFO->status_orig_ == 0);
-    REQUIRE(stdfs::file_size(TEST_INFO->new_file_.hermes_) ==
-        TEST_INFO->num_iterations_ * TEST_INFO->request_size_);
   }
   TEST_INFO->Posttest();
 }
@@ -1053,7 +1056,7 @@ TEST_CASE("BatchedReadSequentialTemporalFixed",
   }
 
   SECTION("read from existing file always at start") {
-    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "w+");
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
     REQUIRE(TEST_INFO->fh_orig_ != nullptr);
 
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
@@ -1062,8 +1065,8 @@ TEST_CASE("BatchedReadSequentialTemporalFixed",
       REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t offset = ftell(TEST_INFO->fh_orig_);
       REQUIRE(offset == 0);
-      TEST_INFO->test_fwrite(TEST_INFO->write_data_.data(), TEST_INFO->request_size_);
-      REQUIRE(TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
+      TEST_INFO->test_fread(TEST_INFO->read_data_.data(), TEST_INFO->request_size_);
+      REQUIRE(TEST_INFO->size_read_orig_ == TEST_INFO->request_size_);
     }
     TEST_INFO->test_fclose();
     REQUIRE(TEST_INFO->status_orig_ == 0);
@@ -1081,8 +1084,8 @@ TEST_CASE("BatchedWriteTemporalVariable",
               "[pattern=sequential][file=1][temporal=variable]") {
   TEST_INFO->Pretest();
 
-  SECTION("write to existing file") {
-    TEST_INFO->test_fopen(TEST_INFO->new_file_, "w+");
+  SECTION("write to existing file always at start") {
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "w+");
     REQUIRE(TEST_INFO->fh_orig_ != nullptr);
 
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
@@ -1098,10 +1101,10 @@ TEST_CASE("BatchedWriteTemporalVariable",
     }
     TEST_INFO->test_fclose();
     REQUIRE(TEST_INFO->status_orig_ == 0);
-    REQUIRE(stdfs::file_size(TEST_INFO->new_file_.hermes_) == TEST_INFO->request_size_);
+    REQUIRE(stdfs::file_size(TEST_INFO->existing_file_.hermes_) == TEST_INFO->request_size_);
   }
 
-  SECTION("write to new file always at start") {
+  SECTION("write to new file") {
     TEST_INFO->test_fopen(TEST_INFO->new_file_, "w+");
     REQUIRE(TEST_INFO->fh_orig_ != nullptr);
 
@@ -1146,7 +1149,7 @@ TEST_CASE("BatchedReadSequentialTemporalVariable",
   }
 
   SECTION("read from existing file always at start") {
-    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "w+");
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
     REQUIRE(TEST_INFO->fh_orig_ != nullptr);
 
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
@@ -1157,8 +1160,8 @@ TEST_CASE("BatchedReadSequentialTemporalVariable",
       REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t offset = ftell(TEST_INFO->fh_orig_);
       REQUIRE(offset == 0);
-      TEST_INFO->test_fwrite(TEST_INFO->write_data_.data(), TEST_INFO->request_size_);
-      REQUIRE(TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
+      TEST_INFO->test_fread(TEST_INFO->read_data_.data(), TEST_INFO->request_size_);
+      REQUIRE(TEST_INFO->size_read_orig_ == TEST_INFO->request_size_);
     }
     TEST_INFO->test_fclose();
     REQUIRE(TEST_INFO->status_orig_ == 0);

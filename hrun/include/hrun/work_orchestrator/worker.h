@@ -311,14 +311,9 @@ class Worker {
     while (orchestrator->IsAlive()) {
       try {
         bool flushing = flush_.flushing_;
-        if (!flushing) {
-          Run(false);
-        } else {
-          flush_.pending_ = 0;
-          Run(true);
-          if (flush_.pending_ == 0) {
-            flush_.flushing_ = false;
-          }
+        Run(flushing);
+        if (flushing) {
+          flush_.flushing_ = false;
         }
       } catch (hshm::Error &e) {
         HELOG(kFatal, "(node {}) Worker {} caught an error: {}", HRUN_CLIENT->node_id_, id_, e.what());
@@ -442,13 +437,13 @@ class Worker {
       }
       // Verify tasks
       if (flushing && !task->IsFlush()) {
-//        int pend_prior = flush_.pending_;
+//        int pend_prior = flush_.count_;
         if (task->IsLongRunning()) {
           exec->Monitor(MonitorMode::kFlushStat, task, rctx);
         } else {
-          flush_.pending_ += 1;
+          flush_.count_ += 1;
         }
-//        if (pend_prior != flush_.pending_) {
+//        if (pend_prior != flush_.count_) {
 //          HILOG(kDebug, "(node {}) Pending on task={} state={} method={} is_remote={} worker={}",
 //                HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, task->method_,
 //                is_remote, id_)

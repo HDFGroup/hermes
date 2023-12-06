@@ -171,21 +171,18 @@ class Server : public TaskLib {
   /** Flush the runtime */
   void Flush(FlushTask *task, RunContext &rctx) {
     HILOG(kDebug, "Beginning to flush runtime");
-    for (std::unique_ptr<Worker> &worker : HRUN_WORK_ORCHESTRATOR->workers_) {
-      worker->flush_.flushing_ = true;
-      worker->flush_.pending_ = 1;
-    }
     while (true) {
+      // Make all workers flush locally
       int count = 0;
       for (std::unique_ptr<Worker> &worker : HRUN_WORK_ORCHESTRATOR->workers_) {
-        if (worker->flush_.flushing_) {
-          count += 1;
-          break;
+        worker->flush_.count_ = 0;
+        worker->flush_.flushing_ = true;
+        while (worker->flush_.flushing_) {
+          task->Yield<TASK_YIELD_CO>();
         }
+        count += worker->flush_.count_;
       }
-      if (count) {
-        task->Yield<TASK_YIELD_CO>();
-      } else {
+      if (!count) {
         break;
       }
     }

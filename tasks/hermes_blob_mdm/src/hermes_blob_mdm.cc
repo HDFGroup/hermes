@@ -253,11 +253,18 @@ class Server : public TaskLib {
    * Long-running task to stage out data periodically and
    * reorganize blobs
    * */
+  struct FlushInfo {
+    BlobInfo *blob_info_;
+    LPointer<data_stager::StageOutTask> stage_task_;
+    size_t mod_count_;
+  };
   void FlushData(FlushDataTask *task, RunContext &rctx) {
     hshm::Timepoint now;
     now.Now();
     // Get the blob info data structure
     BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
+    std::vector<FlushInfo> stage_tasks;
+    stage_tasks.reserve(256);
     for (auto &it : blob_map) {
       BlobInfo &blob_info = it.second;
       // Update blob scores
@@ -276,11 +283,13 @@ class Server : public TaskLib {
       blob_info.access_freq_ = 0;
 
       // Flush data
-      size_t mod_count = blob_info.mod_count_;
+      FlushInfo flush_info;
+      flush_info.blob_info_ = &blob_info;
+      flush_info.mod_count_ = blob_info.mod_count_;
       if (blob_info.last_flush_ > 0 &&
-          mod_count > blob_info.last_flush_) {
+          flush_info.mod_count_ > blob_info.last_flush_) {
         HILOG(kDebug, "Flushing blob {} (mod_count={}, last_flush={})",
-              blob_info.blob_id_, mod_count, blob_info.last_flush_);
+              blob_info.blob_id_, flush_info.mod_count_, blob_info.last_flush_);
         LPointer<char> data = HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_CO>(
             blob_info.blob_size_, task);
         LPointer<GetBlobTask> get_blob =
@@ -291,13 +300,25 @@ class Server : public TaskLib {
                                    0, blob_info.blob_size_,
                                    data.shm_);
         get_blob->Wait<TASK_YIELD_CO>(task);
-        stager_mdm_.AsyncStageOut(task->task_node_ + 1,
-                                  blob_info.tag_id_,
-                                  blob_info.name_,
-                                  data.shm_, blob_info.blob_size_,
-                                  TASK_DATA_OWNER | TASK_FIRE_AND_FORGET);
-        blob_info.last_flush_ = mod_count;
+        HRUN_CLIENT->DelTask(get_blob);
+        flush_info.stage_task_ =
+          stager_mdm_.AsyncStageOut(task->task_node_ + 1,
+                                    blob_info.tag_id_,
+                                    blob_info.name_,
+                                    data.shm_, blob_info.blob_size_,
+                                    TASK_DATA_OWNER);
+        stage_tasks.emplace_back(flush_info);
       }
+      if (stage_tasks.size() == 256) {
+        break;
+      }
+    }
+
+    for (FlushInfo &flush_info : stage_tasks) {
+      BlobInfo &blob_info = *flush_info.blob_info_;
+      flush_info.stage_task_->Wait<TASK_YIELD_CO>(task);
+      blob_info.last_flush_ = flush_info.mod_count_;
+      HRUN_CLIENT->DelTask(flush_info.stage_task_);
     }
   }
   void MonitorFlushData(u32 mode, FlushDataTask *task, RunContext &rctx) {
@@ -306,7 +327,7 @@ class Server : public TaskLib {
       BlobInfo &blob_info = it.second;
       if (blob_info.last_flush_ > 0 &&
           blob_info.mod_count_ > blob_info.last_flush_) {
-        rctx.flush_->pending_ += 1;
+        rctx.flush_->count_ += 1;
         return;
       }
     }
