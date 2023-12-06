@@ -10,106 +10,14 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <filesystem>
-
-#include "catch_config.h"
-#include "hermes/hermes_types.h"
-#include "hermes_adapters/adapter_constants.h"
+#include "stdio_adapter_test.h"
 #include "hermes_adapters/mapper/mapper_factory.h"
-#include "hermes_adapters/stdio/stdio_fs_api.h"
+#include "hermes_adapters/mapper/mapper_factory.h"
+#include "hermes_adapters/adapter_constants.h"
 
-using hermes::adapter::BlobPlacements;
 using hermes::adapter::MapperFactory;
-using hermes::adapter::MapperType;
+using hermes::adapter::BlobPlacements;
 using hermes::adapter::kMapperType;
-using hermes::adapter::fs::MetadataManager;
-
-namespace stdfs = std::filesystem;
-
-namespace hermes::adapter::stdio::test {
-struct Arguments {
-  std::string filename = "test.dat";
-  std::string directory = "/tmp/test_hermes";
-  size_t request_size = 65536;
-  size_t num_iterations = 1024;
-};
-struct Info {
-  int rank = 0;
-  int comm_size = 1;
-  std::string new_file;
-  std::string existing_file;
-  unsigned int offset_seed = 1;
-  unsigned int rs_seed = 1;
-  size_t total_size;
-  size_t stride_size = 1024;
-  size_t small_min = 1, small_max = 4 * 1024;
-  size_t medium_min = 4 * 1024 + 1, medium_max = 256 * 1024;
-  size_t large_min = 256 * 1024 + 1, large_max = 4 * 1024 * 1024;
-};
-}  // namespace hermes::adapter::stdio::test
-hermes::adapter::stdio::test::Arguments args;
-hermes::adapter::stdio::test::Info info;
-
-int init(int* argc, char*** argv) {
-#if HERMES_INTERCEPT == 1
-  setenv("HERMES_FLUSH_MODE", "kSync", 1);
-  HERMES_CLIENT_CONF.flushing_mode_ = hermes::FlushingMode::kSync;
-#endif
-  MPI_Init(argc, argv);
-
-  return 0;
-}
-int finalize() {
-  MPI_Finalize();
-
-  return 0;
-}
-
-int pretest() {
-  stdfs::path fullpath = args.directory;
-  fullpath /= args.filename;
-  TEST_INFO->new_file_ = fullpath.string() + "_new";
-  TEST_INFO->existing_file = fullpath.string() + "_ext";
-  if (stdfs::exists(TEST_INFO->new_file_)) stdfs::remove(TEST_INFO->new_file_);
-  if (stdfs::exists(TEST_INFO->existing_file)) stdfs::remove(TEST_INFO->existing_file);
-  if (!stdfs::exists(TEST_INFO->existing_file)) {
-    std::string cmd = "dd if=/dev/zero of=" + TEST_INFO->existing_file +
-                      " bs=1 count=0 seek=" +
-                      std::to_string(TEST_INFO->request_size_ * args.num_iterations) +
-                      " > /dev/null 2>&1";
-    int status = system(cmd.c_str());
-    REQUIRE(status != -1);
-    REQUIRE(stdfs::file_size(TEST_INFO->existing_file) ==
-            TEST_INFO->request_size_ * args.num_iterations);
-    TEST_INFO->total_size_ = stdfs::file_size(TEST_INFO->existing_file);
-  }
-  REQUIRE(TEST_INFO->total_size_ > 0);
-  return 0;
-}
-
-void Clear() {
-#if HERMES_INTERCEPT == 1
-  HERMES->Clear();
-#endif
-}
-
-int TEST_INFO->Posttest() {
-  Clear();
-  if (stdfs::exists(TEST_INFO->new_file_)) stdfs::remove(TEST_INFO->new_file_);
-  if (stdfs::exists(TEST_INFO->existing_file)) stdfs::remove(TEST_INFO->existing_file);
-  return 0;
-}
-
-cl::Parser define_options() {
-  return cl::Opt(args.filename, "filename")["-f"]["--filename"](
-             "Filename used for performing I/O") |
-         cl::Opt(args.directory, "dir")["-d"]["--directory"](
-             "Directory used for performing I/O") |
-         cl::Opt(TEST_INFO->request_size_, "request_size")["-s"]["--request_size"](
-             "Request size used for performing I/O") |
-         cl::Opt(args.num_iterations, "iterations")["-n"]["--iterations"](
-             "Number of iterations of requests");
-}
 
 TEST_CASE("SingleWrite", "[process=" + std::to_string(TEST_INFO->comm_size_) +
                              "]"
@@ -119,7 +27,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(TEST_INFO->comm_size_) +
   TEST_INFO->Pretest();
   const size_t kPageSize = MEGABYTES(1);
   SECTION("Map a one request") {
-    auto mapper = MapperFactory().Get(kMapperType);
+    auto mapper = hermes::adapter::MapperFactory().Get(kMapperType);
     size_t total_size = TEST_INFO->request_size_;
     FILE* fp = fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
     REQUIRE(fp != nullptr);
@@ -136,7 +44,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(TEST_INFO->comm_size_) +
   }
   SECTION("Map a one big request") {
     auto mapper = MapperFactory().Get(kMapperType);
-    size_t total_size = TEST_INFO->request_size_ * args.num_iterations;
+    size_t total_size = TEST_INFO->request_size_ * TEST_INFO->num_iterations_;
     FILE* fp = fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 0;
@@ -156,7 +64,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(TEST_INFO->comm_size_) +
   }
   SECTION("Map a one large unaligned request") {
     auto mapper = MapperFactory().Get(kMapperType);
-    size_t total_size = TEST_INFO->request_size_ * args.num_iterations;
+    size_t total_size = TEST_INFO->request_size_ * TEST_INFO->num_iterations_;
     FILE* fp = fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 1;

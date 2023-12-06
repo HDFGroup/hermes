@@ -8,8 +8,7 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 add_executable(posix_adapter_test
         posix_adapter_test.cc
         posix_adapter_basic_test.cc
-        posix_adapter_rs_test.cc
-        ${ADAPTER_COMMON})
+        posix_adapter_rs_test.cc)
 add_dependencies(posix_adapter_test
         hermes)
 target_link_libraries(posix_adapter_test
@@ -21,8 +20,7 @@ jarvis_test(posix test_posix_basic)
 add_executable(hermes_posix_adapter_test
         posix_adapter_test.cc
         posix_adapter_basic_test.cc
-        posix_adapter_rs_test.cc
-        ${ADAPTER_COMMON})
+        posix_adapter_rs_test.cc)
 add_dependencies(hermes_posix_adapter_test
         hermes_posix)
 target_link_libraries(hermes_posix_adapter_test
@@ -37,7 +35,7 @@ add_executable(posix_adapter_mpi_test
         posix_adapter_basic_test.cc
         posix_adapter_rs_test.cc
         # posix_adapter_shared_test.cc
-        ${ADAPTER_COMMON})
+)
 add_dependencies(posix_adapter_mpi_test
         hermes)
 target_link_libraries(posix_adapter_mpi_test
@@ -51,7 +49,7 @@ add_executable(hermes_posix_adapter_mpi_test
         posix_adapter_basic_test.cc
         posix_adapter_rs_test.cc
         # posix_adapter_shared_test.cc
-        ${ADAPTER_COMMON})
+)
 add_dependencies(hermes_posix_adapter_mpi_test
         hermes_posix)
 target_link_libraries(hermes_posix_adapter_mpi_test
