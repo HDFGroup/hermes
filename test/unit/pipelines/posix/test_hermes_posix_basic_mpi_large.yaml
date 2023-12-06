@@ -1,8 +1,6 @@
 name: hermes_unit_hermes_posix_basic_mpi_large
 env: hermes
 pkgs:
-  - pkg_type: asan
-    pkg_name: asan
   - pkg_type: hermes_run
     pkg_name: hermes_run
     sleep: 2

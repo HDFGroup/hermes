@@ -13,16 +13,22 @@ namespace hermes::data_stager {
 
 class StagerFactory {
  public:
-  static std::unique_ptr<AbstractStager> Get(const std::string &url) {
+  static std::unique_ptr<AbstractStager> Get(const std::string &path,
+                                             const std::string &params) {
+    std::string protocol;
+    hrun::LocalDeserialize srl(params);
+    srl >> protocol;
+
     std::unique_ptr<AbstractStager> stager;
-    if (url.find("file://") == 0) {
+    if (protocol == "file") {
       stager = std::make_unique<BinaryFileStager>();
-    } else if (url.find("parquet://")) {
-    } else if (url.find("hdf5://")) {
+    } else if (protocol == "parquet") {
+    } else if (protocol == "hdf5") {
     } else {
       throw std::runtime_error("Unknown stager type");
     }
-    stager->url_ = url;
+    stager->path_ = path;
+    stager->params_ = params;
     return stager;
   }
 };

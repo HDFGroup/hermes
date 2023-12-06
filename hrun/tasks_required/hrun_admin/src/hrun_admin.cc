@@ -99,6 +99,7 @@ class Server : public TaskLib {
         task->id_,
         task);
     queue->flags_.SetBits(QUEUE_READY);
+    task->method_ = Method::kCreateTaskState;
     task->SetModuleComplete();
   }
   void MonitorCreateTaskState(u32 mode, CreateTaskStateTask *task, RunContext &rctx) {

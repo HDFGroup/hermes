@@ -228,7 +228,7 @@ class PutBlobPhase {
 #define HERMES_BLOB_REPLACE BIT_OPT(u32, 0)
 #define HERMES_BLOB_APPEND BIT_OPT(u32, 1)
 #define HERMES_DID_STAGE_IN BIT_OPT(u32, 2)
-#define HERMES_IS_FILE BIT_OPT(u32, 3)
+#define HERMES_SHOULD_STAGE BIT_OPT(u32, 3)
 #define HERMES_BLOB_DID_CREATE BIT_OPT(u32, 4)
 #define HERMES_GET_BLOB_ID BIT_OPT(u32, 5)
 #define HERMES_HAS_DERIVED BIT_OPT(u32, 6)
@@ -334,6 +334,7 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
     hrun::LocalSerialize srl(group);
+    srl << std::string("blob_op");
     srl << tag_id_;
     return 0;
   }
@@ -454,6 +455,7 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
     hrun::LocalSerialize srl(group);
+    srl << std::string("blob_op");
     srl << tag_id_;
     return 0;
   }
@@ -509,6 +511,7 @@ struct TagBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
     hrun::LocalSerialize srl(group);
+    srl << std::string("blob_op");
     srl << tag_id_;
     return 0;
   }
@@ -569,6 +572,7 @@ struct BlobHasTagTask : public Task, TaskFlags<TF_SRL_SYM> {
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
     hrun::LocalSerialize srl(group);
+    srl << std::string("blob_op");
     srl << tag_id_;
     return 0;
   }
@@ -630,6 +634,7 @@ struct GetBlobIdTask : public Task, TaskFlags<TF_SRL_SYM> {
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
     hrun::LocalSerialize srl(group);
+    srl << std::string("blob_op");
     srl << tag_id_;
     return 0;
   }
@@ -692,6 +697,7 @@ struct GetBlobNameTask : public Task, TaskFlags<TF_SRL_SYM> {
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
     hrun::LocalSerialize srl(group);
+    srl << std::string("blob_op");
     srl << tag_id_;
     return 0;
   }
@@ -759,6 +765,7 @@ struct GetBlobSizeTask : public Task, TaskFlags<TF_SRL_SYM> {
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
     hrun::LocalSerialize srl(group);
+    srl << std::string("blob_op");
     srl << tag_id_;
     return 0;
   }
@@ -813,6 +820,7 @@ struct GetBlobScoreTask : public Task, TaskFlags<TF_SRL_SYM> {
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
     hrun::LocalSerialize srl(group);
+    srl << std::string("blob_op");
     srl << tag_id_;
     return 0;
   }
@@ -873,6 +881,7 @@ struct GetBlobBuffersTask : public Task, TaskFlags<TF_SRL_SYM> {
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
     hrun::LocalSerialize srl(group);
+    srl << std::string("blob_op");
     srl << tag_id_;
     return 0;
   }
@@ -937,6 +946,7 @@ struct RenameBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
     hrun::LocalSerialize srl(group);
+    srl << std::string("blob_op");
     srl << tag_id_;
     return 0;
   }
@@ -992,6 +1002,7 @@ struct TruncateBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
     hrun::LocalSerialize srl(group);
+    srl << std::string("blob_op");
     srl << tag_id_;
     return 0;
   }
@@ -1055,6 +1066,7 @@ struct DestroyBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
     hrun::LocalSerialize srl(group);
+    srl << std::string("blob_op");
     srl << tag_id_;
     return 0;
   }
@@ -1129,6 +1141,7 @@ struct ReorganizeBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
     hrun::LocalSerialize srl(group);
+    srl << std::string("blob_op");
     srl << tag_id_;
     return 0;
   }

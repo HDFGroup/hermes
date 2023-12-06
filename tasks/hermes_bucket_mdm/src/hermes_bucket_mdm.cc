@@ -168,8 +168,8 @@ class Server : public TaskLib {
                 HRUN_CLIENT->node_id_, append.blob_name_.str(), append.data_size_,
                 task->tag_id_, task->task_node_, blob_mdm_.id_);
           Context ctx;
-          if (tag_info.flags_.Any(HERMES_IS_FILE)) {
-            ctx.flags_.SetBits(HERMES_IS_FILE);
+          if (tag_info.flags_.Any(HERMES_SHOULD_STAGE)) {
+            ctx.flags_.SetBits(HERMES_SHOULD_STAGE);
           }
           append.put_task_ = blob_mdm_.AsyncPutBlob(task->task_node_ + 1,
                                                     task->tag_id_,
@@ -236,11 +236,12 @@ class Server : public TaskLib {
       tag_info.tag_id_ = tag_id;
       tag_info.owner_ = task->blob_owner_;
       tag_info.internal_size_ = task->backend_size_;
-      if (task->flags_.Any(HERMES_IS_FILE)) {
+      if (task->flags_.Any(HERMES_SHOULD_STAGE)) {
         stager_mdm_.AsyncRegisterStager(task->task_node_ + 1,
                                         tag_id,
-                                        hshm::charbuf(task->tag_name_->str()));
-        tag_info.flags_.SetBits(HERMES_IS_FILE);
+                                        hshm::charbuf(task->tag_name_->str()),
+                                        hshm::charbuf(task->params_->str()));
+        tag_info.flags_.SetBits(HERMES_SHOULD_STAGE);
       }
     } else {
       if (tag_name.size()) {

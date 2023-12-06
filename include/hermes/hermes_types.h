@@ -119,11 +119,11 @@ struct Context {
   /** The blob's score */
   float blob_score_;
 
-  /** Page size to use for FS reads / writes*/
-  size_t page_size_;
-
   /** Flags */
   bitfield32_t flags_;
+
+  /** Custom bucket parameters */
+  std::string bkt_params_;
 
   /** The node id the blob will be accessed from */
   u32 node_id_;

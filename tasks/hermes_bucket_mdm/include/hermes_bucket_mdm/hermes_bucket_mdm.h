@@ -125,21 +125,22 @@ class Client : public TaskLibClient {
                                     bool blob_owner,
                                     const std::vector<TraitId> &traits,
                                     size_t backend_size,
-                                    u32 flags) {
+                                    u32 flags,
+                                    const Context &ctx = Context()) {
     HILOG(kDebug, "Creating a tag {}", tag_name.str());
-    u32 hash = std::hash<hshm::charbuf>{}(tag_name);
     HRUN_CLIENT->ConstructTask<GetOrCreateTagTask>(
-        task, task_node, DomainId::GetNode(HASH_TO_NODE_ID(hash)), id_,
-        tag_name, blob_owner, traits, backend_size, flags);
+        task, task_node, id_,
+        tag_name, blob_owner, traits, backend_size, flags, ctx);
   }
   HSHM_ALWAYS_INLINE
   TagId GetOrCreateTagRoot(const hshm::charbuf &tag_name,
                            bool blob_owner,
                            const std::vector<TraitId> &traits,
                            size_t backend_size,
-                           u32 flags) {
+                           u32 flags,
+                           const Context &ctx = Context()) {
     LPointer<hrunpq::TypedPushTask<GetOrCreateTagTask>> push_task =
-        AsyncGetOrCreateTagRoot(tag_name, blob_owner, traits, backend_size, flags);
+        AsyncGetOrCreateTagRoot(tag_name, blob_owner, traits, backend_size, flags, ctx);
     push_task->Wait();
     GetOrCreateTagTask *task = push_task->get();
     TagId tag_id = task->tag_id_;

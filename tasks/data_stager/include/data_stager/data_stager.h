@@ -57,15 +57,17 @@ class Client : public TaskLibClient {
   void AsyncRegisterStagerConstruct(RegisterStagerTask *task,
                                     const TaskNode &task_node,
                                     const BucketId &bkt_id,
-                                    const hshm::charbuf &url) {
+                                    const hshm::charbuf &path,
+                                    const hshm::charbuf &params) {
     HRUN_CLIENT->ConstructTask<RegisterStagerTask>(
-        task, task_node, id_, bkt_id, url);
+        task, task_node, id_, bkt_id, path, params);
   }
   HSHM_ALWAYS_INLINE
   void RegisterStagerRoot(const BucketId &bkt_id,
-                          const hshm::charbuf &url) {
+                          const hshm::charbuf &path,
+                          const hshm::charbuf params) {
     LPointer<hrunpq::TypedPushTask<RegisterStagerTask>> task =
-        AsyncRegisterStagerRoot(bkt_id, url);
+        AsyncRegisterStagerRoot(bkt_id, path, params);
     task.ptr_->Wait();
   }
   HRUN_TASK_NODE_PUSH_ROOT(RegisterStager);

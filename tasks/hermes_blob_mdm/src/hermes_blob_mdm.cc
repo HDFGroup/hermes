@@ -330,7 +330,7 @@ class Server : public TaskLib {
     blob_info.user_score_ = task->score_;
 
     // Stage Blob
-    if (task->flags_.Any(HERMES_IS_FILE) && blob_info.last_flush_ == 0) {
+    if (task->flags_.Any(HERMES_SHOULD_STAGE) && blob_info.last_flush_ == 0) {
       HILOG(kDebug, "This file has not yet been flushed");
       blob_info.last_flush_ = 1;
       LPointer<data_stager::StageInTask> stage_task =
@@ -342,7 +342,7 @@ class Server : public TaskLib {
       blob_info.mod_count_ = 1;
       HRUN_CLIENT->DelTask(stage_task);
     }
-    if (task->flags_.Any(HERMES_IS_FILE)) {
+    if (task->flags_.Any(HERMES_SHOULD_STAGE)) {
       HILOG(kDebug, "This is marked as a file: {} {}",
             blob_info.mod_count_, blob_info.last_flush_);
     }
@@ -445,7 +445,7 @@ class Server : public TaskLib {
     }
 
     // Update information
-    if (task->flags_.Any(HERMES_IS_FILE)) {
+    if (task->flags_.Any(HERMES_SHOULD_STAGE)) {
       // TODO(llogan): Move to data stager
       adapter::BlobPlacement p;
       std::string blob_name_str = task->blob_name_->str();
@@ -507,7 +507,7 @@ class Server : public TaskLib {
     BlobInfo &blob_info = blob_map[task->blob_id_];
 
     // Stage Blob
-    if (task->flags_.Any(HERMES_IS_FILE) && blob_info.last_flush_ == 0) {
+    if (task->flags_.Any(HERMES_SHOULD_STAGE) && blob_info.last_flush_ == 0) {
       // TODO(llogan): Don't hardcore score = 1
       blob_info.last_flush_ = 1;
       LPointer<data_stager::StageInTask> stage_task =
@@ -617,7 +617,7 @@ class Server : public TaskLib {
       BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
       blob_map.emplace(blob_id, BlobInfo());
       BlobInfo &blob_info = blob_map[blob_id];
-      blob_info.name_ = std::move(blob_name);
+      blob_info.name_ = blob_name;
       blob_info.blob_id_ = blob_id;
       blob_info.tag_id_ = tag_id;
       blob_info.blob_size_ = 0;

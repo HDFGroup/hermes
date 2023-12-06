@@ -523,11 +523,8 @@ TEST_CASE("TestHermesDataStager") {
 
   // Create a stageable bucket
   using hermes::data_stager::BinaryFileStager;
-  hermes::Context ctx;
-  ctx.flags_.SetBits(HERMES_IS_FILE);
-  hshm::charbuf url =
-      BinaryFileStager::BuildFileUrl(path, page_size);
-  hermes::Bucket bkt(url.str(), file_size, HERMES_IS_FILE);
+  hermes::Context ctx = BinaryFileStager::BuildContext(page_size);
+  hermes::Bucket bkt(path, ctx, file_size);
 
   // Put a few blobs in the bucket
   for (size_t i = off; i < proc_count; ++i) {
@@ -567,7 +564,6 @@ TEST_CASE("TestHermesDataOp") {
   HERMES->ClientInit();
 
   // Create a bucket that supports derived quantities
-  using hermes::data_stager::BinaryFileStager;
   hermes::Context ctx;
   ctx.flags_.SetBits(HERMES_HAS_DERIVED);
   std::string url = "data_bkt";

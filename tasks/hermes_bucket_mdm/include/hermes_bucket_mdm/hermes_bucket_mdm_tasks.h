@@ -277,6 +277,7 @@ struct AppendBlobSchemaTask : public Task, TaskFlags<TF_SRL_SYM> {
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
     hrun::LocalSerialize srl(group);
+    srl << std::string("blob_op");
     srl << tag_id_;
     return 0;
   }
@@ -339,6 +340,7 @@ struct AppendBlobTask : public Task, TaskFlags<TF_LOCAL> {
   HSHM_ALWAYS_INLINE
   u32 GetGroup(hshm::charbuf &group) {
     hrun::LocalSerialize srl(group);
+    srl << std::string("blob_op");
     srl << tag_id_;
     return 0;
   }
@@ -347,6 +349,7 @@ struct AppendBlobTask : public Task, TaskFlags<TF_LOCAL> {
 /** A task to get or create a tag */
 struct GetOrCreateTagTask : public Task, TaskFlags<TF_SRL_SYM> {
   IN hipc::ShmArchive<hipc::string> tag_name_;
+  IN hipc::ShmArchive<hipc::string> params_;
   IN bool blob_owner_;
   IN hipc::ShmArchive<hipc::vector<TraitId>> traits_;
   IN size_t backend_size_;
@@ -361,16 +364,13 @@ struct GetOrCreateTagTask : public Task, TaskFlags<TF_SRL_SYM> {
   HSHM_ALWAYS_INLINE explicit
   GetOrCreateTagTask(hipc::Allocator *alloc,
                      const TaskNode &task_node,
-                     const DomainId &domain_id,
                      const TaskStateId &state_id,
-                     const hshm::charbuf &url,
+                     const hshm::charbuf &tag_name,
                      bool blob_owner,
                      const std::vector<TraitId> &traits,
                      size_t backend_size,
-                     u32 flags) : Task(alloc) {
-    // Parse tag name URL
-    hshm::charbuf tag_name = data_stager::Client::GetTagNameFromUrl(url);
-
+                     u32 flags,
+                     const Context &ctx) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = std::hash<hshm::charbuf>{}(tag_name);
@@ -378,13 +378,14 @@ struct GetOrCreateTagTask : public Task, TaskFlags<TF_SRL_SYM> {
     task_state_ = state_id;
     method_ = Method::kGetOrCreateTag;
     task_flags_.SetBits(TASK_LOW_LATENCY);
-    domain_id_ = domain_id;
+    domain_id_ = DomainId::GetNode(HASH_TO_NODE_ID(lane_hash_));
 
     // Custom params
     blob_owner_ = blob_owner;
     backend_size_ = backend_size;
-    HSHM_MAKE_AR(tag_name_, alloc, url)
+    HSHM_MAKE_AR(tag_name_, alloc, tag_name)
     HSHM_MAKE_AR(traits_, alloc, traits)
+    HSHM_MAKE_AR(params_, alloc, ctx.bkt_params_)
     flags_ = bitfield32_t(flags);
   }
 
@@ -392,6 +393,7 @@ struct GetOrCreateTagTask : public Task, TaskFlags<TF_SRL_SYM> {
   ~GetOrCreateTagTask() {
     HSHM_DESTROY_AR(tag_name_)
     HSHM_DESTROY_AR(traits_)
+    HSHM_DESTROY_AR(params_)
   }
 
   /** (De)serialize message call */

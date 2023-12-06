@@ -40,6 +40,8 @@ File Filesystem::Open(AdapterStat &stat, const std::string &path) {
 void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
   Context ctx;
+  ctx.flags_.SetBits(HERMES_SHOULD_STAGE);
+
   std::shared_ptr<AdapterStat> exists = mdm->Find(f);
   if (!exists) {
     HILOG(kDebug, "File not opened before by adapter")
@@ -58,17 +60,17 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     }
     // Update page size
     stat.page_size_ = mdm->GetAdapterPageSize(path);
+    // Bucket parameters
+    ctx.bkt_params_ = hermes::data_stager::BinaryFileStager::BuildFileParams(stat.page_size_);
     // Get or create the bucket
-    hshm::charbuf url = hermes::data_stager::BinaryFileStager::BuildFileUrl(
-        stat.path_, stat.page_size_);
     if (stat.hflags_.Any(HERMES_FS_TRUNC)) {
       // The file was opened with TRUNCATION
-      stat.bkt_id_ = HERMES->GetBucket(url.str(), ctx, 0, HERMES_IS_FILE);
+      stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, 0, HERMES_SHOULD_STAGE);
       stat.bkt_id_.Clear();
     } else {
       // The file was opened regularly
       stat.file_size_ = io_client_->GetSize(*path_shm);
-      stat.bkt_id_ = HERMES->GetBucket(url.str(), ctx, stat.file_size_, HERMES_IS_FILE);
+      stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, stat.file_size_, HERMES_SHOULD_STAGE);
     }
     HILOG(kDebug, "BKT vs file size: {} {}", stat.bkt_id_.GetSize(), stat.file_size_);
     // Update file position pointer
@@ -120,8 +122,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
     return total_size;
   }
   Context ctx;
-  ctx.page_size_ = stat.page_size_;
-  ctx.flags_.SetBits(HERMES_IS_FILE);
+  ctx.flags_.SetBits(HERMES_SHOULD_STAGE);
 
   if (is_append) {
     // Perform append
@@ -199,7 +200,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
 
   // Perform a PartialPut for each page
   Context ctx;
-  ctx.flags_.SetBits(HERMES_IS_FILE);
+  ctx.flags_.SetBits(HERMES_SHOULD_STAGE);
   for (const BlobPlacement &p : mapping) {
     Blob page((const char*)ptr + data_offset, p.blob_size_);
     std::string blob_name(p.CreateBlobName().str());

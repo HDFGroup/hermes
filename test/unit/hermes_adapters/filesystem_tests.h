@@ -171,6 +171,7 @@ class FilesystemTests {
   }
 
   void Posttest(bool compare_data = true) {
+    MPI_Barrier(MPI_COMM_WORLD);
     Flush();
     IgnoreAllFiles();
     if (compare_data) {
@@ -194,6 +195,7 @@ class FilesystemTests {
     TrackAllFiles();
     RemoveAllFiles();
     Flush();
+    MPI_Barrier(MPI_COMM_WORLD);
   }
 
   virtual void RegisterFiles() = 0;
