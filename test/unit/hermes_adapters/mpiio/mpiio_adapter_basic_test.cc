@@ -207,6 +207,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(TEST_INFO->comm_size_) +
     REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
   }
 
+
   SECTION("write to new  file") {
     TEST_INFO->test_open(TEST_INFO->new_file_, MPI_MODE_WRONLY | MPI_MODE_CREATE,
                     MPI_COMM_SELF);
@@ -219,7 +220,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(TEST_INFO->comm_size_) +
   }
 
   SECTION("write to new file with allocate") {
-    TEST_INFO->test_open(TEST_INFO->shared_new_file_,
+    TEST_INFO->test_open(TEST_INFO->new_file_,
                     MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_COMM_SELF);
     REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
     TEST_INFO->test_preallocate(TEST_INFO->request_size_ * TEST_INFO->comm_size_);
@@ -231,7 +232,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(TEST_INFO->comm_size_) +
     TEST_INFO->test_close();
     REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
     MPI_Barrier(MPI_COMM_WORLD);
-    REQUIRE(stdfs::file_size(TEST_INFO->shared_new_file_.hermes_) ==
+    REQUIRE(stdfs::file_size(TEST_INFO->new_file_.hermes_) ==
             (size_t)TEST_INFO->size_written_orig_ * TEST_INFO->comm_size_);
   }
 

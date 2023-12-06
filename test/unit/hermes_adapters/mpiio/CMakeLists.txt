@@ -7,7 +7,7 @@ target_link_libraries(mpiio_adapter_test
 add_dependencies(mpiio_adapter_test
         hermes)
 target_compile_definitions(mpiio_adapter_test PUBLIC
-        HERMES_INTERCEPT=1 HERMES_MPI_TESTS=true)
+        HERMES_MPI_TESTS=true)
 jarvis_test(mpiio test_mpiio_basic)
 
 # MPI adapter tests with hermes
