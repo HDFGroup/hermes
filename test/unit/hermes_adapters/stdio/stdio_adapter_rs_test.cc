@@ -9,6 +9,7 @@
  * the COPYING file, which can be found at the top directory. If you do not  *
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#include "stdio_adapter_test.h"
 
 TEST_CASE("BatchedWriteRSRangeSmall",
           "[process=" + std::to_string(TEST_INFO->comm_size_) +
@@ -21,43 +22,43 @@ TEST_CASE("BatchedWriteRSRangeSmall",
               "[pattern=sequential][file=1]") {
   TEST_INFO->Pretest();
   SECTION("write to new file always at the start") {
-    test::test_fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->new_file_, "w+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     size_t biggest_written = 0;
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      test::test_fseek(0, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
-      size_t offset = ftell(test::fh_orig);
+      TEST_INFO->test_fseek(0, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
+      size_t offset = ftell(TEST_INFO->fh_orig_);
       REQUIRE(offset == 0);
       size_t request_size =
-          TEST_INFO->small_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->small_max);
+          TEST_INFO->small_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->small_max_);
       std::string data(request_size, '1');
-      test::test_fwrite(data.data(), request_size);
-      REQUIRE(test::size_written_orig == request_size);
+      TEST_INFO->test_fwrite(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_written_orig_ == request_size);
       if (biggest_written < request_size) biggest_written = request_size;
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
-    REQUIRE(stdfs::file_size(TEST_INFO->new_file) == biggest_written);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
+    REQUIRE(stdfs::file_size(TEST_INFO->new_file_.hermes_) == biggest_written);
   }
 
   SECTION("write to new file") {
-    test::test_fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->new_file_, "w+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     size_t total_written = 0;
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       size_t request_size =
-          TEST_INFO->small_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->small_max);
+          TEST_INFO->small_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->small_max_);
       std::string data(request_size, '1');
-      test::test_fwrite(data.data(), request_size);
-      REQUIRE(test::size_written_orig == request_size);
-      total_written += test::size_written_orig;
+      TEST_INFO->test_fwrite(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_written_orig_ == request_size);
+      total_written += TEST_INFO->size_written_orig_;
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
-    REQUIRE(stdfs::file_size(TEST_INFO->new_file) == total_written);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
+    REQUIRE(stdfs::file_size(TEST_INFO->new_file_.hermes_) == total_written);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedReadSequentialRSRangeSmall",
@@ -70,41 +71,41 @@ TEST_CASE("BatchedReadSequentialRSRangeSmall",
               "[pattern=sequential][file=1]") {
   TEST_INFO->Pretest();
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     std::string data(TEST_INFO->request_size_, '1');
     size_t current_offset = 0;
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       size_t request_size =
-          TEST_INFO->small_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->small_max);
+          TEST_INFO->small_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->small_max_);
       std::string data(request_size, '1');
-      test::test_fread(data.data(), request_size);
-      REQUIRE(test::size_read_orig == request_size);
-      current_offset += test::size_read_orig;
+      TEST_INFO->test_fread(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_read_orig_ == request_size);
+      current_offset += TEST_INFO->size_read_orig_;
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
 
   SECTION("read from existing file always at start") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
 
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      test::test_fseek(0, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
-      size_t offset = ftell(test::fh_orig);
+      TEST_INFO->test_fseek(0, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
+      size_t offset = ftell(TEST_INFO->fh_orig_);
       REQUIRE(offset == 0);
       size_t request_size =
-          TEST_INFO->small_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->small_max);
+          TEST_INFO->small_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->small_max_);
       std::string data(request_size, '1');
-      test::test_fread(data.data(), request_size);
-      REQUIRE(test::size_read_orig == request_size);
+      TEST_INFO->test_fread(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_read_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedReadRandomRSRangeSmall",
@@ -118,23 +119,23 @@ TEST_CASE("BatchedReadRandomRSRangeSmall",
   TEST_INFO->Pretest();
 
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       auto offset =
-          rand_r(&TEST_INFO->offset_seed) % (TEST_INFO->total_size_ - TEST_INFO->small_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+          rand_r(&TEST_INFO->offset_seed_) % (TEST_INFO->total_size_ - TEST_INFO->small_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->small_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->small_max);
+          TEST_INFO->small_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->small_max_);
       std::string data(request_size, '1');
-      test::test_fread(data.data(), request_size);
-      REQUIRE(test::size_read_orig == request_size);
+      TEST_INFO->test_fread(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_read_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedUpdateRandomRSRangeSmall",
@@ -148,23 +149,23 @@ TEST_CASE("BatchedUpdateRandomRSRangeSmall",
   TEST_INFO->Pretest();
 
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       auto offset =
-          rand_r(&TEST_INFO->offset_seed) % (TEST_INFO->total_size_ - TEST_INFO->small_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+          rand_r(&TEST_INFO->offset_seed_) % (TEST_INFO->total_size_ - TEST_INFO->small_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->small_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->small_max);
+          TEST_INFO->small_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->small_max_);
       std::string data(request_size, '1');
-      test::test_fwrite(data.data(), request_size);
-      REQUIRE(test::size_written_orig == request_size);
+      TEST_INFO->test_fwrite(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_written_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedReadStrideFixedRSRangeSmall",
@@ -177,22 +178,22 @@ TEST_CASE("BatchedReadStrideFixedRSRangeSmall",
               "[pattern=stride_fixed][file=1]") {
   TEST_INFO->Pretest();
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      auto offset = (i * TEST_INFO->stride_size) % (TEST_INFO->total_size_ - TEST_INFO->small_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+      auto offset = (i * TEST_INFO->stride_size_) % (TEST_INFO->total_size_ - TEST_INFO->small_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->small_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->small_max);
+          TEST_INFO->small_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->small_max_);
       std::string data(request_size, '1');
-      test::test_fread(data.data(), request_size);
-      REQUIRE(test::size_read_orig == request_size);
+      TEST_INFO->test_fread(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_read_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedUpdateStrideFixedRSRangeSmall",
@@ -205,22 +206,22 @@ TEST_CASE("BatchedUpdateStrideFixedRSRangeSmall",
               "[pattern=stride_fixed][file=1]") {
   TEST_INFO->Pretest();
   SECTION("write to existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      auto offset = (i * TEST_INFO->stride_size) % (TEST_INFO->total_size_ - TEST_INFO->small_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+      auto offset = (i * TEST_INFO->stride_size_) % (TEST_INFO->total_size_ - TEST_INFO->small_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->small_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->small_max);
+          TEST_INFO->small_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->small_max_);
       std::string data(request_size, '1');
-      test::test_fwrite(data.data(), request_size);
-      REQUIRE(test::size_written_orig == request_size);
+      TEST_INFO->test_fwrite(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_written_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedReadStrideDynamicRSRangeSmall",
@@ -233,23 +234,23 @@ TEST_CASE("BatchedReadStrideDynamicRSRangeSmall",
               "[pattern=stride_dynamic][file=1]") {
   TEST_INFO->Pretest();
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      auto offset = GetRandomOffset(i, TEST_INFO->offset_seed, TEST_INFO->stride_size,
-                                    TEST_INFO->total_size_ - TEST_INFO->small_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+      auto offset = TEST_INFO->GetRandomOffset(i, TEST_INFO->offset_seed_, TEST_INFO->stride_size_,
+                                    TEST_INFO->total_size_ - TEST_INFO->small_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->small_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->small_max);
+          TEST_INFO->small_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->small_max_);
       std::string data(request_size, '1');
-      test::test_fread(data.data(), request_size);
-      REQUIRE(test::size_read_orig == request_size);
+      TEST_INFO->test_fread(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_read_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedUpdateStrideDynamicRSRangeSmall",
@@ -262,23 +263,23 @@ TEST_CASE("BatchedUpdateStrideDynamicRSRangeSmall",
               "[pattern=stride_dynamic][file=1]") {
   TEST_INFO->Pretest();
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      auto offset = GetRandomOffset(i, TEST_INFO->offset_seed, TEST_INFO->stride_size,
-                                    TEST_INFO->total_size_ - TEST_INFO->small_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+      auto offset = TEST_INFO->GetRandomOffset(i, TEST_INFO->offset_seed_, TEST_INFO->stride_size_,
+                                    TEST_INFO->total_size_ - TEST_INFO->small_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->small_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->small_max);
+          TEST_INFO->small_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->small_max_);
       std::string data(request_size, '1');
-      test::test_fwrite(data.data(), request_size);
-      REQUIRE(test::size_written_orig == request_size);
+      TEST_INFO->test_fwrite(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_written_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedReadStrideNegativeRSRangeSmall",
@@ -291,23 +292,23 @@ TEST_CASE("BatchedReadStrideNegativeRSRangeSmall",
               "[pattern=stride_negative][file=1]") {
   TEST_INFO->Pretest();
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      auto offset = (TEST_INFO->total_size_ - i * TEST_INFO->stride_size) %
-                    (TEST_INFO->total_size_ - TEST_INFO->small_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+      auto offset = (TEST_INFO->total_size_ - i * TEST_INFO->stride_size_) %
+                    (TEST_INFO->total_size_ - TEST_INFO->small_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->small_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->small_max);
+          TEST_INFO->small_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->small_max_);
       std::string data(request_size, '1');
-      test::test_fread(data.data(), request_size);
-      REQUIRE(test::size_read_orig == request_size);
+      TEST_INFO->test_fread(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_read_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedUpdateStrideNegativeRSRangeSmall",
@@ -321,23 +322,23 @@ TEST_CASE("BatchedUpdateStrideNegativeRSRangeSmall",
               "[pattern=stride_negative][file=1]") {
   TEST_INFO->Pretest();
   SECTION("write to existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      auto offset = TEST_INFO->total_size_ - ((i * TEST_INFO->stride_size) %
-                                       (TEST_INFO->total_size_ - TEST_INFO->small_max));
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+      auto offset = TEST_INFO->total_size_ - ((i * TEST_INFO->stride_size_) %
+                                       (TEST_INFO->total_size_ - TEST_INFO->small_max_));
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->small_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->small_max);
+          TEST_INFO->small_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->small_max_);
       std::string data(request_size, '1');
-      test::test_fwrite(data.data(), request_size);
-      REQUIRE(test::size_written_orig == request_size);
+      TEST_INFO->test_fwrite(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_written_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedReadStride2DRSRangeSmall",
@@ -355,8 +356,8 @@ TEST_CASE("BatchedReadStride2DRSRangeSmall",
   size_t cell_size = 128;
   size_t cell_stride = rows * cols / cell_size / TEST_INFO->num_iterations_;
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     size_t prev_cell_col = 0, prev_cell_row = 0;
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       size_t current_cell_col = (prev_cell_col + cell_stride) % cols;
@@ -365,19 +366,19 @@ TEST_CASE("BatchedReadStride2DRSRangeSmall",
                                     : prev_cell_row;
       prev_cell_row = current_cell_row;
       auto offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
-                    (TEST_INFO->total_size_ - TEST_INFO->small_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+                    (TEST_INFO->total_size_ - TEST_INFO->small_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->small_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->small_max);
+          TEST_INFO->small_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->small_max_);
       std::string data(request_size, '1');
-      test::test_fread(data.data(), request_size);
-      REQUIRE(test::size_read_orig == request_size);
+      TEST_INFO->test_fread(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_read_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedUpdateStride2DRSRangeSmall",
@@ -395,8 +396,8 @@ TEST_CASE("BatchedUpdateStride2DRSRangeSmall",
   size_t cell_size = 128;
   size_t cell_stride = rows * cols / cell_size / TEST_INFO->num_iterations_;
   SECTION("write to existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     size_t prev_cell_col = 0, prev_cell_row = 0;
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       size_t current_cell_col = (prev_cell_col + cell_stride) % cols;
@@ -405,19 +406,19 @@ TEST_CASE("BatchedUpdateStride2DRSRangeSmall",
                                     : prev_cell_row;
       prev_cell_row = current_cell_row;
       auto offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
-                    (TEST_INFO->total_size_ - TEST_INFO->small_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+                    (TEST_INFO->total_size_ - TEST_INFO->small_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->small_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->small_max);
+          TEST_INFO->small_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->small_max_);
       std::string data(request_size, '1');
-      test::test_fwrite(data.data(), request_size);
-      REQUIRE(test::size_written_orig == request_size);
+      TEST_INFO->test_fwrite(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_written_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 /**
  * Medium RS
@@ -433,42 +434,42 @@ TEST_CASE("BatchedWriteRSRangeMedium",
               "[pattern=sequential][file=1]") {
   TEST_INFO->Pretest();
   SECTION("write to new file always at the start") {
-    test::test_fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->new_file_, "w+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     size_t biggest_written = 0;
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      test::test_fseek(0, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
-      size_t offset = ftell(test::fh_orig);
+      TEST_INFO->test_fseek(0, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
+      size_t offset = ftell(TEST_INFO->fh_orig_);
       REQUIRE(offset == 0);
       size_t request_size =
-          TEST_INFO->medium_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->medium_max);
+          TEST_INFO->medium_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->medium_max_);
       std::string data(request_size, '1');
-      test::test_fwrite(data.data(), request_size);
-      REQUIRE(test::size_written_orig == request_size);
+      TEST_INFO->test_fwrite(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_written_orig_ == request_size);
       if (biggest_written < request_size) biggest_written = request_size;
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
-    REQUIRE(stdfs::file_size(TEST_INFO->new_file) == biggest_written);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
+    REQUIRE(stdfs::file_size(TEST_INFO->new_file_.hermes_) == biggest_written);
   }
 
   SECTION("write to new file") {
-    test::test_fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->new_file_, "w+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     size_t total_written = 0;
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       size_t request_size =
-          TEST_INFO->medium_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->medium_max);
+          TEST_INFO->medium_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->medium_max_);
       std::string data(request_size, '1');
-      test::test_fwrite(data.data(), request_size);
-      REQUIRE(test::size_written_orig == request_size);
-      total_written += test::size_written_orig;
+      TEST_INFO->test_fwrite(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_written_orig_ == request_size);
+      total_written += TEST_INFO->size_written_orig_;
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedReadSequentialRSRangeMedium",
@@ -481,42 +482,42 @@ TEST_CASE("BatchedReadSequentialRSRangeMedium",
               "[pattern=sequential][file=1]") {
   TEST_INFO->Pretest();
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     std::string data(TEST_INFO->request_size_, '1');
     size_t current_offset = 0;
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       size_t request_size =
-          (TEST_INFO->medium_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->medium_max)) %
+          (TEST_INFO->medium_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->medium_max_)) %
           (TEST_INFO->total_size_ - current_offset);
       std::string data(request_size, '1');
-      test::test_fread(data.data(), request_size);
-      REQUIRE(test::size_read_orig == request_size);
-      current_offset += test::size_read_orig;
+      TEST_INFO->test_fread(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_read_orig_ == request_size);
+      current_offset += TEST_INFO->size_read_orig_;
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
 
   SECTION("read from existing file always at start") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
 
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      test::test_fseek(0, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
-      size_t offset = ftell(test::fh_orig);
+      TEST_INFO->test_fseek(0, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
+      size_t offset = ftell(TEST_INFO->fh_orig_);
       REQUIRE(offset == 0);
       size_t request_size =
-          TEST_INFO->medium_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->medium_max);
+          TEST_INFO->medium_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->medium_max_);
       std::string data(request_size, '1');
-      test::test_fread(data.data(), request_size);
-      REQUIRE(test::size_read_orig == request_size);
+      TEST_INFO->test_fread(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_read_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedReadRandomRSRangeMedium",
@@ -530,23 +531,23 @@ TEST_CASE("BatchedReadRandomRSRangeMedium",
   TEST_INFO->Pretest();
 
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       auto offset =
-          rand_r(&TEST_INFO->offset_seed) % (TEST_INFO->total_size_ - TEST_INFO->medium_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+          rand_r(&TEST_INFO->offset_seed_) % (TEST_INFO->total_size_ - TEST_INFO->medium_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->medium_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->medium_max);
+          TEST_INFO->medium_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->medium_max_);
       std::string data(request_size, '1');
-      test::test_fread(data.data(), request_size);
-      REQUIRE(test::size_read_orig == request_size);
+      TEST_INFO->test_fread(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_read_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedUpdateRandomRSRangeMedium",
@@ -560,23 +561,23 @@ TEST_CASE("BatchedUpdateRandomRSRangeMedium",
   TEST_INFO->Pretest();
 
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       auto offset =
-          rand_r(&TEST_INFO->offset_seed) % (TEST_INFO->total_size_ - TEST_INFO->medium_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+          rand_r(&TEST_INFO->offset_seed_) % (TEST_INFO->total_size_ - TEST_INFO->medium_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->medium_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->medium_max);
+          TEST_INFO->medium_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->medium_max_);
       std::string data(request_size, '1');
-      test::test_fwrite(data.data(), request_size);
-      REQUIRE(test::size_written_orig == request_size);
+      TEST_INFO->test_fwrite(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_written_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedReadStrideFixedRSRangeMedium",
@@ -589,23 +590,23 @@ TEST_CASE("BatchedReadStrideFixedRSRangeMedium",
               "[pattern=stride_fixed][file=1]") {
   TEST_INFO->Pretest();
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       auto offset =
-          (i * TEST_INFO->stride_size) % (TEST_INFO->total_size_ - TEST_INFO->medium_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+          (i * TEST_INFO->stride_size_) % (TEST_INFO->total_size_ - TEST_INFO->medium_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->medium_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->medium_max);
+          TEST_INFO->medium_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->medium_max_);
       std::string data(request_size, '1');
-      test::test_fread(data.data(), request_size);
-      REQUIRE(test::size_read_orig == request_size);
+      TEST_INFO->test_fread(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_read_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedUpdateStrideFixedRSRangeMedium",
@@ -618,23 +619,23 @@ TEST_CASE("BatchedUpdateStrideFixedRSRangeMedium",
               "[pattern=stride_fixed][file=1]") {
   TEST_INFO->Pretest();
   SECTION("write to existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       auto offset =
-          (i * TEST_INFO->stride_size) % (TEST_INFO->total_size_ - TEST_INFO->medium_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+          (i * TEST_INFO->stride_size_) % (TEST_INFO->total_size_ - TEST_INFO->medium_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->medium_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->medium_max);
+          TEST_INFO->medium_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->medium_max_);
       std::string data(request_size, '1');
-      test::test_fwrite(data.data(), request_size);
-      REQUIRE(test::size_written_orig == request_size);
+      TEST_INFO->test_fwrite(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_written_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedReadStrideDynamicRSRangeMedium",
@@ -647,23 +648,23 @@ TEST_CASE("BatchedReadStrideDynamicRSRangeMedium",
               "[pattern=stride_dynamic][file=1]") {
   TEST_INFO->Pretest();
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      auto offset = GetRandomOffset(i, TEST_INFO->offset_seed, TEST_INFO->stride_size,
-                                    TEST_INFO->total_size_ - TEST_INFO->medium_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+      auto offset = TEST_INFO->GetRandomOffset(i, TEST_INFO->offset_seed_, TEST_INFO->stride_size_,
+                                    TEST_INFO->total_size_ - TEST_INFO->medium_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->medium_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->medium_max);
+          TEST_INFO->medium_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->medium_max_);
       std::string data(request_size, '1');
-      test::test_fread(data.data(), request_size);
-      REQUIRE(test::size_read_orig == request_size);
+      TEST_INFO->test_fread(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_read_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedUpdateStrideDynamicRSRangeMedium",
@@ -676,23 +677,23 @@ TEST_CASE("BatchedUpdateStrideDynamicRSRangeMedium",
               "[pattern=stride_dynamic][file=1]") {
   TEST_INFO->Pretest();
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      auto offset = GetRandomOffset(i, TEST_INFO->offset_seed, TEST_INFO->stride_size,
-                                    TEST_INFO->total_size_ - TEST_INFO->medium_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+      auto offset = TEST_INFO->GetRandomOffset(i, TEST_INFO->offset_seed_, TEST_INFO->stride_size_,
+                                    TEST_INFO->total_size_ - TEST_INFO->medium_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->medium_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->medium_max);
+          TEST_INFO->medium_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->medium_max_);
       std::string data(request_size, '1');
-      test::test_fwrite(data.data(), request_size);
-      REQUIRE(test::size_written_orig == request_size);
+      TEST_INFO->test_fwrite(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_written_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedReadStrideNegativeRSRangeMedium",
@@ -705,23 +706,23 @@ TEST_CASE("BatchedReadStrideNegativeRSRangeMedium",
               "[pattern=stride_negative][file=1]") {
   TEST_INFO->Pretest();
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      auto offset = (TEST_INFO->total_size_ - i * TEST_INFO->stride_size) %
-                    (TEST_INFO->total_size_ - TEST_INFO->medium_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+      auto offset = (TEST_INFO->total_size_ - i * TEST_INFO->stride_size_) %
+                    (TEST_INFO->total_size_ - TEST_INFO->medium_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->medium_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->medium_max);
+          TEST_INFO->medium_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->medium_max_);
       std::string data(request_size, '1');
-      test::test_fread(data.data(), request_size);
-      REQUIRE(test::size_read_orig == request_size);
+      TEST_INFO->test_fread(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_read_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedUpdateStrideNegativeRSRangeMedium",
@@ -734,23 +735,23 @@ TEST_CASE("BatchedUpdateStrideNegativeRSRangeMedium",
               "[pattern=stride_negative][file=1]") {
   TEST_INFO->Pretest();
   SECTION("write to existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      auto offset = TEST_INFO->total_size_ - ((i * TEST_INFO->stride_size) %
-                                       (TEST_INFO->total_size_ - TEST_INFO->medium_max));
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+      auto offset = TEST_INFO->total_size_ - ((i * TEST_INFO->stride_size_) %
+                                       (TEST_INFO->total_size_ - TEST_INFO->medium_max_));
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->medium_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->medium_max);
+          TEST_INFO->medium_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->medium_max_);
       std::string data(request_size, '1');
-      test::test_fwrite(data.data(), request_size);
-      REQUIRE(test::size_written_orig == request_size);
+      TEST_INFO->test_fwrite(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_written_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedReadStride2DRSRangeMedium",
@@ -768,8 +769,8 @@ TEST_CASE("BatchedReadStride2DRSRangeMedium",
   size_t cell_size = 128;
   size_t cell_stride = rows * cols / cell_size / TEST_INFO->num_iterations_;
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     size_t prev_cell_col = 0, prev_cell_row = 0;
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       size_t current_cell_col = (prev_cell_col + cell_stride) % cols;
@@ -778,19 +779,19 @@ TEST_CASE("BatchedReadStride2DRSRangeMedium",
                                     : prev_cell_row;
       prev_cell_row = current_cell_row;
       auto offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
-                    (TEST_INFO->total_size_ - TEST_INFO->medium_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+                    (TEST_INFO->total_size_ - TEST_INFO->medium_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->medium_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->medium_max);
+          TEST_INFO->medium_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->medium_max_);
       std::string data(request_size, '1');
-      test::test_fread(data.data(), request_size);
-      REQUIRE(test::size_read_orig == request_size);
+      TEST_INFO->test_fread(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_read_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedUpdateStride2DRSRangeMedium",
@@ -808,8 +809,8 @@ TEST_CASE("BatchedUpdateStride2DRSRangeMedium",
   size_t cell_size = 128;
   size_t cell_stride = rows * cols / cell_size / TEST_INFO->num_iterations_;
   SECTION("write to existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     size_t prev_cell_col = 0, prev_cell_row = 0;
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       size_t current_cell_col = (prev_cell_col + cell_stride) % cols;
@@ -818,19 +819,19 @@ TEST_CASE("BatchedUpdateStride2DRSRangeMedium",
                                     : prev_cell_row;
       prev_cell_row = current_cell_row;
       auto offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
-                    (TEST_INFO->total_size_ - TEST_INFO->medium_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+                    (TEST_INFO->total_size_ - TEST_INFO->medium_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->medium_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->medium_max);
+          TEST_INFO->medium_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->medium_max_);
       std::string data(request_size, '1');
-      test::test_fwrite(data.data(), request_size);
-      REQUIRE(test::size_written_orig == request_size);
+      TEST_INFO->test_fwrite(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_written_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 /**
  * Large RS
@@ -846,42 +847,42 @@ TEST_CASE("BatchedWriteRSRangeLarge",
               "[pattern=sequential][file=1]") {
   TEST_INFO->Pretest();
   SECTION("write to new file always at the start") {
-    test::test_fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->new_file_, "w+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     size_t biggest_written = 0;
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      test::test_fseek(0, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
-      size_t offset = ftell(test::fh_orig);
+      TEST_INFO->test_fseek(0, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
+      size_t offset = ftell(TEST_INFO->fh_orig_);
       REQUIRE(offset == 0);
       size_t request_size =
-          TEST_INFO->large_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->large_max);
+          TEST_INFO->large_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->large_max_);
       std::string data(request_size, '1');
-      test::test_fwrite(data.data(), request_size);
-      REQUIRE(test::size_written_orig == request_size);
+      TEST_INFO->test_fwrite(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_written_orig_ == request_size);
       if (biggest_written < request_size) biggest_written = request_size;
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
 
   SECTION("write to new file") {
-    test::test_fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->new_file_, "w+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     size_t total_written = 0;
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       size_t request_size =
-          TEST_INFO->large_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->large_max);
+          TEST_INFO->large_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->large_max_);
       std::string data(request_size, '1');
-      test::test_fwrite(data.data(), request_size);
-      REQUIRE(test::size_written_orig == request_size);
-      total_written += test::size_written_orig;
+      TEST_INFO->test_fwrite(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_written_orig_ == request_size);
+      total_written += TEST_INFO->size_written_orig_;
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
-    REQUIRE(stdfs::file_size(TEST_INFO->new_file) == total_written);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
+    REQUIRE(stdfs::file_size(TEST_INFO->new_file_.hermes_) == total_written);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedReadSequentialRSRangeLarge",
@@ -894,42 +895,42 @@ TEST_CASE("BatchedReadSequentialRSRangeLarge",
               "[pattern=sequential][file=1]") {
   TEST_INFO->Pretest();
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     std::string data(TEST_INFO->request_size_, '1');
     size_t current_offset = 0;
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       size_t request_size =
-          (TEST_INFO->large_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->large_max)) %
+          (TEST_INFO->large_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->large_max_)) %
           (TEST_INFO->total_size_ - current_offset);
       std::string data(request_size, '1');
-      test::test_fread(data.data(), request_size);
-      REQUIRE(test::size_read_orig == request_size);
-      current_offset += test::size_read_orig;
+      TEST_INFO->test_fread(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_read_orig_ == request_size);
+      current_offset += TEST_INFO->size_read_orig_;
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
 
   SECTION("read from existing file always at start") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
 
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      test::test_fseek(0, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
-      size_t offset = ftell(test::fh_orig);
+      TEST_INFO->test_fseek(0, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
+      size_t offset = ftell(TEST_INFO->fh_orig_);
       REQUIRE(offset == 0);
       size_t request_size =
-          TEST_INFO->large_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->large_max);
+          TEST_INFO->large_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->large_max_);
       std::string data(request_size, '1');
-      test::test_fread(data.data(), request_size);
-      REQUIRE(test::size_read_orig == request_size);
+      TEST_INFO->test_fread(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_read_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedReadRandomRSRangeLarge",
@@ -942,24 +943,24 @@ TEST_CASE("BatchedReadRandomRSRangeLarge",
               "][pattern=random][file=1]") {
   TEST_INFO->Pretest();
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       auto offset =
-          rand_r(&TEST_INFO->offset_seed) % (TEST_INFO->total_size_ - TEST_INFO->large_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+          rand_r(&TEST_INFO->offset_seed_) % (TEST_INFO->total_size_ - TEST_INFO->large_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          (TEST_INFO->large_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->large_max)) %
+          (TEST_INFO->large_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->large_max_)) %
           (TEST_INFO->total_size_ - offset);
       std::string data(request_size, '1');
-      test::test_fread(data.data(), request_size);
-      REQUIRE(test::size_read_orig == request_size);
+      TEST_INFO->test_fread(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_read_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedUpdateRandomRSRangeLarge",
@@ -973,23 +974,23 @@ TEST_CASE("BatchedUpdateRandomRSRangeLarge",
   TEST_INFO->Pretest();
 
   SECTION("write into existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       auto offset =
-          rand_r(&TEST_INFO->offset_seed) % (TEST_INFO->total_size_ - TEST_INFO->large_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+          rand_r(&TEST_INFO->offset_seed_) % (TEST_INFO->total_size_ - TEST_INFO->large_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->large_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->large_max);
-      std::string data = GenRandom(request_size);
-      test::test_fwrite(data.data(), request_size);
-      REQUIRE(test::size_written_orig == request_size);
+          TEST_INFO->large_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->large_max_);
+      std::vector<char> data = TEST_INFO->GenRandom(request_size);
+      TEST_INFO->test_fwrite(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_written_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedReadStrideFixedRSRangeLarge",
@@ -1002,22 +1003,22 @@ TEST_CASE("BatchedReadStrideFixedRSRangeLarge",
               "[pattern=stride_fixed][file=1]") {
   TEST_INFO->Pretest();
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      auto offset = (i * TEST_INFO->stride_size) % (TEST_INFO->total_size_ - TEST_INFO->large_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+      auto offset = (i * TEST_INFO->stride_size_) % (TEST_INFO->total_size_ - TEST_INFO->large_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->large_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->large_max);
+          TEST_INFO->large_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->large_max_);
       std::string data(request_size, '1');
-      test::test_fread(data.data(), request_size);
-      REQUIRE(test::size_read_orig == request_size);
+      TEST_INFO->test_fread(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_read_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedUpdateStrideFixedRSRangeLarge",
@@ -1030,22 +1031,22 @@ TEST_CASE("BatchedUpdateStrideFixedRSRangeLarge",
               "[pattern=stride_fixed][file=1]") {
   TEST_INFO->Pretest();
   SECTION("write to existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      auto offset = (i * TEST_INFO->stride_size) % (TEST_INFO->total_size_ - TEST_INFO->large_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+      auto offset = (i * TEST_INFO->stride_size_) % (TEST_INFO->total_size_ - TEST_INFO->large_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->large_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->large_max);
+          TEST_INFO->large_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->large_max_);
       std::string data(request_size, '1');
-      test::test_fwrite(data.data(), request_size);
-      REQUIRE(test::size_written_orig == request_size);
+      TEST_INFO->test_fwrite(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_written_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedReadStrideDynamicRSRangeLarge",
@@ -1058,23 +1059,23 @@ TEST_CASE("BatchedReadStrideDynamicRSRangeLarge",
               "[pattern=stride_dynamic][file=1]") {
   TEST_INFO->Pretest();
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      auto offset = GetRandomOffset(i, TEST_INFO->offset_seed, TEST_INFO->stride_size,
-                                    TEST_INFO->total_size_ - TEST_INFO->large_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+      auto offset = TEST_INFO->GetRandomOffset(i, TEST_INFO->offset_seed_, TEST_INFO->stride_size_,
+                                    TEST_INFO->total_size_ - TEST_INFO->large_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->large_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->large_max);
+          TEST_INFO->large_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->large_max_);
       std::string data(request_size, '1');
-      test::test_fread(data.data(), request_size);
-      REQUIRE(test::size_read_orig == request_size);
+      TEST_INFO->test_fread(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_read_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedUpdateStrideDynamicRSRangeLarge",
@@ -1087,23 +1088,23 @@ TEST_CASE("BatchedUpdateStrideDynamicRSRangeLarge",
               "[pattern=stride_dynamic][file=1]") {
   TEST_INFO->Pretest();
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      auto offset = GetRandomOffset(i, TEST_INFO->offset_seed, TEST_INFO->stride_size,
-                                    TEST_INFO->total_size_ - TEST_INFO->large_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+      auto offset = TEST_INFO->GetRandomOffset(i, TEST_INFO->offset_seed_, TEST_INFO->stride_size_,
+                                    TEST_INFO->total_size_ - TEST_INFO->large_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->large_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->large_max);
+          TEST_INFO->large_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->large_max_);
       std::string data(request_size, '1');
-      test::test_fwrite(data.data(), request_size);
-      REQUIRE(test::size_written_orig == request_size);
+      TEST_INFO->test_fwrite(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_written_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedReadStrideNegativeRSRangeLarge",
@@ -1116,24 +1117,24 @@ TEST_CASE("BatchedReadStrideNegativeRSRangeLarge",
               "[pattern=stride_negative][file=1]") {
   TEST_INFO->Pretest();
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      auto offset = (TEST_INFO->total_size_ - i * TEST_INFO->stride_size) %
-                    (TEST_INFO->total_size_ - TEST_INFO->large_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+      auto offset = (TEST_INFO->total_size_ - i * TEST_INFO->stride_size_) %
+                    (TEST_INFO->total_size_ - TEST_INFO->large_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          (TEST_INFO->large_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->large_max)) %
-          (TEST_INFO->total_size_ - TEST_INFO->large_max);
+          (TEST_INFO->large_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->large_max_)) %
+          (TEST_INFO->total_size_ - TEST_INFO->large_max_);
       std::string data(request_size, '1');
-      test::test_fread(data.data(), request_size);
-      REQUIRE(test::size_read_orig == request_size);
+      TEST_INFO->test_fread(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_read_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedUpdateStrideNegativeRSRangeLarge",
@@ -1146,23 +1147,23 @@ TEST_CASE("BatchedUpdateStrideNegativeRSRangeLarge",
               "[pattern=stride_negative][file=1]") {
   TEST_INFO->Pretest();
   SECTION("write to existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      auto offset = TEST_INFO->total_size_ - ((i * TEST_INFO->stride_size) %
-                                       (TEST_INFO->total_size_ - TEST_INFO->large_max));
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+      auto offset = TEST_INFO->total_size_ - ((i * TEST_INFO->stride_size_) %
+                                       (TEST_INFO->total_size_ - TEST_INFO->large_max_));
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->large_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->large_max);
+          TEST_INFO->large_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->large_max_);
       std::string data(request_size, '1');
-      test::test_fwrite(data.data(), request_size);
-      REQUIRE(test::size_written_orig == request_size);
+      TEST_INFO->test_fwrite(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_written_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedReadStride2DRSRangeLarge",
@@ -1180,8 +1181,8 @@ TEST_CASE("BatchedReadStride2DRSRangeLarge",
   size_t cell_size = 128;
   size_t cell_stride = rows * cols / cell_size / TEST_INFO->num_iterations_;
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     size_t prev_cell_col = 0, prev_cell_row = 0;
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       size_t current_cell_col = (prev_cell_col + cell_stride) % cols;
@@ -1190,19 +1191,19 @@ TEST_CASE("BatchedReadStride2DRSRangeLarge",
                                     : prev_cell_row;
       prev_cell_row = current_cell_row;
       auto offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
-                    (TEST_INFO->total_size_ - TEST_INFO->large_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+                    (TEST_INFO->total_size_ - TEST_INFO->large_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->large_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->large_max);
+          TEST_INFO->large_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->large_max_);
       std::string data(request_size, '1');
-      test::test_fread(data.data(), request_size);
-      REQUIRE(test::size_read_orig == request_size);
+      TEST_INFO->test_fread(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_read_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedUpdateStride2DRSRangeLarge",
@@ -1221,8 +1222,8 @@ TEST_CASE("BatchedUpdateStride2DRSRangeLarge",
   size_t cell_size = 128;
   size_t cell_stride = rows * cols / cell_size / TEST_INFO->num_iterations_;
   SECTION("write to existing file") {
-    test::test_fopen(TEST_INFO->existing_file_.hermes_.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_file_, "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     size_t prev_cell_col = 0, prev_cell_row = 0;
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       size_t current_cell_col = (prev_cell_col + cell_stride) % cols;
@@ -1231,17 +1232,17 @@ TEST_CASE("BatchedUpdateStride2DRSRangeLarge",
                                     : prev_cell_row;
       prev_cell_row = current_cell_row;
       auto offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
-                    (TEST_INFO->total_size_ - TEST_INFO->large_max);
-      test::test_fseek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == 0);
+                    (TEST_INFO->total_size_ - TEST_INFO->large_max_);
+      TEST_INFO->test_fseek(offset, SEEK_SET);
+      REQUIRE(TEST_INFO->status_orig_ == 0);
       size_t request_size =
-          TEST_INFO->large_min + (rand_r(&TEST_INFO->rs_seed) % TEST_INFO->large_max);
+          TEST_INFO->large_min_ + (rand_r(&TEST_INFO->rs_seed_) % TEST_INFO->large_max_);
       std::string data(request_size, '1');
-      test::test_fwrite(data.data(), request_size);
-      REQUIRE(test::size_written_orig == request_size);
+      TEST_INFO->test_fwrite(data.data(), request_size);
+      REQUIRE(TEST_INFO->size_written_orig_ == request_size);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }

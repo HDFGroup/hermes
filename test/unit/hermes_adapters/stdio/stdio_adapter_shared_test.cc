@@ -21,15 +21,15 @@ TEST_CASE("SharedSTDIORead", "[process=" + std::to_string(TEST_INFO->comm_size_)
   TEST_INFO->Pretest();
 
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_shared_file.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->existing_shared_file.c_str(), "r+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     std::string data(TEST_INFO->request_size_, '1');
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      test::test_fread(data.data(), TEST_INFO->request_size_);
-      REQUIRE(test::size_read_orig == TEST_INFO->request_size_);
+      TEST_INFO->test_fread(data.data(), TEST_INFO->request_size_);
+      REQUIRE(TEST_INFO->size_read_orig_ == TEST_INFO->request_size_);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }

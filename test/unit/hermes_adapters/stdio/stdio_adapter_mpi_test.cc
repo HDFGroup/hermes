@@ -90,7 +90,7 @@ size_t size_read_orig;
 size_t size_written_orig;
 void test_fopen(const char* path, const char* mode) {
   std::string cmp_path;
-  if (strcmp(path, TEST_INFO->new_file.c_str()) == 0) {
+  if (strcmp(path, TEST_INFO->new_file_.c_str()) == 0) {
     cmp_path = TEST_INFO->new_file_cmp;
   } else if (strcmp(path, TEST_INFO->existing_file.c_str()) == 0) {
     cmp_path = TEST_INFO->existing_file_cmp;
@@ -136,7 +136,7 @@ void test_fseek(long offset, int whence) {
 int pretest() {
   stdfs::path fullpath = args.directory;
   fullpath /= args.filename;
-  TEST_INFO->new_file = fullpath.string() + "_new_" + std::to_string(TEST_INFO->rank) +
+  TEST_INFO->new_file_ = fullpath.string() + "_new_" + std::to_string(TEST_INFO->rank) +
                   "_of_" + std::to_string(TEST_INFO->comm_size_) + "_" +
                   std::to_string(getpid());
   TEST_INFO->existing_file = fullpath.string() + "_ext_" + std::to_string(TEST_INFO->rank) +
@@ -152,7 +152,7 @@ int pretest() {
       fullpath.string() + "_ext_" + std::to_string(TEST_INFO->comm_size_);
   TEST_INFO->existing_shared_file_cmp =
       fullpath.string() + "_ext_cmp_" + std::to_string(TEST_INFO->comm_size_);
-  if (stdfs::exists(TEST_INFO->new_file)) stdfs::remove(TEST_INFO->new_file);
+  if (stdfs::exists(TEST_INFO->new_file_)) stdfs::remove(TEST_INFO->new_file_);
   if (stdfs::exists(TEST_INFO->existing_file)) stdfs::remove(TEST_INFO->existing_file);
   if (stdfs::exists(TEST_INFO->existing_file)) stdfs::remove(TEST_INFO->existing_file);
   if (stdfs::exists(TEST_INFO->existing_file_cmp))
@@ -228,13 +228,13 @@ void Clear() {
 int posttest(bool compare_data = true) {
 #if HERMES_INTERCEPT == 1
   HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->existing_file, false);
-  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->new_file, false);
+  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->new_file_, false);
   HERMES_CLIENT_CONF.SetAdapterPathTracking(
       TEST_INFO->existing_shared_file, false);
 #endif
-  if (compare_data && stdfs::exists(TEST_INFO->new_file) &&
+  if (compare_data && stdfs::exists(TEST_INFO->new_file_) &&
       stdfs::exists(TEST_INFO->new_file_cmp)) {
-    size_t size = stdfs::file_size(TEST_INFO->new_file);
+    size_t size = stdfs::file_size(TEST_INFO->new_file_);
     REQUIRE(size == stdfs::file_size(TEST_INFO->new_file_cmp));
     if (size > 0) {
       std::vector<unsigned char> d1(size, '0');
@@ -320,7 +320,7 @@ int posttest(bool compare_data = true) {
     }
   }
   /* Clean up. */
-  if (stdfs::exists(TEST_INFO->new_file)) stdfs::remove(TEST_INFO->new_file);
+  if (stdfs::exists(TEST_INFO->new_file_)) stdfs::remove(TEST_INFO->new_file_);
   if (stdfs::exists(TEST_INFO->existing_file)) stdfs::remove(TEST_INFO->existing_file);
   if (stdfs::exists(TEST_INFO->new_file_cmp)) stdfs::remove(TEST_INFO->new_file_cmp);
   if (stdfs::exists(TEST_INFO->existing_file_cmp))
@@ -337,7 +337,7 @@ int posttest(bool compare_data = true) {
 #if HERMES_INTERCEPT == 1
   HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->existing_file_cmp, true);
   HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->new_file_cmp, true);
-  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->new_file, true);
+  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->new_file_, true);
   HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->existing_file, true);
   HERMES_CLIENT_CONF.SetAdapterPathTracking(
       TEST_INFO->existing_shared_file, true);

@@ -68,9 +68,9 @@ int finalize() {
 int pretest() {
   stdfs::path fullpath = args.directory;
   fullpath /= args.filename;
-  TEST_INFO->new_file = fullpath.string() + "_new";
+  TEST_INFO->new_file_ = fullpath.string() + "_new";
   TEST_INFO->existing_file = fullpath.string() + "_ext";
-  if (stdfs::exists(TEST_INFO->new_file)) stdfs::remove(TEST_INFO->new_file);
+  if (stdfs::exists(TEST_INFO->new_file_)) stdfs::remove(TEST_INFO->new_file_);
   if (stdfs::exists(TEST_INFO->existing_file)) stdfs::remove(TEST_INFO->existing_file);
   if (!stdfs::exists(TEST_INFO->existing_file)) {
     std::string cmd = "dd if=/dev/zero of=" + TEST_INFO->existing_file +
@@ -93,9 +93,9 @@ void Clear() {
 #endif
 }
 
-int posttest() {
+int TEST_INFO->Posttest() {
   Clear();
-  if (stdfs::exists(TEST_INFO->new_file)) stdfs::remove(TEST_INFO->new_file);
+  if (stdfs::exists(TEST_INFO->new_file_)) stdfs::remove(TEST_INFO->new_file_);
   if (stdfs::exists(TEST_INFO->existing_file)) stdfs::remove(TEST_INFO->existing_file);
   return 0;
 }
@@ -205,5 +205,5 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(TEST_INFO->comm_size_) +
     int status = fclose(fp);
     REQUIRE(status == 0);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }

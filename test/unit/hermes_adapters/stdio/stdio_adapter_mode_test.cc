@@ -66,14 +66,14 @@ int init(int* argc, char*** argv) {
 #endif
   stdfs::path fullpath = args.directory;
   fullpath /= args.filename;
-  TEST_INFO->new_file = fullpath.string() + "_new" + std::to_string(getpid());
+  TEST_INFO->new_file_ = fullpath.string() + "_new" + std::to_string(getpid());
   TEST_INFO->existing_file = fullpath.string() + "_ext" + std::to_string(getpid());
   TEST_INFO->new_file_cmp = fullpath.string() + "_new_cmp" + std::to_string(getpid());
   TEST_INFO->existing_file_cmp =
       fullpath.string() + "_ext_cmp" + std::to_string(getpid());
   char* set_path = getenv("SET_PATH");
   if (set_path && strcmp(set_path, "1") == 0) {
-    HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->new_file, false);
+    HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->new_file_, false);
     HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->existing_file, false);
   }
   MPI_Init(argc, argv);
@@ -90,14 +90,14 @@ void IgnoreAllFiles() {
 #if HERMES_INTERCEPT == 1
   HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->existing_file_cmp, false);
   HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->new_file_cmp, false);
-  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->new_file, false);
+  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->new_file_, false);
   HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->existing_file, false);
 #endif
 }
 
 void TrackFiles() {
 #if HERMES_INTERCEPT == 1
-  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->new_file, true);
+  HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->new_file_, true);
   HERMES_CLIENT_CONF.SetAdapterPathTracking(TEST_INFO->existing_file, true);
 #endif
 }
@@ -110,7 +110,7 @@ void RemoveFile(const std::string &path) {
 }
 
 void RemoveFiles() {
-  RemoveFile(TEST_INFO->new_file);
+  RemoveFile(TEST_INFO->new_file_);
   RemoveFile(TEST_INFO->new_file_cmp);
   RemoveFile(TEST_INFO->existing_file);
   RemoveFile(TEST_INFO->existing_file_cmp);
@@ -151,9 +151,9 @@ int pretest() {
 
 int posttest(bool compare_data = true) {
   IgnoreAllFiles();
-  if (compare_data && stdfs::exists(TEST_INFO->new_file) &&
+  if (compare_data && stdfs::exists(TEST_INFO->new_file_) &&
       stdfs::exists(TEST_INFO->new_file_cmp)) {
-    size_t size = stdfs::file_size(TEST_INFO->new_file);
+    size_t size = stdfs::file_size(TEST_INFO->new_file_);
     REQUIRE(size == stdfs::file_size(TEST_INFO->new_file_cmp));
     if (size > 0) {
       std::vector<unsigned char> d1(size, '0');
@@ -233,7 +233,7 @@ size_t size_read_orig;
 size_t size_written_orig;
 void test_fopen(const char* path, const char* mode) {
   std::string cmp_path;
-  if (strcmp(path, TEST_INFO->new_file.c_str()) == 0) {
+  if (strcmp(path, TEST_INFO->new_file_.c_str()) == 0) {
     cmp_path = TEST_INFO->new_file_cmp;
   } else {
     cmp_path = TEST_INFO->existing_file_cmp;
@@ -290,19 +290,19 @@ TEST_CASE("BatchedWriteSequentialPersistent",
   REQUIRE(HERMES_CLIENT_CONF.GetBaseAdapterMode() == AdapterMode::kDefault);
   TEST_INFO->Pretest();
   SECTION("write to new file always at end") {
-    test::test_fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
 
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      test::test_fwrite(TEST_INFO->write_data_.data(), TEST_INFO->request_size_);
-      REQUIRE(test::size_written_orig == TEST_INFO->request_size_);
+      TEST_INFO->test_fwrite(TEST_INFO->write_data_.data(), TEST_INFO->request_size_);
+      REQUIRE(TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
-    REQUIRE(stdfs::file_size(TEST_INFO->new_file) ==
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
+    REQUIRE(stdfs::file_size(TEST_INFO->new_file_) ==
             TEST_INFO->num_iterations_ * TEST_INFO->request_size_);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedWriteSequentialBypass",
@@ -318,19 +318,19 @@ TEST_CASE("BatchedWriteSequentialBypass",
   REQUIRE(HERMES_CLIENT_CONF.GetBaseAdapterMode() == AdapterMode::kBypass);
   TEST_INFO->Pretest();
   SECTION("write to new file always at end") {
-    test::test_fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
 
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      test::test_fwrite(TEST_INFO->write_data_.data(), TEST_INFO->request_size_);
-      REQUIRE(test::size_written_orig == TEST_INFO->request_size_);
+      TEST_INFO->test_fwrite(TEST_INFO->write_data_.data(), TEST_INFO->request_size_);
+      REQUIRE(TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
-    REQUIRE(stdfs::file_size(TEST_INFO->new_file) ==
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
+    REQUIRE(stdfs::file_size(TEST_INFO->new_file_) ==
             TEST_INFO->num_iterations_ * TEST_INFO->request_size_);
   }
-  posttest();
+  TEST_INFO->Posttest();
 }
 
 TEST_CASE("BatchedWriteSequentialScratch",
@@ -346,17 +346,17 @@ TEST_CASE("BatchedWriteSequentialScratch",
   REQUIRE(HERMES_CLIENT_CONF.GetBaseAdapterMode() == AdapterMode::kScratch);
   TEST_INFO->Pretest();
   SECTION("write to new file always at end") {
-    test::test_fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
-    REQUIRE(test::fh_orig != nullptr);
+    TEST_INFO->test_fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
+    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
 
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      test::test_fwrite(TEST_INFO->write_data_.data(), TEST_INFO->request_size_);
-      REQUIRE(test::size_written_orig == TEST_INFO->request_size_);
+      TEST_INFO->test_fwrite(TEST_INFO->write_data_.data(), TEST_INFO->request_size_);
+      REQUIRE(TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TEST_INFO->test_fclose();
+    REQUIRE(TEST_INFO->status_orig_ == 0);
     IgnoreAllFiles();
-    REQUIRE(stdfs::exists(TEST_INFO->new_file) == 0);
+    REQUIRE(stdfs::exists(TEST_INFO->new_file_) == 0);
     TrackFiles();
   }
   TEST_INFO->Posttest(false);

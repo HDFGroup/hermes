@@ -30,7 +30,7 @@ jarvis_test(stdio test_stdio_basic)
 add_executable(hermes_stdio_adapter_test
         stdio_adapter_test.cc
         stdio_adapter_basic_test.cc
-#        stdio_adapter_rs_test.cc
+        stdio_adapter_rs_test.cc
         ${ADAPTER_COMMON})
 add_dependencies(hermes_stdio_adapter_test
         hermes_stdio)

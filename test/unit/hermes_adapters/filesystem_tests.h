@@ -206,6 +206,19 @@ class FilesystemTests {
     return abs((int)(((i * rand_r(&offset_seed)) % stride) % total_size));
   }
 
+  std::vector<char> GenRandom(const size_t len, int seed = 100) {
+    auto tmp_s = std::vector<char>(len);
+    static const char alphanum[] =
+        "0123456789"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz";
+
+    srand(seed);
+    for (int i = 0; i < len; ++i)
+      tmp_s[i] = alphanum[rand() % (sizeof(alphanum) - 1)];
+    return tmp_s;
+  }
+
  private:
   void LoadFile(const std::string &path, std::vector<char> &data) {
     FILE* fh = fopen(path.c_str(), "r");
@@ -222,19 +235,6 @@ class FilesystemTests {
       if (d1[pos] != d2[pos]) char_mismatch++;
     }
     REQUIRE(char_mismatch == 0);
-  }
-
-  std::vector<char> GenRandom(const size_t len, int seed = 100) {
-    auto tmp_s = std::vector<char>(len);
-    static const char alphanum[] =
-        "0123456789"
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz";
-
-    srand(seed);
-    for (int i = 0; i < len; ++i)
-      tmp_s[i] = alphanum[rand() % (sizeof(alphanum) - 1)];
-    return tmp_s;
   }
 
   void CreateFile(const std::string &path,
