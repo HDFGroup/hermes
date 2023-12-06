@@ -99,11 +99,11 @@ class FilesystemTests {
                     FileInfo &info) {
     info.hermes_ = dir_ + "/" + filename_ + "_" + basename + "_";
     info.cmp_ = info.hermes_ + "cmp_";
+    info.flags_.SetBits(flags | TEST_WITH_HERMES);
     if (!info.flags_.Any(TEST_FILE_SHARED)) {
       info.hermes_ += pid_str_;
       info.cmp_ += pid_str_;
     }
-    info.flags_.SetBits(flags | TEST_WITH_HERMES);
     files_.push_back(info);
   }
 
@@ -249,6 +249,7 @@ class FilesystemTests {
     }
     close(fd);
     REQUIRE(stdfs::file_size(path) == data.size());
+    HILOG(kInfo, "Created file {}", path);
   }
 
   void RemoveFile(const std::string &path) {

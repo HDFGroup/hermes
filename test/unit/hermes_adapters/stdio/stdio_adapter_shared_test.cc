@@ -10,6 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include "stdio_adapter_test.h"
+
 TEST_CASE("SharedSTDIORead", "[process=" + std::to_string(TEST_INFO->comm_size_) +
                                  "]"
                                  "[operation=batched_read]"
@@ -21,7 +23,7 @@ TEST_CASE("SharedSTDIORead", "[process=" + std::to_string(TEST_INFO->comm_size_)
   TEST_INFO->Pretest();
 
   SECTION("read from existing file") {
-    TEST_INFO->test_fopen(TEST_INFO->existing_shared_file.c_str(), "r+");
+    TEST_INFO->test_fopen(TEST_INFO->shared_existing_file_, "r+");
     REQUIRE(TEST_INFO->fh_orig_ != nullptr);
     std::string data(TEST_INFO->request_size_, '1');
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {

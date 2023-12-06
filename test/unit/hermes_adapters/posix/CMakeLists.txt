@@ -85,8 +85,8 @@ jarvis_test(posix test_hermes_posix_simple_io_omp)
 set(POSIX_TESTS
   posix_adapter_test
   hermes_posix_adapter_test
-#  posix_adapter_mpi_test
-#  hermes_posix_adapter_mpi_test
+  posix_adapter_mpi_test
+  hermes_posix_adapter_mpi_test
   posix_simple_io_mpi
   posix_simple_io_omp
 )

@@ -13,11 +13,12 @@ include_directories(
 #------------------------------------------------------------------------------
 # STDIO Adapter End to End tests
 #------------------------------------------------------------------------------
+# Non-Hermes, None-MPI STDIO basic
 add_executable(stdio_adapter_test
         stdio_adapter_test.cc
         stdio_adapter_basic_test.cc
         stdio_adapter_func_test.cc
-#        stdio_adapter_rs_test.cc
+        stdio_adapter_rs_test.cc
         ${ADAPTER_COMMON})
 add_dependencies(stdio_adapter_test
         hermes)
@@ -27,6 +28,7 @@ target_compile_definitions(stdio_adapter_test PUBLIC
         HERMES_MPI_TESTS=false)
 jarvis_test(stdio test_stdio_basic)
 
+# Hermes, None-MPI STDIO basic
 add_executable(hermes_stdio_adapter_test
         stdio_adapter_test.cc
         stdio_adapter_basic_test.cc
@@ -41,10 +43,20 @@ target_compile_definitions(hermes_stdio_adapter_test PUBLIC
 jarvis_test(stdio test_hermes_stdio_basic_small)
 jarvis_test(stdio test_hermes_stdio_basic_large)
 
-#add_executable(stdio_adapter_mpi_test
-#        stdio_adapter_mpi_test.cpp
-#        ${ADAPTER_COMMON})
-# pytest(stdio test_stdio_basic_mpi 2 "")
+# Non-Hermes, MPI STDIO basic
+add_executable(stdio_adapter_mpi_test
+        stdio_adapter_test.cc
+        stdio_adapter_basic_test.cc
+        stdio_adapter_rs_test.cc
+        stdio_adapter_shared_test.cc
+        ${ADAPTER_COMMON})
+add_dependencies(stdio_adapter_mpi_test
+        hermes)
+target_link_libraries(stdio_adapter_mpi_test
+        hermes)
+target_compile_definitions(stdio_adapter_mpi_test PUBLIC
+        HERMES_MPI_TESTS=true)
+jarvis_test(stdio test_stdio_basic_mpi)
 
 #add_executable(hermes_stdio_adapter_mpi_test
 #        stdio_adapter_mpi_test.cpp
@@ -81,7 +93,7 @@ set(STDIO_TESTS
   hermes_stdio_adapter_test
 #  hermes_stdio_low_buf_adapter_test
 #  hermes_stdio_adapter_mode_test
-#  stdio_adapter_mpi_test
+  stdio_adapter_mpi_test
 #  hermes_stdio_adapter_mpi_test
 )
 
