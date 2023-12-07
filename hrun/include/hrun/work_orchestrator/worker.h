@@ -456,8 +456,6 @@ class Worker {
         entry->complete_ = true;
         if (task->IsCoroutine()) {
           free(rctx.stack_ptr_);
-        } else if (task->IsPreemptive()) {
-          ABT_thread_join(entry->thread_);
         }
         RemoveTaskGroup(task, exec, work_entry.lane_id_, is_remote);
         EndTask(lane, exec, task, off);

@@ -46,12 +46,27 @@ class Server : public TaskLib {
         continue;
       }
       for (LaneGroup &lane_group : *queue.groups_) {
-        for (u32 lane_id = lane_group.num_scheduled_; lane_id < lane_group.num_lanes_; ++lane_id) {
-          if (lane_group.IsLowLatency()) {
+        u32 num_lanes = lane_group.num_lanes_;
+        if (lane_group.IsTethered()) {
+          LaneGroup &tether_group = queue.GetGroup(lane_group.tether_);
+          num_lanes = tether_group.num_scheduled_;
+        }
+        for (u32 lane_id = lane_group.num_scheduled_; lane_id < num_lanes; ++lane_id) {
+          Lane &lane = lane_group.GetLane(lane_id);
+          if (lane_group.IsTethered()) {
+            LaneGroup &tether_group = queue.GetGroup(lane_group.tether_);
+            Lane &tether_lane = tether_group.GetLane(lane_id);
+            Worker &worker = *HRUN_WORK_ORCHESTRATOR->workers_[tether_lane.worker_id_];
+            worker.PollQueues({WorkEntry(lane_group.prio_, lane_id, &queue)});
+            lane.worker_id_ = worker.id_;
+            HILOG(kDebug, "(node {}) Scheduling the queue {} (prio {}, lane {}, worker {})",
+                  HRUN_CLIENT->node_id_, queue.id_, lane_group.prio_, lane_id, worker.id_);
+          } else if (lane_group.IsLowLatency()) {
             u32 worker_off = count_lowlat_ % HRUN_WORK_ORCHESTRATOR->dworkers_.size();
             count_lowlat_ += 1;
             Worker &worker = *HRUN_WORK_ORCHESTRATOR->dworkers_[worker_off];
             worker.PollQueues({WorkEntry(lane_group.prio_, lane_id, &queue)});
+            lane.worker_id_ = worker.id_;
             HILOG(kDebug, "(node {}) Scheduling the queue {} (prio {}, lane {}, worker {})",
                   HRUN_CLIENT->node_id_, queue.id_, lane_group.prio_, lane_id, worker.id_);
           } else {
@@ -61,9 +76,10 @@ class Server : public TaskLib {
             worker.PollQueues({WorkEntry(lane_group.prio_, lane_id, &queue)});
             HILOG(kDebug, "(node {}) Scheduling the queue {} (prio {}, lane {}, worker {})",
                   HRUN_CLIENT->node_id_, queue.id_, lane_group.prio_, lane_id, worker_off);
+            lane.worker_id_ = worker.id_;
           }
         }
-        lane_group.num_scheduled_ = lane_group.num_lanes_;
+        lane_group.num_scheduled_ = num_lanes;
       }
     }
   }

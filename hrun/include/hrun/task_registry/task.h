@@ -53,8 +53,6 @@ class TaskLib;
 #define TASK_DATA_OWNER BIT_OPT(u32, 14)
 /** This task uses co-routine wait */
 #define TASK_COROUTINE BIT_OPT(u32, 15)
-/** This task uses argobot wait */
-#define TASK_PREEMPTIVE BIT_OPT(u32, 17)
 /** This task can be scheduled on any lane */
 #define TASK_LANE_ANY BIT_OPT(u32, 18)
 /** This task should be scheduled on all lanes */
@@ -391,11 +389,6 @@ struct Task : public hipc::ShmContainer {
   /** Set this task as blocking */
   HSHM_ALWAYS_INLINE void UnsetCoroutine() {
     task_flags_.UnsetBits(TASK_COROUTINE);
-  }
-
-  /** Set this task as blocking */
-  HSHM_ALWAYS_INLINE bool IsPreemptive() {
-    return task_flags_.Any(TASK_PREEMPTIVE);
   }
 
   /** This task should be dispersed across all lanes */

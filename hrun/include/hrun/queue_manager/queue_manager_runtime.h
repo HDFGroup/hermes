@@ -56,13 +56,13 @@ class QueueManagerRuntime : public QueueManager {
     // Create the admin queue
     MultiQueue *queue;
     queue = CreateQueue(admin_queue_, {
-      {1, 1, qm.queue_depth_, QUEUE_UNORDERED}
+      {TaskPrio::kAdmin, 1, 1, qm.queue_depth_, QUEUE_UNORDERED}
     });
     queue->flags_.SetBits(QUEUE_READY);
     queue = CreateQueue(process_queue_, {
-        {1, 1, qm.queue_depth_, QUEUE_UNORDERED},
-        {1, 1, qm.queue_depth_, QUEUE_LONG_RUNNING},
-        {qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY}
+        {TaskPrio::kAdmin, 1, 1, qm.queue_depth_, QUEUE_UNORDERED},
+        {TaskPrio::kLongRunning, 1, 1, qm.queue_depth_, QUEUE_LONG_RUNNING},
+        {TaskPrio::kLowLatency, qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY}
     });
     queue->flags_.SetBits(QUEUE_READY);
   }
