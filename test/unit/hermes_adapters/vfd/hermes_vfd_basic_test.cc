@@ -690,7 +690,7 @@ TEST_CASE("PartialUpdateToLastPage") {
   TEST_INFO->Posttest();
 }
 
-TEST_CASE("ScratchMode", "[scratch]") {
+TEST_CASE("ScratchMode", "[mode=scratch]") {
   TEST_INFO->Pretest();
 
   SECTION("created files shouldn't persist") {
