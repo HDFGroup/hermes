@@ -13,11 +13,11 @@
 #ifndef HERMES_TEST_UNIT_HERMES_ADAPTERS_POSIX_POSIX_ADAPTER_BASE_TEST_H_
 #define HERMES_TEST_UNIT_HERMES_ADAPTERS_POSIX_POSIX_ADAPTER_BASE_TEST_H_
 
-#include "filesystem_tests.h"
+#include "binary_file_tests.h"
 
 namespace hermes::adapter::fs::test {
 template<bool WITH_MPI>
-class PosixTest : public FilesystemTests {
+class PosixTest : public BinaryFileTests {
  public:
   FileInfo new_file_;
   FileInfo existing_file_;

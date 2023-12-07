@@ -5,11 +5,11 @@
 #ifndef HERMES_TEST_UNIT_HERMES_ADAPTERS_STDIO_STDIO_ADAPTER_TEST_H_
 #define HERMES_TEST_UNIT_HERMES_ADAPTERS_STDIO_STDIO_ADAPTER_TEST_H_
 
-#include "filesystem_tests.h"
+#include "binary_file_tests.h"
 
 namespace hermes::adapter::fs::test {
 template<bool WITH_MPI>
-class StdioTest : public FilesystemTests {
+class StdioTest : public BinaryFileTests {
  public:
   FileInfo new_file_;
   FileInfo existing_file_;

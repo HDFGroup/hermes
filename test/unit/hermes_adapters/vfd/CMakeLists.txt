@@ -4,7 +4,9 @@ set(hermes_vfd_tests
         hermes_vfd_adapter_test
 )
 
-add_executable(hermes_vfd_adapter_test ${CMAKE_CURRENT_SOURCE_DIR}/hermes_vfd_test.cc)
+add_executable(hermes_vfd_adapter_test
+        ${CMAKE_CURRENT_SOURCE_DIR}/hermes_vfd_test.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/hermes_vfd_basic_test.cc)
 target_include_directories(hermes_vfd_adapter_test PRIVATE ${HERMES_VFD_DIR})
 target_include_directories(hermes_vfd_adapter_test PRIVATE ${HERMES_ADAPTER_TEST_DIR})
 target_include_directories(hermes_vfd_adapter_test

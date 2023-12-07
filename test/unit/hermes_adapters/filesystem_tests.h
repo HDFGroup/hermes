@@ -40,11 +40,12 @@ struct FileInfo {
   bitfield32_t flags_;           /** Various flags */
 };
 
+template<typename T>
 class FilesystemTests {
  public:
   bool supports_tmpfile;
-  std::vector<char> write_data_;
-  std::vector<char> read_data_;
+  std::vector<T> write_data_;
+  std::vector<T> read_data_;
   std::list<FileInfo> files_;
   int pid_;
   std::string pid_str_;
@@ -79,7 +80,7 @@ class FilesystemTests {
 
     total_size_ = request_size_ * num_iterations_;
     write_data_ = GenRandom(request_size_);
-    read_data_ = std::vector<char>(request_size_, 'r');
+    read_data_ = std::vector<T>(request_size_, 'r');
     supports_tmpfile = FilesystemSupportsTmpfile();
     pid_ = getpid();
     pid_str_ = std::to_string(pid_);
@@ -139,7 +140,6 @@ class FilesystemTests {
   }
 
   void CreateFiles() {
-    std::vector<char> data = GenRandom(total_size_, 200);
     for (const FileInfo &info : files_) {
       if (!info.flags_.Any(TEST_WITH_HERMES)) {
         continue;
@@ -148,8 +148,8 @@ class FilesystemTests {
         if (info.flags_.Any(TEST_FILE_SHARED) && rank_ != 0) {
           continue;
         }
-        CreateFile(info.cmp_, data);
-        CreateFile(info.hermes_, data);
+        CreateFile(info.cmp_);
+        CreateFile(info.hermes_);
       }
     }
   }
@@ -180,14 +180,7 @@ class FilesystemTests {
           continue;
         }
         if (stdfs::exists(info.hermes_) && stdfs::exists(info.cmp_)) {
-          size_t cmp_size = stdfs::file_size(info.cmp_);
-          size_t hermes_size = stdfs::file_size(info.hermes_);
-          REQUIRE(cmp_size == hermes_size);
-          std::vector<char> d1(cmp_size, '0');
-          std::vector<char> d2(hermes_size, '1');
-          LoadFile(info.cmp_, d1);
-          LoadFile(info.hermes_, d2);
-          CompareBuffers(d1, d2);
+          CompareFiles(info);
         }
       }
     }
@@ -199,6 +192,8 @@ class FilesystemTests {
   }
 
   virtual void RegisterFiles() = 0;
+  virtual void CreateFile(const std::string &path) = 0;
+  virtual void CompareFiles(FileInfo &info) = 0;
 
   static size_t GetRandomOffset(
       size_t i, unsigned int offset_seed,
@@ -206,8 +201,8 @@ class FilesystemTests {
     return abs((int)(((i * rand_r(&offset_seed)) % stride) % total_size));
   }
 
-  std::vector<char> GenRandom(const size_t len, int seed = 100) {
-    auto tmp_s = std::vector<char>(len);
+  std::vector<T> GenRandom(const size_t len, int seed = 100) {
+    auto tmp_s = std::vector<T>(len);
     static const char alphanum[] =
         "0123456789"
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -219,39 +214,42 @@ class FilesystemTests {
     return tmp_s;
   }
 
+  static inline u32 RotateLeft(const u32 x, int k) {
+    u32 result = (x << k) | (x >> (32 - k));
+
+    return result;
+  }
+
+  u32 GenNextRandom() {
+    static u32 random_state[4] = {111, 222, 333, 444};
+    const u32 random = random_state[0] + random_state[3];
+
+    const u32 t = random_state[1] << 9;
+
+    random_state[2] ^= random_state[0];
+    random_state[3] ^= random_state[1];
+    random_state[1] ^= random_state[2];
+    random_state[0] ^= random_state[3];
+
+    random_state[2] ^= t;
+
+    random_state[3] = RotateLeft(random_state[3], 11);
+
+    return random;
+  }
+
+  /**
+   * Return a random float in the range [0.0f, 1.0f]
+   * */
+  f32 GenRandom0to1() {
+    u32 random_u32 = GenNextRandom();
+
+    f32 result = (random_u32 >> 8) * 0x1.0p-24f;
+
+    return result;
+  }
+
  private:
-  void LoadFile(const std::string &path, std::vector<char> &data) {
-    FILE* fh = fopen(path.c_str(), "r");
-    REQUIRE(fh != nullptr);
-    size_t load_size = fread(data.data(), 1, data.size(), fh);
-    REQUIRE(load_size == data.size());
-    int status = fclose(fh);
-    REQUIRE(status == 0);
-  }
-
-  void CompareBuffers(const std::vector<char> &d1, const std::vector<char> &d2) {
-    size_t char_mismatch = 0;
-    for (size_t pos = 0; pos < d1.size(); ++pos) {
-      if (d1[pos] != d2[pos]) char_mismatch++;
-    }
-    REQUIRE(char_mismatch == 0);
-  }
-
-  void CreateFile(const std::string &path,
-                  const std::vector<char> &data) {
-    int fd = open(path.c_str(), O_CREAT | O_TRUNC | O_RDWR, 0666);
-    if (fd == -1) {
-      HELOG(kFatal, "Failed to open file: {}", path);
-    }
-    int ret = write(fd, data.data(), data.size());
-    if (ret != data.size()) {
-      return;
-    }
-    close(fd);
-    REQUIRE(stdfs::file_size(path) == data.size());
-    HILOG(kInfo, "Created file {}", path);
-  }
-
   void RemoveFile(const std::string &path) {
     stdfs::remove(path);
     if (stdfs::exists(path)) {
