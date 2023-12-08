@@ -78,6 +78,12 @@ class FilesystemTests {
     int rc = session.applyCommandLine(argc, argv);
     if (rc != 0) return rc;
 
+#if HERMES_INTERCEPT == 1
+    TRANSPARENT_HERMES();
+    setenv("HERMES_FLUSH_MODE", "kSync", 1);
+    HERMES_CLIENT_CONF.flushing_mode_ = hermes::FlushingMode::kSync;
+#endif
+
     total_size_ = request_size_ * num_iterations_;
     write_data_ = GenRandom(request_size_);
     read_data_ = std::vector<T>(request_size_, 'r');
@@ -86,10 +92,6 @@ class FilesystemTests {
     pid_str_ = std::to_string(pid_);
     RegisterFiles();
 
-#if HERMES_INTERCEPT == 1
-    setenv("HERMES_FLUSH_MODE", "kSync", 1);
-  HERMES_CLIENT_CONF.flushing_mode_ = hermes::FlushingMode::kSync;
-#endif
     rc = session.run();
     MPI_Finalize();
     return rc;
@@ -140,6 +142,7 @@ class FilesystemTests {
   }
 
   void CreateFiles() {
+    std::vector<T> data = GenerateData();
     for (const FileInfo &info : files_) {
       if (!info.flags_.Any(TEST_WITH_HERMES)) {
         continue;
@@ -148,8 +151,8 @@ class FilesystemTests {
         if (info.flags_.Any(TEST_FILE_SHARED) && rank_ != 0) {
           continue;
         }
-        CreateFile(info.cmp_);
-        CreateFile(info.hermes_);
+        CreateFile(info.cmp_, data);
+        CreateFile(info.hermes_, data);
       }
     }
   }
@@ -192,7 +195,8 @@ class FilesystemTests {
   }
 
   virtual void RegisterFiles() = 0;
-  virtual void CreateFile(const std::string &path) = 0;
+  virtual void CreateFile(const std::string &path, std::vector<T> &data) = 0;
+  virtual std::vector<T> GenerateData() = 0;
   virtual void CompareFiles(FileInfo &info) = 0;
 
   static size_t GetRandomOffset(

@@ -80,7 +80,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(TEST_INFO->comm_size_) +
     TEST_INFO->TestOpen(TEST_INFO->existing_file_, H5F_ACC_RDWR);
     REQUIRE(TEST_INFO->hermes_hid_ != H5I_INVALID_HID);
     TEST_INFO->TestWritePartial1d("0", TEST_INFO->write_data_.data(), 0,
-                                  TEST_INFO->nelems_per_dataset_);
+                                  TEST_INFO->request_size_);
     TEST_INFO->TestClose();
     REQUIRE(TEST_INFO->hermes_herr_ >= 0);
   }
@@ -127,7 +127,7 @@ TEST_CASE("SingleRead", "[process=" + std::to_string(TEST_INFO->comm_size_) +
   SECTION("read first dataset from existing file") {
     TEST_INFO->TestOpen(TEST_INFO->existing_file_, H5F_ACC_RDONLY);
     REQUIRE(TEST_INFO->hermes_hid_ != H5I_INVALID_HID);
-    TEST_INFO->TestRead("0", TEST_INFO->read_data_, 0, TEST_INFO->nelems_per_dataset_);
+    TEST_INFO->TestRead("0", TEST_INFO->read_data_, 0, TEST_INFO->request_size_);
     TEST_INFO->TestClose();
     REQUIRE(TEST_INFO->hermes_herr_ >= 0);
   }
@@ -136,7 +136,7 @@ TEST_CASE("SingleRead", "[process=" + std::to_string(TEST_INFO->comm_size_) +
     TEST_INFO->TestOpen(TEST_INFO->existing_file_, H5F_ACC_RDONLY);
     REQUIRE(TEST_INFO->hermes_hid_ != H5I_INVALID_HID);
     TEST_INFO->TestRead(std::to_string(TEST_INFO->num_iterations_ - 1), TEST_INFO->read_data_, 0,
-                   TEST_INFO->nelems_per_dataset_);
+                   TEST_INFO->request_size_);
     TEST_INFO->TestClose();
     REQUIRE(TEST_INFO->hermes_herr_ >= 0);
   }
@@ -170,7 +170,7 @@ TEST_CASE("BatchedWriteSequential",
     TEST_INFO->TestWriteDataset("0", TEST_INFO->write_data_);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       TEST_INFO->TestWritePartial1d("0", TEST_INFO->write_data_.data(), 0,
-                               TEST_INFO->nelems_per_dataset_);
+                               TEST_INFO->request_size_);
     }
     TEST_INFO->TestClose();
     REQUIRE(TEST_INFO->hermes_herr_ >= 0);
@@ -191,9 +191,9 @@ TEST_CASE("BatchedReadSequential",
     TEST_INFO->TestOpen(TEST_INFO->existing_file_, H5F_ACC_RDWR);
     REQUIRE(TEST_INFO->hermes_hid_ != H5I_INVALID_HID);
 
-    std::vector<f32> buf(TEST_INFO->nelems_per_dataset_, 0.0f);
+    std::vector<f32> buf(TEST_INFO->request_size_, 0.0f);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      TEST_INFO->TestRead(std::to_string(i), buf, 0, TEST_INFO->nelems_per_dataset_);
+      TEST_INFO->TestRead(std::to_string(i), buf, 0, TEST_INFO->request_size_);
     }
     TEST_INFO->TestClose();
     REQUIRE(TEST_INFO->hermes_herr_ >= 0);
@@ -204,7 +204,7 @@ TEST_CASE("BatchedReadSequential",
     REQUIRE(TEST_INFO->hermes_hid_ != H5I_INVALID_HID);
 
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      TEST_INFO->TestRead("0", TEST_INFO->read_data_, 0, TEST_INFO->nelems_per_dataset_);
+      TEST_INFO->TestRead("0", TEST_INFO->read_data_, 0, TEST_INFO->request_size_);
     }
     TEST_INFO->TestClose();
     REQUIRE(TEST_INFO->hermes_herr_ >= 0);
@@ -224,10 +224,10 @@ TEST_CASE("BatchedReadRandom", "[process=" + std::to_string(TEST_INFO->comm_size
     TEST_INFO->TestOpen(TEST_INFO->existing_file_, H5F_ACC_RDWR);
     REQUIRE(TEST_INFO->hermes_hid_ != H5I_INVALID_HID);
 
-    std::vector<f32> buf(TEST_INFO->nelems_per_dataset_, 0.0f);
+    std::vector<f32> buf(TEST_INFO->request_size_, 0.0f);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       u32 dataset = TEST_INFO->GenNextRandom() % TEST_INFO->num_iterations_;
-      TEST_INFO->TestRead(std::to_string(dataset), buf, 0, TEST_INFO->nelems_per_dataset_);
+      TEST_INFO->TestRead(std::to_string(dataset), buf, 0, TEST_INFO->request_size_);
     }
     TEST_INFO->TestClose();
     REQUIRE(TEST_INFO->hermes_herr_ >= 0);
@@ -250,7 +250,7 @@ TEST_CASE("BatchedUpdateRandom", "[process=" + std::to_string(TEST_INFO->comm_si
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       u32 dataset = TEST_INFO->GenNextRandom() % TEST_INFO->num_iterations_;
       TEST_INFO->TestWritePartial1d(std::to_string(dataset), TEST_INFO->write_data_.data(),
-                               0, TEST_INFO->nelems_per_dataset_);
+                               0, TEST_INFO->request_size_);
     }
     TEST_INFO->TestClose();
     REQUIRE(TEST_INFO->hermes_herr_ >= 0);
@@ -292,7 +292,7 @@ TEST_CASE("BatchedWriteRSVariable",
     REQUIRE(TEST_INFO->hermes_hid_ != H5I_INVALID_HID);
 
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      size_t request_size = Random1ToUpperBound(TEST_INFO->nelems_per_dataset_);
+      size_t request_size = Random1ToUpperBound(TEST_INFO->request_size_);
       std::vector<f32> data(request_size, 2.0f);
       TEST_INFO->TestWritePartial1d(std::to_string(i), data.data(), 0, request_size);
     }
@@ -318,8 +318,8 @@ TEST_CASE("BatchedReadSequentialRSVariable",
     REQUIRE(TEST_INFO->hermes_hid_ != H5I_INVALID_HID);
 
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      size_t request_size = Random1ToUpperBound(TEST_INFO->nelems_per_dataset_);
-      size_t starting_element =  TEST_INFO->nelems_per_dataset_ - request_size;
+      size_t request_size = Random1ToUpperBound(TEST_INFO->request_size_);
+      size_t starting_element =  TEST_INFO->request_size_ - request_size;
       std::vector<f32> data(request_size, 1.5f);
       TEST_INFO->TestRead(std::to_string(i), data, starting_element, request_size);
     }
@@ -332,7 +332,7 @@ TEST_CASE("BatchedReadSequentialRSVariable",
     REQUIRE(TEST_INFO->hermes_hid_ != H5I_INVALID_HID);
 
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      size_t request_size = Random1ToUpperBound(TEST_INFO->nelems_per_dataset_);
+      size_t request_size = Random1ToUpperBound(TEST_INFO->request_size_);
       std::vector<f32> data(request_size, 3.0f);
       TEST_INFO->TestRead(std::to_string(i), data, 0, request_size);
     }
@@ -357,12 +357,12 @@ TEST_CASE("BatchedReadRandomRSVariable",
     TEST_INFO->TestOpen(TEST_INFO->existing_file_, H5F_ACC_RDWR);
     REQUIRE(TEST_INFO->hermes_hid_ != H5I_INVALID_HID);
 
-    std::vector<f32> data(TEST_INFO->nelems_per_dataset_, 5.0f);
+    std::vector<f32> data(TEST_INFO->request_size_, 5.0f);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       std::string dset_name = RandomDatasetName(TEST_INFO->num_iterations_);
-      size_t starting_element = Random1ToUpperBound(TEST_INFO->nelems_per_dataset_);
+      size_t starting_element = Random1ToUpperBound(TEST_INFO->request_size_);
       size_t request_elements =
-        Random1ToUpperBound(TEST_INFO->nelems_per_dataset_ - starting_element);
+        Random1ToUpperBound(TEST_INFO->request_size_ - starting_element);
       std::vector<f32> data(request_elements, 3.8f);
       TEST_INFO->TestRead(dset_name, data, starting_element, request_elements);
     }
@@ -387,10 +387,10 @@ TEST_CASE("BatchedUpdateRandomRSVariable",
     TEST_INFO->TestOpen(TEST_INFO->existing_file_, H5F_ACC_RDWR);
     REQUIRE(TEST_INFO->hermes_hid_ != H5I_INVALID_HID);
 
-    std::vector<f32> data(TEST_INFO->nelems_per_dataset_, 8.0f);
+    std::vector<f32> data(TEST_INFO->request_size_, 8.0f);
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       std::string dset_name = RandomDatasetName(TEST_INFO->num_iterations_);
-      size_t request_size = Random1ToUpperBound(TEST_INFO->nelems_per_dataset_);
+      size_t request_size = Random1ToUpperBound(TEST_INFO->request_size_);
       TEST_INFO->TestWritePartial1d(dset_name, data.data(), 0, request_size);
     }
     TEST_INFO->TestClose();
@@ -417,7 +417,7 @@ TEST_CASE("BatchedWriteTemporalFixed",
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       usleep(TEST_INFO->temporal_interval_ms_ * 1000);
       TEST_INFO->TestWritePartial1d(std::to_string(i), TEST_INFO->write_data_.data(), 0,
-                               TEST_INFO->nelems_per_dataset_);
+                               TEST_INFO->request_size_);
     }
     TEST_INFO->TestClose();
     REQUIRE(TEST_INFO->hermes_herr_ >= 0);
@@ -456,7 +456,7 @@ TEST_CASE("BatchedWriteTemporalVariable",
         TEST_INFO->GenNextRandom() % (TEST_INFO->temporal_interval_ms_ + 2);
       usleep(sleep_interval_ms * 1000);
       TEST_INFO->TestWritePartial1d(std::to_string(i), TEST_INFO->write_data_.data(), 0,
-                               TEST_INFO->nelems_per_dataset_);
+                               TEST_INFO->request_size_);
     }
     TEST_INFO->TestClose();
     REQUIRE(TEST_INFO->hermes_herr_ >= 0);
@@ -496,7 +496,7 @@ TEST_CASE("BatchedMixedSequential",
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       std::string dset_name = std::to_string(i);
       TEST_INFO->TestWriteDataset(dset_name, TEST_INFO->write_data_);
-      TEST_INFO->TestRead(dset_name, TEST_INFO->read_data_, 0, TEST_INFO->nelems_per_dataset_);
+      TEST_INFO->TestRead(dset_name, TEST_INFO->read_data_, 0, TEST_INFO->request_size_);
     }
     TEST_INFO->TestClose();
     REQUIRE(TEST_INFO->hermes_herr_ >= 0);
@@ -511,9 +511,9 @@ TEST_CASE("BatchedMixedSequential",
 
       if (i % 2 == 0) {
         TEST_INFO->TestWritePartial1d(dset_name, TEST_INFO->write_data_.data(), 0,
-                                 TEST_INFO->nelems_per_dataset_);
+                                 TEST_INFO->request_size_);
       } else {
-        TEST_INFO->TestRead(dset_name, TEST_INFO->read_data_, 0, TEST_INFO->nelems_per_dataset_);
+        TEST_INFO->TestRead(dset_name, TEST_INFO->read_data_, 0, TEST_INFO->request_size_);
       }
     }
     TEST_INFO->TestClose();
@@ -526,9 +526,9 @@ TEST_CASE("BatchedMixedSequential",
 
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       std::string dset_name = std::to_string(i);
-      TEST_INFO->TestRead(dset_name, TEST_INFO->read_data_, 0, TEST_INFO->nelems_per_dataset_);
+      TEST_INFO->TestRead(dset_name, TEST_INFO->read_data_, 0, TEST_INFO->request_size_);
       TEST_INFO->TestWritePartial1d(dset_name, TEST_INFO->write_data_.data(), 0,
-                               TEST_INFO->nelems_per_dataset_);
+                               TEST_INFO->request_size_);
     }
 
     TEST_INFO->TestClose();
@@ -546,7 +546,7 @@ TEST_CASE("BatchedMixedSequential",
 
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       std::string dset_name = std::to_string(i);
-      TEST_INFO->TestRead(dset_name, TEST_INFO->read_data_, 0, TEST_INFO->nelems_per_dataset_);
+      TEST_INFO->TestRead(dset_name, TEST_INFO->read_data_, 0, TEST_INFO->request_size_);
     }
 
     TEST_INFO->TestClose();
@@ -569,7 +569,7 @@ TEST_CASE("BatchedMixedSequential",
 
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       TEST_INFO->TestRead(std::to_string(i), TEST_INFO->read_data_, 0,
-                     TEST_INFO->nelems_per_dataset_);
+                     TEST_INFO->request_size_);
     }
 
     TEST_INFO->TestClose();
@@ -589,7 +589,7 @@ TEST_CASE("SingleMixed", "[process=" + std::to_string(TEST_INFO->comm_size_) +
     REQUIRE(TEST_INFO->hermes_hid_ != H5I_INVALID_HID);
     std::string dset_name("0");
     TEST_INFO->TestWriteDataset(dset_name, TEST_INFO->write_data_);
-    TEST_INFO->TestRead(dset_name, TEST_INFO->read_data_, 0, TEST_INFO->nelems_per_dataset_);
+    TEST_INFO->TestRead(dset_name, TEST_INFO->read_data_, 0, TEST_INFO->request_size_);
     TEST_INFO->TestClose();
     REQUIRE(TEST_INFO->hermes_herr_ >= 0);
   }
@@ -598,9 +598,9 @@ TEST_CASE("SingleMixed", "[process=" + std::to_string(TEST_INFO->comm_size_) +
     TEST_INFO->TestOpen(TEST_INFO->existing_file_, H5F_ACC_RDWR);
     REQUIRE(TEST_INFO->hermes_hid_ != H5I_INVALID_HID);
     std::string dset_name("0");
-    TEST_INFO->TestRead(dset_name, TEST_INFO->read_data_, 0, TEST_INFO->nelems_per_dataset_);
+    TEST_INFO->TestRead(dset_name, TEST_INFO->read_data_, 0, TEST_INFO->request_size_);
     TEST_INFO->TestWritePartial1d(dset_name, TEST_INFO->write_data_.data(), 0,
-                             TEST_INFO->nelems_per_dataset_);
+                             TEST_INFO->request_size_);
     TEST_INFO->TestClose();
     REQUIRE(TEST_INFO->hermes_herr_ >= 0);
   }
@@ -614,7 +614,7 @@ TEST_CASE("SingleMixed", "[process=" + std::to_string(TEST_INFO->comm_size_) +
     REQUIRE(TEST_INFO->hermes_herr_ >= 0);
 
     TEST_INFO->TestOpen(TEST_INFO->new_file_, H5F_ACC_RDWR);
-    TEST_INFO->TestRead(dset_name, TEST_INFO->read_data_, 0, TEST_INFO->nelems_per_dataset_);
+    TEST_INFO->TestRead(dset_name, TEST_INFO->read_data_, 0, TEST_INFO->request_size_);
     TEST_INFO->TestClose();
     REQUIRE(TEST_INFO->hermes_herr_ >= 0);
   }
@@ -660,7 +660,7 @@ TEST_CASE("PartialUpdateToLastPage") {
     REQUIRE(TEST_INFO->hermes_hid_ != H5I_INVALID_HID);
     TEST_INFO->TestWritePartial1d(std::to_string(TEST_INFO->num_iterations_ - 1),
                              TEST_INFO->write_data_.data(), 0,
-                             TEST_INFO->nelems_per_dataset_ / 2);
+                             TEST_INFO->request_size_ / 2);
     TEST_INFO->TestClose();
     REQUIRE(TEST_INFO->hermes_herr_ >= 0);
   }
@@ -670,8 +670,8 @@ TEST_CASE("PartialUpdateToLastPage") {
     REQUIRE(TEST_INFO->hermes_hid_ != H5I_INVALID_HID);
     TEST_INFO->TestWritePartial1d(std::to_string(TEST_INFO->num_iterations_ - 1),
                              TEST_INFO->write_data_.data(),
-                             TEST_INFO->nelems_per_dataset_ / 4,
-                             TEST_INFO->nelems_per_dataset_ / 2);
+                             TEST_INFO->request_size_ / 4,
+                             TEST_INFO->request_size_ / 2);
     TEST_INFO->TestClose();
     REQUIRE(TEST_INFO->hermes_herr_ >= 0);
   }
@@ -681,8 +681,8 @@ TEST_CASE("PartialUpdateToLastPage") {
     REQUIRE(TEST_INFO->hermes_hid_ != H5I_INVALID_HID);
     TEST_INFO->TestWritePartial1d(std::to_string(TEST_INFO->num_iterations_ - 1),
                              TEST_INFO->write_data_.data(),
-                             TEST_INFO->nelems_per_dataset_ / 2,
-                             TEST_INFO->nelems_per_dataset_ / 2);
+                             TEST_INFO->request_size_ / 2,
+                             TEST_INFO->request_size_ / 2);
     TEST_INFO->TestClose();
     REQUIRE(TEST_INFO->hermes_herr_ >= 0);
   }
@@ -703,7 +703,7 @@ TEST_CASE("ScratchMode", "[mode=scratch]") {
 
     for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
       std::string dset_name = RandomDatasetName(TEST_INFO->num_iterations_);
-      TEST_INFO->TestRead(dset_name, TEST_INFO->read_data_, 0, TEST_INFO->nelems_per_dataset_);
+      TEST_INFO->TestRead(dset_name, TEST_INFO->read_data_, 0, TEST_INFO->request_size_);
     }
 
     TEST_INFO->TestClose();

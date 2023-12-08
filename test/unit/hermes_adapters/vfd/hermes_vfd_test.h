@@ -262,7 +262,6 @@ class Hdf5VfdTests : public FilesystemTests<f32> {
   // size_t medium_max = KILOBYTES(256);
   // size_t large_min = KILOBYTES(256) + 1;
   // size_t large_max = MEGABYTES(3);
-  size_t nelems_per_dataset_;    /**< number of elements per dataset */
 
   hid_t hermes_hid_;               /**< Hermes handle ID */
   hid_t sec2_hid_;                 /**< POSIX driver handle ID */
@@ -279,30 +278,42 @@ class Hdf5VfdTests : public FilesystemTests<f32> {
   }
 
   void CompareFiles(FileInfo &info) override {
+    const char *driver = getenv("HDF5_DRIVER");
+    if (driver != nullptr) {
+      unsetenv("HDF5_DRIVER");
+    }
     std::string h5diff_cmd = "h5diff " + info.hermes_ + " " + info.cmp_;
     int status = system(h5diff_cmd.c_str());
     if (status != 0) {
       HELOG(kError, "Failing h5diff command: {}", h5diff_cmd)
     }
+    if (driver != nullptr) {
+      setenv("HDF5_DRIVER", driver, 1);
+    }
     REQUIRE(status == 0);
+  }
+
+  std::vector<f32> GenerateData() override {
+    std::vector<f32> data(request_size_ * num_iterations_);
+    for (size_t i = 0; i < data.size(); ++i) {
+      data[i] = GenRandom0to1();
+    }
+    return data;
   }
 
   /**
    * Create an HDF5 file called @p fname with @p num_datasets datasets, each with
    * @p num_dataset_elems elements.
    * */
-  void CreateFile(const std::string &path) override {
-    std::vector<f32> data(nelems_per_dataset_ * num_iterations_);
-    for (size_t i = 0; i < data.size(); ++i) {
-      data[i] = GenRandom0to1();
-    }
+  void CreateFile(const std::string &path,
+                  std::vector<f32> &data) override {
     Hdf5Api api;
     f32 *at = (f32*)data.data();
     hid_t file_id = api.CreatePosix(path, H5F_ACC_TRUNC);
     REQUIRE(file_id != H5I_INVALID_HID);
     for (size_t i = 0; i < num_iterations_; ++i) {
-      api.MakeDataset(file_id, std::to_string(i), at, nelems_per_dataset_);
-      at += nelems_per_dataset_;
+      api.MakeDataset(file_id, std::to_string(i), at, request_size_);
+      at += request_size_;
     }
     REQUIRE(api.Close(file_id) > -1);
   }

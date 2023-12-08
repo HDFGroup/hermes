@@ -11,8 +11,12 @@ namespace hermes::adapter::fs::test {
 
 class BinaryFileTests : public FilesystemTests<char> {
  public:
-  void CreateFile(const std::string &path) override {
-    std::vector<char> data = GenRandom(total_size_, 200);
+  std::vector<char> GenerateData() override {
+    return GenRandom(total_size_, 200);
+  }
+
+  void CreateFile(const std::string &path,
+                  std::vector<char> &data) override {
     int fd = open(path.c_str(), O_CREAT | O_TRUNC | O_RDWR, 0666);
     if (fd == -1) {
       HELOG(kFatal, "Failed to open file: {}", path);
