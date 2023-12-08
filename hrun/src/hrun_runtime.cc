@@ -119,11 +119,16 @@ void Runtime::InitSharedMemory() {
       qm.shm_name_);
   auto backend = mem_mngr->GetBackend(qm.shm_name_);
   HILOG(kInfo, "Created backend {}", (void*)backend);
-  main_alloc_ =
-      mem_mngr->CreateAllocator<hipc::ScalablePageAllocator>(
-          qm.shm_name_,
-          main_alloc_id_,
-          sizeof(HrunShm));
+  try {
+    main_alloc_ =
+        mem_mngr->CreateAllocator<hipc::ScalablePageAllocator>(
+            qm.shm_name_,
+            main_alloc_id_,
+            sizeof(HrunShm));
+  } catch (std::exception &e) {
+    HILOG(kError, "Failed to create main allocator: {}", e.what())
+    throw;
+  }
   header_ = main_alloc_->GetCustomHeader<HrunShm>();
   // Create separate data allocator
   mem_mngr->CreateBackend<hipc::PosixShmMmap>(
