@@ -301,7 +301,7 @@ class FilesystemIoClient {
   virtual ~FilesystemIoClient() = default;
 
   /** Get initial statistics from the backend */
-  virtual size_t GetSize(const hipc::charbuf &bkt_name) = 0;
+  virtual size_t GetBackendSize(const hipc::charbuf &bkt_name) = 0;
 
   /** Write blob to backend */
   virtual void WriteBlob(const std::string &bkt_name,
@@ -348,6 +348,9 @@ class FilesystemIoClient {
   virtual void HermesClose(File &f,
                            const AdapterStat &stat,
                            FilesystemIoClientState &fs_mdm) = 0;
+
+  /** Updates I/O status after read/write operations */
+  virtual void UpdateIoStatus(const FsIoOptions &opts, IoStatus &status) = 0;
 };
 
 }  // namespace hermes::adapter::fs

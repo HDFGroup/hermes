@@ -39,7 +39,6 @@
 #include "H5PLextern.h"
 #include "H5FDhermes.h"     /* Hermes file driver     */
 
-#include "hermes_adapters/posix/posix_io_client.h"
 #include "hermes_adapters/posix/posix_fs_api.h"
 
 /**
@@ -62,6 +61,7 @@ hid_t H5FDhermes_err_class_g = H5I_INVALID_HID;
 
 using hermes::adapter::fs::AdapterStat;
 using hermes::adapter::fs::File;
+using hermes::adapter::fs::IoStatus;
 
 /* POSIX I/O mode used as the third parameter to open/_open
  * when creating a new file (O_CREAT is set). */

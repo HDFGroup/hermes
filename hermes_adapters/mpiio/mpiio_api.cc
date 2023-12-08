@@ -27,10 +27,12 @@ bool mpiio_intercepted = true;
 using hermes::adapter::fs::MetadataManager;
 using hermes::adapter::fs::File;
 using hermes::adapter::fs::AdapterStat;
+using hermes::adapter::fs::SeekMode;
+using hermes::adapter::fs::IoStatus;
+using hermes::adapter::fs::FsIoOptions;
 using hermes::adapter::fs::MpiioApi;
 using hermes::adapter::fs::MpiioFs;
 using hermes::adapter::fs::MpiioSeekModeConv;
-
 
 extern "C" {
 

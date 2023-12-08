@@ -5,29 +5,19 @@ include_directories(
         ${HERMES_IO_CLIENT_DIR}
         .)
 
-# Creates the POSIX I/O client
-add_library(hermes_posix_io_client SHARED posix_io_client.cc)
-add_dependencies(hermes_posix_io_client
-        hermes hermes_fs_base)
-target_link_libraries(hermes_posix_io_client
-        hermes hermes_fs_base
-        MPI::MPI_CXX stdc++fs dl)
-
 # Create the POSIX interceptor
 set(INTERCEPTOR_DEPS
-        hermes
-        hermes_posix_io_client)
+        hermes hermes_fs_base)
 add_library(hermes_posix SHARED
         ${CMAKE_CURRENT_SOURCE_DIR}/posix_api.cc)
 add_dependencies(hermes_posix ${INTERCEPTOR_DEPS})
-target_link_libraries(hermes_posix ${INTERCEPTOR_DEPS})
+target_link_libraries(hermes_posix MPI::MPI_CXX stdc++fs dl ${INTERCEPTOR_DEPS})
 
 #-----------------------------------------------------------------------------
 # Add Target(s) to CMake Install
 #-----------------------------------------------------------------------------
 install(
         TARGETS
-        hermes_posix_io_client
         hermes_posix
         EXPORT
         ${HERMES_EXPORTED_TARGETS}
@@ -40,7 +30,6 @@ install(
 # Export all exported targets to the build tree for use by parent project
 #-----------------------------------------------------------------------------
 set(HERMES_EXPORTED_LIBS
-        hermes_posix_io_client
         hermes_posix
         ${HERMES_EXPORTED_LIBS})
 if(NOT HERMES_EXTERNALLY_CONFIGURED)
@@ -69,6 +58,5 @@ install(
 # Add Target(s) to Coverage
 #-----------------------------------------------------------------------------
 if(HERMES_ENABLE_COVERAGE)
-    set_coverage_flags(hermes_posix_io_client)
-    #set_coverage_flags(hermes_posix)
+    set_coverage_flags(hermes_posix)
 endif()

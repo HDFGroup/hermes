@@ -27,10 +27,12 @@ bool posix_intercepted = true;
 #include "posix_fs_api.h"
 #include "hermes_adapters/filesystem/filesystem.h"
 
-using hermes::adapter::fs::AdapterStat;
-using hermes::adapter::fs::IoStatus;
-using hermes::adapter::fs::File;
+using hermes::adapter::fs::MetadataManager;
 using hermes::adapter::fs::SeekMode;
+using hermes::adapter::fs::AdapterStat;
+using hermes::adapter::fs::File;
+using hermes::adapter::fs::IoStatus;
+using hermes::adapter::fs::FsIoOptions;
 
 namespace stdfs = std::filesystem;
 

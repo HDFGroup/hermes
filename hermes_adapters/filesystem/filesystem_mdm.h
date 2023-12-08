@@ -16,7 +16,6 @@
 #include <cstdio>
 #include <unordered_map>
 #include "filesystem_io_client.h"
-#include "filesystem.h"
 
 namespace hermes::adapter::fs {
 
@@ -65,7 +64,16 @@ class MetadataManager {
    * @return    true, if operation was successful.
    *            false, if operation was unsuccessful.
    */
-  bool Create(const File& f, std::shared_ptr<AdapterStat> &stat);
+  bool Create(const File& f, std::shared_ptr<AdapterStat> &stat) {
+    HILOG(kDebug, "Create metadata for file handler")
+    ScopedRwWriteLock md_lock(lock_, kMDM_Create);
+    if (path_to_hermes_file_.find(stat->path_) == path_to_hermes_file_.end()) {
+      path_to_hermes_file_.emplace(stat->path_, std::list<File>());
+    }
+    path_to_hermes_file_[stat->path_].emplace_back(f);
+    auto ret = hermes_file_to_stat_.emplace(f, std::move(stat));
+    return ret.second;
+  }
 
   /**
    * Update existing metadata entry for filesystem adapters.
@@ -74,7 +82,17 @@ class MetadataManager {
    * @return    true, if operation was successful.
    *            false, if operation was unsuccessful or entry doesn't exist.
    */
-  bool Update(const File& f, const AdapterStat& stat);
+  bool Update(const File& f, const AdapterStat& stat) {
+    HILOG(kDebug, "Update metadata for file handler")
+    ScopedRwWriteLock md_lock(lock_, kMDM_Update);
+    auto iter = hermes_file_to_stat_.find(f);
+    if (iter != hermes_file_to_stat_.end()) {
+      *(*iter).second = stat;
+      return true;
+    } else {
+      return false;
+    }
+  }
 
   /**
    * Delete existing metadata entry for for filesystem adapters.
@@ -82,14 +100,38 @@ class MetadataManager {
    * @return    true, if operation was successful.
    *            false, if operation was unsuccessful.
    */
-  bool Delete(const std::string &path, const File& f);
+  bool Delete(const std::string &path, const File& f) {
+    HILOG(kDebug, "Delete metadata for file handler")
+    ScopedRwWriteLock md_lock(lock_, kMDM_Delete);
+    auto iter = hermes_file_to_stat_.find(f);
+    if (iter != hermes_file_to_stat_.end()) {
+      hermes_file_to_stat_.erase(iter);
+      auto &list = path_to_hermes_file_[path];
+      auto f_iter = std::find(list.begin(), list.end(), f);
+      path_to_hermes_file_[path].erase(f_iter);
+      if (list.size() == 0) {
+        path_to_hermes_file_.erase(path);
+      }
+      return true;
+    } else {
+      return false;
+    }
+  }
 
   /**
    * Find the hermes file relating to a path.
    * @param path the path being checked
    * @return The hermes file.
    * */
-  std::list<File>* Find(const std::string &path);
+  std::list<File>* Find(const std::string &path) {
+    std::string canon_path = stdfs::absolute(path).string();
+    ScopedRwReadLock md_lock(lock_, kMDM_Find);
+    auto iter = path_to_hermes_file_.find(canon_path);
+    if (iter == path_to_hermes_file_.end())
+      return nullptr;
+    else
+      return &iter->second;
+  }
 
   /**
    * Find existing metadata entry for filesystem adapters.
@@ -97,7 +139,14 @@ class MetadataManager {
    * @return    The metadata entry if exist.
    *            The bool in pair indicated whether metadata entry exists.
    */
-  std::shared_ptr<AdapterStat> Find(const File& f);
+  std::shared_ptr<AdapterStat> Find(const File& f) {
+    ScopedRwReadLock md_lock(lock_, kMDM_Find2);
+    auto iter = hermes_file_to_stat_.find(f);
+    if (iter == hermes_file_to_stat_.end())
+      return nullptr;
+    else
+      return iter->second;
+  }
 };
 }  // namespace hermes::adapter::fs
 
