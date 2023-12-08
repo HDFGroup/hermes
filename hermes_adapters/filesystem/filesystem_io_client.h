@@ -53,6 +53,19 @@ struct IoStatus {
                mpi_ret_(MPI_SUCCESS),
                mpi_status_ptr_(&mpi_status_),
                success_(true) {}
+
+  /** Copy constructor */
+  void Copy(const IoStatus &other) {
+    size_ = other.size_;
+    mpi_ret_ = other.mpi_ret_;
+    mpi_status_ = other.mpi_status_;
+    if (other.mpi_status_ptr_ == &other.mpi_status_) {
+      mpi_status_ptr_ = &mpi_status_;
+    } else {
+      mpi_status_ptr_ = other.mpi_status_ptr_;
+    }
+    success_ = other.success_;
+  }
 };
 
 /**
@@ -115,7 +128,7 @@ struct FsIoOptions {
 struct FsAsyncTask {
   std::vector<LPointer<hrunpq::TypedPushTask<PutBlobTask>>> put_tasks_;
   std::vector<LPointer<hrunpq::TypedPushTask<GetBlobTask>>> get_tasks_;
-  IoStatus io_status_; 
+  IoStatus io_status_;
   FsIoOptions opts_;
 };
 

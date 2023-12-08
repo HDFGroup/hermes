@@ -287,7 +287,7 @@ class Filesystem : public FilesystemIoClient {
     // Writes are completely async at this time
     FsAsyncTask *fstask = new FsAsyncTask();
     Write(f, stat, ptr, off, total_size, io_status, opts);
-    fstask->io_status_ = io_status;
+    fstask->io_status_.Copy(io_status);
     fstask->opts_ = opts;
     return fstask;
   }
@@ -311,15 +311,17 @@ class Filesystem : public FilesystemIoClient {
     }
 
     // Update I/O status for gets
-    size_t get_size = 0;
-    for (LPointer<hrunpq::TypedPushTask<GetBlobTask>> &push_task : fstask->get_tasks_) {
-      push_task->Wait();
-      GetBlobTask *task = push_task->get();
-      get_size += task->data_size_;
-      HRUN_CLIENT->DelTask(task);
+    if (!fstask->get_tasks_.empty()) {
+      size_t get_size = 0;
+      for (LPointer<hrunpq::TypedPushTask<GetBlobTask>> &push_task : fstask->get_tasks_) {
+        push_task->Wait();
+        GetBlobTask *task = push_task->get();
+        get_size += task->data_size_;
+        HRUN_CLIENT->DelTask(task);
+      }
+      fstask->io_status_.size_ = get_size;
+      UpdateIoStatus(fstask->opts_, fstask->io_status_);
     }
-    fstask->io_status_.size_ = get_size;
-    UpdateIoStatus(fstask->opts_, fstask->io_status_);
     return 0;
   }
 

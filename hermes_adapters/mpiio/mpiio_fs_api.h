@@ -203,7 +203,6 @@ class MpiioFs : public Filesystem {
       return MPI_SUCCESS;
     }
     return real_api_->MPI_Wait(req, status);
-    return 0;
   }
 
   int WaitAll(int count, MPI_Request *req, MPI_Status *status) {
