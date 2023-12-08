@@ -54,7 +54,7 @@ class Filesystem : public FilesystemIoClient {
  public:
   /** Constructor */
   explicit Filesystem(AdapterType type)
-  : type_(type) {}
+      : type_(type) {}
 
   /** open \a path */
   File Open(AdapterStat &stat, const std::string &path) {
@@ -205,11 +205,15 @@ class Filesystem : public FilesystemIoClient {
 
     // SEEK_END is not a valid read position
     if (off == std::numeric_limits<size_t>::max()) {
+      io_status.size_ = 0;
+      UpdateIoStatus(opts, io_status);
       return 0;
     }
 
     // Ensure the amount being read makes sense
     if (total_size == 0) {
+      io_status.size_ = 0;
+      UpdateIoStatus(opts, io_status);
       return 0;
     }
 
@@ -243,19 +247,24 @@ class Filesystem : public FilesystemIoClient {
       Blob page((const char*)ptr + data_offset, p.blob_size_);
       std::string blob_name(p.CreateBlobName().str());
       bkt.PartialGet(blob_name, page, p.blob_off_, ctx);
-      data_offset += p.blob_size_;
+      data_offset += page.size();
+      if (page.size() != p.blob_size_) {
+        break;
+      }
     }
     if (opts.DoSeek()) {
-      stat.st_ptr_ = off + total_size;
+      stat.st_ptr_ = off + data_offset;
     }
     stat.UpdateTime();
+    io_status.size_ = data_offset;
+    UpdateIoStatus(opts, io_status);
     return data_offset;
   }
 
   /** write asynchronously */
   Task* AWrite(File &f, AdapterStat &stat, const void *ptr, size_t off,
-                        size_t total_size, size_t req_id, IoStatus &io_status,
-                        FsIoOptions opts = FsIoOptions()) {
+               size_t total_size, size_t req_id, IoStatus &io_status,
+               FsIoOptions opts = FsIoOptions()) {
     HILOG(kDebug, "Starting an asynchronous write",
           opts.backend_size_);
     return nullptr;
@@ -263,8 +272,8 @@ class Filesystem : public FilesystemIoClient {
 
   /** read asynchronously */
   Task* ARead(File &f, AdapterStat &stat, void *ptr, size_t off,
-                       size_t total_size, size_t req_id, IoStatus &io_status,
-                       FsIoOptions opts = FsIoOptions()) {
+              size_t total_size, size_t req_id, IoStatus &io_status,
+              FsIoOptions opts = FsIoOptions()) {
     HILOG(kDebug, "Starting an asynchronous read",
           opts.backend_size_);
     return nullptr;
@@ -426,15 +435,15 @@ class Filesystem : public FilesystemIoClient {
 
   /** write asynchronously */
   Task* AWrite(File &f, AdapterStat &stat, const void *ptr,
-                        size_t total_size, size_t req_id, IoStatus &io_status,
-                        FsIoOptions opts) {
+               size_t total_size, size_t req_id, IoStatus &io_status,
+               FsIoOptions opts) {
     size_t off = stat.st_ptr_;
     return AWrite(f, stat, ptr, off, total_size, req_id, io_status, opts);
   }
 
   /** read asynchronously */
   Task* ARead(File &f, AdapterStat &stat, void *ptr, size_t total_size,
-                       size_t req_id, IoStatus &io_status, FsIoOptions opts) {
+              size_t req_id, IoStatus &io_status, FsIoOptions opts) {
     size_t off = stat.st_ptr_;
     return ARead(f, stat, ptr, off, total_size, req_id, io_status, opts);
   }
@@ -503,8 +512,8 @@ class Filesystem : public FilesystemIoClient {
 
   /** write asynchronously */
   Task* AWrite(File &f, bool &stat_exists, const void *ptr,
-                        size_t total_size, size_t req_id, IoStatus &io_status,
-                        FsIoOptions opts) {
+               size_t total_size, size_t req_id, IoStatus &io_status,
+               FsIoOptions opts) {
     auto mdm = HERMES_FS_METADATA_MANAGER;
     auto stat = mdm->Find(f);
     if (!stat) {
@@ -517,7 +526,7 @@ class Filesystem : public FilesystemIoClient {
 
   /** read asynchronously */
   Task* ARead(File &f, bool &stat_exists, void *ptr, size_t total_size,
-                       size_t req_id, IoStatus &io_status, FsIoOptions opts) {
+              size_t req_id, IoStatus &io_status, FsIoOptions opts) {
     auto mdm = HERMES_FS_METADATA_MANAGER;
     auto stat = mdm->Find(f);
     if (!stat) {
@@ -530,8 +539,8 @@ class Filesystem : public FilesystemIoClient {
 
   /** write \a off offset asynchronously */
   Task* AWrite(File &f, bool &stat_exists, const void *ptr, size_t off,
-                        size_t total_size, size_t req_id, IoStatus &io_status,
-                        FsIoOptions opts) {
+               size_t total_size, size_t req_id, IoStatus &io_status,
+               FsIoOptions opts) {
     auto mdm = HERMES_FS_METADATA_MANAGER;
     auto stat = mdm->Find(f);
     if (!stat) {
@@ -545,8 +554,8 @@ class Filesystem : public FilesystemIoClient {
 
   /** read \a off offset asynchronously */
   Task* ARead(File &f, bool &stat_exists, void *ptr, size_t off,
-                       size_t total_size, size_t req_id, IoStatus &io_status,
-                       FsIoOptions opts) {
+              size_t total_size, size_t req_id, IoStatus &io_status,
+              FsIoOptions opts) {
     auto mdm = HERMES_FS_METADATA_MANAGER;
     auto stat = mdm->Find(f);
     if (!stat) {

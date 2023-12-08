@@ -66,19 +66,18 @@ struct HermesRequest {
  * For now, nothing additional than the typical FsIoOptions.
  * */
 struct FsIoOptions {
-  AdapterMode adapter_mode_;      /**< Current adapter mode for this obj */
-  hapi::PlacementPolicy dpe_;     /**< data placement policy */
-  bitfield32_t flags_;            /**< various I/O flags */
-  MPI_Datatype mpi_type_; /**< MPI data type */
-  int mpi_count_;         /**< The number of types */
-  size_t backend_off_;    /**< Offset in the backend to begin I/O */
-  size_t backend_size_;   /**< Size of I/O to perform at backend */
+  bitfield32_t flags_;     /**< various I/O flags */
+  MPI_Datatype mpi_type_;  /**< MPI data type */
+  int mpi_count_;          /**< The number of types */
+  int type_size_;          /**< The size of type */
+  size_t backend_off_;     /**< Offset in the backend to begin I/O */
+  size_t backend_size_;    /**< Size of I/O to perform at backend */
 
   /** Default constructor */
-  FsIoOptions() : dpe_(hapi::PlacementPolicy::kNone),
-                  flags_(),
+  FsIoOptions() : flags_(),
                   mpi_type_(MPI_CHAR),
                   mpi_count_(0),
+                  type_size_(1),
                   backend_off_(0),
                   backend_size_(0) {
     SetSeek();
@@ -114,13 +113,6 @@ struct FsIoOptions {
     FsIoOptions opts;
     opts.mpi_type_ = mpi_type;
     if (!seek) { opts.UnsetSeek(); }
-    return opts;
-  }
-
-  /** Return Io options with \a DPE */
-  static FsIoOptions WithDpe(hapi::PlacementPolicy dpe) {
-    FsIoOptions opts;
-    opts.dpe_ = dpe;
     return opts;
   }
 };

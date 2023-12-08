@@ -207,120 +207,119 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(TEST_INFO->comm_size_) +
     REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
   }
 
+  SECTION("write to new  file") {
+    TEST_INFO->test_open(TEST_INFO->new_file_, MPI_MODE_WRONLY | MPI_MODE_CREATE,
+                    MPI_COMM_SELF);
+    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
+    TEST_INFO->test_write(TEST_INFO->write_data_.data(), TEST_INFO->request_size_, MPI_CHAR);
+    REQUIRE((size_t)TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
+    TEST_INFO->test_close();
+    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
+    REQUIRE(stdfs::file_size(TEST_INFO->new_file_.hermes_) == (size_t)TEST_INFO->size_written_orig_);
+  }
 
-//  SECTION("write to new  file") {
-//    TEST_INFO->test_open(TEST_INFO->new_file_, MPI_MODE_WRONLY | MPI_MODE_CREATE,
-//                    MPI_COMM_SELF);
-//    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
-//    TEST_INFO->test_write(TEST_INFO->write_data_.data(), TEST_INFO->request_size_, MPI_CHAR);
-//    REQUIRE((size_t)TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
-//    TEST_INFO->test_close();
-//    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
-//    REQUIRE(stdfs::file_size(TEST_INFO->new_file_.hermes_) == (size_t)TEST_INFO->size_written_orig_);
-//  }
-//
-//  SECTION("write to new file with allocate") {
-//    TEST_INFO->test_open(TEST_INFO->new_file_,
-//                    MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_COMM_SELF);
-//    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
-//    TEST_INFO->test_preallocate(TEST_INFO->request_size_ * TEST_INFO->comm_size_);
-//    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
-//    TEST_INFO->test_seek(TEST_INFO->request_size_ * TEST_INFO->rank_, MPI_SEEK_SET);
-//    REQUIRE(TEST_INFO->status_orig_ == 0);
-//    TEST_INFO->test_write(TEST_INFO->write_data_.data(), TEST_INFO->request_size_, MPI_CHAR);
-//    REQUIRE((size_t)TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
-//    TEST_INFO->test_close();
-//    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
-//    MPI_Barrier(MPI_COMM_WORLD);
-//    REQUIRE(stdfs::file_size(TEST_INFO->new_file_.hermes_) ==
-//            (size_t)TEST_INFO->size_written_orig_ * TEST_INFO->comm_size_);
-//  }
+  SECTION("write to new file with allocate") {
+    TEST_INFO->test_open(TEST_INFO->new_file_,
+                    MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_COMM_SELF);
+    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
+    TEST_INFO->test_preallocate(TEST_INFO->request_size_ * TEST_INFO->comm_size_);
+    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
+    TEST_INFO->test_seek(TEST_INFO->request_size_ * TEST_INFO->rank_, MPI_SEEK_SET);
+    REQUIRE(TEST_INFO->status_orig_ == 0);
+    TEST_INFO->test_write(TEST_INFO->write_data_.data(), TEST_INFO->request_size_, MPI_CHAR);
+    REQUIRE((size_t)TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
+    TEST_INFO->test_close();
+    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
+    MPI_Barrier(MPI_COMM_WORLD);
+    REQUIRE(stdfs::file_size(TEST_INFO->new_file_.hermes_) ==
+            (size_t)TEST_INFO->size_written_orig_ * TEST_INFO->comm_size_);
+  }
 
-//  SECTION("append to existing file") {
-//    auto existing_size = stdfs::file_size(TEST_INFO->existing_file_.hermes_);
-//    TEST_INFO->test_open(TEST_INFO->existing_file_,
-//                    MPI_MODE_WRONLY | MPI_MODE_APPEND | MPI_MODE_EXCL,
-//                    MPI_COMM_SELF);
-//    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
-//    TEST_INFO->test_write(TEST_INFO->write_data_.data(), TEST_INFO->request_size_, MPI_CHAR);
-//    REQUIRE((size_t)TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
-//    TEST_INFO->test_close();
-//    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
-//    REQUIRE(stdfs::file_size(TEST_INFO->existing_file_.hermes_) ==
-//            existing_size + TEST_INFO->size_written_orig_);
-//  }
-//
-//  SECTION("append to new file") {
-//    TEST_INFO->test_open(TEST_INFO->new_file_,
-//                    MPI_MODE_WRONLY | MPI_MODE_APPEND | MPI_MODE_CREATE,
-//                    MPI_COMM_SELF);
-//    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
-//    TEST_INFO->test_write(TEST_INFO->write_data_.data(), TEST_INFO->request_size_, MPI_CHAR);
-//    REQUIRE((size_t)TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
-//    TEST_INFO->test_close();
-//    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
-//    REQUIRE(stdfs::file_size(TEST_INFO->new_file_.hermes_) == (size_t)TEST_INFO->size_written_orig_);
-//  }
+  SECTION("append to existing file") {
+    auto existing_size = stdfs::file_size(TEST_INFO->existing_file_.hermes_);
+    TEST_INFO->test_open(TEST_INFO->existing_file_,
+                    MPI_MODE_WRONLY | MPI_MODE_APPEND | MPI_MODE_EXCL,
+                    MPI_COMM_SELF);
+    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
+    TEST_INFO->test_write(TEST_INFO->write_data_.data(), TEST_INFO->request_size_, MPI_CHAR);
+    REQUIRE((size_t)TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
+    TEST_INFO->test_close();
+    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
+    REQUIRE(stdfs::file_size(TEST_INFO->existing_file_.hermes_) ==
+            existing_size + TEST_INFO->size_written_orig_);
+  }
 
-//  SECTION("write_at to existing file") {
-//    TEST_INFO->test_open(TEST_INFO->existing_file_, MPI_MODE_RDWR, MPI_COMM_SELF);
-//    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
-//    TEST_INFO->test_write_at(TEST_INFO->write_data_.data(), TEST_INFO->request_size_, MPI_CHAR,
-//                        TEST_INFO->rank_ * TEST_INFO->request_size_);
-//    REQUIRE((size_t)TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
-//    TEST_INFO->test_close();
-//    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
-//  }
-//
-//  SECTION("write_at to new file") {
-//    TEST_INFO->test_open(TEST_INFO->new_file_, MPI_MODE_WRONLY | MPI_MODE_CREATE,
-//                    MPI_COMM_SELF);
-//    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
-//    TEST_INFO->test_write_at(TEST_INFO->write_data_.data(), TEST_INFO->request_size_, MPI_CHAR,
-//                        0);
-//    REQUIRE((size_t)TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
-//    TEST_INFO->test_close();
-//    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
-//    REQUIRE(stdfs::file_size(TEST_INFO->new_file_.hermes_) == (size_t)TEST_INFO->size_written_orig_);
-//  }
-//
-//  SECTION("delete on close mode on new file") {
-//    TEST_INFO->test_open(
-//        TEST_INFO->new_file_,
-//        MPI_MODE_WRONLY | MPI_MODE_CREATE | MPI_MODE_DELETE_ON_CLOSE,
-//        MPI_COMM_SELF);
-//    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
-//    TEST_INFO->test_seek(0, MPI_SEEK_SET);
-//    REQUIRE(TEST_INFO->status_orig_ == 0);
-//    TEST_INFO->test_write(TEST_INFO->write_data_.data(), TEST_INFO->request_size_, MPI_CHAR);
-//    REQUIRE((size_t)TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
-//    REQUIRE(stdfs::exists(TEST_INFO->new_file_.hermes_));
-//    TEST_INFO->test_close();
-//    REQUIRE(!stdfs::exists(TEST_INFO->new_file_.hermes_));
-//    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
-//  }
-//
-//  SECTION("delete on close mode on existing file") {
-//    auto original_size = stdfs::file_size(TEST_INFO->existing_file_.hermes_);
-//    TEST_INFO->test_open(TEST_INFO->existing_file_,
-//                    MPI_MODE_WRONLY | MPI_MODE_EXCL | MPI_MODE_DELETE_ON_CLOSE,
-//                    MPI_COMM_SELF);
-//    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
-//    TEST_INFO->test_seek(TEST_INFO->rank_ * TEST_INFO->request_size_, MPI_SEEK_SET);
-//    REQUIRE(TEST_INFO->status_orig_ == 0);
-//    TEST_INFO->test_write(TEST_INFO->write_data_.data(), TEST_INFO->request_size_, MPI_CHAR);
-//    REQUIRE((size_t)TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
-//    REQUIRE(stdfs::exists(TEST_INFO->existing_file_.hermes_));
-//    auto new_size =
-//        original_size > (size_t)TEST_INFO->size_written_orig_ * TEST_INFO->comm_size_
-//            ? original_size
-//            : TEST_INFO->size_written_orig_ * TEST_INFO->comm_size_;
-//    REQUIRE(stdfs::file_size(TEST_INFO->existing_file_.hermes_) == (size_t)new_size);
-//    TEST_INFO->test_close();
-//    REQUIRE(!stdfs::exists(TEST_INFO->existing_file_.hermes_));
-//    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
-//    check_bytes = false;
-//  }
+  SECTION("append to new file") {
+    TEST_INFO->test_open(TEST_INFO->new_file_,
+                    MPI_MODE_WRONLY | MPI_MODE_APPEND | MPI_MODE_CREATE,
+                    MPI_COMM_SELF);
+    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
+    TEST_INFO->test_write(TEST_INFO->write_data_.data(), TEST_INFO->request_size_, MPI_CHAR);
+    REQUIRE((size_t)TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
+    TEST_INFO->test_close();
+    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
+    REQUIRE(stdfs::file_size(TEST_INFO->new_file_.hermes_) == (size_t)TEST_INFO->size_written_orig_);
+  }
+
+  SECTION("write_at to existing file") {
+    TEST_INFO->test_open(TEST_INFO->existing_file_, MPI_MODE_RDWR, MPI_COMM_SELF);
+    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
+    TEST_INFO->test_write_at(TEST_INFO->write_data_.data(), TEST_INFO->request_size_, MPI_CHAR,
+                        TEST_INFO->rank_ * TEST_INFO->request_size_);
+    REQUIRE((size_t)TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
+    TEST_INFO->test_close();
+    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
+  }
+
+  SECTION("write_at to new file") {
+    TEST_INFO->test_open(TEST_INFO->new_file_, MPI_MODE_WRONLY | MPI_MODE_CREATE,
+                    MPI_COMM_SELF);
+    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
+    TEST_INFO->test_write_at(TEST_INFO->write_data_.data(), TEST_INFO->request_size_, MPI_CHAR,
+                        0);
+    REQUIRE((size_t)TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
+    TEST_INFO->test_close();
+    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
+    REQUIRE(stdfs::file_size(TEST_INFO->new_file_.hermes_) == (size_t)TEST_INFO->size_written_orig_);
+  }
+
+  SECTION("delete on close mode on new file") {
+    TEST_INFO->test_open(
+        TEST_INFO->new_file_,
+        MPI_MODE_WRONLY | MPI_MODE_CREATE | MPI_MODE_DELETE_ON_CLOSE,
+        MPI_COMM_SELF);
+    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
+    TEST_INFO->test_seek(0, MPI_SEEK_SET);
+    REQUIRE(TEST_INFO->status_orig_ == 0);
+    TEST_INFO->test_write(TEST_INFO->write_data_.data(), TEST_INFO->request_size_, MPI_CHAR);
+    REQUIRE((size_t)TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
+    REQUIRE(stdfs::exists(TEST_INFO->new_file_.hermes_));
+    TEST_INFO->test_close();
+    REQUIRE(!stdfs::exists(TEST_INFO->new_file_.hermes_));
+    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
+  }
+
+  SECTION("delete on close mode on existing file") {
+    auto original_size = stdfs::file_size(TEST_INFO->existing_file_.hermes_);
+    TEST_INFO->test_open(TEST_INFO->existing_file_,
+                    MPI_MODE_WRONLY | MPI_MODE_EXCL | MPI_MODE_DELETE_ON_CLOSE,
+                    MPI_COMM_SELF);
+    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
+    TEST_INFO->test_seek(TEST_INFO->rank_ * TEST_INFO->request_size_, MPI_SEEK_SET);
+    REQUIRE(TEST_INFO->status_orig_ == 0);
+    TEST_INFO->test_write(TEST_INFO->write_data_.data(), TEST_INFO->request_size_, MPI_CHAR);
+    REQUIRE((size_t)TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
+    REQUIRE(stdfs::exists(TEST_INFO->existing_file_.hermes_));
+    auto new_size =
+        original_size > (size_t)TEST_INFO->size_written_orig_ * TEST_INFO->comm_size_
+            ? original_size
+            : TEST_INFO->size_written_orig_ * TEST_INFO->comm_size_;
+    REQUIRE(stdfs::file_size(TEST_INFO->existing_file_.hermes_) == (size_t)new_size);
+    TEST_INFO->test_close();
+    REQUIRE(!stdfs::exists(TEST_INFO->existing_file_.hermes_));
+    REQUIRE(TEST_INFO->status_orig_ == MPI_SUCCESS);
+    check_bytes = false;
+  }
   TEST_INFO->Posttest(check_bytes);
 }
 

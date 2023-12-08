@@ -581,6 +581,7 @@ class Server : public TaskLib {
       read_task->Wait<TASK_YIELD_CO>(task);
       HRUN_CLIENT->DelTask(read_task);
     }
+    task->data_size_ = buf_off;
     task->SetModuleComplete();
   }
   void MonitorGetBlob(u32 mode, GetBlobTask *task, RunContext &rctx) {

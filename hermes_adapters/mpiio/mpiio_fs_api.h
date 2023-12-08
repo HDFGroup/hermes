@@ -48,6 +48,16 @@ class MpiioFs : public Filesystem {
     real_api_ = HERMES_MPIIO_API;
   }
 
+  /** Initialize I/O opts using count + datatype */
+  static size_t IoSizeFromCount(int count,
+                                MPI_Datatype datatype,
+                                FsIoOptions &opts) {
+    opts.mpi_type_ = datatype;
+    opts.mpi_count_ = count;
+    MPI_Type_size(datatype, &opts.type_size_);
+    return static_cast<size_t>(count * opts.type_size_);
+  }
+
   inline bool IsMpiFpTracked(MPI_File *fh, std::shared_ptr<AdapterStat> &stat) {
     auto mdm = HERMES_FS_METADATA_MANAGER;
     if (fh == nullptr) { return false; }
@@ -63,7 +73,6 @@ class MpiioFs : public Filesystem {
 
   int Read(File &f, AdapterStat &stat, void *ptr, size_t offset, int count,
            MPI_Datatype datatype, MPI_Status *status, FsIoOptions opts) {
-    opts.mpi_type_ = datatype;
     IoStatus io_status;
     io_status.mpi_status_ptr_ = status;
     size_t total_size = IoSizeFromCount(count, datatype, opts);
@@ -73,7 +82,6 @@ class MpiioFs : public Filesystem {
 
   int ARead(File &f, AdapterStat &stat, void *ptr, size_t offset, int count,
             MPI_Datatype datatype, MPI_Request *request, FsIoOptions opts) {
-    opts.mpi_type_ = datatype;
     IoStatus io_status;
     size_t total_size = IoSizeFromCount(count, datatype, opts);
     Filesystem::ARead(f, stat, ptr, offset, total_size,
@@ -83,7 +91,6 @@ class MpiioFs : public Filesystem {
 
   int ReadAll(File &f, AdapterStat &stat, void *ptr, size_t offset, int count,
               MPI_Datatype datatype, MPI_Status *status, FsIoOptions opts) {
-    opts.mpi_type_ = datatype;
     MPI_Barrier(stat.comm_);
     size_t ret = Read(f, stat, ptr, offset, count, datatype, status, opts);
     MPI_Barrier(stat.comm_);
@@ -105,7 +112,6 @@ class MpiioFs : public Filesystem {
   int Write(File &f, AdapterStat &stat, const void *ptr, size_t offset,
             int count, MPI_Datatype datatype, MPI_Status *status,
             FsIoOptions opts) {
-    opts.mpi_type_ = datatype;
     IoStatus io_status;
     io_status.mpi_status_ptr_ = status;
     size_t total_size = IoSizeFromCount(count, datatype, opts);
@@ -116,7 +122,6 @@ class MpiioFs : public Filesystem {
   int AWrite(File &f, AdapterStat &stat, const void *ptr, size_t offset,
              int count, MPI_Datatype datatype, MPI_Request *request,
              FsIoOptions opts) {
-    opts.mpi_type_ = datatype;
     IoStatus io_status;
     size_t total_size = IoSizeFromCount(count, datatype, opts);
     Filesystem::AWrite(f, stat, ptr, offset, total_size,
@@ -127,7 +132,6 @@ class MpiioFs : public Filesystem {
   int WriteAll(File &f, AdapterStat &stat, const void *ptr, size_t offset,
                int count, MPI_Datatype datatype, MPI_Status *status,
                FsIoOptions opts) {
-    opts.mpi_type_ = datatype;
     MPI_Barrier(stat.comm_);
     int ret = Write(f, stat, ptr, offset, count, datatype, status, opts);
     MPI_Barrier(stat.comm_);
@@ -137,7 +141,6 @@ class MpiioFs : public Filesystem {
   int WriteOrdered(File &f, AdapterStat &stat, const void *ptr, int count,
                    MPI_Datatype datatype,
                    MPI_Status *status, FsIoOptions opts) {
-    opts.mpi_type_ = datatype;
     int total;
     MPI_Scan(&count, &total, 1, MPI_INT, MPI_SUM, stat.comm_);
     MPI_Offset my_offset = total - count;
@@ -571,17 +574,6 @@ class MpiioFs : public Filesystem {
     return true_size;
   }
 
-  /** Initialize I/O context using count + datatype */
-  static size_t IoSizeFromCount(int count,
-                                MPI_Datatype datatype,
-                                FsIoOptions &opts) {
-    int datatype_size;
-    opts.mpi_type_ = datatype;
-    opts.mpi_count_ = count;
-    MPI_Type_size(datatype, &datatype_size);
-    return static_cast<size_t>(count * datatype_size);
-  }
-
   /** Write blob to backend */
   void WriteBlob(const std::string &bkt_name,
                  const Blob &full_blob,
@@ -678,10 +670,10 @@ class MpiioFs : public Filesystem {
   void UpdateIoStatus(const FsIoOptions &opts, IoStatus &status) override {
 #ifdef HERMES_OPENMPI
     status.mpi_status_ptr_->_cancelled = 0;
-  status.mpi_status_ptr_->_ucount = opts.mpi_count_;
+  status.mpi_status_ptr_->_ucount = (int) (status.size_ / opts.type_size_);
 #elif defined(HERMES_MPICH)
     status.mpi_status_ptr_->count_hi_and_cancelled = 0;
-    status.mpi_status_ptr_->count_lo = opts.mpi_count_;
+    status.mpi_status_ptr_->count_lo = (int) (status.size_ / opts.type_size_);
 #else
 #error "No MPI implementation specified for MPIIO adapter"
 #endif

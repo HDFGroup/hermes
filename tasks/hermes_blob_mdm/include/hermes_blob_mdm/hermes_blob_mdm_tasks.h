@@ -354,7 +354,7 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
   INOUT BlobId blob_id_;
   IN size_t blob_off_;
   IN hipc::Pointer data_;
-  INOUT ssize_t data_size_;
+  INOUT size_t data_size_;
   IN bitfield32_t flags_;
 
   /** SHM default constructor */
@@ -371,7 +371,7 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
               const hshm::charbuf &blob_name,
               const BlobId &blob_id,
               size_t off,
-              ssize_t data_size,
+              size_t data_size,
               hipc::Pointer &data,
               const Context &ctx,
               u32 flags) : Task(alloc) {
@@ -449,6 +449,7 @@ struct GetBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     if (flags_.Any(HERMES_GET_BLOB_ID)) {
       ar(blob_id_);
     }
+    ar(data_size_);
   }
 
    /** Create group */
