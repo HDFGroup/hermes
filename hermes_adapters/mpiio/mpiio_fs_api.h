@@ -82,10 +82,12 @@ class MpiioFs : public Filesystem {
 
   int ARead(File &f, AdapterStat &stat, void *ptr, size_t offset, int count,
             MPI_Datatype datatype, MPI_Request *request, FsIoOptions opts) {
+    auto mdm = HERMES_FS_METADATA_MANAGER;
     IoStatus io_status;
     size_t total_size = IoSizeFromCount(count, datatype, opts);
-    Filesystem::ARead(f, stat, ptr, offset, total_size,
-                      reinterpret_cast<size_t>(request), io_status, opts);
+    FsAsyncTask *fstask = Filesystem::ARead(f, stat, ptr, offset, total_size,
+                                            reinterpret_cast<size_t>(request), io_status, opts);
+    mdm->EmplaceTask(reinterpret_cast<size_t>(request), fstask);
     return io_status.mpi_ret_;
   }
 
@@ -122,68 +124,85 @@ class MpiioFs : public Filesystem {
   int AWrite(File &f, AdapterStat &stat, const void *ptr, size_t offset,
              int count, MPI_Datatype datatype, MPI_Request *request,
              FsIoOptions opts) {
+    auto mdm = HERMES_FS_METADATA_MANAGER;
     IoStatus io_status;
     size_t total_size = IoSizeFromCount(count, datatype, opts);
-    Filesystem::AWrite(f, stat, ptr, offset, total_size,
-                       reinterpret_cast<size_t>(request), io_status, opts);
+    FsAsyncTask *fstask = Filesystem::AWrite(f, stat, ptr, offset, total_size,
+                                             reinterpret_cast<size_t>(request), io_status, opts);
+    mdm->EmplaceTask(reinterpret_cast<size_t>(request), fstask);
     return io_status.mpi_ret_;
+  }
+
+  template<bool ASYNC>
+  int BaseWriteAll(File &f, AdapterStat &stat, const void *ptr, size_t offset,
+                   int count, MPI_Datatype datatype, MPI_Status *status,
+                   MPI_Request *request, FsIoOptions opts) {
+    if constexpr(!ASYNC) {
+      MPI_Barrier(stat.comm_);
+      int ret = Write(f, stat, ptr, offset, count, datatype, status, opts);
+      MPI_Barrier(stat.comm_);
+      return ret;
+    } else {
+      return AWrite(f, stat, ptr, offset, count, datatype, request, opts);
+    }
   }
 
   int WriteAll(File &f, AdapterStat &stat, const void *ptr, size_t offset,
                int count, MPI_Datatype datatype, MPI_Status *status,
                FsIoOptions opts) {
-    MPI_Barrier(stat.comm_);
-    int ret = Write(f, stat, ptr, offset, count, datatype, status, opts);
-    MPI_Barrier(stat.comm_);
-    return ret;
+    return BaseWriteAll<false>(f, stat, ptr, offset, count, datatype, status,
+                               nullptr, opts);
+  }
+
+  int AWriteAll(File &f, AdapterStat &stat, const void *ptr, size_t offset,
+               int count, MPI_Datatype datatype, MPI_Request *request,
+               FsIoOptions opts) {
+    return BaseWriteAll<true>(f, stat, ptr, offset, count, datatype, nullptr,
+                              request, opts);
+  }
+
+  template<bool ASYNC>
+  int BaseWriteOrdered(File &f, AdapterStat &stat, const void *ptr, int count,
+                       MPI_Datatype datatype, MPI_Status *status,
+                       MPI_Request *request, FsIoOptions opts) {
+    int total;
+    MPI_Scan(&count, &total, 1, MPI_INT, MPI_SUM, stat.comm_);
+    MPI_Offset my_offset = total - count;
+    if constexpr(!ASYNC) {
+      size_t ret =
+          WriteAll(f, stat, ptr, my_offset, count, datatype, status, opts);
+      return ret;
+    } else {
+      return AWriteAll(f, stat, ptr, my_offset, count, datatype, request, opts);
+    }
   }
 
   int WriteOrdered(File &f, AdapterStat &stat, const void *ptr, int count,
                    MPI_Datatype datatype,
                    MPI_Status *status, FsIoOptions opts) {
-    int total;
-    MPI_Scan(&count, &total, 1, MPI_INT, MPI_SUM, stat.comm_);
-    MPI_Offset my_offset = total - count;
-    size_t ret =
-        WriteAll(f, stat, ptr, my_offset, count, datatype, status, opts);
-    return ret;
+    return BaseWriteOrdered<false>(f, stat, ptr, count, datatype, status,
+                                   nullptr, opts);
   }
 
   int AWriteOrdered(File &f, AdapterStat &stat, const void *ptr, int count,
                     MPI_Datatype datatype, MPI_Request *request,
                     FsIoOptions opts) {
     HILOG(kDebug, "Starting an asynchronous write")
-    // TODO(llogan): FIX
-    /*auto mdm = HERMES_FS_METADATA_MANAGER;
-    auto pool = HERMES_FS_THREAD_POOL;
-    Task* hreq = new HermesRequest();
-    auto lambda = [](MpiioFs *fs, File &f, AdapterStat &stat, const void *ptr,
-                     int count, MPI_Datatype datatype, MPI_Status *status,
-                     FsIoOptions opts) {
-      int ret = fs->WriteOrdered(f, stat, ptr, count, datatype, status, opts);
-      return static_cast<size_t>(ret);
-    };
-    auto func = std::bind(lambda, this, f, stat, ptr, count, datatype,
-                          &hreq->io_status.mpi_status_, opts);
-    hreq->return_future = pool->run(func);
-    mdm->request_map.emplace(reinterpret_cast<size_t>(request), hreq);*/
-    return MPI_SUCCESS;
+    return BaseWriteOrdered<true>(f, stat, ptr, count, datatype, nullptr,
+                                  request, opts);
   }
 
   int Wait(MPI_Request *req, MPI_Status *status) {
-    // TODO(llogan): FIX
-    /*auto mdm = HERMES_FS_METADATA_MANAGER;
-    auto real_api_ = HERMES_MPIIO_API;
-    auto iter = mdm->request_map.find(reinterpret_cast<size_t>(req));
-    if (iter != mdm->request_map.end()) {
-      Task* hreq = iter->second;
-      hreq->return_future.get();
-      memcpy(status, hreq->io_status.mpi_status_ptr_, sizeof(MPI_Status));
-      mdm->request_map.erase(iter);
-      delete (hreq);
+    auto mdm = HERMES_FS_METADATA_MANAGER;
+    FsAsyncTask *fstask = mdm->FindTask(reinterpret_cast<size_t>(req));
+    if (fstask) {
+      Filesystem::Wait(fstask);
+      memcpy(status, fstask->io_status_.mpi_status_ptr_, sizeof(MPI_Status));
+      mdm->DeleteTask(reinterpret_cast<size_t>(req));
+      delete (fstask);
       return MPI_SUCCESS;
     }
-    return real_api_->MPI_Wait(req, status);*/
+    return real_api_->MPI_Wait(req, status);
     return 0;
   }
 

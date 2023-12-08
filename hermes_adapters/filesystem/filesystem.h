@@ -191,10 +191,12 @@ class Filesystem : public FilesystemIoClient {
     return total_size;
   }
 
-  /** read */
-  size_t Read(File &f, AdapterStat &stat, void *ptr,
-              size_t off, size_t total_size,
-              IoStatus &io_status, FsIoOptions opts = FsIoOptions()) {
+  /** base read function */
+  template<bool ASYNC>
+  size_t BaseRead(File &f, AdapterStat &stat, void *ptr, size_t off,
+                  size_t total_size, size_t req_id,
+                  std::vector<LPointer<hrunpq::TypedPushTask<GetBlobTask>>> &tasks,
+                  IoStatus &io_status, FsIoOptions opts = FsIoOptions()) {
     (void) f;
     hapi::Bucket &bkt = stat.bkt_id_;
 
@@ -218,21 +220,23 @@ class Filesystem : public FilesystemIoClient {
       return 0;
     }
 
-    if (stat.adapter_mode_ == AdapterMode::kBypass) {
-      // Bypass mode is handled differently
-      opts.backend_size_ = total_size;
-      opts.backend_off_ = off;
-      Blob blob_wrap((char*)ptr, total_size);
-      ReadBlob(bkt.GetName(), blob_wrap, opts, io_status);
-      if (!io_status.success_) {
-        HILOG(kDebug, "Failed to read blob of size {} from backend",
-              opts.backend_size_)
-        return 0;
+    if constexpr (!ASYNC) {
+      if (stat.adapter_mode_ == AdapterMode::kBypass) {
+        // Bypass mode is handled differently
+        opts.backend_size_ = total_size;
+        opts.backend_off_ = off;
+        Blob blob_wrap((char *) ptr, total_size);
+        ReadBlob(bkt.GetName(), blob_wrap, opts, io_status);
+        if (!io_status.success_) {
+          HILOG(kDebug, "Failed to read blob of size {} from backend",
+                opts.backend_size_)
+          return 0;
+        }
+        if (opts.DoSeek()) {
+          stat.st_ptr_ = off + total_size;
+        }
+        return total_size;
       }
-      if (opts.DoSeek()) {
-        stat.st_ptr_ = off + total_size;
-      }
-      return total_size;
     }
 
     // Fragment I/O request into pages
@@ -247,7 +251,13 @@ class Filesystem : public FilesystemIoClient {
     for (const BlobPlacement &p : mapping) {
       Blob page((const char*)ptr + data_offset, p.blob_size_);
       std::string blob_name(p.CreateBlobName().str());
-      bkt.PartialGet(blob_name, page, p.blob_off_, ctx);
+      if constexpr (ASYNC) {
+        LPointer<hrunpq::TypedPushTask<GetBlobTask>> task =
+            bkt.AsyncPartialGet(blob_name, page, p.blob_off_, ctx);
+        tasks.emplace_back(task);
+      } else {
+        bkt.PartialGet(blob_name, page, p.blob_off_, ctx);
+      }
       data_offset += page.size();
       if (page.size() != p.blob_size_) {
         break;
@@ -262,31 +272,59 @@ class Filesystem : public FilesystemIoClient {
     return data_offset;
   }
 
+  /** read */
+  size_t Read(File &f, AdapterStat &stat, void *ptr,
+              size_t off, size_t total_size,
+              IoStatus &io_status, FsIoOptions opts = FsIoOptions()) {
+    std::vector<LPointer<hrunpq::TypedPushTask<GetBlobTask>>> tasks;
+    return BaseRead<false>(f, stat, ptr, off, total_size, 0, tasks, io_status, opts);
+  }
+
   /** write asynchronously */
-  Task* AWrite(File &f, AdapterStat &stat, const void *ptr, size_t off,
-               size_t total_size, size_t req_id, IoStatus &io_status,
-               FsIoOptions opts = FsIoOptions()) {
-    HILOG(kDebug, "Starting an asynchronous write",
-          opts.backend_size_);
-    return nullptr;
+  FsAsyncTask* AWrite(File &f, AdapterStat &stat, const void *ptr, size_t off,
+                      size_t total_size, size_t req_id, IoStatus &io_status,
+                      FsIoOptions opts = FsIoOptions()) {
+    // Writes are completely async at this time
+    FsAsyncTask *fstask = new FsAsyncTask();
+    Write(f, stat, ptr, off, total_size, io_status, opts);
+    fstask->io_status_ = io_status;
+    fstask->opts_ = opts;
+    return fstask;
   }
 
   /** read asynchronously */
-  Task* ARead(File &f, AdapterStat &stat, void *ptr, size_t off,
-              size_t total_size, size_t req_id, IoStatus &io_status,
-              FsIoOptions opts = FsIoOptions()) {
-    HILOG(kDebug, "Starting an asynchronous read",
-          opts.backend_size_);
-    return nullptr;
+  FsAsyncTask* ARead(File &f, AdapterStat &stat, void *ptr, size_t off,
+                     size_t total_size, size_t req_id,
+                     IoStatus &io_status, FsIoOptions opts = FsIoOptions()) {
+    FsAsyncTask *fstask = new FsAsyncTask();
+    BaseRead<true>(f, stat, ptr, off, total_size, req_id, fstask->get_tasks_, io_status, opts);
+    fstask->io_status_ = io_status;
+    fstask->opts_ = opts;
+    return fstask;
   }
 
   /** wait for \a req_id request ID */
-  size_t Wait(uint64_t req_id) {
+  size_t Wait(FsAsyncTask *fstask) {
+    for (LPointer<hrunpq::TypedPushTask<PutBlobTask>> &push_task : fstask->put_tasks_) {
+      push_task->Wait();
+      HRUN_CLIENT->DelTask(push_task);
+    }
+
+    // Update I/O status for gets
+    size_t get_size = 0;
+    for (LPointer<hrunpq::TypedPushTask<GetBlobTask>> &push_task : fstask->get_tasks_) {
+      push_task->Wait();
+      GetBlobTask *task = push_task->get();
+      get_size += task->data_size_;
+      HRUN_CLIENT->DelTask(task);
+    }
+    fstask->io_status_.size_ = get_size;
+    UpdateIoStatus(fstask->opts_, fstask->io_status_);
     return 0;
   }
 
   /** wait for request IDs in \a req_id vector */
-  void Wait(std::vector<uint64_t> &req_ids, std::vector<size_t> &ret) {
+  void Wait(std::vector<FsAsyncTask*> &req_ids, std::vector<size_t> &ret) {
     for (auto &req_id : req_ids) {
       ret.emplace_back(Wait(req_id));
     }
@@ -435,16 +473,17 @@ class Filesystem : public FilesystemIoClient {
   }
 
   /** write asynchronously */
-  Task* AWrite(File &f, AdapterStat &stat, const void *ptr,
-               size_t total_size, size_t req_id, IoStatus &io_status,
-               FsIoOptions opts) {
+  FsAsyncTask* AWrite(File &f, AdapterStat &stat, const void *ptr,
+                      size_t total_size, size_t req_id, IoStatus &io_status,
+                      FsIoOptions opts) {
     size_t off = stat.st_ptr_;
     return AWrite(f, stat, ptr, off, total_size, req_id, io_status, opts);
   }
 
   /** read asynchronously */
-  Task* ARead(File &f, AdapterStat &stat, void *ptr, size_t total_size,
-              size_t req_id, IoStatus &io_status, FsIoOptions opts) {
+  FsAsyncTask* ARead(File &f, AdapterStat &stat, void *ptr, size_t total_size,
+             size_t req_id,
+             IoStatus &io_status, FsIoOptions opts) {
     size_t off = stat.st_ptr_;
     return ARead(f, stat, ptr, off, total_size, req_id, io_status, opts);
   }
@@ -512,9 +551,10 @@ class Filesystem : public FilesystemIoClient {
   }
 
   /** write asynchronously */
-  Task* AWrite(File &f, bool &stat_exists, const void *ptr,
-               size_t total_size, size_t req_id, IoStatus &io_status,
-               FsIoOptions opts) {
+  FsAsyncTask* AWrite(File &f, bool &stat_exists, const void *ptr,
+                      size_t total_size, size_t req_id,
+                      std::vector<PutBlobTask*> &tasks,
+                      IoStatus &io_status, FsIoOptions opts) {
     auto mdm = HERMES_FS_METADATA_MANAGER;
     auto stat = mdm->Find(f);
     if (!stat) {
@@ -526,8 +566,8 @@ class Filesystem : public FilesystemIoClient {
   }
 
   /** read asynchronously */
-  Task* ARead(File &f, bool &stat_exists, void *ptr, size_t total_size,
-              size_t req_id, IoStatus &io_status, FsIoOptions opts) {
+  FsAsyncTask* ARead(File &f, bool &stat_exists, void *ptr, size_t total_size,
+                     size_t req_id, IoStatus &io_status, FsIoOptions opts) {
     auto mdm = HERMES_FS_METADATA_MANAGER;
     auto stat = mdm->Find(f);
     if (!stat) {
@@ -539,9 +579,9 @@ class Filesystem : public FilesystemIoClient {
   }
 
   /** write \a off offset asynchronously */
-  Task* AWrite(File &f, bool &stat_exists, const void *ptr, size_t off,
-               size_t total_size, size_t req_id, IoStatus &io_status,
-               FsIoOptions opts) {
+  FsAsyncTask* AWrite(File &f, bool &stat_exists, const void *ptr, size_t off,
+                      size_t total_size, size_t req_id, IoStatus &io_status,
+                      FsIoOptions opts) {
     auto mdm = HERMES_FS_METADATA_MANAGER;
     auto stat = mdm->Find(f);
     if (!stat) {
@@ -554,9 +594,9 @@ class Filesystem : public FilesystemIoClient {
   }
 
   /** read \a off offset asynchronously */
-  Task* ARead(File &f, bool &stat_exists, void *ptr, size_t off,
-              size_t total_size, size_t req_id, IoStatus &io_status,
-              FsIoOptions opts) {
+  FsAsyncTask* ARead(File &f, bool &stat_exists, void *ptr, size_t off,
+                     size_t total_size, size_t req_id, IoStatus &io_status,
+                     FsIoOptions opts) {
     auto mdm = HERMES_FS_METADATA_MANAGER;
     auto stat = mdm->Find(f);
     if (!stat) {

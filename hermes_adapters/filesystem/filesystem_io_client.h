@@ -55,12 +55,6 @@ struct IoStatus {
                success_(true) {}
 };
 
-/** A structure to represent Hermes request */
-struct HermesRequest {
-  std::future<size_t> return_future; /**< future result of async op. */
-  IoStatus io_status;                /**< IO status */
-};
-
 /**
  * A structure to represent IO options for FS adapter.
  * For now, nothing additional than the typical FsIoOptions.
@@ -115,6 +109,14 @@ struct FsIoOptions {
     if (!seek) { opts.UnsetSeek(); }
     return opts;
   }
+};
+
+/** A structure to represent Hermes request */
+struct FsAsyncTask {
+  std::vector<LPointer<hrunpq::TypedPushTask<PutBlobTask>>> put_tasks_;
+  std::vector<LPointer<hrunpq::TypedPushTask<GetBlobTask>>> get_tasks_;
+  IoStatus io_status_; 
+  FsIoOptions opts_;
 };
 
 /** Represents an object in the I/O client (e.g., a file) */

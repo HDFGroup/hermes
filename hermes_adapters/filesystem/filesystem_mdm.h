@@ -25,15 +25,15 @@ namespace hermes::adapter::fs {
 class MetadataManager {
  private:
   std::unordered_map<std::string, std::list<File>>
-      path_to_hermes_file_; /**< Map to determine if path is buffered. */
+      path_to_hermes_file_;  /**< Map to determine if path is buffered. */
   std::unordered_map<File, std::shared_ptr<AdapterStat>>
-      hermes_file_to_stat_; /**< Map for metadata */
-  RwLock lock_;             /**< Lock to synchronize MD updates*/
+      hermes_file_to_stat_;  /**< Map for metadata */
+  RwLock lock_;              /**< Lock to synchronize MD updates*/
 
  public:
-  /** map for Hermes request */
-  std::unordered_map<uint64_t, HermesRequest*> request_map;
-  FsIoClientMetadata fs_mdm_; /**< Context needed for I/O clients */
+  std::unordered_map<uint64_t, FsAsyncTask*>
+      request_map_;  /**< Map for async FS requests */
+  FsIoClientMetadata fs_mdm_;  /**< Context needed for I/O clients */
 
   /** Constructor */
   MetadataManager() = default;
@@ -146,6 +146,38 @@ class MetadataManager {
       return nullptr;
     else
       return iter->second;
+  }
+
+  /**
+   * Add a request to the request map.
+   * */
+  void EmplaceTask(uint64_t id, FsAsyncTask* task) {
+    ScopedRwWriteLock md_lock(lock_, 0);
+    request_map_.emplace(id, task);
+  }
+
+  /**
+   * Find a request in the request map.
+   * */
+  FsAsyncTask* FindTask(uint64_t id) {
+    ScopedRwReadLock md_lock(lock_, 0);
+    auto iter = request_map_.find(id);
+    if (iter == request_map_.end()) {
+      return nullptr;
+    } else {
+      return iter->second;
+    }
+  }
+
+  /**
+   * Delete a request in the request map.
+   * */
+  void DeleteTask(uint64_t id) {
+    ScopedRwWriteLock md_lock(lock_, 0);
+    auto iter = request_map_.find(id);
+    if (iter != request_map_.end()) {
+      request_map_.erase(iter);
+    }
   }
 };
 }  // namespace hermes::adapter::fs
