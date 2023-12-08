@@ -32,9 +32,13 @@ Runtime* Runtime::Create(std::string server_config_path) {
 /** Initialize */
 void Runtime::ServerInit(std::string server_config_path) {
   LoadServerConfig(server_config_path);
+  HILOG(kInfo, "Initializing shared memory")
   InitSharedMemory();
+  HILOG(kInfo, "Initializing RPC")
   rpc_.ServerInit(&server_config_);
+  HILOG(kInfo, "Initializing thallium")
   thallium_.ServerInit(&rpc_);
+  HILOG(kInfo, "Initializing queues + workers")
   header_->node_id_ = rpc_.node_id_;
   header_->unique_ = 0;
   header_->num_nodes_ = server_config_.rpc_.host_names_.size();

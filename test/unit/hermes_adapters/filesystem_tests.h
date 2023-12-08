@@ -168,6 +168,7 @@ class FilesystemTests {
     MPI_Barrier(MPI_COMM_WORLD);
     IgnoreAllFiles();
     RemoveAllFiles();
+    MPI_Barrier(MPI_COMM_WORLD);
     CreateFiles();
     TrackAllFiles();
     MPI_Barrier(MPI_COMM_WORLD);
@@ -188,6 +189,7 @@ class FilesystemTests {
       }
     }
     /* Delete the files from both Hermes and the backend. */
+    MPI_Barrier(MPI_COMM_WORLD);
     TrackAllFiles();
     RemoveAllFiles();
     Flush();

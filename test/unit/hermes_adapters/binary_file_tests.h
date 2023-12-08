@@ -44,6 +44,9 @@ class BinaryFileTests : public FilesystemTests<char> {
  private:
   void LoadFile(const std::string &path, std::vector<char> &data) {
     FILE* fh = fopen(path.c_str(), "r");
+    if (fh == nullptr) {
+      HELOG(kFatal, "Failed to open file: {}", path);
+    }
     REQUIRE(fh != nullptr);
     size_t load_size = fread(data.data(), 1, data.size(), fh);
     REQUIRE(load_size == data.size());
