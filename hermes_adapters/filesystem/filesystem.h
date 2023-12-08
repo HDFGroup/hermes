@@ -183,6 +183,7 @@ class Filesystem : public FilesystemIoClient {
       }
     }
     stat.UpdateTime();
+    io_status.size_ = total_size;
     UpdateIoStatus(opts, io_status);
 
     HILOG(kDebug, "The size of file after write: {}",
