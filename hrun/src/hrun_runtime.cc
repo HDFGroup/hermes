@@ -118,6 +118,7 @@ void Runtime::InitSharedMemory() {
       qm.shm_size_,
       qm.shm_name_);
   auto backend = mem_mngr->GetBackend(qm.shm_name_);
+  memset(backend->data_, 0, MEGABYTES(1));  // TODO(llogan): remove
   HILOG(kInfo, "Created backend {} {}", (void*)backend, (void*)backend->data_);
   try {
     main_alloc_ =
