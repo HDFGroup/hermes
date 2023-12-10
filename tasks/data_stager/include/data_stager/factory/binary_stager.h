@@ -12,7 +12,6 @@ namespace hermes::data_stager {
 
 class BinaryFileStager : public AbstractStager {
  public:
-  int fd_ = -1;
   size_t page_size_;
   std::string path_;
 
@@ -57,16 +56,16 @@ class BinaryFileStager : public AbstractStager {
     HILOG(kDebug, "Attempting to stage {} bytes from the backend file {} at offset {}",
           page_size_, path_, plcmnt.bucket_off_);
     LPointer<char> blob = HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_STD>(page_size_);
-    fd_ = HERMES_POSIX_API->open(path_.c_str(), O_CREAT | O_RDWR, 0666);
-    if (fd_ < 0) {
+    int fd = HERMES_POSIX_API->open(path_.c_str(), O_CREAT | O_RDWR, 0666);
+    if (fd < 0) {
       HELOG(kError, "Failed to open file {}", path_);
       return;
     }
-    ssize_t real_size = HERMES_POSIX_API->pread(fd_,
+    ssize_t real_size = HERMES_POSIX_API->pread(fd,
                                                 blob.ptr_,
                                                 page_size_,
                                                 (off_t)plcmnt.bucket_off_);
-    HERMES_POSIX_API->close(fd_);
+    HERMES_POSIX_API->close(fd);
     if (real_size < 0) {
       HELOG(kError, "Failed to stage in {} bytes from {}",
             page_size_, path_);
@@ -98,16 +97,16 @@ class BinaryFileStager : public AbstractStager {
     HILOG(kDebug, "Attempting to stage {} bytes to the backend file {} at offset {}",
           page_size_, path_, plcmnt.bucket_off_);
     char *data = HRUN_CLIENT->GetDataPointer(task->data_);
-    fd_ = HERMES_POSIX_API->open(path_.c_str(), O_CREAT | O_RDWR, 0666);
-    if (fd_ < 0) {
+    int fd = HERMES_POSIX_API->open(path_.c_str(), O_CREAT | O_RDWR, 0666);
+    if (fd < 0) {
       HELOG(kError, "Failed to open file {}", path_);
       return;
     }
-    ssize_t real_size = HERMES_POSIX_API->pwrite(fd_,
+    ssize_t real_size = HERMES_POSIX_API->pwrite(fd,
                                                  data,
                                                  task->data_size_,
                                                  (off_t)plcmnt.bucket_off_);
-    HERMES_POSIX_API->close(fd_);
+    HERMES_POSIX_API->close(fd);
     if (real_size < 0) {
       HELOG(kError, "Failed to stage out {} bytes from {}",
             task->data_size_, path_);
