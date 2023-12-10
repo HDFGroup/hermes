@@ -1171,7 +1171,7 @@ struct FlushDataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
         TASK_LONG_RUNNING |
         TASK_COROUTINE |
         TASK_REMOTE_DEBUG_MARK);
-    SetPeriodMs(5);  // TODO(llogan): don't hardcode this
+    SetPeriodSec(5);  // TODO(llogan): don't hardcode this
     domain_id_ = DomainId::GetLocal();
   }
 
