@@ -242,7 +242,7 @@ class Client : public TaskLibClient {
       }
       // FlushRoot(DomainId::GetLocal());
       HRUN_CLIENT->Yield<TASK_YIELD_STD>();
-      // HILOG(kInfo, "{} Could not allocate buffer of size {} (1)?", THREAD_MODEL, size);
+      HILOG(kDebug, "{} Waiting to allocate buffer of size {} (1)?", size);
     }
     return p;
   }

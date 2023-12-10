@@ -263,9 +263,9 @@ class Client : public ConfigurationManager {
     auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(p.allocator_id_);
     alloc->Free(p);
     HILOG(kDebug, "Heap size (1) for {}/{}: {}",
-          p.allocator_id_.bits_.major_,
-          p.allocator_id_.bits_.minor_,
-          data_alloc_->GetCurrentlyAllocatedSize());
+          alloc->GetId().bits_.major_,
+          alloc->GetId().bits_.minor_,
+          alloc->GetCurrentlyAllocatedSize());
   }
 
   /** Free a buffer */
@@ -276,7 +276,7 @@ class Client : public ConfigurationManager {
     HILOG(kDebug, "Heap size (2) for {}/{}: {}",
           alloc->GetId().bits_.major_,
           alloc->GetId().bits_.minor_,
-          data_alloc_->GetCurrentlyAllocatedSize());
+          alloc->GetCurrentlyAllocatedSize());
   }
 
   /** Convert pointer to char* */
