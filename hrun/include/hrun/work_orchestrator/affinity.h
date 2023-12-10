@@ -134,7 +134,7 @@ class ProcessAffiner {
     return count;
   }
   int Affine(int pid) {
-    return SetAffinitySafe(pid, n_cpu_, cpus_);
+    return SetAffinitySafe(pid, n_cpu_, cpus_.data());
   }
 
   void PrintAffinity(int pid) {
