@@ -66,6 +66,7 @@ class BinaryFileStager : public AbstractStager {
                                                 blob.ptr_,
                                                 page_size_,
                                                 (off_t)plcmnt.bucket_off_);
+    HERMES_POSIX_API->close(fd_);
     if (real_size < 0) {
       HELOG(kError, "Failed to stage in {} bytes from {}",
             page_size_, path_);
