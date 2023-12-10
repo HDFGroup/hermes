@@ -49,11 +49,8 @@ void ServerConfig::ParseQueueManager(YAML::Node yaml_conf) {
     queue_manager_.shm_allocator_ = yaml_conf["shm_allocator"].as<std::string>();
   }
   if (yaml_conf["shm_name"]) {
-    std::vector<char> username_vec(4096, 0);
-    getlogin_r(username_vec.data(), username_vec.size());
-    std::string username = username_vec.data();
-    queue_manager_.shm_name_ = yaml_conf["shm_name"].as<std::string>() + "_" + username;
-    queue_manager_.data_shm_name_ = queue_manager_.shm_name_ + "_data" + "_" + username;
+    queue_manager_.shm_name_ = hshm::ConfigParse::ExpandPath(yaml_conf["shm_name"].as<std::string>());
+    queue_manager_.data_shm_name_ = hshm::ConfigParse::ExpandPath(queue_manager_.shm_name_ + "_data");
   }
   if (yaml_conf["shm_size"]) {
     queue_manager_.shm_size_ = hshm::ConfigParse::ParseSize(
