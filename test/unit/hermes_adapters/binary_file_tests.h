@@ -7,7 +7,7 @@
 
 #include "filesystem_tests.h"
 
-namespace hermes::adapter::fs::test {
+namespace hermes::adapter::test {
 
 class BinaryFileTests : public FilesystemTests<char> {
  public:
@@ -63,6 +63,6 @@ class BinaryFileTests : public FilesystemTests<char> {
   }
 };
 
-}  // namespace hermes::adapter::fs::test
+}  // namespace hermes::adapter::test
 
 #endif  // HERMES_TEST_UNIT_HERMES_ADAPTERS_BINARY_FILE_TESTS_H_

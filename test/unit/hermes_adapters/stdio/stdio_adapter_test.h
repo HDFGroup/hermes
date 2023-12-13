@@ -7,7 +7,7 @@
 
 #include "binary_file_tests.h"
 
-namespace hermes::adapter::fs::test {
+namespace hermes::adapter::test {
 template<bool WITH_MPI>
 class StdioTest : public BinaryFileTests {
  public:
@@ -84,14 +84,14 @@ class StdioTest : public BinaryFileTests {
   }
 };
 
-}  // namespace hermes::adapter::fs::test
+}  // namespace hermes::adapter::test
 
 #if defined(HERMES_MPI_TESTS)
 #define TEST_INFO \
-  hshm::EasySingleton<hermes::adapter::fs::test::StdioTest<HERMES_MPI_TESTS>>::GetInstance()
+  hshm::EasySingleton<hermes::adapter::test::StdioTest<HERMES_MPI_TESTS>>::GetInstance()
 #else
 #define TEST_INFO \
-  hshm::EasySingleton<hermes::adapter::fs::test::StdioTest<false>>::GetInstance()
+  hshm::EasySingleton<hermes::adapter::test::StdioTest<false>>::GetInstance()
 #endif
 
 #endif //HERMES_TEST_UNIT_HERMES_ADAPTERS_STDIO_STDIO_ADAPTER_TEST_H_

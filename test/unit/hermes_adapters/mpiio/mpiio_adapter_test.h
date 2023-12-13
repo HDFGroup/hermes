@@ -15,7 +15,7 @@
 
 #include "binary_file_tests.h"
 
-namespace hermes::adapter::fs::test {
+namespace hermes::adapter::test {
 template<bool WITH_MPI>
 class MpiioTest : public BinaryFileTests {
  public:
@@ -458,9 +458,9 @@ class MpiioTest : public BinaryFileTests {
   }
 };
 
-}  // namespace hermes::adapter::fs::test
+}  // namespace hermes::adapter::test
 
 #define TEST_INFO \
-  hshm::EasySingleton<hermes::adapter::fs::test::MpiioTest<true>>::GetInstance()
+  hshm::EasySingleton<hermes::adapter::test::MpiioTest<true>>::GetInstance()
 
 #endif  // HERMES_TEST_UNIT_HERMES_ADAPTERS_POSIX_POSIX_ADAPTER_BASE_TEST_H_

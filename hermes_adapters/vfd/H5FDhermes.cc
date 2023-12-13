@@ -59,9 +59,9 @@ hid_t H5FDhermes_err_class_g = H5I_INVALID_HID;
 #define OP_READ    1
 #define OP_WRITE   2
 
-using hermes::adapter::fs::AdapterStat;
-using hermes::adapter::fs::File;
-using hermes::adapter::fs::IoStatus;
+using hermes::adapter::AdapterStat;
+using hermes::adapter::File;
+using hermes::adapter::IoStatus;
 
 /* POSIX I/O mode used as the third parameter to open/_open
  * when creating a new file (O_CREAT is set). */

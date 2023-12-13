@@ -27,7 +27,7 @@
 #include <mpi.h>
 #include <catch2/catch_all.hpp>
 
-namespace hermes::adapter::fs::test {
+namespace hermes::adapter::test {
 
 /**
  * Temporarily disable printing of the HDF5 error stack.
@@ -273,7 +273,8 @@ class Hdf5VfdTests : public FilesystemTests<f32> {
     RegisterPath("ext", TEST_DO_CREATE, existing_file_);
     if constexpr(WITH_MPI) {
       RegisterPath("shared_new", TEST_FILE_SHARED, shared_new_file_);
-      RegisterPath("shared_ext", TEST_DO_CREATE | TEST_FILE_SHARED, shared_existing_file_);
+      RegisterPath("shared_ext", TEST_DO_CREATE | TEST_FILE_SHARED,
+                   shared_existing_file_);
     }
   }
 
@@ -387,14 +388,14 @@ class Hdf5VfdTests : public FilesystemTests<f32> {
     api.Read(hermes_hid_, dset_name, buf, offset, nelems);
     std::vector<f32> sec2_read_buf(nelems, 0.0f);
     api.Read(sec2_hid_, dset_name, sec2_read_buf, offset, nelems);
-
-    REQUIRE(std::equal(buf.begin(), buf.begin() + nelems, sec2_read_buf.begin()));
+    REQUIRE(std::equal(buf.begin(), buf.begin() + nelems,
+                       sec2_read_buf.begin()));
   }
 };
 
-}
+}  // namespace hermes::adapter::test
 
 #define TEST_INFO \
-  hshm::EasySingleton<hermes::adapter::fs::test::Hdf5VfdTests<true>>::GetInstance()
+  hshm::EasySingleton<hermes::adapter::test::Hdf5VfdTests<true>>::GetInstance()
 
 #endif  // HERMES_TEST_UNIT_HERMES_ADAPTERS_HDF5_VFD_TESTS_H_

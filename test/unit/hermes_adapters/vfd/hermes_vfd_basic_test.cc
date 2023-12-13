@@ -11,7 +11,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "hermes_vfd_test.h"
-using hermes::adapter::fs::test::MuteHdf5Errors;
+using hermes::adapter::test::MuteHdf5Errors;
 
 /** Returns a number in the range [1, upper_bound] */
 static inline size_t Random1ToUpperBound(size_t upper_bound) {

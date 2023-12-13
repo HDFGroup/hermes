@@ -19,7 +19,7 @@
 #include "hermes_adapters/filesystem/filesystem_mdm.h"
 #include "mpiio_api.h"
 
-namespace hermes::adapter::fs {
+namespace hermes::adapter {
 
 /** A class to represent MPI IO seek mode conversion */
 class MpiioSeekModeConv {
@@ -698,11 +698,11 @@ class MpiioFs : public Filesystem {
   }
 };
 
-}  // namespace hermes::adapter::fs
+}  // namespace hermes::adapter
 
 /** Simplify access to the stateless StdioFs Singleton */
 #define HERMES_MPIIO_FS \
-  hshm::EasySingleton<::hermes::adapter::fs::MpiioFs>::GetInstance()
-#define HERMES_STDIO_FS_T hermes::adapter::fs::MpiioFs*
+  hshm::EasySingleton<::hermes::adapter::MpiioFs>::GetInstance()
+#define HERMES_STDIO_FS_T hermes::adapter::MpiioFs*
 
 #endif  // HERMES_ADAPTER_MPIIO_MPIIO_FS_API_H_

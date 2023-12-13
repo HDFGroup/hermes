@@ -23,7 +23,7 @@
 
 namespace stdfs = std::filesystem;
 
-namespace hermes::adapter::fs {
+namespace hermes::adapter {
 
 /** Put or get data directly from I/O client */
 #define HERMES_IO_CLIENT_BYPASS BIT_OPT(uint32_t, 0)
@@ -360,14 +360,14 @@ class FilesystemIoClient {
   virtual void UpdateIoStatus(const FsIoOptions &opts, IoStatus &status) = 0;
 };
 
-}  // namespace hermes::adapter::fs
+}  // namespace hermes::adapter
 
 namespace std {
 /** A structure to represent hash */
 template <>
-struct hash<::hermes::adapter::fs::File> {
+struct hash<::hermes::adapter::File> {
   /** hash creator functor */
-  std::size_t operator()(const hermes::adapter::fs::File &key) const {
+  std::size_t operator()(const hermes::adapter::File &key) const {
     return key.hash();
   }
 };

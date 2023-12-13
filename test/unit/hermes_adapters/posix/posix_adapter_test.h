@@ -15,7 +15,7 @@
 
 #include "binary_file_tests.h"
 
-namespace hermes::adapter::fs::test {
+namespace hermes::adapter::test {
 template<bool WITH_MPI>
 class PosixTest : public BinaryFileTests {
  public:
@@ -114,14 +114,14 @@ class PosixTest : public BinaryFileTests {
   }
 };
 
-}  // namespace hermes::adapter::fs::test
+}  // namespace hermes::adapter::test
 
 #if defined(HERMES_MPI_TESTS)
 #define TEST_INFO \
-  hshm::EasySingleton<hermes::adapter::fs::test::PosixTest<HERMES_MPI_TESTS>>::GetInstance()
+  hshm::EasySingleton<hermes::adapter::test::PosixTest<HERMES_MPI_TESTS>>::GetInstance()
 #else
 #define TEST_INFO \
-  hshm::EasySingleton<hermes::adapter::fs::test::PosixTest<false>>::GetInstance()
+  hshm::EasySingleton<hermes::adapter::test::PosixTest<false>>::GetInstance()
 #endif
 
 #endif  // HERMES_TEST_UNIT_HERMES_ADAPTERS_POSIX_POSIX_ADAPTER_BASE_TEST_H_

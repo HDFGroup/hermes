@@ -33,7 +33,7 @@
 #include <filesystem>
 
 
-namespace hermes::adapter::fs {
+namespace hermes::adapter {
 
 /** The maximum length of a posix path */
 static inline const int kMaxPathLen = 4096;
@@ -705,6 +705,6 @@ class Filesystem : public FilesystemIoClient {
   }
 };
 
-}  // namespace hermes::adapter::fs
+}  // namespace hermes::adapter
 
 #endif  // HERMES_ADAPTER_FILESYSTEM_FILESYSTEM_H_

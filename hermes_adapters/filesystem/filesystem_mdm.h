@@ -17,7 +17,7 @@
 #include <unordered_map>
 #include "filesystem_io_client.h"
 
-namespace hermes::adapter::fs {
+namespace hermes::adapter {
 
 /**
  * Metadata manager for POSIX adapter
@@ -180,14 +180,14 @@ class MetadataManager {
     }
   }
 };
-}  // namespace hermes::adapter::fs
+}  // namespace hermes::adapter
 
 // Singleton macros
 #include "hermes_shm/util/singleton.h"
 
 #define HERMES_FS_METADATA_MANAGER \
-  hshm::Singleton<::hermes::adapter::fs::MetadataManager>::GetInstance()
-#define HERMES_FS_METADATA_MANAGER_T hermes::adapter::fs::MetadataManager*
+  hshm::Singleton<::hermes::adapter::MetadataManager>::GetInstance()
+#define HERMES_FS_METADATA_MANAGER_T hermes::adapter::MetadataManager*
 
 
 #endif  // HERMES_ADAPTER_METADATA_MANAGER_H

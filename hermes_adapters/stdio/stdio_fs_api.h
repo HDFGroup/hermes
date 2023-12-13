@@ -20,10 +20,10 @@
 #include "hermes_adapters/posix/posix_fs_api.h"
 #include "stdio_api.h"
 
-namespace hermes::adapter::fs {
+namespace hermes::adapter {
 
 /** A class to represent POSIX IO file system */
-class StdioFs : public hermes::adapter::fs::Filesystem {
+class StdioFs : public hermes::adapter::Filesystem {
  public:
   HERMES_STDIO_API_T real_api_;  /**< pointer to real APIs */
 
@@ -75,7 +75,7 @@ class StdioFs : public hermes::adapter::fs::Filesystem {
     if (!fp || !HERMES->IsInitialized()) {
       return false;
     }
-    hermes::adapter::fs::File f;
+    hermes::adapter::File f;
     f.hermes_fh_ = fp;
     stat = HERMES_FS_METADATA_MANAGER->Find(f);
     return stat != nullptr;
@@ -254,9 +254,9 @@ class StdioFs : public hermes::adapter::fs::Filesystem {
 
 /** Simplify access to the stateless StdioFs Singleton */
 #define HERMES_STDIO_FS \
-  hshm::EasySingleton<::hermes::adapter::fs::StdioFs>::GetInstance()
-#define HERMES_STDIO_FS_T hermes::adapter::fs::StdioFs*
+  hshm::EasySingleton<::hermes::adapter::StdioFs>::GetInstance()
+#define HERMES_STDIO_FS_T hermes::adapter::StdioFs*
 
-}  // namespace hermes::adapter::fs
+}  // namespace hermes::adapter
 
 #endif  // HERMES_ADAPTER_STDIO_NATIVE_H_

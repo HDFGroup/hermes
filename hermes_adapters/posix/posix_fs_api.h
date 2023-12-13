@@ -19,10 +19,10 @@
 #include "hermes_adapters/filesystem/filesystem_mdm.h"
 #include "posix_api.h"
 
-namespace hermes::adapter::fs {
+namespace hermes::adapter {
 
 /** A class to represent POSIX IO file system */
-class PosixFs : public hermes::adapter::fs::Filesystem {
+class PosixFs : public hermes::adapter::Filesystem {
  public:
   HERMES_POSIX_API_T real_api_; /**< pointer to real APIs */
   
@@ -83,7 +83,7 @@ class PosixFs : public hermes::adapter::fs::Filesystem {
     if (!HERMES->IsInitialized() || fd < 8192) {
       return false;
     }
-    hermes::adapter::fs::File f;
+    hermes::adapter::File f;
     f.hermes_fd_ = fd;
     stat = HERMES_FS_METADATA_MANAGER->Find(f);
     return stat != nullptr;
@@ -262,9 +262,9 @@ class PosixFs : public hermes::adapter::fs::Filesystem {
 
 /** Simplify access to the stateless PosixFs Singleton */
 #define HERMES_POSIX_FS \
-  hshm::EasySingleton<::hermes::adapter::fs::PosixFs>::GetInstance()
-#define HERMES_POSIX_FS_T hermes::adapter::fs::PosixFs*
+  hshm::EasySingleton<::hermes::adapter::PosixFs>::GetInstance()
+#define HERMES_POSIX_FS_T hermes::adapter::PosixFs*
 
-}  // namespace hermes::adapter::fs
+}  // namespace hermes::adapter
 
 #endif  // HERMES_ADAPTER_POSIX_NATIVE_H_

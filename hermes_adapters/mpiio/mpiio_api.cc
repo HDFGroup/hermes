@@ -19,20 +19,19 @@ bool mpiio_intercepted = true;
 #include "mpiio_fs_api.h"
 
 #include "hermes_shm/util/singleton.h"
-#include "hermes_adapters/interceptor.h"
 
 /**
  * Namespace declarations
  */
-using hermes::adapter::fs::MetadataManager;
-using hermes::adapter::fs::File;
-using hermes::adapter::fs::AdapterStat;
-using hermes::adapter::fs::SeekMode;
-using hermes::adapter::fs::IoStatus;
-using hermes::adapter::fs::FsIoOptions;
-using hermes::adapter::fs::MpiioApi;
-using hermes::adapter::fs::MpiioFs;
-using hermes::adapter::fs::MpiioSeekModeConv;
+using hermes::adapter::MetadataManager;
+using hermes::adapter::File;
+using hermes::adapter::AdapterStat;
+using hermes::adapter::SeekMode;
+using hermes::adapter::IoStatus;
+using hermes::adapter::FsIoOptions;
+using hermes::adapter::MpiioApi;
+using hermes::adapter::MpiioFs;
+using hermes::adapter::MpiioSeekModeConv;
 
 extern "C" {
 

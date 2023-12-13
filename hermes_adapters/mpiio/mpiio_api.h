@@ -57,7 +57,7 @@ typedef int (*MPI_File_iwrite_shared_t)(MPI_File fh, const void * buf, int count
 typedef int (*MPI_File_sync_t)(MPI_File fh);
 }
 
-namespace hermes::adapter::fs {
+namespace hermes::adapter {
 
 /** Pointers to the real mpiio API */
 class MpiioApi : public RealApi {
@@ -184,7 +184,7 @@ class MpiioApi : public RealApi {
 
 /** Simplify access to the stateless MpiioFs Singleton */
 #define HERMES_MPIIO_API \
-  hshm::EasySingleton<::hermes::adapter::fs::MpiioApi>::GetInstance()
-#define HERMES_MPIIO_API_T hermes::adapter::fs::MpiioApi*
+  hshm::EasySingleton<::hermes::adapter::MpiioApi>::GetInstance()
+#define HERMES_MPIIO_API_T hermes::adapter::MpiioApi*
 
 #endif  // HERMES_ADAPTER_MPIIO_H

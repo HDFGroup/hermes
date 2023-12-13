@@ -13,4 +13,4 @@
 #include "hermes_shm/util/singleton.h"
 
 #include "filesystem_mdm.h"
-DEFINE_SINGLETON_CC(hermes::adapter::fs::MetadataManager)
+DEFINE_SINGLETON_CC(hermes::adapter::MetadataManager)

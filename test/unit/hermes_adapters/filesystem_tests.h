@@ -25,7 +25,7 @@
 #include <mpi.h>
 #include <catch2/catch_all.hpp>
 
-namespace hermes::adapter::fs::test {
+namespace hermes::adapter::test {
 
 /** Pre-create the Hermes file */
 #define TEST_DO_CREATE BIT_OPT(u32, 0)
