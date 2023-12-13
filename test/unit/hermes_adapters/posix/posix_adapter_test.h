@@ -49,11 +49,12 @@ class PosixTest : public BinaryFileTests {
     RegisterPath("ext", TEST_DO_CREATE, existing_file_);
     if constexpr(WITH_MPI) {
       RegisterPath("shared_new", TEST_FILE_SHARED, shared_new_file_);
-      RegisterPath("shared_ext", TEST_DO_CREATE | TEST_FILE_SHARED, shared_existing_file_);
+      RegisterPath("shared_ext", TEST_DO_CREATE | TEST_FILE_SHARED,
+                   shared_existing_file_);
     }
     RegisterTmpPath(tmp_file_);
   }
-  
+
   void test_open(FileInfo &info, int flags, ...) {
     int mode = 0;
     if (flags & O_CREAT || flags & O_TMPFILE) {
@@ -117,10 +118,11 @@ class PosixTest : public BinaryFileTests {
 }  // namespace hermes::adapter::test
 
 #if defined(HERMES_MPI_TESTS)
-#define TEST_INFO \
-  hshm::EasySingleton<hermes::adapter::test::PosixTest<HERMES_MPI_TESTS>>::GetInstance()
+#define TESTER \
+  hshm::EasySingleton< \
+    hermes::adapter::test::PosixTest<HERMES_MPI_TESTS>>::GetInstance()
 #else
-#define TEST_INFO \
+#define TESTER \
   hshm::EasySingleton<hermes::adapter::test::PosixTest<false>>::GetInstance()
 #endif
 

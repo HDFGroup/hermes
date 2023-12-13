@@ -1,6 +1,14 @@
-//
-// Created by lukemartinlogan on 12/7/23.
-//
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef HERMES_TEST_UNIT_HERMES_ADAPTERS_BINARY_FILE_TESTS_H_
 #define HERMES_TEST_UNIT_HERMES_ADAPTERS_BINARY_FILE_TESTS_H_
@@ -54,7 +62,8 @@ class BinaryFileTests : public FilesystemTests<char> {
     REQUIRE(status == 0);
   }
 
-  void CompareBuffers(const std::vector<char> &d1, const std::vector<char> &d2) {
+  void CompareBuffers(const std::vector<char> &d1,
+                      const std::vector<char> &d2) {
     size_t char_mismatch = 0;
     for (size_t pos = 0; pos < d1.size(); ++pos) {
       if (d1[pos] != d2[pos]) char_mismatch++;

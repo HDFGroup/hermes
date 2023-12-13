@@ -12,26 +12,26 @@
 
 #include "stdio_adapter_test.h"
 
-TEST_CASE("SharedSTDIORead", "[process=" + std::to_string(TEST_INFO->comm_size_) +
-                                 "]"
-                                 "[operation=batched_read]"
-                                 "[request_size=type-fixed][repetition=" +
-                                 std::to_string(TEST_INFO->num_iterations_) +
-                                 "]"
-                                 "[mode=shared]"
-                                 "[pattern=sequential][file=1]") {
-  TEST_INFO->Pretest();
+TEST_CASE("SharedSTDIORead", "[process=" + std::to_string(TESTER->comm_size_) +
+    "]"
+    "[operation=batched_read]"
+    "[request_size=type-fixed][repetition=" +
+    std::to_string(TESTER->num_iterations_) +
+    "]"
+    "[mode=shared]"
+    "[pattern=sequential][file=1]") {
+  TESTER->Pretest();
 
   SECTION("read from existing file") {
-    TEST_INFO->test_fopen(TEST_INFO->shared_existing_file_, "r+");
-    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
-    std::string data(TEST_INFO->request_size_, '1');
-    for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      TEST_INFO->test_fread(data.data(), TEST_INFO->request_size_);
-      REQUIRE(TEST_INFO->size_read_orig_ == TEST_INFO->request_size_);
+    TESTER->test_fopen(TESTER->shared_existing_file_, "r+");
+    REQUIRE(TESTER->fh_orig_ != nullptr);
+    std::string data(TESTER->request_size_, '1');
+    for (size_t i = 0; i < TESTER->num_iterations_; ++i) {
+      TESTER->test_fread(data.data(), TESTER->request_size_);
+      REQUIRE(TESTER->size_read_orig_ == TESTER->request_size_);
     }
-    TEST_INFO->test_fclose();
-    REQUIRE(TEST_INFO->status_orig_ == 0);
+    TESTER->test_fclose();
+    REQUIRE(TESTER->status_orig_ == 0);
   }
-  TEST_INFO->Posttest();
+  TESTER->Posttest();
 }

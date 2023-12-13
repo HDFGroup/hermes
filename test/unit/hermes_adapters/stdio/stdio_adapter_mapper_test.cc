@@ -19,17 +19,17 @@ using hermes::adapter::MapperFactory;
 using hermes::adapter::BlobPlacements;
 using hermes::adapter::kMapperType;
 
-TEST_CASE("SingleWrite", "[process=" + std::to_string(TEST_INFO->comm_size_) +
-                             "]"
-                             "[operation=single_write]"
-                             "[request_size=type-fixed][repetition=1]"
-                             "[pattern=sequential][file=1]") {
-  TEST_INFO->Pretest();
+TEST_CASE("SingleWrite", "[process=" + std::to_string(TESTER->comm_size_) +
+    "]"
+    "[operation=single_write]"
+    "[request_size=type-fixed][repetition=1]"
+    "[pattern=sequential][file=1]") {
+  TESTER->Pretest();
   const size_t kPageSize = MEGABYTES(1);
   SECTION("Map a one request") {
     auto mapper = hermes::adapter::MapperFactory().Get(kMapperType);
-    size_t total_size = TEST_INFO->request_size_;
-    FILE* fp = fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
+    size_t total_size = TESTER->request_size_;
+    FILE* fp = fopen(TESTER->new_file_.hermes_.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 0;
     REQUIRE(kPageSize > total_size + offset);
@@ -44,8 +44,8 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(TEST_INFO->comm_size_) +
   }
   SECTION("Map a one big request") {
     auto mapper = MapperFactory().Get(kMapperType);
-    size_t total_size = TEST_INFO->request_size_ * TEST_INFO->num_iterations_;
-    FILE* fp = fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
+    size_t total_size = TESTER->request_size_ * TESTER->num_iterations_;
+    FILE* fp = fopen(TESTER->new_file_.hermes_.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 0;
     BlobPlacements mapping;
@@ -64,8 +64,8 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(TEST_INFO->comm_size_) +
   }
   SECTION("Map a one large unaligned request") {
     auto mapper = MapperFactory().Get(kMapperType);
-    size_t total_size = TEST_INFO->request_size_ * TEST_INFO->num_iterations_;
-    FILE* fp = fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
+    size_t total_size = TESTER->request_size_ * TESTER->num_iterations_;
+    FILE* fp = fopen(TESTER->new_file_.hermes_.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 1;
     BlobPlacements mapping;
@@ -99,8 +99,8 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(TEST_INFO->comm_size_) +
   }
   SECTION("Map a one small unaligned request") {
     auto mapper = MapperFactory().Get(kMapperType);
-    size_t total_size = TEST_INFO->request_size_;
-    FILE* fp = fopen(TEST_INFO->new_file_.hermes_.c_str(), "w+");
+    size_t total_size = TESTER->request_size_;
+    FILE* fp = fopen(TESTER->new_file_.hermes_.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 1;
     REQUIRE(kPageSize > total_size + offset);
@@ -113,5 +113,5 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(TEST_INFO->comm_size_) +
     int status = fclose(fp);
     REQUIRE(status == 0);
   }
-  TEST_INFO->Posttest();
+  TESTER->Posttest();
 }

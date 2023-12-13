@@ -1,6 +1,14 @@
-//
-// Created by lukemartinlogan on 11/3/23.
-//
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef HERMES_TEST_UNIT_HERMES_ADAPTERS_FILESYSTEM_TESTS_H_
 #define HERMES_TEST_UNIT_HERMES_ADAPTERS_FILESYSTEM_TESTS_H_
@@ -126,8 +134,8 @@ class FilesystemTests {
 
   void TrackAllFiles() {
     for (const FileInfo &info : files_) {
-      HERMES_CLIENT_CONF.SetAdapterPathTracking(info.hermes_, 
-                                                info.flags_.Any(TEST_WITH_HERMES));
+      HERMES_CLIENT_CONF.SetAdapterPathTracking(
+          info.hermes_, info.flags_.Any(TEST_WITH_HERMES));
     }
   }
 
@@ -160,7 +168,7 @@ class FilesystemTests {
   void Flush() {
 #if HERMES_INTERCEPT == 1
     // HERMES->Clear();
-  HRUN_ADMIN->FlushRoot(DomainId::GetGlobal());
+    HRUN_ADMIN->FlushRoot(DomainId::GetGlobal());
 #endif
   }
 
@@ -271,8 +279,8 @@ class FilesystemTests {
     bool result = false;
 
 #if O_TMPFILE
-    // NOTE(chogan): Even if O_TMPFILE is defined, the underlying filesystem might
-    // not support it.
+    // NOTE(chogan): Even if O_TMPFILE is defined, the underlying filesystem
+    // might not support it.
     int tmp_fd = open("/tmp", O_WRONLY | O_TMPFILE, 0600);
     if (tmp_fd > 0) {
       result = true;
@@ -284,6 +292,6 @@ class FilesystemTests {
   }
 };
 
-}
+}  // namespace hermes::adapter::test
 
 #endif  // HERMES_TEST_UNIT_HERMES_ADAPTERS_FILESYSTEM_TESTS_H_

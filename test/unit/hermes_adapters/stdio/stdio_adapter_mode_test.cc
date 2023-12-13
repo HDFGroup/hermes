@@ -13,84 +13,87 @@
 #include "stdio_adapter_test.h"
 
 TEST_CASE("BatchedWriteSequentialPersistent",
-          "[process=" + std::to_string(TEST_INFO->comm_size_) +
+          "[process=" + std::to_string(TESTER->comm_size_) +
               "]"
               "[operation=batched_write]"
               "[hermes_mode=persistent]"
               "[request_size=type-fixed][repetition=" +
-              std::to_string(TEST_INFO->num_iterations_) +
+              std::to_string(TESTER->num_iterations_) +
               "]"
               "[pattern=sequential][file=1]") {
   HERMES_CLIENT_CONF.SetBaseAdapterMode(hermes::adapter::AdapterMode::kDefault);
-  REQUIRE(HERMES_CLIENT_CONF.GetBaseAdapterMode() == hermes::adapter::AdapterMode::kDefault);
-  TEST_INFO->Pretest();
+  REQUIRE(HERMES_CLIENT_CONF.GetBaseAdapterMode() ==
+          hermes::adapter::AdapterMode::kDefault);
+  TESTER->Pretest();
   SECTION("write to new file always at end") {
-    TEST_INFO->test_fopen(TEST_INFO->new_file_, "w+");
-    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
+    TESTER->test_fopen(TESTER->new_file_, "w+");
+    REQUIRE(TESTER->fh_orig_ != nullptr);
 
-    for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      TEST_INFO->test_fwrite(TEST_INFO->write_data_.data(), TEST_INFO->request_size_);
-      REQUIRE(TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
+    for (size_t i = 0; i < TESTER->num_iterations_; ++i) {
+      TESTER->test_fwrite(TESTER->write_data_.data(), TESTER->request_size_);
+      REQUIRE(TESTER->size_written_orig_ == TESTER->request_size_);
     }
-    TEST_INFO->test_fclose();
-    REQUIRE(TEST_INFO->status_orig_ == 0);
-    REQUIRE(stdfs::file_size(TEST_INFO->new_file_.hermes_) ==
-            TEST_INFO->num_iterations_ * TEST_INFO->request_size_);
+    TESTER->test_fclose();
+    REQUIRE(TESTER->status_orig_ == 0);
+    REQUIRE(stdfs::file_size(TESTER->new_file_.hermes_) ==
+        TESTER->num_iterations_ * TESTER->request_size_);
   }
-  TEST_INFO->Posttest();
+  TESTER->Posttest();
 }
 
 TEST_CASE("BatchedWriteSequentialBypass",
-          "[process=" + std::to_string(TEST_INFO->comm_size_) +
+          "[process=" + std::to_string(TESTER->comm_size_) +
               "]"
               "[operation=batched_write]"
               "[hermes_mode=bypass]"
               "[request_size=type-fixed][repetition=" +
-              std::to_string(TEST_INFO->num_iterations_) +
+              std::to_string(TESTER->num_iterations_) +
               "]"
               "[pattern=sequential][file=1]") {
   HERMES_CLIENT_CONF.SetBaseAdapterMode(hermes::adapter::AdapterMode::kBypass);
-  REQUIRE(HERMES_CLIENT_CONF.GetBaseAdapterMode() == hermes::adapter::AdapterMode::kBypass);
-  TEST_INFO->Pretest();
+  REQUIRE(HERMES_CLIENT_CONF.GetBaseAdapterMode() ==
+          hermes::adapter::AdapterMode::kBypass);
+  TESTER->Pretest();
   SECTION("write to new file always at end") {
-    TEST_INFO->test_fopen(TEST_INFO->new_file_, "w+");
-    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
+    TESTER->test_fopen(TESTER->new_file_, "w+");
+    REQUIRE(TESTER->fh_orig_ != nullptr);
 
-    for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      TEST_INFO->test_fwrite(TEST_INFO->write_data_.data(), TEST_INFO->request_size_);
-      REQUIRE(TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
+    for (size_t i = 0; i < TESTER->num_iterations_; ++i) {
+      TESTER->test_fwrite(TESTER->write_data_.data(), TESTER->request_size_);
+      REQUIRE(TESTER->size_written_orig_ == TESTER->request_size_);
     }
-    TEST_INFO->test_fclose();
-    REQUIRE(TEST_INFO->status_orig_ == 0);
-    REQUIRE(stdfs::file_size(TEST_INFO->new_file_.hermes_) ==
-            TEST_INFO->num_iterations_ * TEST_INFO->request_size_);
+    TESTER->test_fclose();
+    REQUIRE(TESTER->status_orig_ == 0);
+    REQUIRE(stdfs::file_size(TESTER->new_file_.hermes_) ==
+        TESTER->num_iterations_ * TESTER->request_size_);
   }
-  TEST_INFO->Posttest();
+  TESTER->Posttest();
 }
 
 TEST_CASE("BatchedWriteSequentialScratch",
-          "[process=" + std::to_string(TEST_INFO->comm_size_) +
+          "[process=" + std::to_string(TESTER->comm_size_) +
               "]"
               "[operation=batched_write]"
               "[hermes_mode=scratch]"
               "[request_size=type-fixed][repetition=" +
-              std::to_string(TEST_INFO->num_iterations_) +
+              std::to_string(TESTER->num_iterations_) +
               "]"
               "[pattern=sequential][file=1]") {
   HERMES_CLIENT_CONF.SetBaseAdapterMode(hermes::adapter::AdapterMode::kScratch);
-  REQUIRE(HERMES_CLIENT_CONF.GetBaseAdapterMode() == hermes::adapter::AdapterMode::kScratch);
-  TEST_INFO->Pretest();
+  REQUIRE(HERMES_CLIENT_CONF.GetBaseAdapterMode() ==
+          hermes::adapter::AdapterMode::kScratch);
+  TESTER->Pretest();
   SECTION("write to new file always at end") {
-    TEST_INFO->test_fopen(TEST_INFO->new_file_, "w+");
-    REQUIRE(TEST_INFO->fh_orig_ != nullptr);
+    TESTER->test_fopen(TESTER->new_file_, "w+");
+    REQUIRE(TESTER->fh_orig_ != nullptr);
 
-    for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      TEST_INFO->test_fwrite(TEST_INFO->write_data_.data(), TEST_INFO->request_size_);
-      REQUIRE(TEST_INFO->size_written_orig_ == TEST_INFO->request_size_);
+    for (size_t i = 0; i < TESTER->num_iterations_; ++i) {
+      TESTER->test_fwrite(TESTER->write_data_.data(), TESTER->request_size_);
+      REQUIRE(TESTER->size_written_orig_ == TESTER->request_size_);
     }
-    TEST_INFO->test_fclose();
-    REQUIRE(TEST_INFO->status_orig_ == 0);
-    REQUIRE(stdfs::exists(TEST_INFO->new_file_.hermes_) == 0);
+    TESTER->test_fclose();
+    REQUIRE(TESTER->status_orig_ == 0);
+    REQUIRE(stdfs::exists(TESTER->new_file_.hermes_) == 0);
   }
-  TEST_INFO->Posttest(false);
+  TESTER->Posttest(false);
 }

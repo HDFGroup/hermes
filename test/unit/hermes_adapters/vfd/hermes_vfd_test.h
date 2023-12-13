@@ -1,6 +1,14 @@
-//
-// Created by lukemartinlogan on 11/3/23.
-//
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef HERMES_TEST_UNIT_HERMES_ADAPTERS_HDF5_VFD_TESTS_H_
 #define HERMES_TEST_UNIT_HERMES_ADAPTERS_HDF5_VFD_TESTS_H_
@@ -395,7 +403,7 @@ class Hdf5VfdTests : public FilesystemTests<f32> {
 
 }  // namespace hermes::adapter::test
 
-#define TEST_INFO \
+#define TESTER \
   hshm::EasySingleton<hermes::adapter::test::Hdf5VfdTests<true>>::GetInstance()
 
 #endif  // HERMES_TEST_UNIT_HERMES_ADAPTERS_HDF5_VFD_TESTS_H_
