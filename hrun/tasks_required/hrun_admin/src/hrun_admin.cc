@@ -174,13 +174,16 @@ class Server : public TaskLib {
     while (true) {
       // Make all workers flush locally
       int count = 0;
-      for (std::unique_ptr<Worker> &worker : HRUN_WORK_ORCHESTRATOR->workers_) {
-        worker->flush_.count_ = 0;
-        worker->flush_.flushing_ = true;
-        while (worker->flush_.flushing_) {
-          task->Yield<TASK_YIELD_CO>();
+      for (int i = 0; i < 2; ++i) {
+        for (std::unique_ptr<Worker>
+              &worker : HRUN_WORK_ORCHESTRATOR->workers_) {
+          worker->flush_.count_ = 0;
+          worker->flush_.flushing_ = true;
+          while (worker->flush_.flushing_) {
+            task->Yield<TASK_YIELD_CO>();
+          }
+          count += worker->flush_.count_;
         }
-        count += worker->flush_.count_;
       }
       if (!count) {
         break;

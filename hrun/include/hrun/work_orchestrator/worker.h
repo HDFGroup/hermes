@@ -383,10 +383,19 @@ class Worker {
         EndTask(lane, exec, task, off);
         continue;
       }
-      // Attempt to run the task if it's ready and runnable
+      // Get task properties
       bool is_remote = task->domain_id_.IsRemote(HRUN_RPC->GetNumHosts(), HRUN_CLIENT->node_id_);
       bool group_avail = CheckTaskGroup(task, exec, work_entry.lane_id_, task->task_node_, is_remote);
       bool should_run = task->ShouldRun(work_entry.cur_time_, flushing);
+      // Verify tasks
+      if (flushing && !task->IsFlush()) {
+        if (task->IsLongRunning()) {
+          exec->Monitor(MonitorMode::kFlushStat, task, rctx);
+        } else {
+          flush_.count_ += 1;
+        }
+      }
+      // Attempt to run the task if it's ready and runnable
       if (!task->IsRunDisabled() && group_avail && should_run) {
 // #define REMOTE_DEBUG
 #ifdef REMOTE_DEBUG
@@ -434,20 +443,6 @@ class Worker {
           task->SetStarted();
         }
         task->DidRun(work_entry.cur_time_);
-      }
-      // Verify tasks
-      if (flushing && !task->IsFlush()) {
-//        int pend_prior = flush_.count_;
-        if (task->IsLongRunning()) {
-          exec->Monitor(MonitorMode::kFlushStat, task, rctx);
-        } else {
-          flush_.count_ += 1;
-        }
-//        if (pend_prior != flush_.count_) {
-//          HILOG(kDebug, "(node {}) Pending on task={} state={} method={} is_remote={} worker={}",
-//                HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, task->method_,
-//                is_remote, id_)
-//        }
       }
       // Cleanup on task completion
       if (task->IsModuleComplete()) {
