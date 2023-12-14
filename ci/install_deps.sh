@@ -29,6 +29,11 @@ set +x
 . ${SPACK_DIR}/share/spack/setup-env.sh
 set -x
 
+# Install jarvis-cd
+git clone https://github.com/grc-iit/jarvis-cd.git
+cd jarvis-cd
+pip install -e . -r requirements.txt
+
 # This will allow Spack to skip building some packages that are directly
 # available from the system. For example, autoconf, cmake, m4, etc.
 # Modify ci/pckages.yaml to skip building compilers or build tools via Spack.
@@ -38,4 +43,4 @@ cp ci/packages.yaml ${SPACK_DIR}/etc/spack/packages.yaml
 # Install hermes_shm (needed for dependencies)
 #
 spack repo add ci/hermes
-spack install hermes_shm
+spack install hermes_shm@master+vfd+mpiio^mpich@3.3.2
