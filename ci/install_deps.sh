@@ -14,7 +14,7 @@ set -o pipefail
 # Change this especially when your $HOME doesn't have enough disk space. 
 INSTALL_DIR="${HOME}"
 SPACK_DIR=${INSTALL_DIR}/spack
-SPACK_VERSION=0.18.1
+SPACK_VERSION=0.20.2
 
 echo "Installing dependencies at ${INSTALL_DIR}"
 mkdir -p ${INSTALL_DIR}
