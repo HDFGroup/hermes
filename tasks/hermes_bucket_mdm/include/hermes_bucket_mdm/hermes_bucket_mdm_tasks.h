@@ -386,7 +386,7 @@ struct GetOrCreateTagTask : public Task, TaskFlags<TF_SRL_SYM> {
     HSHM_MAKE_AR(tag_name_, alloc, tag_name)
     HSHM_MAKE_AR(traits_, alloc, traits)
     HSHM_MAKE_AR(params_, alloc, ctx.bkt_params_)
-    flags_ = bitfield32_t(flags);
+    flags_ = bitfield32_t(flags | ctx.flags_.bits_);
   }
 
   /** Destructor */
