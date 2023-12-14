@@ -51,19 +51,25 @@ endif()
 # Coverage
 #-----------------------------------------------------------------------------
 if(HERMES_ENABLE_COVERAGE)
-    set(COVERAGE_FLAGS "-fprofile-arcs -ftest-coverage" CACHE STRING
+    set(COVERAGE_FLAGS "-fprofile-arcs -ftest-coverage --coverage" CACHE STRING
             "Flags to the coverage program to perform coverage inspection"
     )
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COVERAGE_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${COVERAGE_FLAGS}")
+
     mark_as_advanced(COVERAGE_FLAGS)
 
     macro(set_coverage_flags target)
-        set_target_properties(${target}
-                PROPERTIES
-                COMPILE_FLAGS ${COVERAGE_FLAGS}
-                LINK_FLAGS ${COVERAGE_FLAGS}
-        )
+        target_link_libraries(${target} gcov)
+#        set_target_properties(${target}
+#                PROPERTIES
+#                COMPILE_FLAGS ${COVERAGE_FLAGS}
+#                LINK_FLAGS ${COVERAGE_FLAGS}
+#        )
     endmacro()
 endif()
+add_custom_target(coverage COMMAND bash ${CMAKE_SOURCE_DIR}/ci/coverage.sh
+        ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR})
 
 #-----------------------------------------------------------------------------
 # Find Packages

@@ -16,6 +16,7 @@ add_dependencies(test_hermes_exec
         ${Hermes_CLIENT_DEPS} hermes)
 target_link_libraries(test_hermes_exec
         ${Hermes_CLIENT_LIBRARIES} hermes Catch2::Catch2 MPI::MPI_CXX)
+jarvis_test(test_hermes test_hermes)
 
 #------------------------------------------------------------------------------
 # Test Cases
