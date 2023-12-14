@@ -96,9 +96,9 @@ add_dependencies(hermes_stdio_adapter_mode_test
         hermes_stdio)
 target_compile_definitions(hermes_stdio_adapter_mode_test PUBLIC
         HERMES_INTERCEPT=1 HERMES_MPI_TESTS=false)
-jarvis_test(stdio test_hermes_stdio_bypass)
-jarvis_test(stdio test_hermes_stdio_default)
-jarvis_test(stdio test_hermes_stdio_scratch)
+jarvis_test(stdio test_hermes_stdio_adapter_bypass)
+jarvis_test(stdio test_hermes_stdio_adapter_default)
+jarvis_test(stdio test_hermes_stdio_adapter_scratch)
 
 set(STDIO_TESTS
         stdio_adapter_test

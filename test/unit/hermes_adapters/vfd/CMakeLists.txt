@@ -22,5 +22,5 @@ target_link_libraries(hermes_vfd_adapter_test
         stdc++fs
         ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES})
 
-jarvis_test(vfd test_hermes_vfd_default)
+jarvis_test(vfd test_hermes_vfd_basic)
 jarvis_test(vfd test_hermes_vfd_scratch)

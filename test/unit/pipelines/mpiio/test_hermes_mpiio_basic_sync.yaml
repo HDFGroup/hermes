@@ -1,4 +1,4 @@
-name: hermes_unit_hermes_mpiio_basic_small
+name: hermes_unit_hermes_mpiio_basic_async
 env: hermes
 pkgs:
   - pkg_type: hermes_run
@@ -8,4 +8,4 @@ pkgs:
     pkg_name: hermes_mpiio_tests
     test_file: mpiio_basic
     hermes: true
-    size: small
+    sync: async
