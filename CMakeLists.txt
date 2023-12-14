@@ -48,6 +48,24 @@ if(NOT HERMES_EXPORTED_TARGETS)
 endif()
 
 #-----------------------------------------------------------------------------
+# Coverage
+#-----------------------------------------------------------------------------
+if(HERMES_ENABLE_COVERAGE)
+    set(COVERAGE_FLAGS "-fprofile-arcs -ftest-coverage" CACHE STRING
+            "Flags to the coverage program to perform coverage inspection"
+    )
+    mark_as_advanced(COVERAGE_FLAGS)
+
+    macro(set_coverage_flags target)
+        set_target_properties(${target}
+                PROPERTIES
+                COMPILE_FLAGS ${COVERAGE_FLAGS}
+                LINK_FLAGS ${COVERAGE_FLAGS}
+        )
+    endmacro()
+endif()
+
+#-----------------------------------------------------------------------------
 # Find Packages
 #-----------------------------------------------------------------------------
 

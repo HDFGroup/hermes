@@ -87,7 +87,7 @@ jobs:
 #        run: pushd ci/cluster && ./multi_node_ci_test.sh
 
 #      - name: Generate coverage file
-#        run: bash ci/coverage.sh
+#        run: bash ci/coverage.sh "${GITHUB_WORKSPACE}/coverage"
 
 #      - name: Coveralls
 #        uses: coverallsapp/github-action@master
