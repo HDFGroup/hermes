@@ -1,7 +1,9 @@
 #!/bin/bash
-COVERAGE_DIR="${GITHUB_WORKSPACE}/coverage"
+COVERAGE_DIR="$1"
+BUILD_DIR="$2"
 mkdir -p "${COVERAGE_DIR}"
-cd "${GITHUB_WORKSPACE}/build"
+cd "${BUILD_DIR}"
+echo $BUILD_DIR
 lcov -c -d . -o "${COVERAGE_DIR}/tmp.info"
 lcov --remove "${COVERAGE_DIR}/tmp.info" \
               "/usr/*" \

@@ -5,12 +5,7 @@ include_directories(
         ${HERMES_IO_CLIENT_DIR}
         .)
 
-# Create the MPIIO I/O client
-add_library(hermes_mpiio_io_client SHARED mpiio_io_client.cc)
-add_dependencies(hermes_mpiio_io_client
-        hermes hermes_fs_base)
-target_link_libraries(hermes_mpiio_io_client
-        hermes hermes_fs_base MPI::MPI_CXX stdc++fs dl)
+# Create the MPIIO interceptor
 if (HERMES_MPICH)
     message(STATUS "Using HERMES_MPICH")
     add_definitions(-DHERMES_MPICH)
@@ -18,22 +13,18 @@ elseif(HERMES_OPENMPI)
     message(STATUS "Using HERMES_OPENMPI")
     add_definitions(-DHERMES_OPENMPI)
 endif()
-
-# Create the MPIIO interceptor
 set(INTERCEPTOR_DEPS
-        hermes
-        hermes_mpiio_io_client)
+        hermes hermes_fs_base)
 add_library(hermes_mpiio SHARED
         ${CMAKE_CURRENT_SOURCE_DIR}/mpiio_api.cc)
 add_dependencies(hermes_mpiio ${INTERCEPTOR_DEPS})
-target_link_libraries(hermes_mpiio ${INTERCEPTOR_DEPS})
+target_link_libraries(hermes_mpiio MPI::MPI_CXX stdc++fs dl ${INTERCEPTOR_DEPS})
 
 #-----------------------------------------------------------------------------
 # Add Target(s) to CMake Install
 #-----------------------------------------------------------------------------
 install(
         TARGETS
-        hermes_mpiio_io_client
         hermes_mpiio
         EXPORT
         ${HERMES_EXPORTED_TARGETS}
@@ -59,6 +50,5 @@ install(
 # Add Target(s) to Coverage
 #-----------------------------------------------------------------------------
 if(HERMES_ENABLE_COVERAGE)
-    set_coverage_flags(hermes_mpiio_io_client)
-    #set_coverage_flags(hermes_mpiio)
+    set_coverage_flags(hermes_mpiio)
 endif()

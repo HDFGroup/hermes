@@ -23,7 +23,7 @@
 
 namespace stdfs = std::filesystem;
 
-namespace hermes::adapter::fs {
+namespace hermes::adapter {
 
 /** Put or get data directly from I/O client */
 #define HERMES_IO_CLIENT_BYPASS BIT_OPT(uint32_t, 0)
@@ -53,12 +53,19 @@ struct IoStatus {
                mpi_ret_(MPI_SUCCESS),
                mpi_status_ptr_(&mpi_status_),
                success_(true) {}
-};
 
-/** A structure to represent Hermes request */
-struct HermesRequest {
-  std::future<size_t> return_future; /**< future result of async op. */
-  IoStatus io_status;                /**< IO status */
+  /** Copy constructor */
+  void Copy(const IoStatus &other) {
+    size_ = other.size_;
+    mpi_ret_ = other.mpi_ret_;
+    mpi_status_ = other.mpi_status_;
+    if (other.mpi_status_ptr_ == &other.mpi_status_) {
+      mpi_status_ptr_ = &mpi_status_;
+    } else {
+      mpi_status_ptr_ = other.mpi_status_ptr_;
+    }
+    success_ = other.success_;
+  }
 };
 
 /**
@@ -66,19 +73,18 @@ struct HermesRequest {
  * For now, nothing additional than the typical FsIoOptions.
  * */
 struct FsIoOptions {
-  AdapterMode adapter_mode_;      /**< Current adapter mode for this obj */
-  hapi::PlacementPolicy dpe_;     /**< data placement policy */
-  bitfield32_t flags_;            /**< various I/O flags */
-  MPI_Datatype mpi_type_; /**< MPI data type */
-  int mpi_count_;         /**< The number of types */
-  size_t backend_off_;    /**< Offset in the backend to begin I/O */
-  size_t backend_size_;   /**< Size of I/O to perform at backend */
+  bitfield32_t flags_;     /**< various I/O flags */
+  MPI_Datatype mpi_type_;  /**< MPI data type */
+  int mpi_count_;          /**< The number of types */
+  int type_size_;          /**< The size of type */
+  size_t backend_off_;     /**< Offset in the backend to begin I/O */
+  size_t backend_size_;    /**< Size of I/O to perform at backend */
 
   /** Default constructor */
-  FsIoOptions() : dpe_(hapi::PlacementPolicy::kNone),
-                  flags_(),
+  FsIoOptions() : flags_(),
                   mpi_type_(MPI_CHAR),
                   mpi_count_(0),
+                  type_size_(1),
                   backend_off_(0),
                   backend_size_(0) {
     SetSeek();
@@ -116,13 +122,14 @@ struct FsIoOptions {
     if (!seek) { opts.UnsetSeek(); }
     return opts;
   }
+};
 
-  /** Return Io options with \a DPE */
-  static FsIoOptions WithDpe(hapi::PlacementPolicy dpe) {
-    FsIoOptions opts;
-    opts.dpe_ = dpe;
-    return opts;
-  }
+/** A structure to represent Hermes request */
+struct FsAsyncTask {
+  std::vector<LPointer<hrunpq::TypedPushTask<PutBlobTask>>> put_tasks_;
+  std::vector<LPointer<hrunpq::TypedPushTask<GetBlobTask>>> get_tasks_;
+  IoStatus io_status_;
+  FsIoOptions opts_;
 };
 
 /** Represents an object in the I/O client (e.g., a file) */
@@ -301,7 +308,7 @@ class FilesystemIoClient {
   virtual ~FilesystemIoClient() = default;
 
   /** Get initial statistics from the backend */
-  virtual size_t GetSize(const hipc::charbuf &bkt_name) = 0;
+  virtual size_t GetBackendSize(const hipc::charbuf &bkt_name) = 0;
 
   /** Write blob to backend */
   virtual void WriteBlob(const std::string &bkt_name,
@@ -348,16 +355,19 @@ class FilesystemIoClient {
   virtual void HermesClose(File &f,
                            const AdapterStat &stat,
                            FilesystemIoClientState &fs_mdm) = 0;
+
+  /** Updates I/O status after read/write operations */
+  virtual void UpdateIoStatus(const FsIoOptions &opts, IoStatus &status) = 0;
 };
 
-}  // namespace hermes::adapter::fs
+}  // namespace hermes::adapter
 
 namespace std {
 /** A structure to represent hash */
 template <>
-struct hash<::hermes::adapter::fs::File> {
+struct hash<::hermes::adapter::File> {
   /** hash creator functor */
-  std::size_t operator()(const hermes::adapter::fs::File &key) const {
+  std::size_t operator()(const hermes::adapter::File &key) const {
     return key.hash();
   }
 };

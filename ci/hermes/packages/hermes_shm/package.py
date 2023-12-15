@@ -6,6 +6,7 @@ class HermesShm(CMakePackage):
     url = "https://github.com/lukemartinlogan/hermes_shm/archive/refs/tags/v1.0.0.tar.gz"
 
     version('master', branch='master')
+    version("1.1.0", sha256="080d5361cff22794b670e4544c532926ca8b6d6ec695af25596efe035bfffea5")
     version("1.0.0", sha256="a79f01d531ce89985ad59a2f62b41d74c2385e48d929e2f4ad895ae34137573b")
 
     variant('mpiio', default=True, description='Enable MPI I/O adapter')
@@ -15,6 +16,7 @@ class HermesShm(CMakePackage):
     variant('only_verbs', default=False, description='Only verbs')
     variant('debug', default=False, description='Build shared libraries')
     variant('zmq', default=False, description='Build ZeroMQ tests')
+    variant('adios', default=False, description='Build Adios tests')
 
     depends_on('mochi-thallium~cereal@0.10.1')
     depends_on('catch2@3.0.1')
@@ -30,6 +32,7 @@ class HermesShm(CMakePackage):
                when='+only_verbs')
     depends_on('libzmq', '+zmq')
     depends_on('hdf5@1.14.0', when='+vfd')
+    depends_on('adios2', when='+adios')
 
     def cmake_args(self):
         args = []

@@ -1,15 +1,23 @@
-//
-// Created by lukemartinlogan on 11/4/23.
-//
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef HERMES_TEST_UNIT_HERMES_ADAPTERS_STDIO_STDIO_ADAPTER_TEST_H_
 #define HERMES_TEST_UNIT_HERMES_ADAPTERS_STDIO_STDIO_ADAPTER_TEST_H_
 
-#include "filesystem_tests.h"
+#include "binary_file_tests.h"
 
-namespace hermes::adapter::fs::test {
+namespace hermes::adapter::test {
 template<bool WITH_MPI>
-class StdioTest : public FilesystemTests {
+class StdioTest : public BinaryFileTests {
  public:
   FileInfo new_file_;
   FileInfo existing_file_;
@@ -33,13 +41,15 @@ class StdioTest : public FilesystemTests {
   int status_orig_;
   size_t size_read_orig_;
   size_t size_written_orig_;
+
  public:
   void RegisterFiles() override {
     RegisterPath("new", 0, new_file_);
     RegisterPath("ext", TEST_DO_CREATE, existing_file_);
     if constexpr(WITH_MPI) {
-      RegisterPath("shared_new", TEST_DO_CREATE | TEST_FILE_SHARED, shared_new_file_);
-      RegisterPath("shared_ext", TEST_DO_CREATE | TEST_FILE_SHARED, shared_existing_file_);
+      RegisterPath("shared_new", TEST_FILE_SHARED, shared_new_file_);
+      RegisterPath("shared_ext", TEST_DO_CREATE | TEST_FILE_SHARED,
+                   shared_existing_file_);
     }
     RegisterTmpPath(tmp_file_);
   }
@@ -84,14 +94,15 @@ class StdioTest : public FilesystemTests {
   }
 };
 
-}  // namespace hermes::adapter::fs::test
+}  // namespace hermes::adapter::test
 
 #if defined(HERMES_MPI_TESTS)
-#define TEST_INFO \
-  hshm::EasySingleton<hermes::adapter::fs::test::StdioTest<HERMES_MPI_TESTS>>::GetInstance()
+#define TESTER \
+  hshm::EasySingleton< \
+    hermes::adapter::test::StdioTest<HERMES_MPI_TESTS>>::GetInstance()
 #else
-#define TEST_INFO \
-  hshm::EasySingleton<hermes::adapter::fs::test::StdioTest<false>>::GetInstance()
+#define TESTER \
+  hshm::EasySingleton<hermes::adapter::test::StdioTest<false>>::GetInstance()
 #endif
 
-#endif //HERMES_TEST_UNIT_HERMES_ADAPTERS_STDIO_STDIO_ADAPTER_TEST_H_
+#endif  // HERMES_TEST_UNIT_HERMES_ADAPTERS_STDIO_STDIO_ADAPTER_TEST_H_

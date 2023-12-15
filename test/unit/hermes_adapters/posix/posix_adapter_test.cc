@@ -13,5 +13,5 @@
 #include "posix_adapter_test.h"
 
 int main(int argc, char **argv) {
-  TEST_INFO->Init(argc, argv);
+  TESTER->Init(argc, argv);
 }

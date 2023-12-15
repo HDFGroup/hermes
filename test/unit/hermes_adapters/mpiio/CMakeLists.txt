@@ -1,12 +1,27 @@
-add_executable(mpiio_adapter_test mpiio_adapter_test.cpp ${ADAPTER_COMMON})
-# pytest(mpiio test_mpiio_basic)
+# MPI adapter tests without hermes
+add_executable(mpiio_adapter_test
+        mpiio_adapter_test.cc
+        mpiio_adapter_basic_test.cc)
+target_link_libraries(mpiio_adapter_test
+        hermes)
+add_dependencies(mpiio_adapter_test
+        hermes)
+target_compile_definitions(mpiio_adapter_test PUBLIC
+        HERMES_MPI_TESTS=true)
+jarvis_test(mpiio test_mpiio_basic)
 
-add_executable(hermes_mpiio_adapter_test mpiio_adapter_test.cpp ${ADAPTER_COMMON})
-target_link_libraries(hermes_mpiio_adapter_test hermes_mpiio)
-add_dependencies(hermes_mpiio_adapter_test hermes_mpiio)
-set_target_properties(hermes_mpiio_adapter_test PROPERTIES COMPILE_FLAGS "-DHERMES_INTERCEPT=1")
-pytest(mpiio test_hermes_mpiio_basic_sync)
-pytest(mpiio test_hermes_mpiio_basic_async)
+# MPI adapter tests with hermes
+add_executable(hermes_mpiio_adapter_test
+        mpiio_adapter_test.cc
+        mpiio_adapter_basic_test.cc)
+target_link_libraries(hermes_mpiio_adapter_test
+        hermes_mpiio)
+add_dependencies(hermes_mpiio_adapter_test
+        hermes_mpiio)
+target_compile_definitions(hermes_mpiio_adapter_test PUBLIC
+        HERMES_INTERCEPT=1 HERMES_MPI_TESTS=true)
+jarvis_test(mpiio test_hermes_mpiio_basic_sync)
+jarvis_test(mpiio test_hermes_mpiio_basic_async)
 
 set(MPIIO_TESTS
   mpiio_adapter_test

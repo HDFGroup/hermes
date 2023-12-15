@@ -35,9 +35,9 @@ class Client : public TaskLibClient {
     id_ = TaskStateId::GetNull();
     QueueManagerInfo &qm = HRUN_CLIENT->server_config_.queue_manager_;
     std::vector<PriorityInfo> queue_info = {
-        {1, 1, qm.queue_depth_, 0},
-        {1, 1, qm.queue_depth_, QUEUE_LONG_RUNNING},
-        {qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY}
+        {TaskPrio::kAdmin, 1, 1, qm.queue_depth_, 0},
+        {TaskPrio::kLongRunning, 1, 1, qm.queue_depth_, QUEUE_LONG_RUNNING},
+        {TaskPrio::kLowLatency, qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY}
     };
     return HRUN_ADMIN->AsyncCreateTaskState<ConstructTask>(
         task_node, domain_id, state_name, id_, queue_info);

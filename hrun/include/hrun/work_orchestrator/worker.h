@@ -310,9 +310,9 @@ class Worker {
     now_.Now();
     while (orchestrator->IsAlive()) {
       try {
-        flush_.pending_ = 0;
-        Run();
-        if (flush_.flushing_ && flush_.pending_ == 0) {
+        bool flushing = flush_.flushing_;
+        Run(flushing);
+        if (flushing) {
           flush_.flushing_ = false;
         }
       } catch (hshm::Error &e) {
@@ -322,11 +322,11 @@ class Worker {
         Yield();
       }
     }
-    Run();
+    Run(true);
   }
 
   /** Run a single iteration over all queues */
-  void Run() {
+  void Run(bool flushing) {
     if (poll_queues_.size() > 0) {
       _PollQueues();
     }
@@ -337,11 +337,11 @@ class Worker {
       now_.Now();
       for (WorkEntry &work_entry : work_queue_) {
         work_entry.cur_time_ = now_;
-        PollGrouped(work_entry);
+        PollGrouped(work_entry, flushing);
       }
     } else {
       for (WorkEntry &work_entry : work_queue_) {
-        PollGrouped(work_entry);
+        PollGrouped(work_entry, flushing);
       }
     }
 
@@ -349,7 +349,7 @@ class Worker {
 
   /** Run an iteration over a particular queue */
   HSHM_ALWAYS_INLINE
-  void PollGrouped(WorkEntry &work_entry) {
+  void PollGrouped(WorkEntry &work_entry, bool flushing) {
     int off = 0;
     Lane *&lane = work_entry.lane_;
     Task *task;
@@ -383,11 +383,20 @@ class Worker {
         EndTask(lane, exec, task, off);
         continue;
       }
-      // Attempt to run the task if it's ready and runnable
+      // Get task properties
       bool is_remote = task->domain_id_.IsRemote(HRUN_RPC->GetNumHosts(), HRUN_CLIENT->node_id_);
-      if (!task->IsRunDisabled() &&
-          CheckTaskGroup(task, exec, work_entry.lane_id_, task->task_node_, is_remote) &&
-          task->ShouldRun(work_entry.cur_time_, flush_.flushing_)) {
+      bool group_avail = CheckTaskGroup(task, exec, work_entry.lane_id_, task->task_node_, is_remote);
+      bool should_run = task->ShouldRun(work_entry.cur_time_, flushing);
+      // Verify tasks
+      if (flushing && !task->IsFlush()) {
+        if (task->IsLongRunning()) {
+          exec->Monitor(MonitorMode::kFlushStat, task, rctx);
+        } else {
+          flush_.count_ += 1;
+        }
+      }
+      // Attempt to run the task if it's ready and runnable
+      if (!task->IsRunDisabled() && group_avail && should_run) {
 // #define REMOTE_DEBUG
 #ifdef REMOTE_DEBUG
         if (task->task_state_ != HRUN_QM_CLIENT->admin_task_state_ &&
@@ -435,20 +444,6 @@ class Worker {
         }
         task->DidRun(work_entry.cur_time_);
       }
-      // Verify tasks
-      if (flush_.flushing_ && !task->IsModuleComplete() && !task->IsFlush()) {
-        int pend_prior = flush_.pending_;
-        if (task->IsLongRunning()) {
-          exec->Monitor(MonitorMode::kFlushStat, task, rctx);
-        } else {
-          flush_.pending_ += 1;
-        }
-        if (pend_prior != flush_.pending_) {
-          HILOG(kInfo, "(node {}) Pending on task={} state={} method={} is_remote={} worker={}",
-                HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, task->method_,
-                is_remote, id_)
-        }
-      }
       // Cleanup on task completion
       if (task->IsModuleComplete()) {
 //      HILOG(kDebug, "(node {}) Ending task: task_node={} task_state={} worker={}",
@@ -456,8 +451,6 @@ class Worker {
         entry->complete_ = true;
         if (task->IsCoroutine()) {
           free(rctx.stack_ptr_);
-        } else if (task->IsPreemptive()) {
-          ABT_thread_join(entry->thread_);
         }
         RemoveTaskGroup(task, exec, work_entry.lane_id_, is_remote);
         EndTask(lane, exec, task, off);
@@ -483,7 +476,7 @@ class Worker {
    * =============================================================== */
 
   /** Check if two tasks can execute concurrently */
-  HSHM_ALWAYS_INLINE
+  // HSHM_ALWAYS_INLINE
   bool CheckTaskGroup(Task *task, TaskState *exec,
                       u32 lane_id,
                       TaskNode node, const bool &is_remote) {
@@ -497,33 +490,23 @@ class Worker {
       return true;
     }
 
-#ifdef DEBUG
-    // TODO(llogan): remove
-    std::stringstream ss;
-    for (int i = 0; i < group_.size(); ++i) {
-      ss << std::to_string((int)group_[i]);
-    }
-#endif
-
     // Ensure that concurrent requests are not serialized
-    LocalSerialize srl(group_);
+    LocalSerialize srl(group_, false);
     srl << lane_id;
 
     auto it = group_map_.find(group_);
     if (it == group_map_.end()) {
       node.node_depth_ = 1;
       group_map_.emplace(group_, node);
-//      HILOG(kDebug, "(node {}) Increasing depth of (task_state={} method={} name={}) group to {} worker={}",
-//            HRUN_CLIENT->node_id_, task->task_state_, task->method_, exec->name_,
-//            node.node_depth_, id_);
+//      HILOG(kDebug, "(node {}) Increasing depth of group {} to {} (worker={})",
+//            HRUN_CLIENT->node_id_, std::hash<hshm::charbuf>{}(group_), node.node_depth_, id_);
       return true;
     }
     TaskNode &node_cmp = it->second;
     if (node_cmp.root_ == node.root_) {
       node_cmp.node_depth_ += 1;
-//      HILOG(kDebug, "(node {}) Increasing depth of (task_state={} method={} name={}) group to {} worker={}",
-//            HRUN_CLIENT->node_id_, task->task_state_, task->method_, exec->name_,
-//            node.node_depth_, id_);
+//      HILOG(kDebug, "(node {}) Increasing depth of group {} to {} (worker={})",
+//            HRUN_CLIENT->node_id_, std::hash<hshm::charbuf>{}(group_), node.node_depth_, id_);
       return true;
     }
     return false;
@@ -543,21 +526,14 @@ class Worker {
       return;
     }
 
-#ifdef DEBUG
-    // TODO(llogan): remove
-    std::stringstream ss;
-    for (int i = 0; i < group_.size(); ++i) {
-      ss << std::to_string((int)group_[i]);
-    }
-#endif
     // Ensure that concurrent requests are not serialized
-    LocalSerialize srl(group_);
+    LocalSerialize srl(group_, false);
     srl << lane_id;
 
     TaskNode &node_cmp = group_map_[group_];
     if (node_cmp.node_depth_ == 0) {
       HELOG(kFatal, "(node {}) Group {} depth is already 0 (task_node={} worker={})",
-            HRUN_CLIENT->node_id_, task->task_node_, id_);
+            HRUN_CLIENT->node_id_, std::hash<hshm::charbuf>{}(group_), task->task_node_, id_);
     }
     node_cmp.node_depth_ -= 1;
 //    HILOG(kDebug, "(node {}) Decreasing depth of to {} (task_node={} worker={})",

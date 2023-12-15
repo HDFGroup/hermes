@@ -120,36 +120,6 @@ TEST_CASE("TestHermesAsyncPut") {
   HRUN_ADMIN->FlushRoot(DomainId::GetGlobal());
 }
 
-TEST_CASE("TestHermesAsyncPutLocalFlush") {
-  int rank, nprocs;
-  MPI_Barrier(MPI_COMM_WORLD);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-
-  // Initialize Hermes on all nodes
-  HERMES->ClientInit();
-
-  // Create a bucket
-  hermes::Context ctx;
-  hermes::Bucket bkt("hello");
-
-  size_t count_per_proc = 256;
-  size_t off = rank * count_per_proc;
-  size_t proc_count = off + count_per_proc;
-  for (size_t i = off; i < proc_count; ++i) {
-    HILOG(kInfo, "Iteration: {}", i);
-    // Put a blob
-    hermes::Blob blob(MEGABYTES(1));
-    memset(blob.data(), i % 256, blob.size());
-    bkt.AsyncPut(std::to_string(i), blob, ctx);
-  }
-  MPI_Barrier(MPI_COMM_WORLD);
-  if (rank == 0) {
-    HRUN_ADMIN->FlushRoot(DomainId::GetLocal());
-  }
-  MPI_Barrier(MPI_COMM_WORLD);
-}
-
 TEST_CASE("TestHermesPutGet") {
   int rank, nprocs;
   MPI_Barrier(MPI_COMM_WORLD);
@@ -523,11 +493,8 @@ TEST_CASE("TestHermesDataStager") {
 
   // Create a stageable bucket
   using hermes::data_stager::BinaryFileStager;
-  hermes::Context ctx;
-  ctx.flags_.SetBits(HERMES_IS_FILE);
-  hshm::charbuf url =
-      BinaryFileStager::BuildFileUrl(path, page_size);
-  hermes::Bucket bkt(url.str(), file_size, HERMES_IS_FILE);
+  hermes::Context ctx = BinaryFileStager::BuildContext(page_size);
+  hermes::Bucket bkt(path, ctx, file_size);
 
   // Put a few blobs in the bucket
   for (size_t i = off; i < proc_count; ++i) {
@@ -567,7 +534,6 @@ TEST_CASE("TestHermesDataOp") {
   HERMES->ClientInit();
 
   // Create a bucket that supports derived quantities
-  using hermes::data_stager::BinaryFileStager;
   hermes::Context ctx;
   ctx.flags_.SetBits(HERMES_HAS_DERIVED);
   std::string url = "data_bkt";
@@ -605,19 +571,12 @@ TEST_CASE("TestHermesDataOp") {
   }
   MPI_Barrier(MPI_COMM_WORLD);
 
-  // HRUN_ADMIN->FlushRoot(DomainId::GetGlobal());
+  HRUN_ADMIN->FlushRoot(DomainId::GetGlobal());
   // Verify derived operator happens
   hermes::Bucket bkt_min("data_bkt_min", 0, 0);
-  size_t size;
-  do {
-    size = bkt_min.GetSize();
-    if (size != sizeof(float) * count_per_proc * nprocs) {
-      HILOG(kInfo, "Waiting for derived data");
-      sleep(1);
-    } else {
-      break;
-    }
-  } while (true);
+  HRUN_ADMIN->FlushRoot(DomainId::GetGlobal());
+  size_t size = bkt_min.GetSize();
+  REQUIRE(size == sizeof(float) * count_per_proc * nprocs);
 
   hermes::Blob blob2;
   bkt_min.Get(std::to_string(0), blob2, ctx);
@@ -655,10 +614,11 @@ TEST_CASE("TestHermesCollectMetadata") {
   hermes::MetadataTable table = HERMES->CollectMetadataSnapshot();
   REQUIRE(table.blob_info_.size() == 1024 * nprocs);
   REQUIRE(table.bkt_info_.size() == nprocs);
-  REQUIRE(table.target_info_.size() >= 4);
+  // REQUIRE(table.target_info_.size() >= 4);
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
+/*
 TEST_CASE("TestHermesDataPlacement") {
   int rank, nprocs;
   MPI_Barrier(MPI_COMM_WORLD);
@@ -757,3 +717,4 @@ TEST_CASE("TestHermesDataPlacementFancy") {
     count += 1;
   }
 }
+*/

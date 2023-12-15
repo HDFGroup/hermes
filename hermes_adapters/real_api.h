@@ -16,6 +16,10 @@
 #include <dlfcn.h>
 #include <link.h>
 
+namespace stdfs = std::filesystem;
+
+#define HERMES_DECL(F) F
+
 #define REQUIRE_API(api_name) \
   if (!(api_name)) { \
     HELOG(kFatal, "HERMES Adapter failed to map symbol: {}", #api_name); \

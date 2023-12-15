@@ -28,7 +28,7 @@ class Hermes(CMakePackage):
     version("0.4.0-beta", sha256="06020836e203b2f680bea24007dc73760dfb977eb61e442b795b264f0267c16b")
     version("0.3.0-beta...v0.4.0-beta", sha256="7729b115598277adcab019dee24e5276698fb595066bca758bfa59dc8d51c5a4")
 
-    depends_on('hermes_shm')
+    depends_on('hermes_shm@master')
 
     # Common across hermes_shm and hermes
     variant('mpiio', default=True, description='Enable MPI I/O adapter')

@@ -38,18 +38,14 @@ class ProcessAffiner {
 
  private:
   int n_cpu_;
-  cpu_set_t *cpus_;
+  std::vector<cpu_set_t> cpus_;
   std::vector<int> ignore_pids_;
 
  public:
   ProcessAffiner() {
     n_cpu_ = get_nprocs_conf();
-    cpus_ = new cpu_set_t[n_cpu_];
-    CPU_ZERO(cpus_);
-  }
-
-  ~ProcessAffiner() {
-    delete cpus_;
+    cpus_.resize(n_cpu_);
+    Clear();
   }
 
   inline bool isdigit(char digit) {
@@ -61,7 +57,7 @@ class ProcessAffiner {
   }
 
   inline void SetCpu(int cpu) {
-    CPU_SET(cpu, cpus_);
+    CPU_SET(cpu, cpus_.data());
   }
 
   inline void SetCpus(int off, int len) {
@@ -77,7 +73,7 @@ class ProcessAffiner {
   }
 
   inline void ClearCpu(int cpu) {
-    CPU_CLR(cpu, cpus_);
+    CPU_CLR(cpu, cpus_.data());
   }
 
   void IgnorePids(const std::vector<int> &pids) {
@@ -91,7 +87,9 @@ class ProcessAffiner {
   }
 
   inline void Clear() {
-    CPU_ZERO(cpus_);
+    for (cpu_set_t &cpu : cpus_) {
+      CPU_ZERO(&cpu);
+    }
   }
 
   int AffineAll(void) {
@@ -136,7 +134,7 @@ class ProcessAffiner {
     return count;
   }
   int Affine(int pid) {
-    return SetAffinitySafe(pid, n_cpu_, cpus_);
+    return SetAffinitySafe(pid, n_cpu_, cpus_.data());
   }
 
   void PrintAffinity(int pid) {

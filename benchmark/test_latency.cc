@@ -94,7 +94,7 @@ TEST_CASE("TestHshmQueueEmplacePop") {
   hrun::QueueId qid(0, 3);
   u32 ops = (1 << 20);
   std::vector<PriorityInfo> queue_info = {
-      {16, 16, ops, 0}
+      {TaskPrio::kAdmin, 16, 16, ops, 0}
   };
   auto queue = hipc::make_uptr<hrun::MultiQueue>(
       qid, queue_info);
@@ -119,7 +119,7 @@ TEST_CASE("TestHshmQueueEmplacePop") {
 TEST_CASE("TestHshmQueueGetLane") {
   hrun::QueueId qid(0, 3);
   std::vector<PriorityInfo> queue_info = {
-      {16, 16, 256, 0}
+      {TaskPrio::kAdmin, 16, 16, 256, 0}
   };
   auto queue = hipc::make_uptr<hrun::MultiQueue>(
       qid, queue_info);
@@ -141,7 +141,7 @@ TEST_CASE("TestHshmQueueAllocateEmplacePop") {
   TRANSPARENT_HERMES();
   hrun::QueueId qid(0, 3);
   std::vector<PriorityInfo> queue_info = {
-      {16, 16, 256, 0}
+      {TaskPrio::kAdmin, 16, 16, 256, 0}
   };
   auto queue = hipc::make_uptr<hrun::MultiQueue>(
       qid, queue_info);
@@ -209,7 +209,7 @@ void TestWorkerIterationLatency(u32 num_queues, u32 num_lanes) {
   for (u32 i = 0; i < num_queues; ++i) {
     hrun::QueueId qid(0, i + 1);
     std::vector<PriorityInfo> queue_info = {
-        {num_lanes, num_lanes, 256, 0}
+        {TaskPrio::kAdmin, num_lanes, num_lanes, 256, 0}
     };
     auto queue = hipc::make_uptr<hrun::MultiQueue>(
         qid, queue_info);
@@ -233,7 +233,7 @@ void TestWorkerIterationLatency(u32 num_queues, u32 num_lanes) {
     task = client.AsyncMdPushEmplace(queues[num_queues - 1].get(),
                                      task_node,
                                      hrun::DomainId::GetLocal());
-    worker.Run();
+    worker.Run(false);
     HRUN_CLIENT->DelTask(task);
   }
   t.Pause();

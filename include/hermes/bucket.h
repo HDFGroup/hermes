@@ -71,7 +71,7 @@ class Bucket {
     bkt_mdm_ = &HERMES_CONF->bkt_mdm_;
     id_ = bkt_mdm_->GetOrCreateTagRoot(
         hshm::charbuf(bkt_name), true,
-        std::vector<TraitId>(), backend_size, flags);
+        std::vector<TraitId>(), backend_size, flags, ctx);
     name_ = bkt_name;
   }
 
@@ -477,7 +477,8 @@ class Bucket {
     GetBlobTask *task = push_task->get();
     blob_id = task->blob_id_;
     char *data = HRUN_CLIENT->GetDataPointer(task->data_);
-    memcpy(blob.data(), data, data_size);
+    memcpy(blob.data(), data, task->data_size_);
+    blob.resize(task->data_size_);
     HRUN_CLIENT->FreeBuffer(task->data_);
     HRUN_CLIENT->DelTask(push_task);
     return blob_id;

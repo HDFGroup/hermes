@@ -26,6 +26,16 @@ class LocalSerialize {
   LocalSerialize(DataT &data) : data_(data) {
     data_.resize(0);
   }
+  LocalSerialize(DataT &data, bool) : data_(data) {}
+
+  /** left shift operator */
+  template<int T>
+  HSHM_ALWAYS_INLINE
+  LocalSerialize& operator<<(const UniqueId<T> &obj) {
+    (*this) << obj.unique_;
+    (*this) << obj.node_id_;
+    return *this;
+  }
 
   /** left shift operator */
   template<typename T>
@@ -36,10 +46,13 @@ class LocalSerialize {
       size_t off = data_.size();
       data_.resize(off + size);
       memcpy(data_.data() + off, &obj, size);
-    } else if constexpr (std::is_same<T, std::string>::value || std::is_same<T, hshm::charbuf>::value) {
-      size_t size = obj.size();
+    } else if constexpr (std::is_same<T, std::string>::value ||
+                         std::is_same<T, hshm::charbuf>::value) {
+      size_t size = sizeof(size_t) + obj.size();
       size_t off = data_.size();
       data_.resize(off + size);
+      memcpy(data_.data() + off, &size, sizeof(size_t));
+      off += sizeof(size_t);
       memcpy(data_.data() + off, obj.data(), size);
     } else {
       throw std::runtime_error("Cannot serialize object");
@@ -60,6 +73,15 @@ class LocalDeserialize {
   }
 
   /** right shift operator */
+  template<int T>
+  HSHM_ALWAYS_INLINE
+  LocalDeserialize& operator<<(const UniqueId<T> &obj) {
+    (*this) >> obj.unique_;
+    (*this) >> obj.node_id_;
+    return *this;
+  }
+
+  /** right shift operator */
   template<typename T>
   HSHM_ALWAYS_INLINE
   LocalDeserialize& operator>>(T &obj) {
@@ -69,8 +91,11 @@ class LocalDeserialize {
       size = sizeof(T);
       memcpy(&obj, data_.data() + off, size);
     } else if constexpr (std::is_same<T, std::string>::value || std::is_same<T, hshm::charbuf>::value) {
-      size = obj.size();
-      memcpy(obj.data(), data_.data() + off, size);
+      memcpy(&size, data_.data() + off, sizeof(size_t));
+      size_t str_size = size - sizeof(size_t);
+      off += sizeof(size_t);
+      obj.resize(str_size);
+      memcpy(obj.data(), data_.data() + off, str_size);
     } else {
       throw std::runtime_error("Cannot serialize object");
     }

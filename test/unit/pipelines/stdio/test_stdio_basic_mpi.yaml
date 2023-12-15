@@ -1,0 +1,7 @@
+name: hermes_unit_stdio_basic_mpi
+env: hermes
+pkgs:
+  - pkg_type: hermes_stdio_tests
+    pkg_name: hermes_stdio_tests
+    test_file: stdio_basic_mpi
+    hermes: false

@@ -16,13 +16,6 @@
 #include "hrun/hrun_types.h"
 #include "hrun/task_registry/task.h"
 #include <sstream>
-#include <cereal/archives/binary.hpp>
-#include <cereal/types/vector.hpp>
-#include <cereal/types/string.hpp>
-#include <cereal/types/list.hpp>
-#include <cereal/types/unordered_map.hpp>
-#include <cereal/types/unordered_set.hpp>
-#include <cereal/types/atomic.hpp>
 
 namespace hrun {
 

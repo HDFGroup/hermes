@@ -30,59 +30,75 @@
 /** Requests in this queue are long-running */
 #define QUEUE_LONG_RUNNING BIT_OPT(u32, 5)
 /** Requests in this queue should not be scheduled on a traditional worker */
-#define QUEUE_DISABLED BIT_OPT(u32, 5)
+#define QUEUE_DISABLED BIT_OPT(u32, 6)
+/** This queue is tethered to another queue */
+#define QUEUE_TETHERED BIT_OPT(u32, 7)
 
 namespace hrun {
 
 /** Prioritization info needed to be set by client */
 struct PriorityInfo {
+  u32 prio_;            /**< Priority ID */
   u32 max_lanes_;       /**< Maximum number of lanes in the queue */
   u32 num_lanes_;       /**< Current number of lanes in use */
   u32 depth_;           /**< The maximum depth of individual lanes */
   bitfield32_t flags_;  /**< Scheduling hints for the queue */
+  u32 tether_;          /**< Lanes should be pinned to the same workers as the tether */
 
   /** Default constructor */
   PriorityInfo() = default;
 
   /** Emplace constructor */
-  PriorityInfo(u32 num_lanes, u32 max_lanes, u32 depth, u32 flags) {
+  PriorityInfo(u32 prio, u32 num_lanes, u32 max_lanes,
+               u32 depth, u32 flags, u32 tether = 0) {
+    prio_ = prio;
     max_lanes_ = max_lanes;
     num_lanes_ = num_lanes;
     depth_ = depth;
     flags_ = bitfield32_t(flags);
+    tether_ = tether;
   }
 
   /** Emplace constructor */
-  PriorityInfo(u32 num_lanes, u32 max_lanes, u32 depth, bitfield32_t flags) {
+  PriorityInfo(u32 prio, u32 num_lanes, u32 max_lanes, u32 depth,
+               bitfield32_t flags, u32 tether = 0) {
+    prio_ = prio;
     max_lanes_ = max_lanes;
     num_lanes_ = num_lanes;
     depth_ = depth;
     flags_ = flags;
+    tether_ = tether;
   }
 
   /** Copy constructor */
   PriorityInfo(const PriorityInfo &priority) {
+    prio_ = priority.prio_;
     max_lanes_ = priority.max_lanes_;
     num_lanes_ = priority.num_lanes_;
     depth_ = priority.depth_;
     flags_ = priority.flags_;
+    tether_ = priority.tether_;
   }
 
   /** Move constructor */
   PriorityInfo(PriorityInfo &&priority) noexcept {
+    prio_ = priority.prio_;
     max_lanes_ = priority.max_lanes_;
     num_lanes_ = priority.num_lanes_;
     depth_ = priority.depth_;
     flags_ = priority.flags_;
+    tether_ = priority.tether_;
   }
 
   /** Copy assignment operator */
   PriorityInfo& operator=(const PriorityInfo &priority) {
     if (this != &priority) {
+      prio_ = priority.prio_;
       max_lanes_ = priority.max_lanes_;
       num_lanes_ = priority.num_lanes_;
       depth_ = priority.depth_;
       flags_ = priority.flags_;
+      tether_ = priority.tether_;
     }
     return *this;
   }
@@ -90,10 +106,12 @@ struct PriorityInfo {
   /** Move assignment operator */
   PriorityInfo& operator=(PriorityInfo &&priority) noexcept {
     if (this != &priority) {
+      prio_ = priority.prio_;
       max_lanes_ = priority.max_lanes_;
       num_lanes_ = priority.num_lanes_;
       depth_ = priority.depth_;
       flags_ = priority.flags_;
+      tether_ = priority.tether_;
     }
     return *this;
   }
@@ -101,10 +119,12 @@ struct PriorityInfo {
   /** Serialize Priority Info */
   template<typename Ar>
   void serialize(Ar &ar) {
+    ar & prio_;
     ar & max_lanes_;
     ar & num_lanes_;
     ar & depth_;
     ar & flags_;
+    ar & tether_;
   }
 };
 

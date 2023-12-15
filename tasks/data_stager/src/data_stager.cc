@@ -40,8 +40,10 @@ class Server : public TaskLib {
 
   /** Register a stager */
   void RegisterStager(RegisterStagerTask *task, RunContext &rctx) {
-    std::string url = task->url_->str();
-    std::unique_ptr<AbstractStager> stager = StagerFactory::Get(url);
+    std::string tag_name = task->tag_name_->str();
+    std::string params = task->params_->str();
+    HILOG(kDebug, "Registering stager {}: {}", task->bkt_id_, tag_name);
+    std::unique_ptr<AbstractStager> stager = StagerFactory::Get(tag_name, params);
     stager->RegisterStager(task, rctx);
     url_map_[rctx.lane_id_].emplace(task->bkt_id_, std::move(stager));
     task->SetModuleComplete();
@@ -51,6 +53,7 @@ class Server : public TaskLib {
 
   /** Unregister stager */
   void UnregisterStager(UnregisterStagerTask *task, RunContext &rctx) {
+    HILOG(kDebug, "Unregistering stager {}", task->bkt_id_);
     if (url_map_[rctx.lane_id_].find(task->bkt_id_) == url_map_[rctx.lane_id_].end()) {
       task->SetModuleComplete();
       return;
@@ -63,6 +66,7 @@ class Server : public TaskLib {
 
   /** Stage in data */
   void StageIn(StageInTask *task, RunContext &rctx) {
+    // HILOG(kDebug, "Beginning stage in");
     std::unordered_map<hermes::BucketId, std::unique_ptr<AbstractStager>>::iterator it =
         url_map_[rctx.lane_id_].find(task->bkt_id_);
     if (it == url_map_[rctx.lane_id_].end()) {

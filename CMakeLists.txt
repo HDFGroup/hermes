@@ -11,12 +11,13 @@ option(HERMES_ENABLE_COVERAGE "Check how well tests cover code" OFF)
 option(HERMES_ENABLE_DOXYGEN "Check how well the code is documented" OFF)
 
 option(HERMES_ENABLE_POSIX_ADAPTER "Build the Hermes POSIX adapter." ON)
-option(HERMES_ENABLE_STDIO_ADAPTER "Build the Hermes stdio adapter." ON)
+option(HERMES_ENABLE_STDIO_ADAPTER "Build the Hermes stdio adapter." OFF)
 option(HERMES_ENABLE_MPIIO_ADAPTER "Build the Hermes MPI-IO adapter." OFF)
 option(HERMES_ENABLE_VFD "Build the Hermes HDF5 Virtual File Driver" OFF)
 option(HERMES_ENABLE_PUBSUB_ADAPTER "Build the Hermes pub/sub adapter." OFF)
 option(HERMES_ENABLE_KVSTORE "Build the Hermes KVStore adapter." OFF)
 option(HERMES_ENABLE_PYTHON "Build the Hermes Python wrapper" ON)
+option(HERMES_ENABLE_ADIOS "Build the Hermes Python wrapper" ON)
 
 option(HERMES_MPICH "Specify that this a MPICH build" OFF)
 option(HERMES_OPENMPI "Specify that this a OpenMPI build" OFF)
@@ -45,6 +46,30 @@ add_compile_options(-march=native -fomit-frame-pointer)
 if(NOT HERMES_EXPORTED_TARGETS)
     set(HERMES_EXPORTED_TARGETS "hrun-targets")
 endif()
+
+#-----------------------------------------------------------------------------
+# Coverage
+#-----------------------------------------------------------------------------
+if(HERMES_ENABLE_COVERAGE)
+    set(COVERAGE_FLAGS "-fprofile-arcs -ftest-coverage --coverage" CACHE STRING
+            "Flags to the coverage program to perform coverage inspection"
+    )
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COVERAGE_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${COVERAGE_FLAGS}")
+
+    mark_as_advanced(COVERAGE_FLAGS)
+
+    macro(set_coverage_flags target)
+        target_link_libraries(${target} gcov)
+#        set_target_properties(${target}
+#                PROPERTIES
+#                COMPILE_FLAGS ${COVERAGE_FLAGS}
+#                LINK_FLAGS ${COVERAGE_FLAGS}
+#        )
+    endmacro()
+endif()
+add_custom_target(coverage COMMAND bash ${CMAKE_SOURCE_DIR}/ci/coverage.sh
+        ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR})
 
 #-----------------------------------------------------------------------------
 # Find Packages

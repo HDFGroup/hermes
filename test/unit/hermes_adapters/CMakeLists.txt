@@ -1,5 +1,4 @@
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHERMES_PRELOAD -DHERMES_RPC_THALLIUM")
-set(ADAPTER_COMMON ${CMAKE_CURRENT_SOURCE_DIR}/catch_config.h)
 set(HERMES_ADAPTER_TEST_DIR ${HERMES_ADAPTER_DIR}/test)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
@@ -19,7 +18,7 @@ if(HERMES_ENABLE_STDIO_ADAPTER)
 endif()
 
 if(HERMES_ENABLE_MPIIO_ADAPTER)
-  # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/mpiio)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/mpiio)
 endif()
 
 if(HERMES_ENABLE_PUBSUB_ADAPTER)
@@ -27,5 +26,5 @@ if(HERMES_ENABLE_PUBSUB_ADAPTER)
 endif()
 
 if(HERMES_ENABLE_VFD)
-  # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vfd)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vfd)
 endif()

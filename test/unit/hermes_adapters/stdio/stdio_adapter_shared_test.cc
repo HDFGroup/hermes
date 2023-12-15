@@ -10,26 +10,28 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-TEST_CASE("SharedSTDIORead", "[process=" + std::to_string(TEST_INFO->comm_size_) +
-                                 "]"
-                                 "[operation=batched_read]"
-                                 "[request_size=type-fixed][repetition=" +
-                                 std::to_string(TEST_INFO->num_iterations_) +
-                                 "]"
-                                 "[mode=shared]"
-                                 "[pattern=sequential][file=1]") {
-  TEST_INFO->Pretest();
+#include "stdio_adapter_test.h"
+
+TEST_CASE("SharedSTDIORead", "[process=" + std::to_string(TESTER->comm_size_) +
+    "]"
+    "[operation=batched_read]"
+    "[request_size=type-fixed][repetition=" +
+    std::to_string(TESTER->num_iterations_) +
+    "]"
+    "[mode=shared]"
+    "[pattern=sequential][file=1]") {
+  TESTER->Pretest();
 
   SECTION("read from existing file") {
-    test::test_fopen(TEST_INFO->existing_shared_file.c_str(), "r+");
-    REQUIRE(test::fh_orig != nullptr);
-    std::string data(TEST_INFO->request_size_, '1');
-    for (size_t i = 0; i < TEST_INFO->num_iterations_; ++i) {
-      test::test_fread(data.data(), TEST_INFO->request_size_);
-      REQUIRE(test::size_read_orig == TEST_INFO->request_size_);
+    TESTER->test_fopen(TESTER->shared_existing_file_, "r+");
+    REQUIRE(TESTER->fh_orig_ != nullptr);
+    std::string data(TESTER->request_size_, '1');
+    for (size_t i = 0; i < TESTER->num_iterations_; ++i) {
+      TESTER->test_fread(data.data(), TESTER->request_size_);
+      REQUIRE(TESTER->size_read_orig_ == TESTER->request_size_);
     }
-    test::test_fclose();
-    REQUIRE(test::status_orig == 0);
+    TESTER->test_fclose();
+    REQUIRE(TESTER->status_orig_ == 0);
   }
-  posttest();
+  TESTER->Posttest();
 }

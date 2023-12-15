@@ -24,7 +24,7 @@ class Client : public TaskLibClient {
                   const std::string &state_name) {
     id_ = TaskStateId::GetNull();
     std::vector<PriorityInfo> queue_info = {
-        {1, 1, 1, 0},
+        {TaskPrio::kAdmin, 1, 1, 1, 0},
     };
     id_ = HRUN_ADMIN->CreateTaskStateRoot<ConstructTask>(
         domain_id, state_name, id_, queue_info);

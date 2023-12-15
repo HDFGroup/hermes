@@ -177,6 +177,10 @@ class Client : public TaskLibClient {
         task, task_node, domain_id);
   }
   HRUN_TASK_NODE_ADMIN_ROOT(StopRuntime);
+  void StopRuntimeRoot(const DomainId &domain_id) {
+    FlushRoot(domain_id);
+    AsyncStopRuntimeRoot(domain_id);
+  }
 
   /** Set work orchestrator queue policy */
   void AsyncSetWorkOrchQueuePolicyConstruct(SetWorkOrchQueuePolicyTask *task,
@@ -242,7 +246,7 @@ class Client : public TaskLibClient {
       }
       // FlushRoot(DomainId::GetLocal());
       HRUN_CLIENT->Yield<TASK_YIELD_STD>();
-      // HILOG(kInfo, "{} Could not allocate buffer of size {} (1)?", THREAD_MODEL, size);
+      HILOG(kDebug, "{} Waiting to allocate buffer of size {} (1)?", size);
     }
     return p;
   }
