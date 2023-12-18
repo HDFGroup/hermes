@@ -2,6 +2,7 @@
 
 # CD into git workspace
 cd ${GITHUB_WORKSPACE}
+git submodule update --init
 
 set -x
 set -e
