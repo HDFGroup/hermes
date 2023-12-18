@@ -71,10 +71,10 @@ jobs:
         if: steps.spack-cache.outputs.cache-hit != 'true'
         run: ci/install_deps.sh
 
-#      - name: Build
-#        if: steps.hermes-cache.outputs.cache-hit != 'true'
-#        run: ci/build_hermes.sh
-#
+      - name: Build and Test
+        # if: steps.hermes-cache.outputs.cache-hit != 'true'
+        run: ci/build_hermes.sh
+
 #      - name: Test
 #        run: bash ci/test_hermes.sh
 #
