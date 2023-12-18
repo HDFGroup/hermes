@@ -13,10 +13,18 @@ INSTALL_DIR="${HOME}"
 SPACK_DIR=${INSTALL_DIR}/spack
 . ${SPACK_DIR}/share/spack/setup-env.sh
 
+# Load hermes_shm
 mkdir -p "${HOME}/install"
 mkdir build
 cd build
 spack load hermes_shm
+
+# Install jarvis-cd
+git clone https://github.com/grc-iit/jarvis-cd.git
+cd jarvis-cd
+pip install -e . -r requirements.txt
+
+# Build Hermes
 cmake ../ \
 -DCMAKE_BUILD_TYPE=Debug \
 -DCMAKE_INSTALL_PREFIX="${HOME}/install" \
