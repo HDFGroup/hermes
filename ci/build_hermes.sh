@@ -21,8 +21,9 @@ spack load hermes_shm
 
 # Install jarvis-cd
 git clone https://github.com/grc-iit/jarvis-cd.git
-cd jarvis-cd
+pushd jarvis-cd
 pip install -e . -r requirements.txt
+popd
 
 # Build Hermes
 cmake ../ \
