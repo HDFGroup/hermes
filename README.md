@@ -57,6 +57,6 @@ We follow the [Google C++ Style Guide](https://google.github.io/styleguide/cppgu
 ## Docker
 
 ```
-sudo docker build -t hermes_deps ${HOME}/Documents/Projects/PhD/hermes -f docker/deps.Dockerfile
-sudo docker run -it --name hermes_deps_c --network host hermes_deps
+docker build -t hermes_deps ${HOME}/Documents/Projects/PhD/hermes -f docker/deps.Dockerfile
+docker run -it --mount src=${PWD},target=/hermes,type=bind --name hermes_deps_c --network host hermes_deps
 ```

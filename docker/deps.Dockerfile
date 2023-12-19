@@ -25,16 +25,23 @@ ENV INSTALL_DIR="${HOME}"
 ENV SPACK_DIR="${INSTALL_DIR}/spack"
 ENV SPACK_VERSION="v0.20.2"
 ENV HERMES_DEPS_DIR="${HOME}/hermes_deps"
+ENV HERMES_DIR="${HOME}/hermes"
 
 # Install Spack
 RUN git clone -b ${SPACK_VERSION} https://github.com/spack/spack ${SPACK_DIR} && \
     . ${SPACK_DIR}/share/spack/setup-env.sh && \
-    git clone -b dev https://github.com/HDFGroup/hermes.git ${HERMES_DEPS_DIR} && \
+    git clone -b dev https://github.com/lukemartinlogan/hermes.git ${HERMES_DEPS_DIR} && \
+    # git clone -b dev https://github.com/HDFGroup/hermes.git ${HERMES_DEPS_DIR} && \
     spack repo add ${HERMES_DEPS_DIR}/ci/hermes && \
-    spack external find #&& \
-    # spack install hermes_shm@master+vfd+mpiio^mpich@3.3.2
+    mkdir -p ${HERMES_DIR} && \
+    spack external find
+
+# COPY docker/packages.yaml ~/.spack/packages.yaml
+
+RUN . ${SPACK_DIR}/share/spack/setup-env.sh && \
+    spack install hermes_shm@master+vfd+mpiio^mpich@3.3.2
 
 # Install jarvis-cd
 RUN git clone https://github.com/grc-iit/jarvis-cd.git && \
-    pushd jarvis-cd && \
+    cd jarvis-cd && \
     pip install -e . -r requirements.txt

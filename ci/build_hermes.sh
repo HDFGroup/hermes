@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# CD into git workspace
+# THIS SCRIPT IS EXECUTED BY CONTAINER!!!
+# CD into Hermes directory in container
 cd ${GITHUB_WORKSPACE}
 git submodule update --init
 
@@ -8,28 +9,14 @@ set -x
 set -e
 set -o pipefail
 
-# Download from dockerhub
-docker pull lukemartinlogan/hermes_deps:latest
-docker run lukemartinlogan/hermes_deps:latest
-
-# Set spack env
-INSTALL_DIR="${HOME}"
-SPACK_DIR=${INSTALL_DIR}/spack
-. ${SPACK_DIR}/share/spack/setup-env.sh
-
 # Load hermes_shm
+. ${SPACK_DIR}/share/spack/setup-env.sh
+spack load hermes_shm
+
+# Build Hermes
 mkdir -p "${HOME}/install"
 mkdir build
 cd build
-spack load hermes_shm
-
-# Install jarvis-cd
-git clone https://github.com/grc-iit/jarvis-cd.git
-pushd jarvis-cd
-pip install -e . -r requirements.txt
-popd
-
-# Build Hermes
 cmake ../ \
 -DCMAKE_BUILD_TYPE=Debug \
 -DCMAKE_INSTALL_PREFIX="${HOME}/install" \
@@ -41,6 +28,7 @@ cmake ../ \
 make -j8
 make install
 
+# Test Hermes
 export CXXFLAGS=-Wall
 ctest -VV
 

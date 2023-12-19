@@ -343,8 +343,8 @@ class Server : public TaskLib {
       task->blob_id_ = GetOrCreateBlobId(task->tag_id_, task->lane_hash_,
                                          blob_name, rctx, task->flags_);
     }
-    HILOG(kDebug, "Beginning PUT for (hash: {}) {}",
-          std::hash<hshm::charbuf>{}(blob_name), blob_name.str());
+    HILOG(kDebug, "Beginning PUT for (hash: {})",
+          std::hash<hshm::charbuf>{}(blob_name));
     BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
     BlobInfo &blob_info = blob_map[task->blob_id_];
     blob_info.score_ = task->score_;
