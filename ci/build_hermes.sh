@@ -8,6 +8,10 @@ set -x
 set -e
 set -o pipefail
 
+# Download from dockerhub
+docker pull lukemartinlogan/hermes_deps:latest
+docker run lukemartinlogan/hermes_deps:latest
+
 # Set spack env
 INSTALL_DIR="${HOME}"
 SPACK_DIR=${INSTALL_DIR}/spack

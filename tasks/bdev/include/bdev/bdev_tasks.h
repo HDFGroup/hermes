@@ -182,13 +182,19 @@ struct WriteTask : public Task, TaskFlags<TF_LOCAL> {
             size_t disk_off,
             size_t size) : Task(alloc) {
     // Initialize task
+    static int counter = 0;
     task_node_ = task_node;
-    lane_hash_ = disk_off;
-    prio_ = TaskPrio::kHighLatency;
+    lane_hash_ = ++counter;
+    if (size < KILOBYTES(8)) {
+      prio_ = TaskPrio::kLowLatency;
+    } else {
+      prio_ = TaskPrio::kHighLatency;
+    }
     task_state_ = state_id;
     method_ = Method::kWrite;
     task_flags_.SetBits(TASK_UNORDERED | TASK_REMOTE_DEBUG_MARK);
     domain_id_ = domain_id;
+    counter += 1;
 
     // Free params
     buf_ = buf;
@@ -226,9 +232,11 @@ struct ReadTask : public Task, TaskFlags<TF_LOCAL> {
            char *buf,
            size_t disk_off,
            size_t size) : Task(alloc) {
+    static int counter = 0;
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = disk_off;
+    lane_hash_ = counter;
+    ++counter;
     if (size < KILOBYTES(8)) {
       prio_ = TaskPrio::kLowLatency;
     } else {

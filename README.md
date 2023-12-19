@@ -53,3 +53,10 @@ make install
 ## Contributing
 
 We follow the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html). You can run `make lint` to ensure that your code conforms to the style. This requires the `cpplint` Python module (`pip install cpplint`). Alternatively, you can let the CI build inform you of required style changes.
+
+## Docker
+
+```
+sudo docker build -t hermes_deps ${HOME}/Documents/Projects/PhD/hermes -f docker/deps.Dockerfile
+sudo docker run -it --name hermes_deps_c --network host hermes_deps
+```
