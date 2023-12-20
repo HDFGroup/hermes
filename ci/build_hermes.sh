@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# ARGS:
+# SPACK_DIR: the path to spack
+
 # THIS SCRIPT IS EXECUTED BY CONTAINER!!!
 set -x
 set -e
@@ -18,32 +21,34 @@ pip install -e . -r requirements.txt
 popd
 
 # Load scspkg environment
-if ! shopt -q login_shell; then
-  if [ -d /etc/profile.d ]; then
-    for i in /etc/profile.d/*.sh; do
-      if [ -r $i ]; then
-        . $i
-      fi
-    done
-  fi
-fi
+. /module_load.sh
 module use "$(scspkg module dir)"
 
-# CD into Hermes directory in container
-git config --global --add safe.directory '*'
-cd hermes
-git submodule update --init
-
 # Load hermes_shm
-. ${SPACK_DIR}/share/spack/setup-env.sh
+. "${SPACK_DIR}/share/spack/setup-env.sh"
+spack module tcl refresh --delete-tree -y
 spack load hermes_shm
+# module use "${SPACK_DIR}/share/spack/modules/linux-ubuntu22.04-zen2"
 
 # Create Hermes module
 scspkg create hermes
-scspkg env prepend hermes PATH /hermes/build
-scspkg env prepend hermes LIBRARY_PATH /hermes/build
-scspkg env prepend hermes LD_LIBRARY_PATH /hermes/build
+scspkg env prepend hermes PATH /hermes/build/bin
+scspkg env prepend hermes LIBRARY_PATH /hermes/build/bin
+scspkg env prepend hermes LD_LIBRARY_PATH /hermes/build/bin
 module load hermes
+
+# Initialize the Jarvis testing Hermes environment
+jarvis init \
+"${HOME}/jarvis-config" \
+"${HOME}/jarvis-priv" \
+"${HOME}/jarvis-shared"
+cp /hermes/ci/resource_graph.yaml /jarvis-cd/config/resource_graph.yaml
+jarvis env build hermes
+
+# CD into Hermes directory in container
+cd /hermes
+git config --global --add safe.directory '*'
+git submodule update --init
 
 # Build Hermes
 mkdir -p build
@@ -59,20 +64,12 @@ cmake ../ \
 make -j8
 make install
 
-# Initialize the Jarvis testing Hermes environment
-jarvis init \
-"${HOME}/jarvis-config" \
-"${HOME}/jarvis-priv" \
-"${HOME}/jarvis-shared"
-cp /hermes/ci/resource_graph.yaml /jarvis-cd/config/resource_graph.yaml
-jarvis env build hermes
-
 # Test Hermes
 export CXXFLAGS=-Wall
 ctest -VV
 
 # Run make install unit test
-cd test/unit/external
+cd /hermes/test/unit/external
 mkdir build
 cd build
 cmake ../

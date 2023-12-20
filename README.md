@@ -56,8 +56,30 @@ We follow the [Google C++ Style Guide](https://google.github.io/styleguide/cppgu
 
 ## Docker
 
+Build container with Hermes dependencies:
 ```
 docker build -t lukemartinlogan/hermes_deps . -f docker/deps.Dockerfile
-docker run -it --mount src=${PWD},target=/hermes,type=bind --name hermes_deps_c --network host lukemartinlogan/hermes_deps
+```
+
+Run the container with the Hermes source mounted:
+```
+docker run -it --mount src=${PWD},target=/hermes,type=bind \
+--name hermes_deps_c \
+--network host \
+--memory=4G \
+--shm-size=4G \
+-p 4000:4000 \
+-p 4001:4001 \
+lukemartinlogan/hermes_deps
+```
+
+Build Hermes + Jarvis (in container):
+```
+bash /hermes/ci/build_hermes.sh
+```
+
+```
 docker push lukemartinlogan/hermes_deps
+docker stop /hermes_deps_c
+docker rm /hermes_deps_c
 ```
