@@ -79,6 +79,7 @@ bash /hermes/ci/build_hermes.sh
 ```
 
 ```
+docker commit hermes_deps_c lukemartinlogan/hermes_deps
 docker push lukemartinlogan/hermes_deps
 docker stop /hermes_deps_c
 docker rm /hermes_deps_c
