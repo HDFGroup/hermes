@@ -65,7 +65,7 @@ jobs:
 
       - name: Build and Test
 #        if: steps.hermes-cache.outputs.cache-hit != 'true'
-        run: docker exec /hermes_deps_c hermes/ci/build_hermes.sh
+        run: docker exec /hermes_deps_c bash hermes/ci/build_hermes.sh
 
 #      - name: Test
 #        run: bash ci/test_hermes.sh
@@ -79,7 +79,7 @@ jobs:
 #        run: pushd ci/cluster && ./multi_node_ci_test.sh
 
       - name: Generate coverage file
-        run: docker exec /hermes_deps_c hermes/ci/coverage.sh "hermes/coverage" "hermes/build"
+        run: docker exec /hermes_deps_c bash hermes/ci/coverage.sh "hermes/coverage" "hermes/build"
 
 #      - name: Coveralls
 #        uses: coverallsapp/github-action@master
