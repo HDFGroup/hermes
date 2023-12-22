@@ -102,9 +102,11 @@ class TaskLibClient {
 
  public:
   /** Init from existing ID */
-  void Init(const TaskStateId &id) {
+  void Init(const TaskStateId &id,
+            const QueueId &queue_id) {
     id_ = id;
-    queue_id_ = QueueId(id_);
+    // queue_id_ = QueueId(id_);
+    queue_id_ = queue_id;
   }
 };
 

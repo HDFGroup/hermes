@@ -290,7 +290,10 @@ class Client : public ConfigurationManager {
   /** Get a queue by its ID */
   HSHM_ALWAYS_INLINE
   MultiQueue* GetQueue(const QueueId &queue_id) {
-    return queue_manager_.GetQueue(queue_id);
+    if (queue_id == HRUN_QM_CLIENT->process_queue_) {
+      return queue_manager_.GetQueue(queue_id);
+    }
+    return queue_manager_.GetQueue(HRUN_QM_CLIENT->admin_queue_);
   }
 
   /** Detect if a task is local or remote */

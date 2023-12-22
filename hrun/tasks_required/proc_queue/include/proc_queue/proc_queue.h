@@ -36,12 +36,7 @@ class Client : public TaskLibClient {
                                       const std::string &state_name) {
     id_ = TaskStateId::GetNull();
     QueueManagerInfo &qm = HRUN_CLIENT->server_config_.queue_manager_;
-    std::vector<PriorityInfo> queue_info = {
-        {TaskPrio::kAdmin, 1, 1, qm.queue_depth_, 0},
-        {TaskPrio::kLongRunning, 1, 1, qm.queue_depth_, QUEUE_LONG_RUNNING},
-        // TODO(llogan): Specify different depth for proc queue
-        {TaskPrio::kLowLatency, qm.max_lanes_, qm.max_lanes_, 16, QUEUE_LOW_LATENCY}
-    };
+    std::vector<PriorityInfo> queue_info;
     return HRUN_ADMIN->AsyncCreateTaskState<ConstructTask>(
         task_node, domain_id, state_name, id_, queue_info);
   }
@@ -52,8 +47,7 @@ class Client : public TaskLibClient {
     LPointer<ConstructTask> task =
         AsyncCreateRoot(std::forward<Args>(args)...);
     task->Wait();
-    id_ = task->id_;
-    queue_id_ = QueueId(id_);
+    Init(id_, HRUN_ADMIN->queue_id_);
     HRUN_CLIENT->DelTask(task);
   }
 

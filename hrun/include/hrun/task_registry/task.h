@@ -227,12 +227,12 @@ struct TaskFlags : public IsTask {
 /** Prioritization of tasks */
 class TaskPrio {
  public:
-  TASK_PRIO_T kAdmin = 0;
-  TASK_PRIO_T kLongRunning = 1;
-  TASK_PRIO_T kLowLatency = 2;
-  TASK_PRIO_T kHighLatency = 3;
+  TASK_PRIO_T kAdmin = 0;              /**< Admin task lane */
+  TASK_PRIO_T kLongRunning = 1;        /**< Long-running task lane */
+  TASK_PRIO_T kLowLatency = 2;         /**< Low latency task lane */
+  TASK_PRIO_T kLongRunningTether = 3;  /**< Tethered to low latency workers */
+  TASK_PRIO_T kHighLatency = 4;        /**< High latency task lane */
 };
-
 
 /** Used to indicate the amount of work remaining to do when flushing */
 struct WorkPending {

@@ -106,7 +106,7 @@ class Server : public TaskLib {
             client.id_, client.bandwidth_, client.bw_score_);
     }
     fallback_target_ = &targets_.back();
-    blob_mdm_.Init(id_);
+    blob_mdm_.Init(id_, HRUN_ADMIN->queue_id_);
     HILOG(kInfo, "(node {}) Created Blob MDM", HRUN_CLIENT->node_id_);
     task->SetModuleComplete();
   }
@@ -136,9 +136,9 @@ class Server : public TaskLib {
    * */
   void SetBucketMdm(SetBucketMdmTask *task, RunContext &rctx) {
     if (bkt_mdm_.id_.IsNull()) {
-      bkt_mdm_.Init(task->bkt_mdm_);
-      stager_mdm_.Init(task->stager_mdm_);
-      op_mdm_.Init(task->op_mdm_);
+      bkt_mdm_.Init(task->bkt_mdm_, HRUN_ADMIN->queue_id_);
+      stager_mdm_.Init(task->stager_mdm_, HRUN_ADMIN->queue_id_);
+      op_mdm_.Init(task->op_mdm_, HRUN_ADMIN->queue_id_);
       flush_task_ = blob_mdm_.AsyncFlushData(task->task_node_ + 1);
     }
     task->SetModuleComplete();

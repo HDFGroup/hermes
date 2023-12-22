@@ -33,7 +33,7 @@ class Server : public TaskLib {
   void Construct(ConstructTask *task, RunContext &rctx) {
     id_alloc_ = 0;
     node_id_ = HRUN_CLIENT->node_id_;
-    bkt_mdm_.Init(id_);
+    bkt_mdm_.Init(id_, HRUN_ADMIN->queue_id_);
     tag_id_map_.resize(HRUN_QM_RUNTIME->max_lanes_);
     tag_map_.resize(HRUN_QM_RUNTIME->max_lanes_);
     task->SetModuleComplete();
@@ -52,8 +52,8 @@ class Server : public TaskLib {
    * Set the Blob MDM
    * */
   void SetBlobMdm(SetBlobMdmTask *task, RunContext &rctx) {
-    blob_mdm_.Init(task->blob_mdm_);
-    stager_mdm_.Init(task->stager_mdm_);
+    blob_mdm_.Init(task->blob_mdm_, HRUN_ADMIN->queue_id_);
+    stager_mdm_.Init(task->stager_mdm_, HRUN_ADMIN->queue_id_);
     task->SetModuleComplete();
   }
   void MonitorSetBlobMdm(u32 mode, SetBlobMdmTask *task, RunContext &rctx) {

@@ -88,9 +88,9 @@ class Server : public TaskLib {
       return;
     }
     // Create the task queue for the state
-    QueueId qid(task->id_);
-    MultiQueue *queue = HRUN_QM_RUNTIME->CreateQueue(
-        qid, task->queue_info_->vec());
+    // QueueId qid(task->id_);
+    // MultiQueue *queue = HRUN_QM_RUNTIME->CreateQueue(
+    //     qid, task->queue_info_->vec());
     // Allocate the task state
     task->method_ = Method::kConstruct;
     HRUN_TASK_REGISTRY->CreateTaskState(
@@ -98,7 +98,7 @@ class Server : public TaskLib {
         state_name.c_str(),
         task->id_,
         task);
-    queue->flags_.SetBits(QUEUE_READY);
+    // queue->flags_.SetBits(QUEUE_READY);
     task->method_ = Method::kCreateTaskState;
     task->SetModuleComplete();
   }
