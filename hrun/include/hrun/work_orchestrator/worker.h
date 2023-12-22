@@ -151,18 +151,21 @@ class Worker {
   u32 numa_node_;       // TODO(llogan): track NUMA affinity
   ABT_xstream xstream_;
   std::vector<WorkEntry> work_queue_;  /**< The set of queues to poll */
-  /** A set of queues to begin polling in a worker */
+  /**< A set of queues to begin polling in a worker */
   hshm::spsc_queue<std::vector<WorkEntry>> poll_queues_;
-  /** A set of queues to stop polling in a worker */
+  /**< A set of queues to stop polling in a worker */
   hshm::spsc_queue<std::vector<WorkEntry>> relinquish_queues_;
-  size_t sleep_us_;     /** Time the worker should sleep after a run */
-  u32 retries_;         /** The number of times to repeat the internal run loop before sleeping */
-  bitfield32_t flags_;  /** Worker metadata flags */
+  size_t sleep_us_;     /**< Time the worker should sleep after a run */
+  u32 retries_;         /**< The number of times to repeat the internal run loop before sleeping */
+  bitfield32_t flags_;  /**< Worker metadata flags */
   std::unordered_map<hshm::charbuf, TaskNode>
-      group_map_;        /** Determine if a task can be executed right now */
-  hshm::charbuf group_;  /** The current group */
-  WorkPending flush_;    /** Info needed for flushing ops */
-  hshm::Timepoint now_;  /** The current timepoint */
+      group_map_;        /**< Determine if a task can be executed right now */
+  hshm::charbuf group_;  /**< The current group */
+  WorkPending flush_;    /**< Info needed for flushing ops */
+  hshm::Timepoint now_;  /**< The current timepoint */
+  hshm::spsc_queue<void*> stacks_;  /**< Cache of stacks for tasks */
+  int num_stacks_ = 256;  /**< Number of stacks */
+  int stack_size_ = KILOBYTES(64);
 
  public:
   /**===============================================================
@@ -184,6 +187,10 @@ class Worker {
     group_.resize(512);
     group_.resize(0);
     xstream_ = xstream;
+    stacks_.Resize(num_stacks_);
+    for (int i = 0; i < 16; ++i) {
+      stacks_.emplace(malloc(stack_size_));
+    }
     /* int ret = ABT_thread_create_on_xstream(xstream,
                                            [](void *args) { ((Worker*)args)->Loop(); }, this,
                                            ABT_THREAD_ATTR_NULL, &tl_thread_);
@@ -347,6 +354,23 @@ class Worker {
 
   }
 
+  /** Allocate a stack for a task */
+  void* AllocateStack() {
+    void *stack;
+    if (!stacks_.pop(stack).IsNull()) {
+      return stack;
+    }
+    return malloc(stack_size_);
+  }
+
+  /** Free a stack */
+  void FreeStack(void *stack) {
+    if(!stacks_.emplace(stack).IsNull()) {
+      return;
+    }
+    stacks_.Resize(stacks_.size() + num_stacks_);
+  }
+
   /** Run an iteration over a particular queue */
   HSHM_ALWAYS_INLINE
   void PollGrouped(WorkEntry &work_entry, bool flushing) {
@@ -421,21 +445,21 @@ class Worker {
           task->UnsetCoroutine();
         } else if (task->IsCoroutine()) {
           if (!task->IsStarted()) {
-            rctx.stack_ptr_ = malloc(rctx.stack_size_);
+            rctx.stack_ptr_ = AllocateStack();
             if (rctx.stack_ptr_ == nullptr) {
               HILOG(kFatal, "The stack pointer of size {} is NULL",
-                    rctx.stack_size_, rctx.stack_ptr_);
+                    stack_size_, rctx.stack_ptr_);
             }
             rctx.jmp_.fctx = bctx::make_fcontext(
-                (char*)rctx.stack_ptr_ + rctx.stack_size_,
-                rctx.stack_size_, &Worker::RunCoroutine);
+                (char*)rctx.stack_ptr_ + stack_size_,
+                stack_size_, &Worker::RunCoroutine);
             task->SetStarted();
           }
           rctx.jmp_ = bctx::jump_fcontext(rctx.jmp_.fctx, task);
           if (!task->IsStarted()) {
             rctx.jmp_.fctx = bctx::make_fcontext(
-                (char*)rctx.stack_ptr_ + rctx.stack_size_,
-                rctx.stack_size_, &Worker::RunCoroutine);
+                (char*)rctx.stack_ptr_ + stack_size_,
+                stack_size_, &Worker::RunCoroutine);
             task->SetStarted();
           }
         } else {
@@ -450,7 +474,7 @@ class Worker {
 //            HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, id_);
         entry->complete_ = true;
         if (task->IsCoroutine()) {
-          free(rctx.stack_ptr_);
+          FreeStack(rctx.stack_ptr_);
         }
         RemoveTaskGroup(task, exec, work_entry.lane_id_, is_remote);
         EndTask(lane, exec, task, off);
