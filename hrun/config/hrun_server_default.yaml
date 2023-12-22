@@ -9,6 +9,8 @@ work_orchestrator:
 
 ### Queue Manager settings
 queue_manager:
+  # The default depth of process queue
+  proc_queue_depth: 8192
   # The default depth of allocated queues
   queue_depth: 100000
   # The maximum number of lanes per queue
