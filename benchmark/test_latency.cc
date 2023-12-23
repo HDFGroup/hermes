@@ -270,8 +270,8 @@ TEST_CASE("TestRoundTripLatency") {
   size_t ops = (1 << 20);
   // size_t ops = 1024;
   for (size_t i = 0; i < ops; ++i) {
-    client.MdRoot(hrun::DomainId::GetLocal());
-    // client.MdPushRoot(hrun::DomainId::GetLocal());
+    // client.MdRoot(hrun::DomainId::GetLocal());
+    client.MdPushRoot(hrun::DomainId::GetLocal());
   }
   t.Pause();
 
