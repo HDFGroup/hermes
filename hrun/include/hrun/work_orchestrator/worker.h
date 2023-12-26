@@ -401,7 +401,7 @@ class Worker {
         bool was_end = HRUN_TASK_REGISTRY->task_states_.find(task->task_state_) ==
             HRUN_TASK_REGISTRY->task_states_.end();
         HILOG(kInfo, "Was end: {}", was_end);
-        HELOG(kError, "(node {}) Could not find the task state: {}",
+        HELOG(kWarning, "(node {}) Could not find the task state: {}",
               HRUN_CLIENT->node_id_, task->task_state_);
         // entry->complete_ = true;
         // EndTask(lane, exec, task, off);
