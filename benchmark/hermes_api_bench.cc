@@ -147,7 +147,6 @@ void CreateBucketTest(int nprocs, int rank,
   MpiTimer t(MPI_COMM_WORLD);
   t.Resume();
   hapi::Context ctx;
-  std::unordered_map<std::string, std::string> mdm_;
   for (size_t i = 0; i < bkts_per_rank; ++i) {
     int bkt_name_int = rank * bkts_per_rank + i;
     std::string bkt_name = std::to_string(bkt_name_int);
@@ -242,8 +241,7 @@ int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-  TRANSPARENT_HRUN();
-  HERMES->ClientInit();
+  TRANSPARENT_HERMES();
 
   // Get mode
   REQUIRE_ARGC_GE(2)

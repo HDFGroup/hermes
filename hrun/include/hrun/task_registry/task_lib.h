@@ -45,9 +45,10 @@ class TaskLib {
   TaskLib() : id_(TaskStateId::GetNull()) {}
 
   /** Emplace Constructor */
-  void Init(const TaskStateId &id, const std::string &name) {
+  void Init(const TaskStateId &id, const QueueId &queue_id,
+            const std::string &name) {
     id_ = id;
-    queue_id_ = QueueId(id);
+    queue_id_ = queue_id;
     name_ = name;
   }
 
@@ -102,9 +103,11 @@ class TaskLibClient {
 
  public:
   /** Init from existing ID */
-  void Init(const TaskStateId &id) {
+  void Init(const TaskStateId &id,
+            const QueueId &queue_id) {
     id_ = id;
-    queue_id_ = QueueId(id_);
+    // queue_id_ = QueueId(id_);
+    queue_id_ = queue_id;
   }
 };
 
@@ -123,13 +126,13 @@ typedef const char* (*get_task_lib_name_t)(void);
   void* alloc_state(hrun::Admin::CreateTaskStateTask *task, const char *state_name) {\
     hrun::TaskState *exec = reinterpret_cast<hrun::TaskState*>(\
         new TYPE_UNWRAP(TRAIT_CLASS)());\
-    exec->Init(task->id_, state_name);\
+    exec->Init(task->id_, HRUN_CLIENT->GetQueueId(task->id_), state_name);\
     return exec;\
   }\
   void* create_state(hrun::Admin::CreateTaskStateTask *task, const char *state_name) {\
     hrun::TaskState *exec = reinterpret_cast<hrun::TaskState*>(\
         new TYPE_UNWRAP(TRAIT_CLASS)());\
-    exec->Init(task->id_, state_name);\
+    exec->Init(task->id_, HRUN_CLIENT->GetQueueId(task->id_), state_name);\
     RunContext rctx(0);\
     exec->Run(hrun::TaskMethod::kConstruct, task, rctx);\
     return exec;\

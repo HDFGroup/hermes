@@ -55,14 +55,31 @@ class QueueManagerRuntime : public QueueManager {
     queue_map_->resize(max_queues_);
     // Create the admin queue
     MultiQueue *queue;
-    queue = CreateQueue(admin_queue_, {
-      {TaskPrio::kAdmin, 1, 1, qm.queue_depth_, QUEUE_UNORDERED}
-    });
-    queue->flags_.SetBits(QUEUE_READY);
-    queue = CreateQueue(process_queue_, {
+    std::vector<PriorityInfo> queue_info{
         {TaskPrio::kAdmin, 1, 1, qm.queue_depth_, QUEUE_UNORDERED},
         {TaskPrio::kLongRunning, 1, 1, qm.queue_depth_, QUEUE_LONG_RUNNING},
-        {TaskPrio::kLowLatency, qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY}
+        {TaskPrio::kLowLatency, qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY},
+        {TaskPrio::kLongRunningTether, qm.max_lanes_, qm.max_lanes_, qm.queue_depth_,
+         QUEUE_LONG_RUNNING | QUEUE_TETHERED, TaskPrio::kLowLatency},
+        {TaskPrio::kHighLatency, qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY}
+    };
+    queue = CreateQueue(admin_queue_, {
+        {TaskPrio::kAdmin, 1, 1, qm.queue_depth_, QUEUE_UNORDERED},
+        {TaskPrio::kLongRunning, 1, 1, qm.queue_depth_, QUEUE_LONG_RUNNING},
+        {TaskPrio::kLowLatency, qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY},
+        {TaskPrio::kLongRunningTether, qm.max_lanes_, qm.max_lanes_, qm.queue_depth_,
+         QUEUE_LONG_RUNNING | QUEUE_TETHERED, TaskPrio::kLowLatency},
+        {TaskPrio::kHighLatency, qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY}
+    });
+    queue->flags_.SetBits(QUEUE_READY);
+    u32 depth = qm.proc_queue_depth_;
+    queue = CreateQueue(process_queue_, {
+        {TaskPrio::kAdmin, 1, 1, depth, QUEUE_UNORDERED},
+        {TaskPrio::kLongRunning, 1, 1, depth, QUEUE_LONG_RUNNING},
+        {TaskPrio::kLowLatency, qm.max_lanes_, qm.max_lanes_, depth, QUEUE_LOW_LATENCY},
+        {TaskPrio::kLongRunningTether, qm.max_lanes_, qm.max_lanes_, depth,
+         QUEUE_LONG_RUNNING | QUEUE_TETHERED, TaskPrio::kLowLatency},
+        {TaskPrio::kHighLatency, qm.max_lanes_, qm.max_lanes_, depth, QUEUE_LOW_LATENCY}
     });
     queue->flags_.SetBits(QUEUE_READY);
   }

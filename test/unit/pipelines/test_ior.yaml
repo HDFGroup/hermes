@@ -1,14 +1,18 @@
 name: hermes_unit_ior
 env: hermes
 pkgs:
-  - pkg_type: asan
-    pkg_name: asan
   - pkg_type: hermes_run
     pkg_name: hermes_run
+    include: /tmp/test_hermes
     sleep: 5
+    ram: 1g
   - pkg_type: hermes_api
     pkg_name: hermes_api
     posix: true
   - pkg_type: ior
     pkg_name: ior
     api: posix
+    out: /tmp/test_hermes/ior.bin
+    xfer: 1m
+    block: 32g
+    nprocs: 4

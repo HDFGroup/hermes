@@ -74,6 +74,8 @@ add_custom_target(coverage COMMAND bash ${CMAKE_SOURCE_DIR}/ci/coverage.sh
 #-----------------------------------------------------------------------------
 # Find Packages
 #-----------------------------------------------------------------------------
+# This is for compatability with SPACK
+SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # HermesShm
 find_package(HermesShm CONFIG REQUIRED)

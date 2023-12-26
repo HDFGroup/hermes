@@ -45,7 +45,7 @@ class Hermes(CMakePackage):
     depends_on('cereal')
     depends_on('yaml-cpp')
     depends_on('libaio')
-    depends_on('doxygen@1.9.3')
+    depends_on('doxygen')  # @1.9.3
     depends_on('boost@1.7: +context +fiber +filesystem +system +atomic +chrono +serialization +signals +pic +regex')
     depends_on('libfabric fabrics=sockets,tcp,udp,verbs',
                when='+ares')
@@ -53,6 +53,7 @@ class Hermes(CMakePackage):
                when='+only_verbs')
     depends_on('libzmq', '+zmq')
     depends_on('hdf5@1.14.0', when='+vfd')
+    depends_on('adios2', when='+adios')
 
     def cmake_args(self):
         args = []

@@ -34,9 +34,9 @@ class Server : public TaskLib {
   /** Construct data operator table */
   void Construct(ConstructTask *task, RunContext &rctx) {
     task->Deserialize();
-    bkt_mdm_.Init(task->bkt_mdm_);
-    blob_mdm_.Init(task->blob_mdm_);
-    client_.Init(id_);
+    bkt_mdm_.Init(task->bkt_mdm_, HRUN_ADMIN->queue_id_);
+    blob_mdm_.Init(task->blob_mdm_, HRUN_ADMIN->queue_id_);
+    client_.Init(id_, HRUN_ADMIN->queue_id_);
     op_id_map_["min"] = 0;
     op_id_map_["max"] = 1;
     op_graphs_.resize(HRUN_QM_RUNTIME->max_lanes_);

@@ -134,7 +134,7 @@ void WorkOrchestrator::DedicateCores() {
   affiner.IgnorePids(worker_pids);
   affiner.SetCpus(cpu_ids);
   int count = affiner.AffineAll();
-  HILOG(kInfo, "Affining {} processes to {} cores", count, cpu_ids.size());
+  // HILOG(kInfo, "Affining {} processes to {} cores", count, cpu_ids.size());
 }
 
 }  // namespace hrun

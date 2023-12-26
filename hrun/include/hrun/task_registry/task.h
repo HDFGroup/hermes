@@ -227,12 +227,12 @@ struct TaskFlags : public IsTask {
 /** Prioritization of tasks */
 class TaskPrio {
  public:
-  TASK_PRIO_T kAdmin = 0;
-  TASK_PRIO_T kLongRunning = 1;
-  TASK_PRIO_T kLowLatency = 2;
-  TASK_PRIO_T kHighLatency = 3;
+  TASK_PRIO_T kAdmin = 0;              /**< Admin task lane */
+  TASK_PRIO_T kLongRunning = 1;        /**< Long-running task lane */
+  TASK_PRIO_T kLowLatency = 2;         /**< Low latency task lane */
+  TASK_PRIO_T kLongRunningTether = 3;  /**< Tethered to low latency workers */
+  TASK_PRIO_T kHighLatency = 4;        /**< High latency task lane */
 };
-
 
 /** Used to indicate the amount of work remaining to do when flushing */
 struct WorkPending {
@@ -250,10 +250,9 @@ struct WorkPending {
 
 /** Context passed to the Run method of a task */
 struct RunContext {
-  u32 lane_id_;  /**< The lane id of the task */
+  u32 lane_id_;           /**< The lane id of the task */
   bctx::transfer_t jmp_;  /**< Current execution state of the task (runtime) */
-  size_t stack_size_ = KILOBYTES(64);  /**< The size of the stack for the task (runtime) */
-  void *stack_ptr_;                    /**< The pointer to the stack (runtime) */
+  void *stack_ptr_;   /**< The pointer to the stack (runtime) */
   TaskLib *exec_;
   WorkPending *flush_;
 

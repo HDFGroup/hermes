@@ -12,6 +12,8 @@ const inline char* kHrunServerDefaultConfigStr =
 "\n"
 "### Queue Manager settings\n"
 "queue_manager:\n"
+"  # The default depth of process queue\n"
+"  proc_queue_depth: 8192\n"
 "  # The default depth of allocated queues\n"
 "  queue_depth: 100000\n"
 "  # The maximum number of lanes per queue\n"

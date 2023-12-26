@@ -36,6 +36,8 @@ struct WorkOrchestratorInfo {
 struct QueueManagerInfo {
   /** Maximum depth of IPC queues */
   u32 queue_depth_;
+  /** Maximum depth of process queue */
+  u32 proc_queue_depth_;
   /** Maximum number of lanes per IPC queue */
   u32 max_lanes_;
   /** Maximum number of allocatable IPC queues */

@@ -287,10 +287,21 @@ class Client : public ConfigurationManager {
     return alloc->Convert<T, hipc::Pointer>(p);
   }
 
+  /** Get the queue ID */
+  HSHM_ALWAYS_INLINE
+  QueueId GetQueueId(const TaskStateId &id) {
+    if (id == HRUN_QM_CLIENT->process_queue_) {
+      return HRUN_QM_CLIENT->process_queue_;
+    } else {
+      return HRUN_QM_CLIENT->admin_queue_;
+    }
+  }
+
   /** Get a queue by its ID */
   HSHM_ALWAYS_INLINE
   MultiQueue* GetQueue(const QueueId &queue_id) {
-    return queue_manager_.GetQueue(queue_id);
+    QueueId real_id = GetQueueId(queue_id);
+    return queue_manager_.GetQueue(real_id);
   }
 
   /** Detect if a task is local or remote */
