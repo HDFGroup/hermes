@@ -4,7 +4,7 @@
 add_library(posix_bdev SHARED
         posix_bdev.cc)
 add_dependencies(posix_bdev ${Hermes_RUNTIME_DEPS})
-target_link_libraries(posix_bdev ${Hermes_RUNTIME_LIBRARIES} ${LIBAIO_LIBRARY})
+target_link_libraries(posix_bdev ${Hermes_RUNTIME_LIBRARIES})
 
 #------------------------------------------------------------------------------
 # Install Small Message Task Library
