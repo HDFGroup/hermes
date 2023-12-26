@@ -5,7 +5,7 @@
 #ifndef HRUN_TASKS_BDEV_INCLUDE_BDEV_BDEV_TASKS_H_
 #define HRUN_TASKS_BDEV_INCLUDE_BDEV_BDEV_TASKS_H_
 
-#include <libaio.h>
+// #include <libaio.h>
 #include "hrun/api/hrun_client.h"
 #include "hrun/task_registry/task_lib.h"
 #include "hrun_admin/hrun_admin.h"
@@ -166,7 +166,7 @@ struct WriteTask : public Task, TaskFlags<TF_LOCAL> {
   IN size_t disk_off_;    /**< Offset on disk */
   IN size_t size_;        /**< Size in buf */
   TEMP int phase_ = 0;
-  TEMP io_context_t ctx_ = 0;
+  // TEMP io_context_t ctx_ = 0;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -217,7 +217,7 @@ struct ReadTask : public Task, TaskFlags<TF_LOCAL> {
   IN size_t disk_off_;   /**< Offset on disk */
   IN size_t size_;       /**< Size in disk buf */
   TEMP int phase_ = 0;
-  TEMP io_context_t ctx_ = 0;
+  // TEMP io_context_t ctx_ = 0;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
