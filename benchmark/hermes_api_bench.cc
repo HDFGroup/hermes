@@ -26,7 +26,7 @@ void GatherTimes(std::string test_name, size_t io_size, MpiTimer &t) {
   if (t.rank_ == 0) {
     double max = t.GetSec();
     double mbps = io_size / t.GetUsec();
-    HIPRINT("{}: Time: {} sec, MBps (or MOps): {}, Count: {}, Nprocs: {}\n",
+    HILOG(kInfo, "{}: Time: {} sec, MBps (or MOps): {}, Count: {}, Nprocs: {}\n",
             test_name, max, mbps, io_size, t.nprocs_);
   }
 }
@@ -41,6 +41,7 @@ void PutTest(int nprocs, int rank,
   t.Resume();
   for (int j = 0; j < repeat; ++j) {
     for (size_t i = 0; i < blobs_per_rank; ++i) {
+      // HILOG(kInfo, "On blob {}", i)
       size_t blob_name_int = rank * blobs_per_rank + i;
       std::string name = std::to_string(blob_name_int);
       bkt.AsyncPut(name, blob, ctx);

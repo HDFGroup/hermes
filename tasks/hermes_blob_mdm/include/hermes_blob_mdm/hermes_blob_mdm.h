@@ -424,9 +424,10 @@ class Client : public TaskLibClient {
 
   /** Initialize automatic flushing */
   void AsyncFlushDataConstruct(FlushDataTask *task,
-                               const TaskNode &task_node) {
+                               const TaskNode &task_node,
+                               size_t period_ms) {
     HRUN_CLIENT->ConstructTask<FlushDataTask>(
-        task, task_node, id_);
+        task, task_node, id_, period_ms);
   }
   HRUN_TASK_NODE_PUSH_ROOT(FlushData);
 

@@ -239,8 +239,18 @@ struct MultiQueueT<Hshm> : public hipc::ShmContainer {
 
   /** Emplace a SHM pointer to a task */
   HSHM_ALWAYS_INLINE
-  bool Emplace(u32 prio, u32 lane_hash, hipc::Pointer &p, bool complete = false) {
+  bool Emplace(u32 prio, u32 lane_hash,
+               hipc::Pointer &p, bool complete = false) {
     return Emplace(prio, lane_hash, LaneData(p, complete));
+  }
+
+  /**
+   * Emplace a SHM pointer to a task if the queue utilization is less than 50%
+   * */
+  HSHM_ALWAYS_INLINE
+  bool EmplaceFrac(u32 prio, u32 lane_hash,
+                   hipc::Pointer &p, bool complete = false) {
+    return EmplaceFrac(prio, lane_hash, LaneData(p, complete));
   }
 
   /** Emplace a SHM pointer to a task */
@@ -251,6 +261,23 @@ struct MultiQueueT<Hshm> : public hipc::ShmContainer {
     LaneGroup &lane_group = GetGroup(prio);
     u32 lane_id = lane_hash % lane_group.num_lanes_;
     Lane &lane = GetLane(lane_group, lane_id);
+    hshm::qtok_t ret = lane.emplace(data);
+    return !ret.IsNull();
+  }
+
+  /**
+   * Emplace a SHM pointer to a task if the queue utilization is less than 50%
+   * */
+  bool EmplaceFrac(u32 prio, u32 lane_hash, const LaneData &data) {
+    if (IsEmplacePlugged()) {
+      WaitForEmplacePlug();
+    }
+    LaneGroup &lane_group = GetGroup(prio);
+    u32 lane_id = lane_hash % lane_group.num_lanes_;
+    Lane &lane = GetLane(lane_group, lane_id);
+    if (lane.GetSize() * 2 > lane.GetDepth()) {
+      return false;
+    }
     hshm::qtok_t ret = lane.emplace(data);
     return !ret.IsNull();
   }
