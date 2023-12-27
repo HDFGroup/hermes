@@ -253,11 +253,11 @@ class Client : public ConfigurationManager {
   HSHM_ALWAYS_INLINE
   LPointer<char> AllocateBufferServer(size_t size) {
     LPointer<char> p;
-    p = main_alloc_->AllocateLocalPtr<char>(size);
     HILOG(kDebug, "Heap size (1) for {}/{}: {}",
           main_alloc_->GetId().bits_.major_,
           main_alloc_->GetId().bits_.minor_,
           main_alloc_->GetCurrentlyAllocatedSize());
+    p = main_alloc_->AllocateLocalPtr<char>(size);
     return p;
   }
 
