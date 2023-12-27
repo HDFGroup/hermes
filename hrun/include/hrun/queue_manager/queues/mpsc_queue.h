@@ -175,7 +175,8 @@ class mpsc_queue : public ShmContainer {
 
     // Check if there's space in the queue.
     if (size > queue.size()) {
-      HILOG(kInfo, "Queue {}/{} is full, waiting for space", id_, queue_->size());
+      HILOG(kDebug, "Queue {}/{} is full, waiting for space",
+            id_, queue_->size());
       while (true) {
         head = head_.load();
         size = tail - head + 1;
@@ -184,7 +185,7 @@ class mpsc_queue : public ShmContainer {
         }
         HERMES_THREAD_MODEL->Yield();
       }
-      HILOG(kInfo, "Queue {}/{} got scheduled", id_, queue_->size());
+      HILOG(kDebug, "Queue {}/{} got scheduled", id_, queue_->size());
     }
 
     // Emplace into queue at our slot
@@ -283,6 +284,22 @@ class mpsc_queue : public ShmContainer {
     } else {
       return qtok_t::GetNull();
     }
+  }
+
+  /** Current size of queue */
+  size_t GetSize() {
+    size_t tail = tail_.load();
+    size_t head = head_.load();
+    if (tail <= head) {
+      return 0;
+    } else {
+      return tail - head;
+    }
+  }
+
+  /** Max depth of queue */
+  size_t GetDepth() {
+    return (*queue_).size();
   }
 };
 

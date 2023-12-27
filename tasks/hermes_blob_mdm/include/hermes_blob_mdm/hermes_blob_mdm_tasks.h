@@ -1158,7 +1158,8 @@ struct FlushDataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   HSHM_ALWAYS_INLINE explicit
   FlushDataTask(hipc::Allocator *alloc,
                 const TaskNode &task_node,
-                const TaskStateId &state_id) : Task(alloc) {
+                const TaskStateId &state_id,
+                size_t period_ms) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = 0;
@@ -1171,7 +1172,7 @@ struct FlushDataTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
         TASK_LONG_RUNNING |
         TASK_COROUTINE |
         TASK_REMOTE_DEBUG_MARK);
-    SetPeriodSec(5);  // TODO(llogan): don't hardcode this
+    SetPeriodMs((double)period_ms);
     domain_id_ = DomainId::GetLocal();
   }
 

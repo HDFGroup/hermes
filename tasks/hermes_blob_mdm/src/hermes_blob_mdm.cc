@@ -139,7 +139,8 @@ class Server : public TaskLib {
       bkt_mdm_.Init(task->bkt_mdm_, HRUN_ADMIN->queue_id_);
       stager_mdm_.Init(task->stager_mdm_, HRUN_ADMIN->queue_id_);
       op_mdm_.Init(task->op_mdm_, HRUN_ADMIN->queue_id_);
-      flush_task_ = blob_mdm_.AsyncFlushData(task->task_node_ + 1);
+      flush_task_ = blob_mdm_.AsyncFlushData(
+          task->task_node_ + 1, HERMES_SERVER_CONF.borg_.flush_period_);
     }
     task->SetModuleComplete();
   }
