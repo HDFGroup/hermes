@@ -254,6 +254,10 @@ class Client : public ConfigurationManager {
   LPointer<char> AllocateBufferServer(size_t size) {
     LPointer<char> p;
     p = main_alloc_->AllocateLocalPtr<char>(size);
+    HILOG(kDebug, "Heap size (1) for {}/{}: {}",
+          main_alloc_->GetId().bits_.major_,
+          main_alloc_->GetId().bits_.minor_,
+          main_alloc_->GetCurrentlyAllocatedSize());
     return p;
   }
 
