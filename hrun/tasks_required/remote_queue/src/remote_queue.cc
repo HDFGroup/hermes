@@ -391,10 +391,6 @@ class Server : public TaskLib {
             HRUN_CLIENT->node_id_, state_id);
       req.respond(std::string());
       return;
-    } else {
-      HILOG(kDebug, "(node {}) Found task state {}",
-            HRUN_CLIENT->node_id_,
-            state_id);
     }
     TaskPointer task_ptr = exec->LoadStart(method, ar);
     orig_task = task_ptr.ptr_;
