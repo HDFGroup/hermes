@@ -41,7 +41,7 @@ struct AbtWorkerEntry {
 struct WaitTask {
   u32 method_;
   Task *task_;
-  DomainId domain_id_;
+  DomainId ret_domain_;
   TaskState *exec_;
   size_t task_addr_;
   int replica_;
@@ -200,6 +200,7 @@ class Server : public TaskLib {
   void SyncClientSmallPush(std::vector<DataTransfer> &xfer, PushTask *task) {
     std::string params = std::string((char *) xfer[0].data_, xfer[0].data_size_);
     for (int replica = 0; replica < task->domain_ids_.size(); ++replica) {
+      DomainId my_domain = DomainId::GetNode(HRUN_CLIENT->node_id_);
       DomainId domain_id = task->domain_ids_[replica];
       HRUN_THALLIUM->SyncCall<std::string>(domain_id.id_,
                                            "RpcPushSmall",
@@ -207,7 +208,7 @@ class Server : public TaskLib {
                                            task->exec_method_,
                                            (size_t) task,
                                            replica,
-                                           domain_id,
+                                           my_domain,
                                            params);
     }
   }
@@ -220,6 +221,7 @@ class Server : public TaskLib {
       io_type = IoType::kWrite;
     }
     for (int replica = 0; replica < task->domain_ids_.size(); ++replica) {
+      DomainId my_domain = DomainId::GetNode(HRUN_CLIENT->node_id_);
       DomainId domain_id = task->domain_ids_[replica];
       char *data = (char*)xfer[0].data_;
       size_t data_size = xfer[0].data_size_;
@@ -233,7 +235,7 @@ class Server : public TaskLib {
                                                task->exec_method_,
                                                (size_t) task,
                                                replica,
-                                               domain_id,
+                                               my_domain,
                                                params,
                                                data_size,
                                                io_type);
@@ -249,7 +251,7 @@ class Server : public TaskLib {
                     u32 method,
                     size_t task_addr,
                     int replica,
-                    const DomainId &domain_id,
+                    const DomainId &ret_domain,
                     std::string &params) {
     // Create the input data transfer object
     std::vector<DataTransfer> xfer(1);
@@ -263,7 +265,7 @@ class Server : public TaskLib {
     // Process the message
     TaskState *exec;
     Task *orig_task;
-    RpcExec(req, state_id, method, task_addr, replica, domain_id,
+    RpcExec(req, state_id, method, task_addr, replica, ret_domain,
             xfer, orig_task, exec);
     req.respond(std::string());
   }
@@ -274,7 +276,7 @@ class Server : public TaskLib {
                    u32 method,
                    size_t task_addr,
                    int replica,
-                   const DomainId &domain_id,
+                   const DomainId &ret_domain,
                    std::string &params,
                    const tl::bulk &bulk,
                    size_t data_size,
@@ -299,7 +301,7 @@ class Server : public TaskLib {
     }
     TaskState *exec;
     Task *orig_task;
-    RpcExec(req, state_id, method, task_addr, replica, domain_id,
+    RpcExec(req, state_id, method, task_addr, replica, ret_domain,
             xfer, orig_task, exec);
     if (io_type == IoType::kRead) {
       HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.ptr_, data_size);
@@ -314,7 +316,7 @@ class Server : public TaskLib {
                u32 method,
                size_t task_addr,
                int replica,
-               const DomainId &domain_id,
+               const DomainId &ret_domain,
                std::vector<DataTransfer> &xfer,
                Task *&orig_task, TaskState *&exec) {
     size_t data_size = xfer[0].data_size_;
@@ -359,7 +361,7 @@ class Server : public TaskLib {
     // Spawn wait event handler for task completion
     WaitTask wait_task;
     wait_task.method_ = method;
-    wait_task.domain_id_ = domain_id;
+    wait_task.ret_domain_ = ret_domain;
     wait_task.task_ = orig_task;
     wait_task.exec_ = exec;
     wait_task.task_addr_ = task_addr;
@@ -384,7 +386,7 @@ class Server : public TaskLib {
                               wait_task->exec_,
                               wait_task->task_addr_,
                               wait_task->replica_,
-                              wait_task->domain_id_);
+                              wait_task->ret_domain_);
           wait_task->complete_ = true;
         }
         if (i == 0 && wait_task->complete_) {
@@ -401,7 +403,7 @@ class Server : public TaskLib {
   void RpcComplete(u32 method, Task *orig_task,
                    TaskState *exec,
                    size_t task_addr, int replica,
-                   const DomainId &domain_id) {
+                   const DomainId &ret_domain) {
     BinaryOutputArchive<false> ar(DomainId::GetNode(HRUN_CLIENT->node_id_));
     std::vector<DataTransfer> out_xfer = exec->SaveEnd(method, ar, orig_task);
     std::string ret;
@@ -412,7 +414,7 @@ class Server : public TaskLib {
           orig_task->task_node_,
           orig_task->task_state_,
           orig_task->method_)
-    HRUN_THALLIUM->SyncCall<std::string>(domain_id.id_,
+    HRUN_THALLIUM->SyncCall<std::string>(ret_domain.id_,
                                          "RpcClientHandlePushReplicaOutput",
                                          task_addr,
                                          replica,
