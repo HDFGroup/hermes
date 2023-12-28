@@ -38,25 +38,18 @@ struct AbtWorkerEntry {
   : id_(id), server_(server), task_(nullptr), rctx_(nullptr) {}
 };
 
-struct RpcQueueEntry {
+struct WaitTask {
+  u32 method_;
+  Task *task_;
+  TaskState *exec_;
   size_t task_addr_;
   int replica_;
-  std::string ret_;
-
-  bool operator==(const RpcQueueEntry &other) const {
-    return task_addr_ == other.task_addr_ && replica_ == other.replica_;
-  }
-
-  size_t operator()(const RpcQueueEntry &entry) const {
-    return std::hash<size_t>{}(entry.task_addr_) ^
-      std::hash<int>{}(entry.replica_);
-  }
 };
 
 class Server : public TaskLib {
  public:
   std::unique_ptr<hshm::spsc_queue<AbtWorkerEntry*>> threads_;
-  std::unordered_set<RpcQueueEntry, RpcQueueEntry> ret_;
+  hipc::uptr<hipc::mpsc_queue<WaitTask>> wait_;
 
  public:
   Server() = default;
@@ -70,12 +63,17 @@ class Server : public TaskLib {
           &Server::RunPreemptive, entry);
       threads.emplace(entry);
     }
+    AbtWorkerEntry *entry = new AbtWorkerEntry(count, this);
+    entry->thread_ = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(
+        &Server::RunWaitPreemptive, entry);
   }
   void Construct(ConstructTask *task, RunContext &rctx) {
     HILOG(kInfo, "(node {}) Constructing remote queue (task_node={}, task_state={}, method={})",
           HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, task->method_);
     size_t max = HRUN_RPC->num_threads_;
     threads_ = std::make_unique<hshm::spsc_queue<AbtWorkerEntry*>>(max);
+    wait_ = hipc::make_uptr<hipc::mpsc_queue<WaitTask>>(
+        HRUN_CLIENT->server_config_.queue_manager_.queue_depth_);
     CreateThreads(*threads_, max / 2);
     HRUN_THALLIUM->RegisterRpc("RpcPushSmall", [this](
         const tl::request &req,
@@ -172,6 +170,33 @@ class Server : public TaskLib {
     }
   }
 
+  /** An ABT thread to run a WAIT task */
+  static void RunWaitPreemptive(void *data) {
+    AbtWorkerEntry *entry = (AbtWorkerEntry *) data;
+    Server *server = entry->server_;
+    WorkOrchestrator *orchestrator = HRUN_WORK_ORCHESTRATOR;
+    while (orchestrator->IsAlive()) {
+      WaitTask *wait_task;
+      int i = 0;
+      while (!server->wait_->peek(wait_task, i).IsNull()) {
+        Task *orig_task = wait_task->task_;
+        if (orig_task->IsComplete()) {
+          server->wait_->pop();
+          server->RpcComplete(wait_task->method_,
+                              orig_task,
+                              wait_task->exec_,
+                              wait_task->task_addr_,
+                              wait_task->replica_);
+          if (i == 0) {
+            continue;
+          }
+        }
+        ++i;
+      }
+      ABT_thread_yield();
+    }
+  }
+
   /** PUSH using thallium */
   void PushPreemptive(PushTask *task) {
     std::vector<DataTransfer> &xfer = task->xfer_;
@@ -244,7 +269,6 @@ class Server : public TaskLib {
                     size_t task_addr,
                     int replica,
                     std::string &params) {
-    req.respond(std::string());
     // Create the input data transfer object
     std::vector<DataTransfer> xfer(1);
     xfer[0].data_ = params.data();
@@ -257,8 +281,9 @@ class Server : public TaskLib {
     // Process the message
     TaskState *exec;
     Task *orig_task;
-    RpcExec(req, state_id, method, params, xfer, orig_task, exec);
-    RpcComplete(method, orig_task, exec, task_addr, replica);
+    RpcExec(req, state_id, method, task_addr, replica,
+            params, xfer, orig_task, exec);
+    req.respond(std::string());
   }
 
   /** The RPC for processing a message with data */
@@ -271,7 +296,6 @@ class Server : public TaskLib {
                    const tl::bulk &bulk,
                    size_t data_size,
                    IoType io_type) {
-    req.respond(std::string());
     LPointer<char> data =
         HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_ABT>(data_size);
 
@@ -292,20 +316,21 @@ class Server : public TaskLib {
     }
     TaskState *exec;
     Task *orig_task;
-    RpcExec(req, state_id, method, params, xfer, orig_task, exec);
+    RpcExec(req, state_id, method, task_addr, replica,
+            params, xfer, orig_task, exec);
     if (io_type == IoType::kRead) {
       HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.ptr_, data_size);
     }
     HRUN_CLIENT->FreeBuffer(data);
-
-    // Return
-    RpcComplete(method, orig_task, exec, task_addr, replica);
+    req.respond(std::string());
   }
 
   /** Push operation called at the remote server */
   void RpcExec(const tl::request &req,
                const TaskStateId &state_id,
                u32 method,
+               size_t task_addr,
+               int replica,
                std::string &params,
                std::vector<DataTransfer> &xfer,
                Task *&orig_task, TaskState *&exec) {
@@ -347,7 +372,15 @@ class Server : public TaskLib {
           method,
           data_size,
           orig_task->lane_hash_);
-    orig_task->Wait<TASK_YIELD_ABT>();
+
+    // Spawn wait event handler for task completion
+    WaitTask wait_task;
+    wait_task.method_ = method;
+    wait_task.task_ = orig_task;
+    wait_task.exec_ = exec;
+    wait_task.task_addr_ = task_addr;
+    wait_task.replica_ = replica;
+    wait_->emplace(wait_task);
   }
 
   void RpcComplete(u32 method, Task *orig_task,
