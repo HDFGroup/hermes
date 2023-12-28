@@ -41,7 +41,7 @@ struct AbtWorkerEntry {
 class Server : public TaskLib {
  public:
   hipc::uptr<hipc::mpsc_queue<AbtWorkerEntry*>> threads_;
-  Task *cur_root_ = nullptr;
+  hipc::uptr<hipc::mpsc_queue<AbtWorkerEntry*>> root_threads_;
 
  public:
   Server() = default;
@@ -52,11 +52,16 @@ class Server : public TaskLib {
           HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, task->method_);
     threads_ = hipc::make_uptr<hipc::mpsc_queue<AbtWorkerEntry*>>(
         HRUN_RPC->num_threads_ + 16);
+    root_threads_ = hipc::make_uptr<hipc::mpsc_queue<AbtWorkerEntry*>>(4);
     for (int i = 0; i < HRUN_RPC->num_threads_; ++i) {
       AbtWorkerEntry *entry = new AbtWorkerEntry(i, this);
       entry->thread_ = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(
           &Server::RunPreemptive, entry);
-      threads_->emplace(entry);
+      if (i > 0) {
+        threads_->emplace(entry);
+      } else {
+        root_threads_->emplace(entry);
+      }
     }
     HRUN_THALLIUM->RegisterRpc("RpcPushSmall", [this](const tl::request &req,
                                                          TaskStateId state_id,
@@ -90,14 +95,13 @@ class Server : public TaskLib {
     AbtWorkerEntry *entry;
     if (!task->started_) {
       if (task->IsRoot()) {
-        if (cur_root_ == nullptr) {
-          cur_root_ = task;
-        } else if (cur_root_ != task) {
+        if (root_threads_->pop(entry).IsNull()) {
           return;
         }
-      }
-      if (threads_->pop(entry).IsNull()) {
-        return;
+      } else {
+        if (threads_->pop(entry).IsNull()) {
+          return;
+        }
       }
       task->started_ = true;
       entry->rctx_ = &rctx;
@@ -145,9 +149,14 @@ class Server : public TaskLib {
     WorkOrchestrator *orchestrator = HRUN_WORK_ORCHESTRATOR;
     while (orchestrator->IsAlive()) {
       if (entry->task_) {
+        bool is_root = entry->task_->IsRoot();
         server->PushPreemptive(entry->task_);
         entry->task_ = nullptr;
-        server->threads_->emplace(entry);
+        if (is_root) {
+          server->root_threads_->emplace(entry);
+        } else {
+          server->threads_->emplace(entry);
+        }
       }
       ABT_thread_yield();
     }
@@ -193,9 +202,6 @@ class Server : public TaskLib {
     } else {
       task->orig_task_->UnsetStarted();
       task->orig_task_->UnsetDisableRun();
-    }
-    if (task->IsRoot()) {
-      cur_root_ = nullptr;
     }
     task->SetModuleComplete();
   }
