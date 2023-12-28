@@ -244,6 +244,7 @@ class Server : public TaskLib {
                     size_t task_addr,
                     int replica,
                     std::string &params) {
+    req.respond(std::string());
     // Create the input data transfer object
     std::vector<DataTransfer> xfer(1);
     xfer[0].data_ = params.data();
@@ -257,8 +258,7 @@ class Server : public TaskLib {
     TaskState *exec;
     Task *orig_task;
     RpcExec(req, state_id, method, params, xfer, orig_task, exec);
-    RpcComplete(req, method, orig_task, exec, state_id,
-                task_addr, replica);
+    RpcComplete(method, orig_task, exec, task_addr, replica);
   }
 
   /** The RPC for processing a message with data */
@@ -271,6 +271,7 @@ class Server : public TaskLib {
                    const tl::bulk &bulk,
                    size_t data_size,
                    IoType io_type) {
+    req.respond(std::string());
     LPointer<char> data =
         HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_ABT>(data_size);
 
@@ -298,8 +299,7 @@ class Server : public TaskLib {
     HRUN_CLIENT->FreeBuffer(data);
 
     // Return
-    RpcComplete(req, method, orig_task, exec, state_id,
-                task_addr, replica);
+    RpcComplete(method, orig_task, exec, task_addr, replica);
   }
 
   /** Push operation called at the remote server */
@@ -309,8 +309,6 @@ class Server : public TaskLib {
                std::string &params,
                std::vector<DataTransfer> &xfer,
                Task *&orig_task, TaskState *&exec) {
-    // NOTE(llogan): Thallium no longer has to wait
-    req.respond(std::string());
     size_t data_size = xfer[0].data_size_;
     BinaryInputArchive<true> ar(xfer);
 
@@ -352,9 +350,8 @@ class Server : public TaskLib {
     orig_task->Wait<TASK_YIELD_ABT>();
   }
 
-  void RpcComplete(const tl::request &req,
-                   u32 method, Task *orig_task,
-                   TaskState *exec, TaskStateId state_id,
+  void RpcComplete(u32 method, Task *orig_task,
+                   TaskState *exec,
                    size_t task_addr, int replica) {
     BinaryOutputArchive<false> ar(DomainId::GetNode(HRUN_CLIENT->node_id_));
     std::vector<DataTransfer> out_xfer = exec->SaveEnd(method, ar, orig_task);
@@ -363,6 +360,10 @@ class Server : public TaskLib {
     if (out_xfer.size() > 0 && out_xfer[0].data_size_ > 0) {
       ret = std::string((char *) out_xfer[0].data_, out_xfer[0].data_size_);
     }
+    HILOG(kInfo, "Server-side task complete (task_node={}, task_state={}, method={})",
+          orig_task->task_node_,
+          orig_task->task_state_,
+          orig_task->method_)
     HRUN_THALLIUM->SyncCall<std::string>(orig_task->domain_id_.id_,
                                          "RpcClientHandlePushReplicaOutput",
                                          task_addr,
@@ -377,6 +378,10 @@ class Server : public TaskLib {
                                         std::string &ret) {
     req.respond(std::string());
     PushTask *task = (PushTask *) task_addr;
+    HILOG(kInfo, "Client-side task complete (task_node={}, task_state={}, method={})",
+          task->orig_task_->task_node_,
+          task->orig_task_->task_state_,
+          task->orig_task_->method_)
     ClientHandlePushReplicaOutput(replica, ret, task);
   }
 
