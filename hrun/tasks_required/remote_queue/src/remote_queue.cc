@@ -101,7 +101,6 @@ class Server : public TaskLib {
     });
     HRUN_THALLIUM->RegisterRpc("RpcClientHandlePushReplicaOutput", [this](
         const tl::request &req,
-        const tl::bulk &bulk,
         size_t task_addr,
         int replica,
         std::string &ret) {
