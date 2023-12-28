@@ -76,7 +76,7 @@ class Server : public TaskLib {
           HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, task->method_);
     size_t max = HRUN_RPC->num_threads_;
     threads_ = std::make_unique<hshm::spsc_queue<AbtWorkerEntry*>>(max);
-    CreateThreads(*threads_, max);
+    CreateThreads(*threads_, max / 2);
     HRUN_THALLIUM->RegisterRpc("RpcPushSmall", [this](
         const tl::request &req,
         TaskStateId state_id,
