@@ -429,6 +429,14 @@ class Server : public TaskLib {
     BinaryInputArchive<false> ar(xfer);
     task->exec_->LoadEnd(replica, task->exec_method_, ar, task->orig_task_);
     task->rep_ += 1;
+    HILOG(kInfo, "Handled replica output for task "
+                 "(task_node={}, task_state={}, method={}, "
+                 "rep={}, num_reps={})",
+          task->orig_task_->task_node_,
+          task->orig_task_->task_state_,
+          task->orig_task_->method_,
+          task->rep_.load(),
+          task->num_reps_);
     if (task->rep_.load() == task->num_reps_) {
       ClientHandlePushReplicaEnd(task);
     }
