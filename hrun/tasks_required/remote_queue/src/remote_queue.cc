@@ -181,13 +181,13 @@ class Server : public TaskLib {
       while (!server->wait_->peek(wait_task, i).IsNull()) {
         Task *orig_task = wait_task->task_;
         if (orig_task->IsComplete()) {
-          server->wait_->pop();
           server->RpcComplete(wait_task->method_,
                               orig_task,
                               wait_task->exec_,
                               wait_task->task_addr_,
                               wait_task->replica_);
           if (i == 0) {
+            server->wait_->pop();
             continue;
           }
         }
