@@ -146,9 +146,6 @@ class Server : public TaskLib {
     while (orchestrator->IsAlive()) {
       if (entry->task_) {
         server->PushPreemptive(entry->task_);
-        if (entry->task_->IsRoot()) {
-          server->cur_root_ = nullptr;
-        }
         entry->task_ = nullptr;
         server->threads_->emplace(entry);
       }
@@ -185,7 +182,7 @@ class Server : public TaskLib {
   }
 
   /** Handle finalization of PUSH replicate */
-  static void ClientHandlePushReplicaEnd(PushTask *task) {
+  void ClientHandlePushReplicaEnd(PushTask *task) {
     task->exec_->ReplicateEnd(task->orig_task_->method_, task->orig_task_);
     HILOG(kDebug, "Completing task (task_node={}, task_state={}, method={})",
           task->orig_task_->task_node_,
@@ -196,6 +193,9 @@ class Server : public TaskLib {
     } else {
       task->orig_task_->UnsetStarted();
       task->orig_task_->UnsetDisableRun();
+    }
+    if (task->IsRoot()) {
+      cur_root_ = nullptr;
     }
     task->SetModuleComplete();
   }
