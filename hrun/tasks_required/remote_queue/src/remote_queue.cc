@@ -353,9 +353,9 @@ class Server : public TaskLib {
   void RpcComplete(u32 method, Task *orig_task,
                    TaskState *exec,
                    size_t task_addr, int replica) {
+    DomainId orig_domain = orig_task->domain_id_;
     BinaryOutputArchive<false> ar(DomainId::GetNode(HRUN_CLIENT->node_id_));
     std::vector<DataTransfer> out_xfer = exec->SaveEnd(method, ar, orig_task);
-    exec->Del(orig_task->method_, orig_task);
     std::string ret;
     if (out_xfer.size() > 0 && out_xfer[0].data_size_ > 0) {
       ret = std::string((char *) out_xfer[0].data_, out_xfer[0].data_size_);
@@ -364,7 +364,8 @@ class Server : public TaskLib {
           orig_task->task_node_,
           orig_task->task_state_,
           orig_task->method_)
-    HRUN_THALLIUM->SyncCall<std::string>(orig_task->domain_id_.id_,
+    exec->Del(orig_task->method_, orig_task);
+    HRUN_THALLIUM->SyncCall<std::string>(orig_domain.id_,
                                          "RpcClientHandlePushReplicaOutput",
                                          task_addr,
                                          replica,
