@@ -414,13 +414,13 @@ class Server : public TaskLib {
                                         size_t task_addr,
                                         int replica,
                                         std::string &ret) {
-    req.respond(std::string());
     PushTask *task = (PushTask *) task_addr;
     HILOG(kInfo, "Client-side task complete (task_node={}, task_state={}, method={})",
           task->orig_task_->task_node_,
           task->orig_task_->task_state_,
           task->orig_task_->method_)
     ClientHandlePushReplicaOutput(replica, ret, task);
+    req.respond(std::string());
   }
 
   /** Handle output from replica PUSH */
