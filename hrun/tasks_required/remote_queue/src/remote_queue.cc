@@ -41,6 +41,7 @@ struct AbtWorkerEntry {
 class Server : public TaskLib {
  public:
   hipc::uptr<hipc::mpsc_queue<AbtWorkerEntry*>> threads_;
+  Task *cur_root_ = nullptr;
 
  public:
   Server() = default;
@@ -88,10 +89,13 @@ class Server : public TaskLib {
   void Push(PushTask *task, RunContext &rctx) {
     AbtWorkerEntry *entry;
     if (!task->started_) {
-//      task->server_ = this;
-//      task->started_ = true;
-//      HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(
-//          &Server::RunOnce, task);
+      if (task->IsRoot()) {
+        if (cur_root_ == nullptr) {
+          cur_root_ = task;
+        } else if (cur_root_ != task) {
+          return;
+        }
+      }
       if (threads_->pop(entry).IsNull()) {
         return;
       }
@@ -142,6 +146,9 @@ class Server : public TaskLib {
     while (orchestrator->IsAlive()) {
       if (entry->task_) {
         server->PushPreemptive(entry->task_);
+        if (entry->task_->IsRoot()) {
+          server->cur_root_ = nullptr;
+        }
         entry->task_ = nullptr;
         server->threads_->emplace(entry);
       }

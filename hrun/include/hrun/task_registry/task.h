@@ -59,6 +59,8 @@ class TaskLib;
 #define TASK_LANE_ALL BIT_OPT(u32, 19)
 /** This task flushes the runtime */
 #define TASK_FLUSH BIT_OPT(u32, 20)
+/** This task is considered a root task */
+#define TASK_IS_ROOT BIT_OPT(u32, 21)
 /** This task is apart of remote debugging */
 #define TASK_REMOTE_DEBUG_MARK BIT_OPT(u32, 31)
 
@@ -398,6 +400,21 @@ struct Task : public hipc::ShmContainer {
   /** Unset this task as lane-dispersable */
   HSHM_ALWAYS_INLINE void UnsetLaneAll() {
     task_flags_.UnsetBits(TASK_LANE_ALL);
+  }
+
+  /** This task is a root task */
+  HSHM_ALWAYS_INLINE bool IsRoot() {
+    return task_flags_.Any(TASK_IS_ROOT);
+  }
+
+  /** Set this task as a root task */
+  HSHM_ALWAYS_INLINE void SetRoot() {
+    task_flags_.SetBits(TASK_IS_ROOT);
+  }
+
+  /** Unset this task a sa root task */
+  HSHM_ALWAYS_INLINE void UnsetRoot() {
+    task_flags_.UnsetBits(TASK_IS_ROOT);
   }
 
   /** Set period in nanoseconds */
