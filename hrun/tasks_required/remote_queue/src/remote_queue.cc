@@ -368,6 +368,17 @@ class Server : public TaskLib {
     wait_task.replica_ = replica;
     wait_task.complete_ = false;
     wait_->emplace(wait_task);
+
+    HILOG(kDebug,
+          "(node {}) Waiting task (task_node={}, task_state={}/{}, state_name={}, method={}, size={}, lane_hash={})",
+          HRUN_CLIENT->node_id_,
+          orig_task->task_node_,
+          orig_task->task_state_,
+          state_id,
+          exec->name_,
+          method,
+          data_size,
+          orig_task->lane_hash_);
   }
 
   /** An ABT thread to run a WAIT task */
