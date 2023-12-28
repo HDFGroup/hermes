@@ -51,7 +51,7 @@ class Server : public TaskLib {
           HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, task->method_);
     threads_ = hipc::make_uptr<hipc::mpsc_queue<AbtWorkerEntry*>>(
         HRUN_RPC->num_threads_ + 16);
-    for (int i = 0; i < HRUN_RPC->num_threads_; ++i) {
+    for (int i = 0; i < HRUN_RPC->num_threads_ / 2; ++i) {
       AbtWorkerEntry *entry = new AbtWorkerEntry(i, this);
       entry->thread_ = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(
           &Server::RunPreemptive, entry);
@@ -95,8 +95,6 @@ class Server : public TaskLib {
       if (threads_->pop(entry).IsNull()) {
         return;
       }
-      HILOG(kDebug, "Starting task {} on {}",
-            task->task_node_, entry->id_);
       task->started_ = true;
       entry->rctx_ = &rctx;
       entry->task_ = task;
@@ -143,7 +141,6 @@ class Server : public TaskLib {
     WorkOrchestrator *orchestrator = HRUN_WORK_ORCHESTRATOR;
     while (orchestrator->IsAlive()) {
       if (entry->task_) {
-        HILOG(kDebug, "Preempt task {}", entry->task_->task_node_)
         server->PushPreemptive(entry->task_);
         entry->task_ = nullptr;
         server->threads_->emplace(entry);
@@ -157,12 +154,10 @@ class Server : public TaskLib {
     std::vector<DataTransfer> &xfer = task->xfer_;
     switch (xfer.size()) {
       case 1: {
-        HILOG(kDebug, "Pushing to small {} vs {}", task->task_node_, task->orig_task_->task_node_)
         SyncClientSmallPush(xfer, task);
         break;
       }
       case 2: {
-        HILOG(kDebug, "Pushing to io {}", task->task_node_, task->orig_task_->task_node_)
         SyncClientIoPush(xfer, task);
         break;
       }
@@ -178,11 +173,6 @@ class Server : public TaskLib {
     std::vector<DataTransfer> xfer(1);
     xfer[0].data_ = ret.data();
     xfer[0].data_size_ = ret.size();
-    HILOG(kDebug, "Wait got {} bytes of data (task_node={}, task_state={}, method={})",
-          xfer[0].data_size_,
-          task->orig_task_->task_node_,
-          task->orig_task_->task_state_,
-          task->orig_task_->method_);
     BinaryInputArchive<false> ar(xfer);
     task->exec_->LoadEnd(replica, task->exec_method_, ar, task->orig_task_);
   }
@@ -208,25 +198,11 @@ class Server : public TaskLib {
     std::string params = std::string((char *) xfer[0].data_, xfer[0].data_size_);
     for (int replica = 0; replica < task->domain_ids_.size(); ++replica) {
       DomainId domain_id = task->domain_ids_[replica];
-      HILOG(kDebug, "(SM) Transferring {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={})",
-            params.size(),
-            task->orig_task_->task_node_,
-            task->orig_task_->task_state_,
-            task->orig_task_->method_,
-            HRUN_CLIENT->node_id_,
-            domain_id.id_);
       std::string ret = HRUN_THALLIUM->SyncCall<std::string>(domain_id.id_,
                                                              "RpcPushSmall",
                                                              task->exec_->id_,
                                                              task->exec_method_,
                                                              params);
-      HILOG(kDebug, "(SM) Finished {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={})",
-            params.size(),
-            task->orig_task_->task_node_,
-            task->orig_task_->task_state_,
-            task->orig_task_->method_,
-            HRUN_CLIENT->node_id_,
-            domain_id.id_);
       ClientHandlePushReplicaOutput(replica, ret, task);
     }
   }
@@ -242,14 +218,6 @@ class Server : public TaskLib {
       DomainId domain_id = task->domain_ids_[replica];
       char *data = (char*)xfer[0].data_;
       size_t data_size = xfer[0].data_size_;
-      HILOG(kDebug, "(IO) Transferring {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={}, type={})",
-            data_size,
-            task->orig_task_->task_node_,
-            task->orig_task_->task_state_,
-            task->orig_task_->method_,
-            HRUN_CLIENT->node_id_,
-            domain_id.id_,
-            static_cast<int>(io_type));
       std::string ret;
       if (data_size > 0) {
         ret = HRUN_THALLIUM->SyncIoCall<std::string>(domain_id.id_,
@@ -265,14 +233,6 @@ class Server : public TaskLib {
       } else {
         HILOG(kFatal, "(IO) Thallium can't handle 0-sized I/O")
       }
-      HILOG(kDebug, "(IO) Finished transferring {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={}, type={})",
-            data_size,
-            task->orig_task_->task_node_,
-            task->orig_task_->task_state_,
-            task->orig_task_->method_,
-            HRUN_CLIENT->node_id_,
-            domain_id.id_,
-            static_cast<int>(io_type));
       ClientHandlePushReplicaOutput(replica, ret, task);
     }
   }
@@ -463,14 +423,6 @@ class Server : public TaskLib {
                    TaskState *exec, TaskStateId state_id) {
     BinaryOutputArchive<false> ar(DomainId::GetNode(HRUN_CLIENT->node_id_));
     std::vector<DataTransfer> out_xfer = exec->SaveEnd(method, ar, orig_task);
-    HILOG(kDebug, "(node {}) Returning {} bytes of data (task_node={}, task_state={}/{}, method={})",
-          HRUN_CLIENT->node_id_,
-          out_xfer[0].data_size_,
-          orig_task->task_node_,
-          orig_task->task_state_,
-          state_id,
-          method);
-
     exec->Del(orig_task->method_, orig_task);
     if (out_xfer.size() > 0 && out_xfer[0].data_size_ > 0) {
       req.respond(std::string((char *) out_xfer[0].data_, out_xfer[0].data_size_));

@@ -81,6 +81,9 @@ class PushTaskPhase {
   TASK_METHOD_T kWaitSchedule = 1;
 };
 
+#define HERMES_PT_IS_FIRE_FORGET BIT_OPT(u32, 0)
+#define HERMES_PT_MARKED BIT_OPT(u32, 1)
+
 /**
  * Push a task into the per-process queue
  * */
