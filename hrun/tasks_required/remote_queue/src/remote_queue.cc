@@ -74,7 +74,7 @@ class Server : public TaskLib {
     threads_ = std::make_unique<hshm::spsc_queue<AbtWorkerEntry*>>(max);
     wait_ = hipc::make_uptr<hipc::mpsc_queue<WaitTask>>(
         HRUN_CLIENT->server_config_.queue_manager_.queue_depth_);
-    CreateThreads(*threads_, max / 2);
+    CreateThreads(*threads_, max);
     HRUN_THALLIUM->RegisterRpc("RpcPushSmall", [this](
         const tl::request &req,
         TaskStateId state_id,
