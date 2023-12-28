@@ -40,27 +40,31 @@ struct AbtWorkerEntry {
 
 class Server : public TaskLib {
  public:
-  hipc::uptr<hipc::mpsc_queue<AbtWorkerEntry*>> threads_;
-  hipc::uptr<hipc::mpsc_queue<AbtWorkerEntry*>> root_threads_;
+  std::vector<hshm::spsc_queue<AbtWorkerEntry*>> threads_;
 
  public:
   Server() = default;
 
   /** Construct remote queue */
+  void CreateThread(hshm::spsc_queue<AbtWorkerEntry*> &threads,
+                     size_t &i) {
+    AbtWorkerEntry *entry = new AbtWorkerEntry(i, this);
+    entry->thread_ = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(
+        &Server::RunPreemptive, entry);
+    threads.emplace(entry);
+    i += 1;
+  }
   void Construct(ConstructTask *task, RunContext &rctx) {
     HILOG(kInfo, "(node {}) Constructing remote queue (task_node={}, task_state={}, method={})",
           HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, task->method_);
-    threads_ = hipc::make_uptr<hipc::mpsc_queue<AbtWorkerEntry*>>(
-        HRUN_RPC->num_threads_);
-    root_threads_ = hipc::make_uptr<hipc::mpsc_queue<AbtWorkerEntry*>>(1);
-    for (int i = 0; i < HRUN_RPC->num_threads_; ++i) {
-      AbtWorkerEntry *entry = new AbtWorkerEntry(i, this);
-      entry->thread_ = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(
-          &Server::RunPreemptive, entry);
-      if (i > 0) {
-        threads_->emplace(entry);
-      } else {
-        root_threads_->emplace(entry);
+    size_t max = HRUN_RPC->num_threads_;
+    size_t count = 0;
+    threads_.resize(8, hshm::spsc_queue<AbtWorkerEntry*>(max));
+    CreateThread(threads_[0], count);
+    CreateThread(threads_[1], count);
+    while (count < max) {
+      for (int depth = 2; depth < 8; ++depth) {
+        CreateThread(threads_[depth], count);
       }
     }
     HRUN_THALLIUM->RegisterRpc("RpcPushSmall", [this](const tl::request &req,
@@ -94,14 +98,10 @@ class Server : public TaskLib {
   void Push(PushTask *task, RunContext &rctx) {
     AbtWorkerEntry *entry;
     if (!task->started_) {
-      if (task->IsRoot()) {
-        if (root_threads_->pop(entry).IsNull()) {
-          return;
-        }
-      } else {
-        if (threads_->pop(entry).IsNull()) {
-          return;
-        }
+      hshm::spsc_queue<AbtWorkerEntry*> &threads =
+          threads_[task->task_node_.node_depth_];
+      if (threads.pop(entry).IsNull()) {
+        return;
       }
       task->started_ = true;
       entry->rctx_ = &rctx;
@@ -149,14 +149,12 @@ class Server : public TaskLib {
     WorkOrchestrator *orchestrator = HRUN_WORK_ORCHESTRATOR;
     while (orchestrator->IsAlive()) {
       if (entry->task_) {
-        bool is_root = entry->task_->IsRoot();
+        TaskNode task_node = entry->task_->task_node_;
         server->PushPreemptive(entry->task_);
         entry->task_ = nullptr;
-        if (is_root) {
-          server->root_threads_->emplace(entry);
-        } else {
-          server->threads_->emplace(entry);
-        }
+        hshm::spsc_queue<AbtWorkerEntry*> &threads =
+            server->threads_[task_node.node_depth_];
+        threads.emplace(entry);
       }
       ABT_thread_yield();
     }
