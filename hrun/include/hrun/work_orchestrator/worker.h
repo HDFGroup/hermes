@@ -422,7 +422,7 @@ class Worker {
       }
       // Attempt to run the task if it's ready and runnable
       if (!task->IsRunDisabled() && group_avail && should_run) {
-#define REMOTE_DEBUG
+// #define REMOTE_DEBUG
 #ifdef REMOTE_DEBUG
         if (task->task_state_ != HRUN_QM_CLIENT->admin_task_state_ &&
           !task->task_flags_.Any(TASK_REMOTE_DEBUG_MARK) &&
