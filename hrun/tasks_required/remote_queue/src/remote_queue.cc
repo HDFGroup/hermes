@@ -394,7 +394,7 @@ class Server : public TaskLib {
     if (out_xfer.size() > 0 && out_xfer[0].data_size_ > 0) {
       ret = std::string((char *) out_xfer[0].data_, out_xfer[0].data_size_);
     }
-    HILOG(kInfo, "Server-side task complete (task_node={}, task_state={}, method={})",
+    HILOG(kInfo, "Server-side task submitted (task_node={}, task_state={}, method={})",
           orig_task->task_node_,
           orig_task->task_state_,
           orig_task->method_)
@@ -403,6 +403,10 @@ class Server : public TaskLib {
                                          task_addr,
                                          replica,
                                          ret);
+    HILOG(kInfo, "Server-side task complete (task_node={}, task_state={}, method={})",
+          orig_task->task_node_,
+          orig_task->task_state_,
+          orig_task->method_)
   }
 
   /** Handle return of RpcComplete */
