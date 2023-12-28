@@ -84,3 +84,37 @@ docker push lukemartinlogan/hermes_deps
 docker stop /hermes_deps_c
 docker rm /hermes_deps_c
 ```
+
+## Remote Debug
+
+### On personal machine
+```
+ares_node=llogan@ares.cs.iit.edu
+
+local_port=4000
+remote_port=4000
+ssh -L ${local_port}:localhost:${remote_port} -fN ${ares_node}
+
+local_port=4001
+remote_port=4001
+ssh -L ${local_port}:localhost:${remote_port} -fN ${ares_node}
+```
+
+On Ares
+```
+ares_node=ares-comp-27
+
+local_port=4000
+remote_port=4000
+ssh -L ${local_port}:localhost:${remote_port} -fN ${ares_node}
+
+local_port=4001
+remote_port=4001
+ssh -L ${local_port}:localhost:${remote_port} -fN ${ares_node}
+```
+
+Find PIDs of processes using ports
+```
+lsof -i :4000
+lsof -i :4001
+```

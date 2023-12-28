@@ -421,6 +421,10 @@ class Worker {
       }
       // Attempt to run the task if it's ready and runnable
       if (!task->IsRunDisabled() && group_avail && should_run) {
+        HILOG(kDebug, "(node {}) Run task: task_node={} task_state={} worker={}"
+                      "state_name={}, state_method={}",
+              HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, id_,
+              exec->name_, task->method_);
 // #define REMOTE_DEBUG
 #ifdef REMOTE_DEBUG
         if (task->task_state_ != HRUN_QM_CLIENT->admin_task_state_ &&
@@ -470,8 +474,6 @@ class Worker {
       }
       // Cleanup on task completion
       if (task->IsModuleComplete()) {
-//      HILOG(kDebug, "(node {}) Ending task: task_node={} task_state={} worker={}",
-//            HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, id_);
         entry->complete_ = true;
         if (task->IsCoroutine()) {
           FreeStack(rctx.stack_ptr_);
