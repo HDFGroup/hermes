@@ -41,14 +41,18 @@ struct AbtWorkerEntry {
 struct WaitTask {
   u32 method_;
   Task *task_;
+  DomainId domain_id_;
   TaskState *exec_;
   size_t task_addr_;
   int replica_;
+  bool complete_;
+  RunContext *rctx_;
 };
 
 class Server : public TaskLib {
  public:
   std::unique_ptr<hshm::spsc_queue<AbtWorkerEntry*>> threads_;
+  hipc::uptr<hipc::mpsc_queue<WaitTask>> push_;
   hipc::uptr<hipc::mpsc_queue<WaitTask>> wait_;
 
  public:
@@ -71,18 +75,22 @@ class Server : public TaskLib {
     HILOG(kInfo, "(node {}) Constructing remote queue (task_node={}, task_state={}, method={})",
           HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, task->method_);
     size_t max = HRUN_RPC->num_threads_;
-    threads_ = std::make_unique<hshm::spsc_queue<AbtWorkerEntry*>>(max);
+    threads_ = std::make_unique<hshm::spsc_queue<AbtWorkerEntry*>>(1);
+    push_ = hipc::make_uptr<hipc::mpsc_queue<WaitTask>>(
+        HRUN_CLIENT->server_config_.queue_manager_.queue_depth_);
     wait_ = hipc::make_uptr<hipc::mpsc_queue<WaitTask>>(
         HRUN_CLIENT->server_config_.queue_manager_.queue_depth_);
-    CreateThreads(*threads_, max);
+    CreateThreads(*threads_, 1);
     HRUN_THALLIUM->RegisterRpc("RpcPushSmall", [this](
         const tl::request &req,
         TaskStateId state_id,
         u32 method,
         size_t task_addr,
         int replica,
+        const DomainId &domain_id,
         std::string &params) {
-      this->RpcPushSmall(req, state_id, method, task_addr, replica, params);
+      this->RpcPushSmall(req, state_id, method,
+                         task_addr, replica, domain_id, params);
     });
     HRUN_THALLIUM->RegisterRpc("RpcPushBulk", [this](
         const tl::request &req,
@@ -91,10 +99,12 @@ class Server : public TaskLib {
         u32 method,
         size_t task_addr,
         int replica,
+        const DomainId &domain_id,
         std::string &params,
         size_t data_size,
         IoType io_type) {
-      this->RpcPushBulk(req, state_id, method, task_addr, replica,
+      this->RpcPushBulk(req, state_id, method,
+                        task_addr, replica, domain_id,
                         params, bulk, data_size, io_type);
     });
     HRUN_THALLIUM->RegisterRpc("RpcClientHandlePushReplicaOutput", [this](
@@ -118,14 +128,16 @@ class Server : public TaskLib {
 
   /** Push operation called on client */
   void Push(PushTask *task, RunContext &rctx) {
-    AbtWorkerEntry *entry;
     if (!task->started_) {
-      if (threads_->pop(entry).IsNull()) {
-        return;
-      }
+      WaitTask push_task;
+      push_task.task_ = task;
+      push_task.complete_ = false;
+      push_task.rctx_ = &rctx;
       task->started_ = true;
-      entry->rctx_ = &rctx;
-      entry->task_ = task;
+      push_->emplace(push_task);
+    }
+    if (task->rep_.load() == task->num_reps_) {
+      ClientHandlePushReplicaEnd(task);
     }
     // HILOG(kDebug, "Continuing task {}", task->task_node_)
   }
@@ -161,36 +173,17 @@ class Server : public TaskLib {
     Server *server = entry->server_;
     WorkOrchestrator *orchestrator = HRUN_WORK_ORCHESTRATOR;
     while (orchestrator->IsAlive()) {
-      if (entry->task_) {
-        server->PushPreemptive(entry->task_);
-        entry->task_ = nullptr;
-        server->threads_->emplace(entry);
-      }
-      ABT_thread_yield();
-    }
-  }
-
-  /** An ABT thread to run a WAIT task */
-  static void RunWaitPreemptive(void *data) {
-    AbtWorkerEntry *entry = (AbtWorkerEntry *) data;
-    Server *server = entry->server_;
-    WorkOrchestrator *orchestrator = HRUN_WORK_ORCHESTRATOR;
-    while (orchestrator->IsAlive()) {
-      WaitTask *wait_task;
+      WaitTask *push_task;
       int i = 0;
-      while (!server->wait_->peek(wait_task, i).IsNull()) {
-        Task *orig_task = wait_task->task_;
-        if (orig_task->IsComplete()) {
-          server->RpcComplete(wait_task->method_,
-                              orig_task,
-                              wait_task->exec_,
-                              wait_task->task_addr_,
-                              wait_task->replica_);
-          if (i == 0) {
-            wait_task->exec_->Del(orig_task->method_, orig_task);
-            server->wait_->pop();
-            continue;
-          }
+      while (!server->push_->peek(push_task, i).IsNull()) {
+        PushTask *orig_task = (PushTask*) push_task->task_;
+        if (!push_task->complete_ && orig_task->IsComplete()) {
+          server->PushPreemptive(orig_task);
+          push_task->complete_ = true;
+        }
+        if (i == 0 && push_task->complete_) {
+          server->push_->pop();
+          continue;
         }
         ++i;
       }
@@ -229,6 +222,7 @@ class Server : public TaskLib {
                                            task->exec_method_,
                                            (size_t) task,
                                            replica,
+                                           domain_id,
                                            params);
     }
   }
@@ -254,6 +248,7 @@ class Server : public TaskLib {
                                                task->exec_method_,
                                                (size_t) task,
                                                replica,
+                                               domain_id,
                                                params,
                                                data_size,
                                                io_type);
@@ -269,6 +264,7 @@ class Server : public TaskLib {
                     u32 method,
                     size_t task_addr,
                     int replica,
+                    const DomainId &domain_id,
                     std::string &params) {
     // Create the input data transfer object
     std::vector<DataTransfer> xfer(1);
@@ -282,8 +278,8 @@ class Server : public TaskLib {
     // Process the message
     TaskState *exec;
     Task *orig_task;
-    RpcExec(req, state_id, method, task_addr, replica,
-            params, xfer, orig_task, exec);
+    RpcExec(req, state_id, method, task_addr, replica, domain_id,
+            xfer, orig_task, exec);
     req.respond(std::string());
   }
 
@@ -293,6 +289,7 @@ class Server : public TaskLib {
                    u32 method,
                    size_t task_addr,
                    int replica,
+                   const DomainId &domain_id,
                    std::string &params,
                    const tl::bulk &bulk,
                    size_t data_size,
@@ -317,8 +314,8 @@ class Server : public TaskLib {
     }
     TaskState *exec;
     Task *orig_task;
-    RpcExec(req, state_id, method, task_addr, replica,
-            params, xfer, orig_task, exec);
+    RpcExec(req, state_id, method, task_addr, replica, domain_id,
+            xfer, orig_task, exec);
     if (io_type == IoType::kRead) {
       HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.ptr_, data_size);
     }
@@ -332,7 +329,7 @@ class Server : public TaskLib {
                u32 method,
                size_t task_addr,
                int replica,
-               std::string &params,
+               const DomainId &domain_id,
                std::vector<DataTransfer> &xfer,
                Task *&orig_task, TaskState *&exec) {
     size_t data_size = xfer[0].data_size_;
@@ -377,17 +374,49 @@ class Server : public TaskLib {
     // Spawn wait event handler for task completion
     WaitTask wait_task;
     wait_task.method_ = method;
+    wait_task.domain_id_ = domain_id;
     wait_task.task_ = orig_task;
     wait_task.exec_ = exec;
     wait_task.task_addr_ = task_addr;
     wait_task.replica_ = replica;
+    wait_task.complete_ = false;
     wait_->emplace(wait_task);
   }
 
+  /** An ABT thread to run a WAIT task */
+  static void RunWaitPreemptive(void *data) {
+    AbtWorkerEntry *entry = (AbtWorkerEntry *) data;
+    Server *server = entry->server_;
+    WorkOrchestrator *orchestrator = HRUN_WORK_ORCHESTRATOR;
+    while (orchestrator->IsAlive()) {
+      WaitTask *wait_task;
+      int i = 0;
+      while (!server->wait_->peek(wait_task, i).IsNull()) {
+        Task *orig_task = wait_task->task_;
+        if (!wait_task->complete_ && orig_task->IsComplete()) {
+          server->RpcComplete(wait_task->method_,
+                              orig_task,
+                              wait_task->exec_,
+                              wait_task->task_addr_,
+                              wait_task->replica_,
+                              wait_task->domain_id_);
+          wait_task->complete_ = true;
+        }
+        if (i == 0 && wait_task->complete_) {
+          server->wait_->pop();
+          continue;
+        }
+        ++i;
+      }
+      ABT_thread_yield();
+    }
+  }
+
+  /** Complete a wait task */
   void RpcComplete(u32 method, Task *orig_task,
                    TaskState *exec,
-                   size_t task_addr, int replica) {
-    DomainId orig_domain = orig_task->domain_id_;
+                   size_t task_addr, int replica,
+                   const DomainId &domain_id) {
     BinaryOutputArchive<false> ar(DomainId::GetNode(HRUN_CLIENT->node_id_));
     std::vector<DataTransfer> out_xfer = exec->SaveEnd(method, ar, orig_task);
     std::string ret;
@@ -398,7 +427,7 @@ class Server : public TaskLib {
           orig_task->task_node_,
           orig_task->task_state_,
           orig_task->method_)
-    HRUN_THALLIUM->SyncCall<std::string>(orig_domain.id_,
+    HRUN_THALLIUM->SyncCall<std::string>(domain_id.id_,
                                          "RpcClientHandlePushReplicaOutput",
                                          task_addr,
                                          replica,
@@ -407,6 +436,7 @@ class Server : public TaskLib {
           orig_task->task_node_,
           orig_task->task_state_,
           orig_task->method_)
+    exec->Del(orig_task->method_, orig_task);
   }
 
   /** Handle return of RpcComplete */
@@ -432,18 +462,15 @@ class Server : public TaskLib {
     xfer[0].data_size_ = ret.size();
     BinaryInputArchive<false> ar(xfer);
     task->exec_->LoadEnd(replica, task->exec_method_, ar, task->orig_task_);
-    task->rep_ += 1;
     HILOG(kInfo, "Handled replica output for task "
                  "(task_node={}, task_state={}, method={}, "
                  "rep={}, num_reps={})",
           task->orig_task_->task_node_,
           task->orig_task_->task_state_,
           task->orig_task_->method_,
-          task->rep_.load(),
+          task->rep_.load() + 1,
           task->num_reps_);
-    if (task->rep_.load() == task->num_reps_) {
-      ClientHandlePushReplicaEnd(task);
-    }
+    task->rep_ += 1;
   }
 
   /** Handle finalization of PUSH replicate */

@@ -392,17 +392,18 @@ class Worker {
       TaskState *exec = HRUN_TASK_REGISTRY->GetTaskState(task->task_state_);
       rctx.exec_ = exec;
       if (!exec) {
-        for (std::pair<std::string, TaskStateId> entries  : HRUN_TASK_REGISTRY->task_state_ids_) {
-          HILOG(kInfo, "Task state: {} id: {} ptr: {} equal: {}",
-                entries.first, entries.second,
-                (size_t)HRUN_TASK_REGISTRY->task_states_[entries.second],
-                entries.second == task->task_state_);
-        }
+//        for (std::pair<std::string, TaskStateId> entries  : HRUN_TASK_REGISTRY->task_state_ids_) {
+//          HILOG(kInfo, "Task state: {} id: {} ptr: {} equal: {}",
+//                entries.first, entries.second,
+//                (size_t)HRUN_TASK_REGISTRY->task_states_[entries.second],
+//                entries.second == task->task_state_);
+//        }
         bool was_end = HRUN_TASK_REGISTRY->task_states_.find(task->task_state_) ==
             HRUN_TASK_REGISTRY->task_states_.end();
         HILOG(kInfo, "Was end: {}", was_end);
         HELOG(kWarning, "(node {}) Could not find the task state: {}",
               HRUN_CLIENT->node_id_, task->task_state_);
+        off += 1;
         // entry->complete_ = true;
         // EndTask(lane, exec, task, off);
         continue;
@@ -421,7 +422,7 @@ class Worker {
       }
       // Attempt to run the task if it's ready and runnable
       if (!task->IsRunDisabled() && group_avail && should_run) {
-// #define REMOTE_DEBUG
+#define REMOTE_DEBUG
 #ifdef REMOTE_DEBUG
         if (task->task_state_ != HRUN_QM_CLIENT->admin_task_state_ &&
           !task->task_flags_.Any(TASK_REMOTE_DEBUG_MARK) &&
