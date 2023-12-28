@@ -90,6 +90,8 @@ struct PushTask : public Task, TaskFlags<TF_LOCAL> {
   IN std::vector<DataTransfer> xfer_;
   TEMP bool started_ = false;
   TEMP void *server_;
+  TEMP std::atomic<u32> rep_;
+  TEMP u32 num_reps_;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
