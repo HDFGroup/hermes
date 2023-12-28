@@ -46,13 +46,12 @@ struct WaitTask {
   size_t task_addr_;
   int replica_;
   bool complete_;
-  RunContext *rctx_;
 };
 
 class Server : public TaskLib {
  public:
   std::unique_ptr<hshm::spsc_queue<AbtWorkerEntry*>> threads_;
-  hipc::uptr<hipc::mpsc_queue<WaitTask>> push_;
+  hipc::uptr<hipc::mpsc_queue<PushTask*>> push_;
   hipc::uptr<hipc::mpsc_queue<WaitTask>> wait_;
 
  public:
@@ -76,7 +75,7 @@ class Server : public TaskLib {
           HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, task->method_);
     size_t max = HRUN_RPC->num_threads_;
     threads_ = std::make_unique<hshm::spsc_queue<AbtWorkerEntry*>>(1);
-    push_ = hipc::make_uptr<hipc::mpsc_queue<WaitTask>>(
+    push_ = hipc::make_uptr<hipc::mpsc_queue<PushTask*>>(
         HRUN_CLIENT->server_config_.queue_manager_.queue_depth_);
     wait_ = hipc::make_uptr<hipc::mpsc_queue<WaitTask>>(
         HRUN_CLIENT->server_config_.queue_manager_.queue_depth_);
@@ -129,14 +128,10 @@ class Server : public TaskLib {
   /** Push operation called on client */
   void Push(PushTask *task, RunContext &rctx) {
     if (!task->started_) {
-      WaitTask push_task;
-      push_task.task_ = task;
-      push_task.complete_ = false;
-      push_task.rctx_ = &rctx;
       task->started_ = true;
       task->rep_ = 0;
       task->num_reps_ = task->domain_ids_.size();
-      push_->emplace(push_task);
+      push_->emplace(task);
     }
     if (task->rep_.load() == task->num_reps_) {
       ClientHandlePushReplicaEnd(task);
@@ -175,19 +170,9 @@ class Server : public TaskLib {
     Server *server = entry->server_;
     WorkOrchestrator *orchestrator = HRUN_WORK_ORCHESTRATOR;
     while (orchestrator->IsAlive()) {
-      WaitTask *push_task;
-      int i = 0;
-      while (!server->push_->peek(push_task, i).IsNull()) {
-        PushTask *orig_task = (PushTask*) push_task->task_;
-        if (!push_task->complete_ && orig_task->IsComplete()) {
-          server->PushPreemptive(orig_task);
-          push_task->complete_ = true;
-        }
-        if (i == 0 && push_task->complete_) {
-          server->push_->pop();
-          continue;
-        }
-        ++i;
+      PushTask *orig_task;
+      while (!server->push_->pop(orig_task).IsNull()) {
+        server->PushPreemptive(orig_task);
       }
       ABT_thread_yield();
     }
