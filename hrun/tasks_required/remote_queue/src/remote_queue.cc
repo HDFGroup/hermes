@@ -187,6 +187,7 @@ class Server : public TaskLib {
                               wait_task->task_addr_,
                               wait_task->replica_);
           if (i == 0) {
+            wait_task->exec_->Del(orig_task->method_, orig_task);
             server->wait_->pop();
             continue;
           }
@@ -397,7 +398,6 @@ class Server : public TaskLib {
           orig_task->task_node_,
           orig_task->task_state_,
           orig_task->method_)
-    exec->Del(orig_task->method_, orig_task);
     HRUN_THALLIUM->SyncCall<std::string>(orig_domain.id_,
                                          "RpcClientHandlePushReplicaOutput",
                                          task_addr,
