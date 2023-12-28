@@ -327,8 +327,10 @@ class Server : public TaskLib {
     std::vector<DataTransfer> xfer(1);
     xfer[0].data_ = params.data();
     xfer[0].data_size_ = params.size();
-    HILOG(kDebug, "Received small message of size {} "
-                  "(task_state={}, method={})", xfer[0].data_size_, state_id, method);
+    HILOG(kDebug, "(node {}) Received small message of size {} "
+                  "(task_state={}, method={})",
+                  HRUN_CLIENT->node_id_,
+                  xfer[0].data_size_, state_id, method);
 
     // Process the message
     TaskState *exec;
@@ -355,8 +357,9 @@ class Server : public TaskLib {
     xfer[1].data_ = params.data();
     xfer[1].data_size_ = params.size();
 
-    HILOG(kDebug, "Received large message of size {} "
-                  "(task_state={}, method={})", xfer[0].data_size_, state_id, method);
+    HILOG(kDebug, "(node {}) Received large message of size {} "
+                  "(task_state={}, method={})",
+                  HRUN_CLIENT->node_id_, xfer[0].data_size_, state_id, method);
 
     // Process the message
     if (io_type == IoType::kWrite) {
