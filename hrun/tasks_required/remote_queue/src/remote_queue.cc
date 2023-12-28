@@ -134,6 +134,8 @@ class Server : public TaskLib {
       push_task.complete_ = false;
       push_task.rctx_ = &rctx;
       task->started_ = true;
+      task->rep_ = 0;
+      task->num_reps_ = task->domain_ids_.size();
       push_->emplace(push_task);
     }
     if (task->rep_.load() == task->num_reps_) {
@@ -194,8 +196,6 @@ class Server : public TaskLib {
   /** PUSH using thallium */
   void PushPreemptive(PushTask *task) {
     std::vector<DataTransfer> &xfer = task->xfer_;
-    task->rep_ = 0;
-    task->num_reps_ = task->domain_ids_.size();
     switch (xfer.size()) {
       case 1: {
         SyncClientSmallPush(xfer, task);
