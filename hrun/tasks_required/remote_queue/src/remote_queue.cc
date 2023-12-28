@@ -407,6 +407,7 @@ class Server : public TaskLib {
     orig_task->UnsetStarted();
     orig_task->UnsetDataOwner();
     orig_task->UnsetLongRunning();
+    orig_task->UnsetRoot();
 
     // Execute task
     MultiQueue *queue = HRUN_CLIENT->GetQueue(QueueId(state_id));
