@@ -434,8 +434,6 @@ class Worker {
         } else if (task->IsLaneAll()) {
           HRUN_REMOTE_QUEUE->DisperseLocal(task, exec, work_entry.queue_, work_entry.group_);
           task->SetDisableRun();
-          task->SetUnordered();
-          task->UnsetCoroutine();
         } else if (task->IsCoroutine()) {
           if (!task->IsStarted()) {
             rctx.stack_ptr_ = AllocateStack();
