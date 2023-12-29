@@ -59,6 +59,7 @@ class BinaryFileStager : public AbstractStager {
     int fd = HERMES_POSIX_API->open(path_.c_str(), O_CREAT | O_RDWR, 0666);
     if (fd < 0) {
       HELOG(kError, "Failed to open file {}", path_);
+      HRUN_CLIENT->FreeBuffer(blob);
       return;
     }
     ssize_t real_size = HERMES_POSIX_API->pread(fd,
@@ -69,8 +70,10 @@ class BinaryFileStager : public AbstractStager {
     if (real_size < 0) {
       HELOG(kError, "Failed to stage in {} bytes from {}",
             page_size_, path_);
+      HRUN_CLIENT->FreeBuffer(blob);
       return;
     } else if (real_size == 0) {
+      HRUN_CLIENT->FreeBuffer(blob);
       return;
     }
     HILOG(kDebug, "Staged {} bytes from the backend file {}",

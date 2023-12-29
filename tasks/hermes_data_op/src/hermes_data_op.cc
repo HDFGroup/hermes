@@ -218,6 +218,8 @@ class Server : public TaskLib {
                              BlobId::GetNull(),
                              0, sizeof(float),
                              min_lptr.shm_, 0, 0);
+      HRUN_CLIENT->FreeBuffer(in_task->data_);
+      HRUN_CLIENT->DelTask(in_task);
     }
   }
 

@@ -270,8 +270,6 @@ class Server : public TaskLib {
         HELOG(kFatal, "(IO) Thallium can't handle 0-sized I/O")
       }
     }
-//    task->rep_ = task->num_reps_;
-//    return;
   }
 
   /** The RPC for processing a small message */
