@@ -432,12 +432,12 @@ class Worker {
           HRUN_REMOTE_QUEUE->Disperse(task, exec, ids);
           task->SetDisableRun();
           // task->SetUnordered();
-          task->UnsetCoroutine();
+          // task->UnsetCoroutine();
         } else if (task->IsLaneAll()) {
           HRUN_REMOTE_QUEUE->DisperseLocal(task, exec, work_entry.queue_, work_entry.group_);
           task->SetDisableRun();
           // task->SetUnordered();
-          task->UnsetCoroutine();
+          // task->UnsetCoroutine();
         } else if (task->IsCoroutine()) {
           if (!task->IsStarted()) {
             rctx.stack_ptr_ = AllocateStack();
@@ -466,7 +466,7 @@ class Worker {
       // Cleanup on task completion
       if (task->IsModuleComplete()) {
         entry->complete_ = true;
-        if (task->IsCoroutine()) {
+        if (task->IsCoroutine() && !is_remote && !task->IsLaneAll()) {
           FreeStack(rctx.stack_ptr_);
         }
         RemoveTaskGroup(task, exec, work_entry.lane_id_, is_remote);
