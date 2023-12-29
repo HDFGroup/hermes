@@ -87,6 +87,8 @@ class Server : public TaskLib {
         HRUN_CLIENT->server_config_.queue_manager_.queue_depth_);
     wait_ = hipc::make_uptr<hipc::mpsc_queue<WaitTask>>(
         HRUN_CLIENT->server_config_.queue_manager_.queue_depth_);
+    ack_ = hipc::make_uptr<hipc::mpsc_queue<AckTask>>(
+        HRUN_CLIENT->server_config_.queue_manager_.queue_depth_);
     CreateThreads();
     HRUN_THALLIUM->RegisterRpc("RpcPushSmall", [this](
         const tl::request &req,
