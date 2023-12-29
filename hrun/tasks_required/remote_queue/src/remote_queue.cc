@@ -253,6 +253,7 @@ class Server : public TaskLib {
                     int replica,
                     const DomainId &ret_domain,
                     std::string &params) {
+    req.respond(std::string());
     // Create the input data transfer object
     std::vector<DataTransfer> xfer(1);
     xfer[0].data_ = params.data();
@@ -267,7 +268,6 @@ class Server : public TaskLib {
     Task *orig_task;
     RpcExec(req, state_id, method, task_addr, replica, ret_domain,
             xfer, orig_task, exec);
-    req.respond(std::string());
   }
 
   /** The RPC for processing a message with data */
@@ -281,6 +281,7 @@ class Server : public TaskLib {
                    const tl::bulk &bulk,
                    size_t data_size,
                    IoType io_type) {
+    req.respond(std::string());
     LPointer<char> data =
         HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_ABT>(data_size);
 
@@ -307,7 +308,6 @@ class Server : public TaskLib {
       HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.ptr_, data_size);
     }
     HRUN_CLIENT->FreeBuffer(data);
-    req.respond(std::string());
   }
 
   /** Push operation called at the remote server */
@@ -446,6 +446,7 @@ class Server : public TaskLib {
                                         size_t task_addr,
                                         int replica,
                                         std::string &ret) {
+    req.respond(std::string());
     PushTask *task = (PushTask *) task_addr;
     HILOG(kInfo, "Client-side task received (task_addr={}, replica={})",
           task_addr, replica)
@@ -454,7 +455,6 @@ class Server : public TaskLib {
           task->orig_task_->task_state_,
           task->orig_task_->method_)
     ClientHandlePushReplicaOutput(replica, ret, task);
-    req.respond(std::string());
   }
 
   /** Handle output from replica PUSH */
