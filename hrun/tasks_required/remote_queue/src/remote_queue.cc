@@ -210,14 +210,14 @@ class Server : public TaskLib {
     for (int replica = 0; replica < task->domain_ids_.size(); ++replica) {
       DomainId my_domain = DomainId::GetNode(HRUN_CLIENT->node_id_);
       DomainId domain_id = task->domain_ids_[replica];
-      HRUN_THALLIUM->SyncCall<std::string>(domain_id.id_,
-                                           "RpcPushSmall",
-                                           task->exec_->id_,
-                                           task->exec_method_,
-                                           (size_t) task,
-                                           replica,
-                                           my_domain,
-                                           params);
+      HRUN_THALLIUM->SyncCall<void>(domain_id.id_,
+                                    "RpcPushSmall",
+                                    task->exec_->id_,
+                                    task->exec_method_,
+                                    (size_t) task,
+                                    replica,
+                                    my_domain,
+                                    params);
     }
   }
 
@@ -234,19 +234,19 @@ class Server : public TaskLib {
       char *data = (char*)xfer[0].data_;
       size_t data_size = xfer[0].data_size_;
       if (data_size > 0) {
-        HRUN_THALLIUM->SyncIoCall<std::string>(domain_id.id_,
-                                               "RpcPushBulk",
-                                               io_type,
-                                               data,
-                                               data_size,
-                                               task->exec_->id_,
-                                               task->exec_method_,
-                                               (size_t) task,
-                                               replica,
-                                               my_domain,
-                                               params,
-                                               data_size,
-                                               io_type);
+        HRUN_THALLIUM->SyncIoCall<void>(domain_id.id_,
+                                        "RpcPushBulk",
+                                        io_type,
+                                        data,
+                                        data_size,
+                                        task->exec_->id_,
+                                        task->exec_method_,
+                                        (size_t) task,
+                                        replica,
+                                        my_domain,
+                                        params,
+                                        data_size,
+                                        io_type);
       } else {
         HELOG(kFatal, "(IO) Thallium can't handle 0-sized I/O")
       }
@@ -285,7 +285,7 @@ class Server : public TaskLib {
     } catch (...) {
       HELOG(kError, "(node {}) Worker {} caught an unknown exception", HRUN_CLIENT->node_id_, id_);
     }
-    req.respond(std::string());
+    req.respond();
   }
 
   /** The RPC for processing a message with data */
@@ -333,7 +333,7 @@ class Server : public TaskLib {
     } catch (...) {
       HELOG(kError, "(node {}) Worker {} caught an unknown exception", HRUN_CLIENT->node_id_, id_);
     }
-    req.respond(std::string());
+    req.respond();
   }
 
   /** Push operation called at the remote server */
@@ -460,11 +460,11 @@ class Server : public TaskLib {
 //          ret.size(),
 //          task_addr,
 //          replica)
-    HRUN_THALLIUM->SyncCall<std::string>(ret_domain.id_,
-                                         "RpcClientHandlePushReplicaOutput",
-                                         task_addr,
-                                         replica,
-                                         ret);
+    HRUN_THALLIUM->SyncCall<void>(ret_domain.id_,
+                                  "RpcClientHandlePushReplicaOutput",
+                                  task_addr,
+                                  replica,
+                                  ret);
 //    HILOG(kInfo, "Server-side task complete (task_node={}, task_state={}, method={})",
 //          orig_task->task_node_,
 //          orig_task->task_state_,
@@ -487,7 +487,7 @@ class Server : public TaskLib {
     } catch (...) {
       HELOG(kError, "(node {}) Worker {} caught an unknown exception", HRUN_CLIENT->node_id_, id_);
     }
-    req.respond(std::string());
+    req.respond();
   }
 
   /** Handle output from replica PUSH */

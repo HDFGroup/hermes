@@ -194,6 +194,7 @@ class ThalliumRpc {
       tl::bulk bulk = client_engine_->expose(segments, flag);
       if constexpr (!ASYNC) {
         if constexpr (std::is_same_v<RetT, void>) {
+          remote_proc.disable_response();
           remote_proc.on(server)(bulk, std::forward<Args>(args)...);
         } else {
           return remote_proc.on(server)(bulk, std::forward<Args>(args)...);
