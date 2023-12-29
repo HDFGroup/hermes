@@ -429,10 +429,15 @@ class Server : public TaskLib {
     if (out_xfer.size() > 0 && out_xfer[0].data_size_ > 0) {
       ret = std::string((char *) out_xfer[0].data_, out_xfer[0].data_size_);
     }
-    HILOG(kInfo, "Server-side task submitted (task_node={}, task_state={}, method={})",
+    HILOG(kInfo, "Server-side task submitted "
+                 "(task_node={}, task_state={}, method={}, "
+                 "retsz={}, task_addr={}, replica={})",
           orig_task->task_node_,
           orig_task->task_state_,
-          orig_task->method_)
+          orig_task->method_,
+          ret.size(),
+          task_addr,
+          replica)
     HRUN_THALLIUM->SyncCall<std::string>(ret_domain.id_,
                                          "RpcClientHandlePushReplicaOutput",
                                          task_addr,
@@ -451,6 +456,8 @@ class Server : public TaskLib {
                                         int replica,
                                         std::string &ret) {
     PushTask *task = (PushTask *) task_addr;
+    HILOG(kInfo, "Client-side task received (task_addr={}, replica={})",
+          task_addr, replica)
     HILOG(kInfo, "Client-side task complete (task_node={}, task_state={}, method={})",
           task->orig_task_->task_node_,
           task->orig_task_->task_state_,
