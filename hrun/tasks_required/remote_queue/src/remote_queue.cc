@@ -45,6 +45,7 @@ struct WaitTask {
   TaskState *exec_;
   size_t task_addr_;
   int replica_;
+  LPointer<char> data_;
   bool complete_;
 };
 
@@ -265,8 +266,10 @@ class Server : public TaskLib {
     // Process the message
     TaskState *exec;
     Task *orig_task;
+    LPointer<char> data;
+    data.ptr_ = nullptr;
     RpcExec(req, state_id, method, task_addr, replica, ret_domain,
-            xfer, orig_task, exec);
+            xfer, data, orig_task, exec);
     req.respond(std::string());
   }
 
@@ -302,11 +305,10 @@ class Server : public TaskLib {
     TaskState *exec;
     Task *orig_task;
     RpcExec(req, state_id, method, task_addr, replica, ret_domain,
-            xfer, orig_task, exec);
+            xfer, data, orig_task, exec);
     if (io_type == IoType::kRead) {
       HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.ptr_, data_size);
     }
-    HRUN_CLIENT->FreeBuffer(data);
     req.respond(std::string());
   }
 
@@ -318,6 +320,7 @@ class Server : public TaskLib {
                int replica,
                const DomainId &ret_domain,
                std::vector<DataTransfer> &xfer,
+               LPointer<char> &data,
                Task *&orig_task, TaskState *&exec) {
     size_t data_size = xfer[0].data_size_;
     BinaryInputArchive<true> ar(xfer);
@@ -365,6 +368,7 @@ class Server : public TaskLib {
     wait_task.exec_ = exec;
     wait_task.task_addr_ = task_addr;
     wait_task.replica_ = replica;
+    wait_task.data_ = data;
     wait_task.complete_ = false;
     wait_->emplace(wait_task);
 
@@ -397,6 +401,9 @@ class Server : public TaskLib {
                               wait_task->task_addr_,
                               wait_task->replica_,
                               wait_task->ret_domain_);
+          if (wait_task->data_.ptr_ != nullptr) {
+            HRUN_CLIENT->FreeBuffer(wait_task->data_);
+          }
           wait_task->complete_ = true;
         }
         if (i == 0 && wait_task->complete_) {
@@ -437,7 +444,7 @@ class Server : public TaskLib {
     HILOG(kInfo, "Server-side task complete (task_node={}, task_state={}, method={})",
           orig_task->task_node_,
           orig_task->task_state_,
-          orig_task->method_)
+          orig_task->method_);
     exec->Del(orig_task->method_, orig_task);
   }
 
