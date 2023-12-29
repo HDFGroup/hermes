@@ -285,7 +285,7 @@ class Server : public TaskLib {
     } catch (...) {
       HELOG(kError, "(node {}) Worker {} caught an unknown exception", HRUN_CLIENT->node_id_, id_);
     }
-    req.respond();
+    // req.respond();
   }
 
   /** The RPC for processing a message with data */
@@ -333,7 +333,7 @@ class Server : public TaskLib {
     } catch (...) {
       HELOG(kError, "(node {}) Worker {} caught an unknown exception", HRUN_CLIENT->node_id_, id_);
     }
-    req.respond();
+    // req.respond();
   }
 
   /** Push operation called at the remote server */
@@ -487,7 +487,7 @@ class Server : public TaskLib {
     } catch (...) {
       HELOG(kError, "(node {}) Worker {} caught an unknown exception", HRUN_CLIENT->node_id_, id_);
     }
-    req.respond();
+    // req.respond();
   }
 
   /** Handle output from replica PUSH */
