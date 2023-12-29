@@ -338,8 +338,6 @@ class Server : public TaskLib {
    * Create a blob's metadata
    * */
   void PutBlob(PutBlobTask *task, RunContext &rctx) {
-    task->SetModuleComplete();
-    return;
     // Get the blob info data structure
     hshm::charbuf blob_name = hshm::to_charbuf(*task->blob_name_);
     if (task->blob_id_.IsNull()) {
@@ -352,6 +350,8 @@ class Server : public TaskLib {
     BlobInfo &blob_info = blob_map[task->blob_id_];
     blob_info.score_ = task->score_;
     blob_info.user_score_ = task->score_;
+    task->SetModuleComplete();
+    return;
 
     // Stage Blob
     if (task->flags_.Any(HERMES_SHOULD_STAGE) && blob_info.last_flush_ == 0) {
