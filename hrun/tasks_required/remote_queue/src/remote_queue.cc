@@ -51,7 +51,6 @@ struct WaitTask {
 
 class Server : public TaskLib {
  public:
-  std::unique_ptr<hshm::spsc_queue<AbtWorkerEntry*>> threads_;
   hipc::uptr<hipc::mpsc_queue<PushTask*>> push_;
   hipc::uptr<hipc::mpsc_queue<WaitTask>> wait_;
 
@@ -59,15 +58,13 @@ class Server : public TaskLib {
   Server() = default;
 
   /** Construct remote queue */
-  void CreateThreads(hshm::spsc_queue<AbtWorkerEntry*> &threads,
-                     size_t count) {
-    for (int i = 0; i < count; ++i) {
-      AbtWorkerEntry *entry = new AbtWorkerEntry(i, this);
-      entry->thread_ = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(
-          &Server::RunPreemptive, entry);
-      threads.emplace(entry);
-    }
-    AbtWorkerEntry *entry = new AbtWorkerEntry(count, this);
+  void CreateThreads() {
+    AbtWorkerEntry *entry;
+    entry = new AbtWorkerEntry(0, this);
+    entry->thread_ = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(
+        &Server::RunPreemptive, entry);
+
+    entry = new AbtWorkerEntry(1, this);
     entry->thread_ = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(
         &Server::RunWaitPreemptive, entry);
   }
@@ -75,12 +72,11 @@ class Server : public TaskLib {
     HILOG(kInfo, "(node {}) Constructing remote queue (task_node={}, task_state={}, method={})",
           HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, task->method_);
     size_t max = HRUN_RPC->num_threads_;
-    threads_ = std::make_unique<hshm::spsc_queue<AbtWorkerEntry*>>(1);
     push_ = hipc::make_uptr<hipc::mpsc_queue<PushTask*>>(
         HRUN_CLIENT->server_config_.queue_manager_.queue_depth_);
     wait_ = hipc::make_uptr<hipc::mpsc_queue<WaitTask>>(
         HRUN_CLIENT->server_config_.queue_manager_.queue_depth_);
-    CreateThreads(*threads_, 1);
+    CreateThreads();
     HRUN_THALLIUM->RegisterRpc("RpcPushSmall", [this](
         const tl::request &req,
         TaskStateId state_id,
@@ -473,7 +469,7 @@ class Server : public TaskLib {
 //          orig_task->task_node_,
 //          orig_task->task_state_,
 //          orig_task->method_);
-    // exec->Del(orig_task->method_, orig_task);
+    exec->Del(orig_task->method_, orig_task);
   }
 
   /** Handle return of RpcComplete */
