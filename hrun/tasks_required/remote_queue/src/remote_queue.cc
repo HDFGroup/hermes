@@ -255,21 +255,27 @@ class Server : public TaskLib {
                     const DomainId &ret_domain,
                     std::string &params) {
     // Create the input data transfer object
-    std::vector<DataTransfer> xfer(1);
-    xfer[0].data_ = params.data();
-    xfer[0].data_size_ = params.size();
-    HILOG(kDebug, "(node {}) Received small message of size {} "
-                  "(task_state={}, method={})",
-                  HRUN_CLIENT->node_id_,
-                  xfer[0].data_size_, state_id, method);
+    try {
+      std::vector<DataTransfer> xfer(1);
+      xfer[0].data_ = params.data();
+      xfer[0].data_size_ = params.size();
+      HILOG(kDebug, "(node {}) Received small message of size {} "
+                    "(task_state={}, method={})",
+            HRUN_CLIENT->node_id_,
+            xfer[0].data_size_, state_id, method);
 
-    // Process the message
-    TaskState *exec;
-    Task *orig_task;
-    LPointer<char> data;
-    data.ptr_ = nullptr;
-    RpcExec(req, state_id, method, task_addr, replica, ret_domain,
-            xfer, data, orig_task, exec);
+      // Process the message
+      TaskState *exec;
+      Task *orig_task;
+      LPointer<char> data;
+      data.ptr_ = nullptr;
+      RpcExec(req, state_id, method, task_addr, replica, ret_domain,
+              xfer, data, orig_task, exec);
+    } catch (const std::exception &e) {
+      HILOG(kError, "Exception: {}", e.what());
+    } catch (const hshm::Error &e) {
+      HILOG(kError, "Exception: {}", e.what());
+    }
     req.respond(std::string());
   }
 
@@ -284,30 +290,36 @@ class Server : public TaskLib {
                    const tl::bulk &bulk,
                    size_t data_size,
                    IoType io_type) {
-    LPointer<char> data =
-        HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_ABT>(data_size);
+    try {
+      LPointer<char> data =
+          HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_ABT>(data_size);
 
-    // Create the input data transfer object
-    std::vector<DataTransfer> xfer(2);
-    xfer[0].data_ = data.ptr_;
-    xfer[0].data_size_ = data_size;
-    xfer[1].data_ = params.data();
-    xfer[1].data_size_ = params.size();
+      // Create the input data transfer object
+      std::vector<DataTransfer> xfer(2);
+      xfer[0].data_ = data.ptr_;
+      xfer[0].data_size_ = data_size;
+      xfer[1].data_ = params.data();
+      xfer[1].data_size_ = params.size();
 
-    HILOG(kDebug, "(node {}) Received large message of size {} "
-                  "(task_state={}, method={})",
-                  HRUN_CLIENT->node_id_, xfer[0].data_size_, state_id, method);
+      HILOG(kDebug, "(node {}) Received large message of size {} "
+                    "(task_state={}, method={})",
+            HRUN_CLIENT->node_id_, xfer[0].data_size_, state_id, method);
 
-    // Process the message
-    if (io_type == IoType::kWrite) {
-      HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.ptr_, data_size);
-    }
-    TaskState *exec;
-    Task *orig_task;
-    RpcExec(req, state_id, method, task_addr, replica, ret_domain,
-            xfer, data, orig_task, exec);
-    if (io_type == IoType::kRead) {
-      HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.ptr_, data_size);
+      // Process the message
+      if (io_type == IoType::kWrite) {
+        HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.ptr_, data_size);
+      }
+      TaskState *exec;
+      Task *orig_task;
+      RpcExec(req, state_id, method, task_addr, replica, ret_domain,
+              xfer, data, orig_task, exec);
+      if (io_type == IoType::kRead) {
+        HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.ptr_, data_size);
+      }
+    } catch (const std::exception &e) {
+      HILOG(kError, "Exception: {}", e.what());
+    } catch (const hshm::Error &e) {
+      HILOG(kError, "Exception: {}", e.what());
     }
     req.respond(std::string());
   }
