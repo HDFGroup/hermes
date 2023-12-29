@@ -391,6 +391,14 @@ class Server : public TaskLib {
       int i = 0;
       while (!server->wait_->peek(wait_task, i).IsNull()) {
         Task *orig_task = wait_task->task_;
+        HILOG(kDebug, "(node {}) Waiting for task "
+                      "(task_node={}, task_state={}, method={}, "
+                      "state_name={})",
+              HRUN_CLIENT->node_id_,
+              orig_task->task_node_,
+              orig_task->task_state_,
+              orig_task->method_,
+              wait_task->exec_->name_)
         if (!wait_task->complete_ && orig_task->IsComplete()) {
           server->RpcComplete(wait_task->method_,
                               orig_task,
