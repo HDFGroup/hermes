@@ -357,18 +357,19 @@ class Worker {
   /** Allocate a stack for a task */
   void* AllocateStack() {
     void *stack;
-    if (!stacks_.pop(stack).IsNull()) {
-      return stack;
-    }
+//    if (!stacks_.pop(stack).IsNull()) {
+//      return stack;
+//    }
     return malloc(stack_size_);
   }
 
   /** Free a stack */
   void FreeStack(void *stack) {
-    if(!stacks_.emplace(stack).IsNull()) {
-      return;
-    }
-    stacks_.Resize(stacks_.size() + num_stacks_);
+    free(stack);
+//    if(!stacks_.emplace(stack).IsNull()) {
+//      return;
+//    }
+//    stacks_.Resize(stacks_.size() + num_stacks_);
   }
 
   /** Run an iteration over a particular queue */
