@@ -414,9 +414,17 @@ class Worker {
           flush_.count_ += 1;
         }
       }
-      HILOG(kDebug, "(node {}) Task {} method {} state {} is remote: {} group_avail: {} should_run: {}",
-            HRUN_CLIENT->node_id_, task->task_node_, task->method_, exec->name_,
-            is_remote, group_avail, should_run );
+      if (!(task->IsLongRunning() && !is_remote)) {
+        HILOG(kDebug,
+              "(node {}) Task {} method {} state {} is remote: {} group_avail: {} should_run: {}",
+              HRUN_CLIENT->node_id_,
+              task->task_node_,
+              task->method_,
+              exec->name_,
+              is_remote,
+              group_avail,
+              should_run);
+      }
       // Attempt to run the task if it's ready and runnable
       if (!task->IsRunDisabled() && group_avail && should_run) {
 // #define REMOTE_DEBUG
