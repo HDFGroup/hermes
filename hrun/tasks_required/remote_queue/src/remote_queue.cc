@@ -182,18 +182,29 @@ class Server : public TaskLib {
   /** PUSH using thallium */
   void PushPreemptive(PushTask *task) {
     std::vector<DataTransfer> &xfer = task->xfer_;
-    switch (xfer.size()) {
-      case 1: {
-        SyncClientSmallPush(xfer, task);
-        break;
+    try {
+      switch (xfer.size()) {
+        case 1: {
+          SyncClientSmallPush(xfer, task);
+          break;
+        }
+        case 2: {
+          SyncClientIoPush(xfer, task);
+          break;
+        }
+        default: {
+          HELOG(kFatal,
+                "The task {}/{} does not support remote calls",
+                task->task_state_,
+                task->method_);
+        }
       }
-      case 2: {
-        SyncClientIoPush(xfer, task);
-        break;
-      }
-      default: {
-        HELOG(kFatal, "The task {}/{} does not support remote calls", task->task_state_, task->method_);
-      }
+    } catch (hshm::Error &e) {
+      HELOG(kError, "(node {}) Worker {} caught an error: {}", HRUN_CLIENT->node_id_, id_, e.what());
+    } catch (std::exception &e) {
+      HELOG(kError, "(node {}) Worker {} caught an exception: {}", HRUN_CLIENT->node_id_, id_, e.what());
+    } catch (...) {
+      HELOG(kError, "(node {}) Worker {} caught an unknown exception", HRUN_CLIENT->node_id_, id_);
     }
   }
 
