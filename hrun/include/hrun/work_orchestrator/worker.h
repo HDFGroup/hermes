@@ -403,8 +403,13 @@ class Worker {
         continue;
       }
       // Get task properties
-      bool is_remote = task->domain_id_.IsRemote(HRUN_RPC->GetNumHosts(), HRUN_CLIENT->node_id_);
-      bool group_avail = CheckTaskGroup(task, exec, work_entry.lane_id_, task->task_node_, is_remote);
+      bool is_remote = task->domain_id_.IsRemote(
+          HRUN_RPC->GetNumHosts(), HRUN_CLIENT->node_id_);
+      bool group_avail = true;
+      if (!is_remote) {
+        CheckTaskGroup(task, exec, work_entry.lane_id_,
+                       task->task_node_, is_remote);
+      }
       bool should_run = task->ShouldRun(work_entry.cur_time_, flushing);
       // Verify tasks
       if (flushing && !task->IsFlush()) {
