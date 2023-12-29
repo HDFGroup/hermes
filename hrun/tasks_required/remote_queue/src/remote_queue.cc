@@ -473,7 +473,7 @@ class Server : public TaskLib {
 //          orig_task->task_node_,
 //          orig_task->task_state_,
 //          orig_task->method_);
-    exec->Del(orig_task->method_, orig_task);
+    // exec->Del(orig_task->method_, orig_task);
   }
 
   /** Handle return of RpcComplete */
