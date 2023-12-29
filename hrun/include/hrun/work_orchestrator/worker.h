@@ -320,7 +320,8 @@ class Worker {
     while (orchestrator->IsAlive()) {
       try {
         if (t.GetMsecFromStart() > 500) {
-          HILOG(kInfo, "Worker {} took {} ms to run", id_, t.GetMsec());
+          HILOG(kInfo, "(node {}) Worker {} took {} ms to run",
+                HRUN_CLIENT->node_id_, id_, t.GetMsecFromStart());
           t.Reset();
           t.Resume();
         }
