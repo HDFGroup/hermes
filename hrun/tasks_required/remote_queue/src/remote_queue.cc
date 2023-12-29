@@ -467,6 +467,9 @@ class Server : public TaskLib {
                    size_t task_addr, int replica,
                    const DomainId &ret_domain,
                    LPointer<char> &data) {
+    if (data.ptr_ != nullptr) {
+      HRUN_CLIENT->FreeBuffer(data);
+    }
     BinaryOutputArchive<false> ar(DomainId::GetNode(HRUN_CLIENT->node_id_));
     std::vector<DataTransfer> out_xfer = exec->SaveEnd(method, ar, orig_task);
     std::string ret;
