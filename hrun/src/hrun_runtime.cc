@@ -117,7 +117,6 @@ void Runtime::InitSharedMemory() {
   mem_mngr->CreateBackend<hipc::PosixShmMmap>(
       qm.shm_size_,
       qm.shm_name_);
-  hipc::MemoryBackend *backend = mem_mngr->GetBackend(qm.shm_name_);
   main_alloc_ =
       mem_mngr->CreateAllocator<hipc::ScalablePageAllocator>(
           qm.shm_name_,

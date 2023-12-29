@@ -165,7 +165,7 @@ class Worker {
   hshm::Timepoint now_;  /**< The current timepoint */
   hshm::spsc_queue<void*> stacks_;  /**< Cache of stacks for tasks */
   int num_stacks_ = 256;  /**< Number of stacks */
-  int stack_size_ = KILOBYTES(64);
+  int stack_size_ = KILOBYTES(128);
 
  public:
   /**===============================================================
