@@ -327,7 +327,6 @@ class Server : public TaskLib {
     if (exec == nullptr) {
       HELOG(kFatal, "(node {}) Could not find the task state {}",
             HRUN_CLIENT->node_id_, state_id);
-      req.respond(std::string());
       return;
     }
     TaskPointer task_ptr = exec->LoadStart(method, ar);
