@@ -225,18 +225,20 @@ class Server : public TaskLib {
   void SyncClientSmallPush(std::vector<DataTransfer> &xfer,
                            std::vector<DomainId> &domain_ids,
                            PushTask *task) {
+    TaskStateId state_id = task->exec_->id_;
+    int method = task->exec_method_;
     std::string params = std::string((char *) xfer[0].data_, xfer[0].data_size_);
     for (int replica = 0; replica < domain_ids.size(); ++replica) {
       DomainId my_domain = DomainId::GetNode(HRUN_CLIENT->node_id_);
       DomainId domain_id = domain_ids[replica];
       HRUN_THALLIUM->SyncCall<int>(domain_id.id_,
-                                    "RpcPushSmall",
-                                    task->exec_->id_,
-                                    task->exec_method_,
-                                    (size_t) task,
-                                    replica,
-                                    my_domain,
-                                    params);
+                                   "RpcPushSmall",
+                                   state_id,
+                                   method,
+                                   (size_t) task,
+                                   replica,
+                                   my_domain,
+                                   params);
     }
   }
 
@@ -249,6 +251,8 @@ class Server : public TaskLib {
     if (xfer[0].flags_.Any(DT_RECEIVER_READ)) {
       io_type = IoType::kWrite;
     }
+    TaskStateId state_id = task->exec_->id_;
+    int method = task->exec_method_;
     for (int replica = 0; replica < domain_ids.size(); ++replica) {
       DomainId my_domain = DomainId::GetNode(HRUN_CLIENT->node_id_);
       DomainId domain_id = domain_ids[replica];
@@ -260,8 +264,8 @@ class Server : public TaskLib {
                                        io_type,
                                        data,
                                        data_size,
-                                       task->exec_->id_,
-                                       task->exec_method_,
+                                       state_id,
+                                       method,
                                        (size_t) task,
                                        replica,
                                        my_domain,
