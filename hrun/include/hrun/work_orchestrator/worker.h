@@ -432,12 +432,12 @@ class Worker {
           HRUN_REMOTE_QUEUE->Disperse(task, exec, ids);
           task->SetDisableRun();
           task->SetUnordered();
-          task->UnsetCoroutine();
+//          task->UnsetCoroutine();
         } else if (task->IsLaneAll()) {
           HRUN_REMOTE_QUEUE->DisperseLocal(task, exec, work_entry.queue_, work_entry.group_);
           task->SetDisableRun();
           task->SetUnordered();
-          task->UnsetCoroutine();
+//          task->UnsetCoroutine();
         } else if (task->IsCoroutine()) {
           if (!task->IsStarted()) {
             rctx.stack_ptr_ = AllocateStack();
@@ -533,7 +533,7 @@ class Worker {
   HSHM_ALWAYS_INLINE
   void RemoveTaskGroup(Task *task, TaskState *exec,
                        u32 lane_id, const bool &is_remote) {
-    if (is_remote) {
+    if (is_remote || task->IsLaneAll()) {
       return;
     }
     int ret = exec->GetGroup(task->method_, task, group_);
