@@ -406,7 +406,7 @@ class Worker {
       bool is_remote = task->domain_id_.IsRemote(
           HRUN_RPC->GetNumHosts(), HRUN_CLIENT->node_id_);
       bool group_avail = true;
-      if (!is_remote) {
+      if (!is_remote && !task->IsLaneAll()) {
         CheckTaskGroup(task, exec, work_entry.lane_id_,
                        task->task_node_, is_remote);
       }
@@ -437,7 +437,9 @@ class Worker {
           HRUN_REMOTE_QUEUE->Disperse(task, exec, ids);
           task->SetDisableRun();
         } else if (task->IsLaneAll()) {
-          HRUN_REMOTE_QUEUE->DisperseLocal(task, exec, work_entry.queue_, work_entry.group_);
+          HRUN_REMOTE_QUEUE->DisperseLocal(task, exec,
+                                           work_entry.queue_,
+                                           work_entry.group_);
           task->SetDisableRun();
         } else if (task->IsCoroutine()) {
           if (!task->IsStarted()) {
