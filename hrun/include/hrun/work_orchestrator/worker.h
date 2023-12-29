@@ -439,7 +439,7 @@ class Worker {
             rctx.stack_ptr_ = AllocateStack();
             if (rctx.stack_ptr_ == nullptr) {
               HILOG(kFatal, "The stack pointer of size {} is NULL",
-                    stack_size_, rctx.stack_ptr_);
+                    stack_size_);
             }
             rctx.jmp_.fctx = bctx::make_fcontext(
                 (char*)rctx.stack_ptr_ + stack_size_,
@@ -447,12 +447,6 @@ class Worker {
             task->SetStarted();
           }
           rctx.jmp_ = bctx::jump_fcontext(rctx.jmp_.fctx, task);
-          if (!task->IsStarted()) {
-            rctx.jmp_.fctx = bctx::make_fcontext(
-                (char*)rctx.stack_ptr_ + stack_size_,
-                stack_size_, &Worker::RunCoroutine);
-            task->SetStarted();
-          }
         } else {
           exec->Run(task->method_, task, rctx);
           task->SetStarted();
