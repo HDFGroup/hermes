@@ -139,8 +139,8 @@ class Server : public TaskLib {
       bkt_mdm_.Init(task->bkt_mdm_, HRUN_ADMIN->queue_id_);
       stager_mdm_.Init(task->stager_mdm_, HRUN_ADMIN->queue_id_);
       op_mdm_.Init(task->op_mdm_, HRUN_ADMIN->queue_id_);
-//      flush_task_ = blob_mdm_.AsyncFlushData(
-//          task->task_node_ + 1, HERMES_SERVER_CONF.borg_.flush_period_);
+      flush_task_ = blob_mdm_.AsyncFlushData(
+          task->task_node_ + 1, HERMES_SERVER_CONF.borg_.flush_period_);
     }
     task->SetModuleComplete();
   }
@@ -350,8 +350,6 @@ class Server : public TaskLib {
     BlobInfo &blob_info = blob_map[task->blob_id_];
     blob_info.score_ = task->score_;
     blob_info.user_score_ = task->score_;
-    task->SetModuleComplete();
-    return;
 
     // Stage Blob
     if (task->flags_.Any(HERMES_SHOULD_STAGE) && blob_info.last_flush_ == 0) {

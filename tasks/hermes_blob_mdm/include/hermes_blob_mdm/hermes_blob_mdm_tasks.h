@@ -271,7 +271,7 @@ struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> 
     task_state_ = state_id;
     method_ = Method::kPutBlob;
     task_flags_ = bitfield32_t(task_flags);
-    // task_flags_.SetBits(TASK_COROUTINE);
+    task_flags_.SetBits(TASK_COROUTINE);
     if (!blob_id.IsNull()) {
       lane_hash_ = blob_id.hash_;
       domain_id_ = domain_id;
