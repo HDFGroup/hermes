@@ -25,6 +25,8 @@ queue_manager:
   shm_size: 0g
   # The size of the shared memory to allocate for data buffers
   data_shm_size: 4g
+  # The size of the shared memory to allocate for runtime data buffers
+  rdata_shm_size: 4g
 
 ### Define properties of RPCs
 rpc:
