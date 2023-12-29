@@ -272,9 +272,9 @@ class Server : public TaskLib {
       RpcExec(req, state_id, method, task_addr, replica, ret_domain,
               xfer, data, orig_task, exec);
     } catch (const std::exception &e) {
-      HILOG(kError, "Exception: {}", e.what());
+      HELOG(kError, "Exception: {}", e.what());
     } catch (const hshm::Error &e) {
-      HILOG(kError, "Exception: {}", e.what());
+      HELOG(kError, "Exception: {}", e.what());
     }
     req.respond(std::string());
   }
@@ -290,9 +290,9 @@ class Server : public TaskLib {
                    const tl::bulk &bulk,
                    size_t data_size,
                    IoType io_type) {
+    LPointer<char> data;
     try {
-      LPointer<char> data =
-          HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_ABT>(data_size);
+      data = HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_ABT>(data_size);
 
       // Create the input data transfer object
       std::vector<DataTransfer> xfer(2);
@@ -317,9 +317,11 @@ class Server : public TaskLib {
         HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.ptr_, data_size);
       }
     } catch (const std::exception &e) {
-      HILOG(kError, "Exception: {}", e.what());
+      HRUN_CLIENT->FreeBuffer(data);
+      HELOG(kError, "Exception: {}", e.what());
     } catch (const hshm::Error &e) {
-      HILOG(kError, "Exception: {}", e.what());
+      HRUN_CLIENT->FreeBuffer(data);
+      HELOG(kError, "Exception: {}", e.what());
     }
     req.respond(std::string());
   }
@@ -465,14 +467,14 @@ class Server : public TaskLib {
                                         size_t task_addr,
                                         int replica,
                                         std::string &ret) {
-    PushTask *task = (PushTask *) task_addr;
-    HILOG(kInfo, "Client-side task received (task_addr={}, replica={})",
-          task_addr, replica)
-    HILOG(kInfo, "Client-side task complete (task_node={}, task_state={}, method={})",
-          task->orig_task_->task_node_,
-          task->orig_task_->task_state_,
-          task->orig_task_->method_)
-    ClientHandlePushReplicaOutput(replica, ret, task);
+    try {
+      PushTask *task = (PushTask *) task_addr;
+      ClientHandlePushReplicaOutput(replica, ret, task);
+    } catch (const std::exception &e) {
+      HELOG(kError, "Exception: {}", e.what());
+    } catch (const hshm::Error &e) {
+      HELOG(kError, "Exception: {}", e.what());
+    }
     req.respond(std::string());
   }
 
@@ -485,7 +487,7 @@ class Server : public TaskLib {
     xfer[0].data_size_ = ret.size();
     BinaryInputArchive<false> ar(xfer);
     task->exec_->LoadEnd(replica, task->exec_method_, ar, task->orig_task_);
-    HILOG(kInfo, "Handled replica output for task "
+    HILOG(kDebug, "Handled replica output for task "
                  "(task_node={}, task_state={}, method={}, "
                  "rep={}, num_reps={})",
           task->orig_task_->task_node_,
