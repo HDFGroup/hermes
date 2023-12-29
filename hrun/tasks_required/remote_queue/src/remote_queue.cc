@@ -318,14 +318,14 @@ class Server : public TaskLib {
         HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.ptr_, data_size);
       }
     } catch (const std::exception &e) {
-      if (data.ptr_ != nullptr) {
-        HRUN_CLIENT->FreeBuffer(data);
-      }
+//      if (data.ptr_ != nullptr) {
+//        HRUN_CLIENT->FreeBuffer(data);
+//      }
       HELOG(kError, "Exception: {}", e.what());
     } catch (const hshm::Error &e) {
-      if (data.ptr_ != nullptr) {
-        HRUN_CLIENT->FreeBuffer(data);
-      }
+//      if (data.ptr_ != nullptr) {
+//        HRUN_CLIENT->FreeBuffer(data);
+//      }
       HELOG(kError, "Exception: {}", e.what());
     }
     req.respond(std::string());
