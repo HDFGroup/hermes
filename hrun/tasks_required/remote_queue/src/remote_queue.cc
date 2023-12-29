@@ -271,10 +271,12 @@ class Server : public TaskLib {
       data.ptr_ = nullptr;
       RpcExec(req, state_id, method, task_addr, replica, ret_domain,
               xfer, data, orig_task, exec);
-    } catch (const std::exception &e) {
-      HELOG(kError, "Exception: {}", e.what());
-    } catch (const hshm::Error &e) {
-      HELOG(kError, "Exception: {}", e.what());
+    } catch (hshm::Error &e) {
+      HELOG(kError, "(node {}) Worker {} caught an error: {}", HRUN_CLIENT->node_id_, id_, e.what());
+    } catch (std::exception &e) {
+      HELOG(kError, "(node {}) Worker {} caught an exception: {}", HRUN_CLIENT->node_id_, id_, e.what());
+    } catch (...) {
+      HELOG(kError, "(node {}) Worker {} caught an unknown exception", HRUN_CLIENT->node_id_, id_);
     }
     req.respond(std::string());
   }
@@ -317,16 +319,12 @@ class Server : public TaskLib {
       if (io_type == IoType::kRead) {
         HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.ptr_, data_size);
       }
-    } catch (const std::exception &e) {
-//      if (data.ptr_ != nullptr) {
-//        HRUN_CLIENT->FreeBuffer(data);
-//      }
-      HELOG(kError, "Exception: {}", e.what());
-    } catch (const hshm::Error &e) {
-//      if (data.ptr_ != nullptr) {
-//        HRUN_CLIENT->FreeBuffer(data);
-//      }
-      HELOG(kError, "Exception: {}", e.what());
+    } catch (hshm::Error &e) {
+      HELOG(kError, "(node {}) Worker {} caught an error: {}", HRUN_CLIENT->node_id_, id_, e.what());
+    } catch (std::exception &e) {
+      HELOG(kError, "(node {}) Worker {} caught an exception: {}", HRUN_CLIENT->node_id_, id_, e.what());
+    } catch (...) {
+      HELOG(kError, "(node {}) Worker {} caught an unknown exception", HRUN_CLIENT->node_id_, id_);
     }
     req.respond(std::string());
   }
@@ -475,10 +473,12 @@ class Server : public TaskLib {
     try {
       PushTask *task = (PushTask *) task_addr;
       ClientHandlePushReplicaOutput(replica, ret, task);
-    } catch (const std::exception &e) {
-      HELOG(kError, "Exception: {}", e.what());
-    } catch (const hshm::Error &e) {
-      HELOG(kError, "Exception: {}", e.what());
+    } catch (hshm::Error &e) {
+      HELOG(kError, "(node {}) Worker {} caught an error: {}", HRUN_CLIENT->node_id_, id_, e.what());
+    } catch (std::exception &e) {
+      HELOG(kError, "(node {}) Worker {} caught an exception: {}", HRUN_CLIENT->node_id_, id_, e.what());
+    } catch (...) {
+      HELOG(kError, "(node {}) Worker {} caught an unknown exception", HRUN_CLIENT->node_id_, id_);
     }
     req.respond(std::string());
   }
