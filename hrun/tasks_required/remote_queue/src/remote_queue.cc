@@ -291,6 +291,7 @@ class Server : public TaskLib {
                    size_t data_size,
                    IoType io_type) {
     LPointer<char> data;
+    data.ptr_ = nullptr;
     try {
       data = HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_ABT>(data_size);
 
@@ -317,10 +318,14 @@ class Server : public TaskLib {
         HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.ptr_, data_size);
       }
     } catch (const std::exception &e) {
-      HRUN_CLIENT->FreeBuffer(data);
+      if (data.ptr_ != nullptr) {
+        HRUN_CLIENT->FreeBuffer(data);
+      }
       HELOG(kError, "Exception: {}", e.what());
     } catch (const hshm::Error &e) {
-      HRUN_CLIENT->FreeBuffer(data);
+      if (data.ptr_ != nullptr) {
+        HRUN_CLIENT->FreeBuffer(data);
+      }
       HELOG(kError, "Exception: {}", e.what());
     }
     req.respond(std::string());
