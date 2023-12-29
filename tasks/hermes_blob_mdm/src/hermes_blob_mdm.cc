@@ -350,8 +350,6 @@ class Server : public TaskLib {
     BlobInfo &blob_info = blob_map[task->blob_id_];
     blob_info.score_ = task->score_;
     blob_info.user_score_ = task->score_;
-    task->SetModuleComplete();
-    return;
 
     // Stage Blob
     if (task->flags_.Any(HERMES_SHOULD_STAGE) && blob_info.last_flush_ == 0) {

@@ -165,7 +165,7 @@ class Worker {
   hshm::Timepoint now_;  /**< The current timepoint */
   hshm::spsc_queue<void*> stacks_;  /**< Cache of stacks for tasks */
   int num_stacks_ = 256;  /**< Number of stacks */
-  int stack_size_ = KILOBYTES(512);
+  int stack_size_ = KILOBYTES(64);
 
  public:
   /**===============================================================
@@ -355,7 +355,37 @@ class Worker {
         PollGrouped(work_entry, flushing);
       }
     }
+  }
 
+  /** Print all queues */
+  void PrintQueues(bool no_long_run = false) {
+    for (std::unique_ptr<Worker> &worker : HRUN_WORK_ORCHESTRATOR->workers_) {
+      for (WorkEntry &work_entry : worker->work_queue_) {
+        Lane *&lane = work_entry.lane_;
+        LaneData *entry;
+        int off = 0;
+        while (!lane->peek(entry, off).IsNull()) {
+          Task *task = HRUN_CLIENT->GetMainPointer<Task>(entry->p_);
+          TaskState *exec = HRUN_TASK_REGISTRY->GetTaskState(task->task_state_);
+          bool is_remote = task->domain_id_.IsRemote(HRUN_RPC->GetNumHosts(),
+                                                     HRUN_CLIENT->node_id_);
+          if (no_long_run && task->IsLongRunning()) {
+            off += 1;
+            continue;
+          }
+          HILOG(kInfo,
+                "(node {}, worker {}) Task {} state {}, method {}, is remote: {}, long_running: {}",
+                HRUN_CLIENT->node_id_,
+                worker->id_,
+                task->task_node_,
+                exec->name_,
+                task->method_,
+                is_remote,
+                task->IsLongRunning());
+          off += 1;
+        }
+      }
+    }
   }
 
   /** Allocate a stack for a task */
@@ -402,12 +432,22 @@ class Worker {
         HELOG(kWarning, "(node {}) Could not find the task state: {}",
               HRUN_CLIENT->node_id_, task->task_state_);
         off += 1;
+        PrintQueues();
         // entry->complete_ = true;
         // EndTask(lane, exec, task, off);
         continue;
       }
       // Get task properties
       bool is_remote = task->domain_id_.IsRemote(HRUN_RPC->GetNumHosts(), HRUN_CLIENT->node_id_);
+#define REMOTE_DEBUG
+#ifdef REMOTE_DEBUG
+      if (task->task_state_ != HRUN_QM_CLIENT->admin_task_state_ &&
+          !task->task_flags_.Any(TASK_REMOTE_DEBUG_MARK) &&
+          task->method_ != TaskMethod::kConstruct &&
+          HRUN_RUNTIME->remote_created_) {
+        is_remote = true;
+      }
+#endif
       bool group_avail = CheckTaskGroup(task, exec, work_entry.lane_id_, task->task_node_, is_remote);
       bool should_run = task->ShouldRun(work_entry.cur_time_, flushing);
       // Verify tasks
@@ -418,29 +458,8 @@ class Worker {
           flush_.count_ += 1;
         }
       }
-//      if (!(task->IsLongRunning() && !is_remote)) {
-//        HILOG(kDebug,
-//              "(node {}) Task {} method {} state {} is remote: {} group_avail: {} should_run: {}",
-//              HRUN_CLIENT->node_id_,
-//              task->task_node_,
-//              task->method_,
-//              exec->name_,
-//              is_remote,
-//              group_avail,
-//              should_run);
-//      }
       // Attempt to run the task if it's ready and runnable
       if (!task->IsRunDisabled() && group_avail && should_run) {
-// #define REMOTE_DEBUG
-#ifdef REMOTE_DEBUG
-        if (task->task_state_ != HRUN_QM_CLIENT->admin_task_state_ &&
-          !task->task_flags_.Any(TASK_REMOTE_DEBUG_MARK) &&
-          task->method_ != TaskMethod::kConstruct &&
-          HRUN_RUNTIME->remote_created_) {
-        is_remote = true;
-      }
-      task->task_flags_.SetBits(TASK_REMOTE_DEBUG_MARK);
-#endif
         // Execute or schedule task
         if (is_remote) {
           auto ids = HRUN_RUNTIME->ResolveDomainId(task->domain_id_);

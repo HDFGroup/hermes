@@ -73,7 +73,7 @@ class Client : public TaskLibClient {
       push_task->SetRoot();
     }
     MultiQueue *queue = HRUN_CLIENT->GetQueue(queue_id_);
-    queue->Emplace(push_task->prio_, orig_task->lane_hash_, push_task.shm_);
+    queue->Emplace(push_task->prio_, 0, push_task.shm_);
   }
 
   /** Disperse a task among each lane of this node */
@@ -97,7 +97,7 @@ class Client : public TaskLibClient {
         orig_task->task_node_ + 1, id_,
         orig_task, exec, orig_task->method_, dups);
     MultiQueue *queue = HRUN_CLIENT->GetQueue(queue_id_);
-    queue->Emplace(dup_task->prio_, orig_task->lane_hash_, dup_task.shm_);
+    queue->Emplace(dup_task->prio_, 0, dup_task.shm_);
   }
 
   /** Spawn task to accept new connections */
