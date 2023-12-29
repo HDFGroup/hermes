@@ -403,10 +403,8 @@ class Worker {
         continue;
       }
       // Get task properties
-      bool is_remote = task->domain_id_.IsRemote(
-          HRUN_RPC->GetNumHosts(), HRUN_CLIENT->node_id_);
-      bool group_avail = CheckTaskGroup(task, exec, work_entry.lane_id_,
-                                        task->task_node_, is_remote);
+      bool is_remote = task->domain_id_.IsRemote(HRUN_RPC->GetNumHosts(), HRUN_CLIENT->node_id_);
+      bool group_avail = CheckTaskGroup(task, exec, work_entry.lane_id_, task->task_node_, is_remote);
       bool should_run = task->ShouldRun(work_entry.cur_time_, flushing);
       // Verify tasks
       if (flushing && !task->IsFlush()) {
@@ -433,17 +431,19 @@ class Worker {
           auto ids = HRUN_RUNTIME->ResolveDomainId(task->domain_id_);
           HRUN_REMOTE_QUEUE->Disperse(task, exec, ids);
           task->SetDisableRun();
+          task->SetUnordered();
+          task->UnsetCoroutine();
         } else if (task->IsLaneAll()) {
-          HRUN_REMOTE_QUEUE->DisperseLocal(task, exec,
-                                           work_entry.queue_,
-                                           work_entry.group_);
+          HRUN_REMOTE_QUEUE->DisperseLocal(task, exec, work_entry.queue_, work_entry.group_);
           task->SetDisableRun();
+          task->SetUnordered();
+          task->UnsetCoroutine();
         } else if (task->IsCoroutine()) {
           if (!task->IsStarted()) {
             rctx.stack_ptr_ = AllocateStack();
             if (rctx.stack_ptr_ == nullptr) {
               HILOG(kFatal, "The stack pointer of size {} is NULL",
-                    stack_size_);
+                    stack_size_, rctx.stack_ptr_);
             }
             rctx.jmp_.fctx = bctx::make_fcontext(
                 (char*)rctx.stack_ptr_ + stack_size_,
