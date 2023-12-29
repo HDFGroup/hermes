@@ -392,12 +392,6 @@ class Worker {
       TaskState *exec = HRUN_TASK_REGISTRY->GetTaskState(task->task_state_);
       rctx.exec_ = exec;
       if (!exec) {
-//        for (std::pair<std::string, TaskStateId> entries  : HRUN_TASK_REGISTRY->task_state_ids_) {
-//          HILOG(kInfo, "Task state: {} id: {} ptr: {} equal: {}",
-//                entries.first, entries.second,
-//                (size_t)HRUN_TASK_REGISTRY->task_states_[entries.second],
-//                entries.second == task->task_state_);
-//        }
         bool was_end = HRUN_TASK_REGISTRY->task_states_.find(task->task_state_) ==
             HRUN_TASK_REGISTRY->task_states_.end();
         HILOG(kInfo, "Was end: {}", was_end);
@@ -437,8 +431,6 @@ class Worker {
           auto ids = HRUN_RUNTIME->ResolveDomainId(task->domain_id_);
           HRUN_REMOTE_QUEUE->Disperse(task, exec, ids);
           task->SetDisableRun();
-          task->SetUnordered();
-          task->UnsetCoroutine();
         } else if (task->IsLaneAll()) {
           HRUN_REMOTE_QUEUE->DisperseLocal(task, exec, work_entry.queue_, work_entry.group_);
           task->SetDisableRun();
