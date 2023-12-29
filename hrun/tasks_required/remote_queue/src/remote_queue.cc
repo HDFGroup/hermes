@@ -252,7 +252,7 @@ class Server : public TaskLib {
                                                data_size,
                                                io_type);
       } else {
-        HILOG(kFatal, "(IO) Thallium can't handle 0-sized I/O")
+        HELOG(kFatal, "(IO) Thallium can't handle 0-sized I/O")
       }
     }
   }

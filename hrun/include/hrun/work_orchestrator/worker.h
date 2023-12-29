@@ -453,7 +453,7 @@ class Worker {
           if (!task->IsStarted()) {
             rctx.stack_ptr_ = AllocateStack();
             if (rctx.stack_ptr_ == nullptr) {
-              HILOG(kFatal, "The stack pointer of size {} is NULL",
+              HELOG(kFatal, "The stack pointer of size {} is NULL",
                     stack_size_, rctx.stack_ptr_);
             }
             rctx.jmp_.fctx = bctx::make_fcontext(
