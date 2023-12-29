@@ -134,12 +134,12 @@ void Runtime::InitSharedMemory() {
           data_alloc_id_, 0);
   // Create separate runtime data allocator
   mem_mngr->CreateBackend<hipc::PosixShmMmap>(
-      qm.data_shm_size_,
-      qm.data_shm_name_);
-  data_alloc_ =
+      qm.rdata_shm_size_,
+      qm.rdata_shm_name_);
+  rdata_alloc_ =
       mem_mngr->CreateAllocator<hipc::ScalablePageAllocator>(
-          qm.data_shm_name_,
-          data_alloc_id_, 0);
+          qm.rdata_shm_name_,
+          rdata_alloc_id_, 0);
 }
 
 /** Finalize Hermes explicitly */
