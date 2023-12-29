@@ -439,7 +439,7 @@ class Worker {
       }
       // Get task properties
       bool is_remote = task->domain_id_.IsRemote(HRUN_RPC->GetNumHosts(), HRUN_CLIENT->node_id_);
-#define REMOTE_DEBUG
+// #define REMOTE_DEBUG
 #ifdef REMOTE_DEBUG
       if (task->task_state_ != HRUN_QM_CLIENT->admin_task_state_ &&
           !task->task_flags_.Any(TASK_REMOTE_DEBUG_MARK) &&

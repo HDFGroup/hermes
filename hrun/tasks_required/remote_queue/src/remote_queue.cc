@@ -193,15 +193,16 @@ class Server : public TaskLib {
 
   /** PUSH using thallium */
   void PushPreemptive(PushTask *task) {
-    std::vector<DataTransfer> &xfer = task->xfer_;
+    std::vector<DataTransfer> xfer = task->xfer_;
+    std::vector<DomainId> domain_ids = task->domain_ids_;
     try {
       switch (xfer.size()) {
         case 1: {
-          SyncClientSmallPush(xfer, task);
+          SyncClientSmallPush(xfer, domain_ids, task);
           break;
         }
         case 2: {
-          SyncClientIoPush(xfer, task);
+          SyncClientIoPush(xfer, domain_ids, task);
           break;
         }
         default: {
@@ -221,11 +222,13 @@ class Server : public TaskLib {
   }
 
   /** Sync Push for small message */
-  void SyncClientSmallPush(std::vector<DataTransfer> &xfer, PushTask *task) {
+  void SyncClientSmallPush(std::vector<DataTransfer> &xfer,
+                           std::vector<DomainId> &domain_ids,
+                           PushTask *task) {
     std::string params = std::string((char *) xfer[0].data_, xfer[0].data_size_);
-    for (int replica = 0; replica < task->domain_ids_.size(); ++replica) {
+    for (int replica = 0; replica < domain_ids.size(); ++replica) {
       DomainId my_domain = DomainId::GetNode(HRUN_CLIENT->node_id_);
-      DomainId domain_id = task->domain_ids_[replica];
+      DomainId domain_id = domain_ids[replica];
       HRUN_THALLIUM->SyncCall<int>(domain_id.id_,
                                     "RpcPushSmall",
                                     task->exec_->id_,
@@ -238,15 +241,17 @@ class Server : public TaskLib {
   }
 
   /** Sync Push for I/O message */
-  void SyncClientIoPush(std::vector<DataTransfer> &xfer, PushTask *task) {
+  void SyncClientIoPush(std::vector<DataTransfer> &xfer,
+                        std::vector<DomainId> &domain_ids,
+                        PushTask *task) {
     std::string params = std::string((char *) xfer[1].data_, xfer[1].data_size_);
     IoType io_type = IoType::kRead;
     if (xfer[0].flags_.Any(DT_RECEIVER_READ)) {
       io_type = IoType::kWrite;
     }
-    for (int replica = 0; replica < task->domain_ids_.size(); ++replica) {
+    for (int replica = 0; replica < domain_ids.size(); ++replica) {
       DomainId my_domain = DomainId::GetNode(HRUN_CLIENT->node_id_);
-      DomainId domain_id = task->domain_ids_[replica];
+      DomainId domain_id = domain_ids[replica];
       char *data = (char*)xfer[0].data_;
       size_t data_size = xfer[0].data_size_;
       if (data_size > 0) {
@@ -544,7 +549,6 @@ class Server : public TaskLib {
           task->orig_task_->task_node_,
           task->orig_task_->task_state_,
           task->orig_task_->method_);
-    task->rep_ = 0;
     if (!task->orig_task_->IsLongRunning()) {
       task->orig_task_->SetModuleComplete();
     } else {
