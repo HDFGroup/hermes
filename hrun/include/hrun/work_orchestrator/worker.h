@@ -447,6 +447,12 @@ class Worker {
             task->SetStarted();
           }
           rctx.jmp_ = bctx::jump_fcontext(rctx.jmp_.fctx, task);
+          if (!task->IsStarted()) {
+            rctx.jmp_.fctx = bctx::make_fcontext(
+                (char*)rctx.stack_ptr_ + stack_size_,
+                stack_size_, &Worker::RunCoroutine);
+            task->SetStarted();
+          }
         } else {
           exec->Run(task->method_, task, rctx);
           task->SetStarted();
