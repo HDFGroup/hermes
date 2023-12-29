@@ -59,7 +59,7 @@ class Server : public TaskLib {
  public:
   hipc::uptr<hipc::mpsc_queue<PushTask*>> push_;
   hipc::uptr<hipc::mpsc_queue<WaitTask>> wait_;
-  hipc::uptr<hipc::mpsc_queue<AckTask>> ack_;
+  // hipc::uptr<hipc::mpsc_queue<AckTask>> ack_;
 
  public:
   Server() = default;
@@ -75,9 +75,9 @@ class Server : public TaskLib {
     entry->thread_ = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(
         &Server::RunWaitPreemptive, entry);
 
-    entry = new AbtWorkerEntry(2, this);
-    entry->thread_ = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(
-        &Server::RunAckPreemptive, entry);
+//    entry = new AbtWorkerEntry(2, this);
+//    entry->thread_ = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(
+//        &Server::RunAckPreemptive, entry);
   }
   void Construct(ConstructTask *task, RunContext &rctx) {
     HILOG(kInfo, "(node {}) Constructing remote queue (task_node={}, task_state={}, method={})",
@@ -86,8 +86,6 @@ class Server : public TaskLib {
     push_ = hipc::make_uptr<hipc::mpsc_queue<PushTask*>>(
         HRUN_CLIENT->server_config_.queue_manager_.queue_depth_);
     wait_ = hipc::make_uptr<hipc::mpsc_queue<WaitTask>>(
-        HRUN_CLIENT->server_config_.queue_manager_.queue_depth_);
-    ack_ = hipc::make_uptr<hipc::mpsc_queue<AckTask>>(
         HRUN_CLIENT->server_config_.queue_manager_.queue_depth_);
     CreateThreads();
     HRUN_THALLIUM->RegisterRpc("RpcPushSmall", [this](
@@ -488,28 +486,29 @@ class Server : public TaskLib {
                                         size_t task_addr,
                                         int replica,
                                         std::string &ret) {
-    AckTask ack_task;
-    ack_task.task_ = (PushTask *) task_addr;
-    ack_task.replica_ = replica;
-    ack_task.ret_ = std::move(ret);
-    ack_->emplace(ack_task);
-    req.respond(0);
+//    AckTask ack_task;
+//    ack_task.task_ = (PushTask *) task_addr;
+//    ack_task.replica_ = replica;
+//    ack_task.ret_ = std::move(ret);
+//    ack_->emplace(ack_task);
+//    req.respond(0);
+    ClientHandlePushReplicaOutput(replica, ret, (PushTask *) task_addr);
   }
 
   /** An ABT thread to run a PUSH task */
-  static void RunAckPreemptive(void *data) {
-    AbtWorkerEntry *entry = (AbtWorkerEntry *) data;
-    Server *server = entry->server_;
-    WorkOrchestrator *orchestrator = HRUN_WORK_ORCHESTRATOR;
-    while (orchestrator->IsAlive()) {
-      AckTask ack_task;
-      while (!server->ack_->pop(ack_task).IsNull()) {
-        server->ClientHandlePushReplicaOutput(
-            ack_task.replica_, ack_task.ret_, ack_task.task_);
-      }
-      ABT_thread_yield();
-    }
-  }
+//  static void RunAckPreemptive(void *data) {
+//    AbtWorkerEntry *entry = (AbtWorkerEntry *) data;
+//    Server *server = entry->server_;
+//    WorkOrchestrator *orchestrator = HRUN_WORK_ORCHESTRATOR;
+//    while (orchestrator->IsAlive()) {
+//      AckTask ack_task;
+//      while (!server->ack_->pop(ack_task).IsNull()) {
+//        server->ClientHandlePushReplicaOutput(
+//            ack_task.replica_, ack_task.ret_, ack_task.task_);
+//      }
+//      ABT_thread_yield();
+//    }
+//  }
 
   /** Handle output from replica PUSH */
   void ClientHandlePushReplicaOutput(int replica,
