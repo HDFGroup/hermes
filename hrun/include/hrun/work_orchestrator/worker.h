@@ -315,16 +315,8 @@ class Worker {
     }
     WorkOrchestrator *orchestrator = HRUN_WORK_ORCHESTRATOR;
     now_.Now();
-    hshm::Timer t;
-    t.Resume();
     while (orchestrator->IsAlive()) {
       try {
-        if (t.GetMsecFromStart() > 500) {
-          HILOG(kInfo, "(node {}) Worker {} took {} ms to run",
-                HRUN_CLIENT->node_id_, id_, t.GetMsecFromStart());
-          t.Reset();
-          t.Resume();
-        }
         bool flushing = flush_.flushing_;
         Run(flushing);
         if (flushing) {
