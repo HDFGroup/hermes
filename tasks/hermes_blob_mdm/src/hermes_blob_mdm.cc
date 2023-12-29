@@ -338,6 +338,8 @@ class Server : public TaskLib {
    * Create a blob's metadata
    * */
   void PutBlob(PutBlobTask *task, RunContext &rctx) {
+    task->SetModuleComplete();
+    return;
     // Get the blob info data structure
     hshm::charbuf blob_name = hshm::to_charbuf(*task->blob_name_);
     if (task->blob_id_.IsNull()) {
