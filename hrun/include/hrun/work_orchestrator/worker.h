@@ -332,6 +332,10 @@ class Worker {
         }
       } catch (hshm::Error &e) {
         HELOG(kFatal, "(node {}) Worker {} caught an error: {}", HRUN_CLIENT->node_id_, id_, e.what());
+      } catch (std::exception &e) {
+        HELOG(kFatal, "(node {}) Worker {} caught an exception: {}", HRUN_CLIENT->node_id_, id_, e.what());
+      } catch (...) {
+        HELOG(kFatal, "(node {}) Worker {} caught an unknown exception", HRUN_CLIENT->node_id_, id_);
       }
       if (!IsContinuousPolling()) {
         Yield();
