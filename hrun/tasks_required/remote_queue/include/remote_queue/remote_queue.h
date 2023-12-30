@@ -74,9 +74,6 @@ class Client : public TaskLibClient {
     LPointer<PushTask> push_task = HRUN_CLIENT->NewTask<PushTask>(
         orig_task->task_node_ + 1, DomainId::GetLocal(), id_,
         domain_ids, orig_task, exec, orig_task->method_, xfer);
-    if (orig_task->IsRoot()) {
-      push_task->SetRoot();
-    }
     MultiQueue *queue = HRUN_CLIENT->GetQueue(queue_id_);
     queue->Emplace(push_task->prio_, 0, push_task.shm_);
   }
