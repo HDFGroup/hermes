@@ -896,13 +896,14 @@ class Server : public TaskLib {
         task->phase_ = ReorganizeBlobPhase::kPut;
       }
       case ReorganizeBlobPhase::kPut: {
-        task->put_task_ = blob_mdm_.AsyncPutBlob(task->task_node_ + 1,
-                                                 task->tag_id_, hshm::charbuf(""),
-                                                 task->blob_id_, 0,
-                                                 task->data_size_,
-                                                 task->data_,
-                                                 task->score_,
-                                                 HERMES_BLOB_REPLACE).ptr_;
+        task->put_task_ = blob_mdm_.AsyncPutBlob(
+            task->task_node_ + 1,
+            task->tag_id_, hshm::charbuf(""),
+            task->blob_id_, 0,
+            task->data_size_,
+            task->data_,
+            task->score_,
+            HERMES_BLOB_REPLACE | TASK_FIRE_AND_FORGET | TASK_DATA_OWNER).ptr_;
         task->SetModuleComplete();
       }
     }

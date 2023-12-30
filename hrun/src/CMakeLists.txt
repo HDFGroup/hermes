@@ -25,7 +25,9 @@ add_library(hrun_runtime
         hrun_runtime.cc)
 add_dependencies(hrun_runtime ${Hermes_CLIENT_DEPS})
 target_link_libraries(hrun_runtime thallium ${Hermes_CLIENT_LIBRARIES})
-
+if (HERMES_REMOTE_DEBUG)
+  target_compile_definitions(hrun_runtime PUBLIC -DHERMES_REMOTE_DEBUG)
+endif()
 #------------------------------------------------------------------------------
 # Build Hrun Runtime Start Function
 #------------------------------------------------------------------------------

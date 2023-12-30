@@ -293,7 +293,9 @@ struct RunOpTask : public Task, TaskFlags<TF_LOCAL | TF_REPLICA> {
     prio_ = TaskPrio::kLongRunning;
     task_state_ = state_id;
     method_ = Method::kRunOp;
-    task_flags_.SetBits(TASK_LONG_RUNNING | TASK_COROUTINE | TASK_LANE_ALL);
+    task_flags_.SetBits(
+        TASK_LONG_RUNNING | TASK_COROUTINE | TASK_LANE_ALL |
+        TASK_REMOTE_DEBUG_MARK);
     SetPeriodSec(1);  // TODO(llogan): don't hardcode this
     domain_id_ = DomainId::GetLocal();
   }

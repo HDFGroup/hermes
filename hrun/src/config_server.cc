@@ -57,6 +57,8 @@ void ServerConfig::ParseQueueManager(YAML::Node yaml_conf) {
         hshm::ConfigParse::ExpandPath(yaml_conf["shm_name"].as<std::string>());
     queue_manager_.data_shm_name_ =
         hshm::ConfigParse::ExpandPath(queue_manager_.shm_name_ + "_data");
+    queue_manager_.rdata_shm_name_ =
+        hshm::ConfigParse::ExpandPath(queue_manager_.shm_name_ + "_rdata");
   }
   if (yaml_conf["shm_size"]) {
     queue_manager_.shm_size_ = hshm::ConfigParse::ParseSize(
@@ -65,6 +67,10 @@ void ServerConfig::ParseQueueManager(YAML::Node yaml_conf) {
   if (yaml_conf["data_shm_size"]) {
     queue_manager_.data_shm_size_ = hshm::ConfigParse::ParseSize(
         yaml_conf["data_shm_size"].as<std::string>());
+  }
+  if (yaml_conf["rdata_shm_size"]) {
+    queue_manager_.rdata_shm_size_ = hshm::ConfigParse::ParseSize(
+        yaml_conf["rdata_shm_size"].as<std::string>());
   }
 }
 

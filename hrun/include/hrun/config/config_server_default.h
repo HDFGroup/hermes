@@ -28,6 +28,8 @@ const inline char* kHrunServerDefaultConfigStr =
 "  shm_size: 0g\n"
 "  # The size of the shared memory to allocate for data buffers\n"
 "  data_shm_size: 4g\n"
+"  # The size of the shared memory to allocate for runtime data buffers\n"
+"  rdata_shm_size: 4g\n"
 "\n"
 "### Define properties of RPCs\n"
 "rpc:\n"

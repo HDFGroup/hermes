@@ -38,39 +38,90 @@ struct AbtWorkerEntry {
   : id_(id), server_(server), task_(nullptr), rctx_(nullptr) {}
 };
 
+struct WaitTask {
+  u32 method_;
+  Task *task_;
+  DomainId ret_domain_;
+  TaskState *exec_;
+  size_t task_addr_;
+  int replica_;
+  LPointer<char> data_;
+  bool complete_;
+};
+
+struct AckTask {
+  PushTask *task_;
+  int replica_;
+  std::string ret_;
+};
+
 class Server : public TaskLib {
  public:
-  hipc::uptr<hipc::mpsc_queue<AbtWorkerEntry*>> threads_;
+  hipc::uptr<hipc::mpsc_queue<PushTask*>> push_;
+  hipc::uptr<hipc::mpsc_queue<WaitTask>> wait_;
+  hipc::uptr<hipc::mpsc_queue<AckTask>> ack_;
 
  public:
   Server() = default;
 
   /** Construct remote queue */
+  void CreateThreads() {
+    AbtWorkerEntry *entry;
+    entry = new AbtWorkerEntry(0, this);
+    entry->thread_ = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(
+        &Server::RunPreemptive, entry);
+
+    entry = new AbtWorkerEntry(1, this);
+    entry->thread_ = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(
+        &Server::RunWaitPreemptive, entry);
+
+//    entry = new AbtWorkerEntry(2, this);
+//    entry->thread_ = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(
+//        &Server::RunAckPreemptive, entry);
+  }
   void Construct(ConstructTask *task, RunContext &rctx) {
     HILOG(kInfo, "(node {}) Constructing remote queue (task_node={}, task_state={}, method={})",
           HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, task->method_);
-    threads_ = hipc::make_uptr<hipc::mpsc_queue<AbtWorkerEntry*>>(
-        HRUN_RPC->num_threads_ + 16);
-    for (int i = 0; i < HRUN_RPC->num_threads_; ++i) {
-      AbtWorkerEntry *entry = new AbtWorkerEntry(i, this);
-      entry->thread_ = HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(
-          &Server::RunPreemptive, entry);
-      threads_->emplace(entry);
-    }
-    HRUN_THALLIUM->RegisterRpc("RpcPushSmall", [this](const tl::request &req,
-                                                         TaskStateId state_id,
-                                                         u32 method,
-                                                         std::string &params) {
-      this->RpcPushSmall(req, state_id, method, params);
+    size_t max = HRUN_RPC->num_threads_;
+    push_ = hipc::make_uptr<hipc::mpsc_queue<PushTask*>>(
+        HRUN_CLIENT->server_config_.queue_manager_.queue_depth_);
+    wait_ = hipc::make_uptr<hipc::mpsc_queue<WaitTask>>(
+        HRUN_CLIENT->server_config_.queue_manager_.queue_depth_);
+//    ack_ = hipc::make_uptr<hipc::mpsc_queue<AckTask>>(
+//        HRUN_CLIENT->server_config_.queue_manager_.queue_depth_);
+    CreateThreads();
+    HRUN_THALLIUM->RegisterRpc("RpcPushSmall", [this](
+        const tl::request &req,
+        TaskStateId state_id,
+        u32 method,
+        size_t task_addr,
+        int replica,
+        const DomainId &domain_id,
+        std::string &params) {
+      this->RpcPushSmall(req, state_id, method,
+                         task_addr, replica, domain_id, params);
     });
-    HRUN_THALLIUM->RegisterRpc("RpcPushBulk", [this](const tl::request &req,
-                                                        const tl::bulk &bulk,
-                                                        TaskStateId state_id,
-                                                        u32 method,
-                                                        std::string &params,
-                                                        size_t data_size,
-                                                        IoType io_type) {
-      this->RpcPushBulk(req, state_id, method, params, bulk, data_size, io_type);
+    HRUN_THALLIUM->RegisterRpc("RpcPushBulk", [this](
+        const tl::request &req,
+        const tl::bulk &bulk,
+        TaskStateId state_id,
+        u32 method,
+        size_t task_addr,
+        int replica,
+        const DomainId &domain_id,
+        std::string &params,
+        size_t data_size,
+        IoType io_type) {
+      this->RpcPushBulk(req, state_id, method,
+                        task_addr, replica, domain_id,
+                        params, bulk, data_size, io_type);
+    });
+    HRUN_THALLIUM->RegisterRpc("RpcClientHandlePushReplicaOutput", [this](
+        const tl::request &req,
+        size_t task_addr,
+        int replica,
+        std::string &ret) {
+      this->RpcClientHandlePushReplicaOutput(req, task_addr, replica, ret);
     });
     task->SetModuleComplete();
   }
@@ -86,20 +137,16 @@ class Server : public TaskLib {
 
   /** Push operation called on client */
   void Push(PushTask *task, RunContext &rctx) {
-    AbtWorkerEntry *entry;
     if (!task->started_) {
-//      task->server_ = this;
-//      task->started_ = true;
-//      HRUN_WORK_ORCHESTRATOR->SpawnAsyncThread(
-//          &Server::RunOnce, task);
-      if (threads_->pop(entry).IsNull()) {
-        return;
-      }
-      HILOG(kDebug, "Starting task {} on {}",
-            task->task_node_, entry->id_);
       task->started_ = true;
-      entry->rctx_ = &rctx;
-      entry->task_ = task;
+      task->rep_ = 0;
+      task->num_reps_ = task->domain_ids_.size();
+      HILOG(kDebug, "push task emplaced: task={}, orig_task={}",
+            (size_t)task, (size_t)task->orig_task_)
+      push_->emplace(task);
+    }
+    if (task->rep_.load() == task->num_reps_) {
+      ClientHandlePushReplicaEnd(task);
     }
     // HILOG(kDebug, "Continuing task {}", task->task_node_)
   }
@@ -129,24 +176,16 @@ class Server : public TaskLib {
   }
 
  private:
-  /** An ABT thread */
-  static void RunOnce(void *data) {
-    PushTask *task = (PushTask *) data;
-    Server *server = (Server *) task->server_;
-    server->PushPreemptive(task);
-  }
-
-  /** An ABT thread */
+  /** An ABT thread to run a PUSH task */
   static void RunPreemptive(void *data) {
     AbtWorkerEntry *entry = (AbtWorkerEntry *) data;
     Server *server = entry->server_;
     WorkOrchestrator *orchestrator = HRUN_WORK_ORCHESTRATOR;
     while (orchestrator->IsAlive()) {
-      if (entry->task_) {
-        HILOG(kDebug, "Preempt task {}", entry->task_->task_node_)
-        server->PushPreemptive(entry->task_);
-        entry->task_ = nullptr;
-        server->threads_->emplace(entry);
+      PushTask *task;
+      while (!server->push_->pop(task).IsNull()) {
+        HILOG(kDebug, "push task started: task={}, orig_task={}", (size_t)task, (size_t)task->orig_task_)
+        server->PushPreemptive(task);
       }
       ABT_thread_yield();
     }
@@ -154,265 +193,185 @@ class Server : public TaskLib {
 
   /** PUSH using thallium */
   void PushPreemptive(PushTask *task) {
-    std::vector<DataTransfer> &xfer = task->xfer_;
-    switch (xfer.size()) {
-      case 1: {
-        HILOG(kDebug, "Pushing to small {} vs {}", task->task_node_, task->orig_task_->task_node_)
-        SyncClientSmallPush(xfer, task);
-        break;
+    std::vector<DataTransfer> xfer = task->xfer_;
+    std::vector<DomainId> domain_ids = task->domain_ids_;
+    try {
+      switch (xfer.size()) {
+        case 1: {
+          SyncClientSmallPush(xfer, domain_ids, task);
+          break;
+        }
+        case 2: {
+          SyncClientIoPush(xfer, domain_ids, task);
+          break;
+        }
+        default: {
+          HELOG(kFatal,
+                "The task {}/{} does not support remote calls",
+                task->task_state_,
+                task->method_);
+        }
       }
-      case 2: {
-        HILOG(kDebug, "Pushing to io {}", task->task_node_, task->orig_task_->task_node_)
-        SyncClientIoPush(xfer, task);
-        break;
-      }
-      default: {
-        HELOG(kFatal, "The task {}/{} does not support remote calls", task->task_state_, task->method_);
-      }
+    } catch (hshm::Error &e) {
+      HELOG(kError, "(node {}) Worker {} caught an error: {}", HRUN_CLIENT->node_id_, id_, e.what());
+    } catch (std::exception &e) {
+      HELOG(kError, "(node {}) Worker {} caught an exception: {}", HRUN_CLIENT->node_id_, id_, e.what());
+    } catch (...) {
+      HELOG(kError, "(node {}) Worker {} caught an unknown exception", HRUN_CLIENT->node_id_, id_);
     }
-    ClientHandlePushReplicaEnd(task);
-  }
-
-  /** Handle output from replica PUSH */
-  static void ClientHandlePushReplicaOutput(int replica, std::string &ret, PushTask *task) {
-    std::vector<DataTransfer> xfer(1);
-    xfer[0].data_ = ret.data();
-    xfer[0].data_size_ = ret.size();
-    HILOG(kDebug, "Wait got {} bytes of data (task_node={}, task_state={}, method={})",
-          xfer[0].data_size_,
-          task->orig_task_->task_node_,
-          task->orig_task_->task_state_,
-          task->orig_task_->method_);
-    BinaryInputArchive<false> ar(xfer);
-    task->exec_->LoadEnd(replica, task->exec_method_, ar, task->orig_task_);
-  }
-
-  /** Handle finalization of PUSH replicate */
-  static void ClientHandlePushReplicaEnd(PushTask *task) {
-    task->exec_->ReplicateEnd(task->orig_task_->method_, task->orig_task_);
-    HILOG(kDebug, "Completing task (task_node={}, task_state={}, method={})",
-          task->orig_task_->task_node_,
-          task->orig_task_->task_state_,
-          task->orig_task_->method_);
-    if (!task->orig_task_->IsLongRunning()) {
-      task->orig_task_->SetModuleComplete();
-    } else {
-      task->orig_task_->UnsetStarted();
-      task->orig_task_->UnsetDisableRun();
-    }
-    task->SetModuleComplete();
   }
 
   /** Sync Push for small message */
-  void SyncClientSmallPush(std::vector<DataTransfer> &xfer, PushTask *task) {
+  void SyncClientSmallPush(std::vector<DataTransfer> &xfer,
+                           std::vector<DomainId> &domain_ids,
+                           PushTask *task) {
+    TaskStateId state_id = task->exec_->id_;
+    int method = task->exec_method_;
     std::string params = std::string((char *) xfer[0].data_, xfer[0].data_size_);
-    for (int replica = 0; replica < task->domain_ids_.size(); ++replica) {
-      DomainId domain_id = task->domain_ids_[replica];
-      HILOG(kDebug, "(SM) Transferring {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={})",
-            params.size(),
-            task->orig_task_->task_node_,
-            task->orig_task_->task_state_,
-            task->orig_task_->method_,
-            HRUN_CLIENT->node_id_,
-            domain_id.id_);
-      std::string ret = HRUN_THALLIUM->SyncCall<std::string>(domain_id.id_,
-                                                             "RpcPushSmall",
-                                                             task->exec_->id_,
-                                                             task->exec_method_,
-                                                             params);
-      HILOG(kDebug, "(SM) Finished {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={})",
-            params.size(),
-            task->orig_task_->task_node_,
-            task->orig_task_->task_state_,
-            task->orig_task_->method_,
-            HRUN_CLIENT->node_id_,
-            domain_id.id_);
-      ClientHandlePushReplicaOutput(replica, ret, task);
+    for (int replica = 0; replica < domain_ids.size(); ++replica) {
+      DomainId my_domain = DomainId::GetNode(HRUN_CLIENT->node_id_);
+      DomainId domain_id = domain_ids[replica];
+      HRUN_THALLIUM->SyncCall<int>(domain_id.id_,
+                                   "RpcPushSmall",
+                                   state_id,
+                                   method,
+                                   (size_t) task,
+                                   replica,
+                                   my_domain,
+                                   params);
     }
   }
 
   /** Sync Push for I/O message */
-  void SyncClientIoPush(std::vector<DataTransfer> &xfer, PushTask *task) {
+  void SyncClientIoPush(std::vector<DataTransfer> &xfer,
+                        std::vector<DomainId> &domain_ids,
+                        PushTask *task) {
     std::string params = std::string((char *) xfer[1].data_, xfer[1].data_size_);
     IoType io_type = IoType::kRead;
     if (xfer[0].flags_.Any(DT_RECEIVER_READ)) {
       io_type = IoType::kWrite;
     }
-    for (int replica = 0; replica < task->domain_ids_.size(); ++replica) {
-      DomainId domain_id = task->domain_ids_[replica];
+    TaskStateId state_id = task->exec_->id_;
+    int method = task->exec_method_;
+    for (int replica = 0; replica < domain_ids.size(); ++replica) {
+      DomainId my_domain = DomainId::GetNode(HRUN_CLIENT->node_id_);
+      DomainId domain_id = domain_ids[replica];
       char *data = (char*)xfer[0].data_;
       size_t data_size = xfer[0].data_size_;
-      HILOG(kDebug, "(IO) Transferring {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={}, type={})",
-            data_size,
-            task->orig_task_->task_node_,
-            task->orig_task_->task_state_,
-            task->orig_task_->method_,
-            HRUN_CLIENT->node_id_,
-            domain_id.id_,
-            static_cast<int>(io_type));
-      std::string ret;
       if (data_size > 0) {
-        ret = HRUN_THALLIUM->SyncIoCall<std::string>(domain_id.id_,
-                                                     "RpcPushBulk",
-                                                     io_type,
-                                                     data,
-                                                     data_size,
-                                                     task->exec_->id_,
-                                                     task->exec_method_,
-                                                     params,
-                                                     data_size,
-                                                     io_type);
+        HRUN_THALLIUM->SyncIoCall<int>(domain_id.id_,
+                                       "RpcPushBulk",
+                                       io_type,
+                                       data,
+                                       data_size,
+                                       state_id,
+                                       method,
+                                       (size_t) task,
+                                       replica,
+                                       my_domain,
+                                       params,
+                                       data_size,
+                                       io_type);
       } else {
-        HILOG(kFatal, "(IO) Thallium can't handle 0-sized I/O")
+        HELOG(kFatal, "(IO) Thallium can't handle 0-sized I/O")
       }
-      HILOG(kDebug, "(IO) Finished transferring {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={}, type={})",
-            data_size,
-            task->orig_task_->task_node_,
-            task->orig_task_->task_state_,
-            task->orig_task_->method_,
-            HRUN_CLIENT->node_id_,
-            domain_id.id_,
-            static_cast<int>(io_type));
-      ClientHandlePushReplicaOutput(replica, ret, task);
     }
-  }
-
-  /** Push for small message */
-  void AsyncClientSmallPush(std::vector<DataTransfer> &xfer, PushTask *task) {
-    std::string params = std::string((char *) xfer[0].data_, xfer[0].data_size_);
-    std::vector<thallium::async_response> waiters;
-    for (int replica = 0; replica < task->domain_ids_.size(); ++replica) {
-      DomainId domain_id = task->domain_ids_[replica];
-      HILOG(kDebug, "(SM) Transferring {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={})",
-            params.size(),
-            task->orig_task_->task_node_,
-            task->orig_task_->task_state_,
-            task->orig_task_->method_,
-            HRUN_CLIENT->node_id_,
-            domain_id.id_);
-      thallium::async_response async =
-          HRUN_THALLIUM->AsyncCall(domain_id.id_,
-                                   "RpcPushSmall",
-                                   task->exec_->id_,
-                                   task->exec_method_,
-                                   params);
-      HILOG(kDebug, "(SM) Submitted {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={})",
-            params.size(),
-            task->orig_task_->task_node_,
-            task->orig_task_->task_state_,
-            task->orig_task_->method_,
-            HRUN_CLIENT->node_id_,
-            domain_id.id_);
-      std::string ret = HRUN_THALLIUM->Wait<std::string>(async);
-      ClientHandlePushReplicaOutput(replica, ret, task);
-    }
-  }
-
-  /** Push for I/O message */
-  void AsyncClientIoPush(std::vector<DataTransfer> &xfer, PushTask *task) {
-    std::string params = std::string((char *) xfer[1].data_, xfer[1].data_size_);
-    IoType io_type = IoType::kRead;
-    if (xfer[0].flags_.Any(DT_RECEIVER_READ)) {
-      io_type = IoType::kWrite;
-    }
-    for (int replica = 0; replica < task->domain_ids_.size(); ++replica) {
-      DomainId domain_id = task->domain_ids_[replica];
-      char *data = (char*)xfer[0].data_;
-      size_t data_size = xfer[0].data_size_;
-      HILOG(kDebug, "(IO) Transferring {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={}, type={})",
-            data_size,
-            task->orig_task_->task_node_,
-            task->orig_task_->task_state_,
-            task->orig_task_->method_,
-            HRUN_CLIENT->node_id_,
-            domain_id.id_,
-            static_cast<int>(io_type));
-      thallium::async_response async =
-          HRUN_THALLIUM->AsyncIoCall(domain_id.id_,
-                                     "RpcPushBulk",
-                                     io_type,
-                                     data,
-                                     data_size,
-                                     task->exec_->id_,
-                                     task->exec_method_,
-                                     params,
-                                     data_size,
-                                     io_type);
-      HILOG(kDebug, "(IO) Submitted transfer {} bytes of data (task_node={}, task_state={}, method={}, from={}, to={}, type={})",
-            data_size,
-            task->orig_task_->task_node_,
-            task->orig_task_->task_state_,
-            task->orig_task_->method_,
-            HRUN_CLIENT->node_id_,
-            domain_id.id_,
-            static_cast<int>(io_type));
-      std::string ret = HRUN_THALLIUM->Wait<std::string>(async);
-      ClientHandlePushReplicaOutput(replica, ret, task);
-    }
+    // task->rep_ = task->num_reps_;
   }
 
   /** The RPC for processing a small message */
   void RpcPushSmall(const tl::request &req,
                     TaskStateId state_id,
                     u32 method,
+                    size_t task_addr,
+                    int replica,
+                    const DomainId &ret_domain,
                     std::string &params) {
-    // Create the input data transfer object
-    std::vector<DataTransfer> xfer(1);
-    xfer[0].data_ = params.data();
-    xfer[0].data_size_ = params.size();
-    HILOG(kDebug, "Received small message of size {} "
-                  "(task_state={}, method={})", xfer[0].data_size_, state_id, method);
 
-    // Process the message
-    TaskState *exec;
-    Task *orig_task;
-    RpcExec(req, state_id, method, params, xfer, orig_task, exec);
-    RpcComplete(req, method, orig_task, exec, state_id);
+    // Create the input data transfer object
+    try {
+      std::vector<DataTransfer> xfer(1);
+      xfer[0].data_ = params.data();
+      xfer[0].data_size_ = params.size();
+      HILOG(kDebug, "(node {}) Received small message of size {} "
+                    "(task_state={}, method={})",
+            HRUN_CLIENT->node_id_,
+            xfer[0].data_size_, state_id, method);
+
+      // Process the message
+      TaskState *exec;
+      Task *orig_task;
+      LPointer<char> data;
+      data.ptr_ = nullptr;
+      RpcExec(req, state_id, method, task_addr, replica, ret_domain,
+              xfer, data, orig_task, exec);
+    } catch (hshm::Error &e) {
+      HELOG(kError, "(node {}) Worker {} caught an error: {}", HRUN_CLIENT->node_id_, id_, e.what());
+    } catch (std::exception &e) {
+      HELOG(kError, "(node {}) Worker {} caught an exception: {}", HRUN_CLIENT->node_id_, id_, e.what());
+    } catch (...) {
+      HELOG(kError, "(node {}) Worker {} caught an unknown exception", HRUN_CLIENT->node_id_, id_);
+    }
+    req.respond(0);
   }
 
   /** The RPC for processing a message with data */
   void RpcPushBulk(const tl::request &req,
                    TaskStateId state_id,
                    u32 method,
+                   size_t task_addr,
+                   int replica,
+                   const DomainId &ret_domain,
                    std::string &params,
                    const tl::bulk &bulk,
                    size_t data_size,
                    IoType io_type) {
-    LPointer<char> data =
-        HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_ABT>(data_size);
+    LPointer<char> data;
+    data.ptr_ = nullptr;
+    try {
+      data = HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_ABT>(data_size);
 
-    // Create the input data transfer object
-    std::vector<DataTransfer> xfer(2);
-    xfer[0].data_ = data.ptr_;
-    xfer[0].data_size_ = data_size;
-    xfer[1].data_ = params.data();
-    xfer[1].data_size_ = params.size();
+      // Create the input data transfer object
+      std::vector<DataTransfer> xfer(2);
+      xfer[0].data_ = data.ptr_;
+      xfer[0].data_size_ = data_size;
+      xfer[1].data_ = params.data();
+      xfer[1].data_size_ = params.size();
 
-    HILOG(kDebug, "Received large message of size {} "
-                  "(task_state={}, method={})", xfer[0].data_size_, state_id, method);
+      HILOG(kDebug, "(node {}) Received large message of size {} "
+                    "(task_state={}, method={})",
+            HRUN_CLIENT->node_id_, xfer[0].data_size_, state_id, method);
 
-    // Process the message
-    if (io_type == IoType::kWrite) {
-      HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.ptr_, data_size);
+      // Process the message
+      if (io_type == IoType::kWrite) {
+        HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.ptr_, data_size);
+      }
+      TaskState *exec;
+      Task *orig_task;
+      RpcExec(req, state_id, method, task_addr, replica, ret_domain,
+              xfer, data, orig_task, exec);
+      if (io_type == IoType::kRead) {
+        HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.ptr_, data_size);
+      }
+    } catch (hshm::Error &e) {
+      HELOG(kError, "(node {}) Worker {} caught an error: {}", HRUN_CLIENT->node_id_, id_, e.what());
+    } catch (std::exception &e) {
+      HELOG(kError, "(node {}) Worker {} caught an exception: {}", HRUN_CLIENT->node_id_, id_, e.what());
+    } catch (...) {
+      HELOG(kError, "(node {}) Worker {} caught an unknown exception", HRUN_CLIENT->node_id_, id_);
     }
-    TaskState *exec;
-    Task *orig_task;
-    RpcExec(req, state_id, method, params, xfer, orig_task, exec);
-    if (io_type == IoType::kRead) {
-      HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.ptr_, data_size);
-    }
-    HRUN_CLIENT->FreeBuffer(data);
-
-    // Return
-    RpcComplete(req, method, orig_task, exec, state_id);
+    req.respond(0);
   }
 
   /** Push operation called at the remote server */
   void RpcExec(const tl::request &req,
                const TaskStateId &state_id,
                u32 method,
-               std::string &params,
+               size_t task_addr,
+               int replica,
+               const DomainId &ret_domain,
                std::vector<DataTransfer> &xfer,
+               LPointer<char> &data,
                Task *&orig_task, TaskState *&exec) {
     size_t data_size = xfer[0].data_size_;
     BinaryInputArchive<true> ar(xfer);
@@ -422,12 +381,7 @@ class Server : public TaskLib {
     if (exec == nullptr) {
       HELOG(kFatal, "(node {}) Could not find the task state {}",
             HRUN_CLIENT->node_id_, state_id);
-      req.respond(std::string());
       return;
-    } else {
-      HILOG(kDebug, "(node {}) Found task state {}",
-            HRUN_CLIENT->node_id_,
-            state_id);
     }
     TaskPointer task_ptr = exec->LoadStart(method, ar);
     orig_task = task_ptr.ptr_;
@@ -441,6 +395,8 @@ class Server : public TaskLib {
     orig_task->UnsetStarted();
     orig_task->UnsetDataOwner();
     orig_task->UnsetLongRunning();
+    orig_task->UnsetRoot();
+    orig_task->task_flags_.SetBits(TASK_REMOTE_DEBUG_MARK);
 
     // Execute task
     MultiQueue *queue = HRUN_CLIENT->GetQueue(QueueId(state_id));
@@ -455,29 +411,161 @@ class Server : public TaskLib {
           method,
           data_size,
           orig_task->lane_hash_);
-    orig_task->Wait<TASK_YIELD_ABT>();
+
+    // Spawn wait event handler for task completion
+    WaitTask wait_task;
+    wait_task.method_ = method;
+    wait_task.ret_domain_ = ret_domain;
+    wait_task.task_ = orig_task;
+    wait_task.exec_ = exec;
+    wait_task.task_addr_ = task_addr;
+    wait_task.replica_ = replica;
+    wait_task.data_ = data;
+    wait_task.complete_ = false;
+    wait_->emplace(wait_task);
+
+//    HILOG(kDebug,
+//          "(node {}) Waiting task (task_node={}, task_state={}/{}, state_name={}, method={}, size={}, lane_hash={})",
+//          HRUN_CLIENT->node_id_,
+//          orig_task->task_node_,
+//          orig_task->task_state_,
+//          state_id,
+//          exec->name_,
+//          method,
+//          data_size,
+//          orig_task->lane_hash_);
   }
 
-  void RpcComplete(const tl::request &req,
-                   u32 method, Task *orig_task,
-                   TaskState *exec, TaskStateId state_id) {
-    BinaryOutputArchive<false> ar(DomainId::GetNode(HRUN_CLIENT->node_id_));
-    std::vector<DataTransfer> out_xfer = exec->SaveEnd(method, ar, orig_task);
-    HILOG(kDebug, "(node {}) Returning {} bytes of data (task_node={}, task_state={}/{}, method={})",
-          HRUN_CLIENT->node_id_,
-          out_xfer[0].data_size_,
-          orig_task->task_node_,
-          orig_task->task_state_,
-          state_id,
-          method);
-
-    HRUN_CLIENT->DelTask(exec, orig_task);
-    if (out_xfer.size() > 0 && out_xfer[0].data_size_ > 0) {
-      req.respond(std::string((char *) out_xfer[0].data_, out_xfer[0].data_size_));
-    } else {
-      req.respond(std::string());
+  /** An ABT thread to run a WAIT task */
+  static void RunWaitPreemptive(void *data) {
+    AbtWorkerEntry *entry = (AbtWorkerEntry *) data;
+    Server *server = entry->server_;
+    WorkOrchestrator *orchestrator = HRUN_WORK_ORCHESTRATOR;
+    while (orchestrator->IsAlive()) {
+      WaitTask *wait_task;
+      int i = 0;
+      while (!server->wait_->peek(wait_task, i).IsNull()) {
+        Task *orig_task = wait_task->task_;
+        if (!wait_task->complete_ && orig_task->IsComplete()) {
+          server->RpcComplete(wait_task->method_,
+                              orig_task,
+                              wait_task->exec_,
+                              wait_task->task_addr_,
+                              wait_task->replica_,
+                              wait_task->ret_domain_,
+                              wait_task->data_);
+          wait_task->complete_ = true;
+        }
+        if (i == 0 && wait_task->complete_) {
+          server->wait_->pop();
+          continue;
+        }
+        ++i;
+      }
+      ABT_thread_yield();
     }
   }
+
+  /** Complete a wait task */
+  void RpcComplete(u32 method, Task *orig_task,
+                   TaskState *exec,
+                   size_t task_addr, int replica,
+                   const DomainId &ret_domain,
+                   LPointer<char> &data) {
+    if (data.ptr_ != nullptr) {
+      HRUN_CLIENT->FreeBuffer(data);
+    }
+    BinaryOutputArchive<false> ar(DomainId::GetNode(HRUN_CLIENT->node_id_));
+    std::vector<DataTransfer> out_xfer = exec->SaveEnd(method, ar, orig_task);
+    std::string ret;
+    if (out_xfer.size() > 0 && out_xfer[0].data_size_ > 0) {
+      ret = std::string((char *) out_xfer[0].data_, out_xfer[0].data_size_);
+    }
+    HRUN_THALLIUM->SyncCall<int>(ret_domain.id_,
+                                  "RpcClientHandlePushReplicaOutput",
+                                  task_addr,
+                                  replica,
+                                  ret);
+    exec->Del(orig_task->method_, orig_task);
+  }
+
+  /** Handle return of RpcComplete */
+  void RpcClientHandlePushReplicaOutput(const tl::request &req,
+                                        size_t task_addr,
+                                        int replica,
+                                        std::string &ret) {
+//    AckTask ack_task;
+//    ack_task.task_ = (PushTask *) task_addr;
+//    ack_task.replica_ = replica;
+//    ack_task.ret_ = std::move(ret);
+//    ack_->emplace(ack_task);
+//    req.respond(0);
+    ClientHandlePushReplicaOutput(replica, ret, (PushTask *) task_addr);
+    req.respond(0);
+  }
+
+  /** An ABT thread to run a PUSH task */
+//  static void RunAckPreemptive(void *data) {
+//    AbtWorkerEntry *entry = (AbtWorkerEntry *) data;
+//    Server *server = entry->server_;
+//    WorkOrchestrator *orchestrator = HRUN_WORK_ORCHESTRATOR;
+//    while (orchestrator->IsAlive()) {
+//      AckTask ack_task;
+//      while (!server->ack_->pop(ack_task).IsNull()) {
+//        server->ClientHandlePushReplicaOutput(
+//            ack_task.replica_, ack_task.ret_, ack_task.task_);
+//      }
+//      ABT_thread_yield();
+//    }
+//  }
+
+  /** Handle output from replica PUSH */
+  void ClientHandlePushReplicaOutput(int replica,
+                                     std::string &ret,
+                                     PushTask *task) {
+    try {
+      std::vector<DataTransfer> xfer(1);
+      xfer[0].data_ = ret.data();
+      xfer[0].data_size_ = ret.size();
+      BinaryInputArchive<false> ar(xfer);
+      task->exec_->LoadEnd(replica, task->exec_method_, ar, task->orig_task_);
+      HILOG(kDebug, "Handled replica output for task "
+                    "(task_node={}, task_state={}, method={}, "
+                    "rep={}, num_reps={})",
+            task->orig_task_->task_node_,
+            task->orig_task_->task_state_,
+            task->orig_task_->method_,
+            task->rep_.load() + 1,
+            task->num_reps_);
+      task->rep_ += 1;
+    } catch (hshm::Error &e) {
+      HELOG(kError, "(node {}) Caught an error: {}",
+            HRUN_CLIENT->node_id_, e.what());
+    } catch (std::exception &e) {
+      HELOG(kError, "(node {}) Caught an exception: {}",
+            HRUN_CLIENT->node_id_, e.what());
+    } catch (...) {
+      HELOG(kError, "(node {}) Caught an unknown exception",
+            HRUN_CLIENT->node_id_);
+    }
+  }
+
+  /** Handle finalization of PUSH replicate */
+  void ClientHandlePushReplicaEnd(PushTask *task) {
+    task->exec_->ReplicateEnd(task->orig_task_->method_, task->orig_task_);
+    HILOG(kDebug, "Completing task (task_node={}, task_state={}, method={})",
+          task->orig_task_->task_node_,
+          task->orig_task_->task_state_,
+          task->orig_task_->method_);
+    if (!task->orig_task_->IsLongRunning()) {
+      task->orig_task_->SetModuleComplete();
+    } else {
+      task->orig_task_->UnsetStarted();
+      task->orig_task_->UnsetDisableRun();
+    }
+    task->SetModuleComplete();
+  }
+
 
  public:
 #include "remote_queue/remote_queue_lib_exec.h"

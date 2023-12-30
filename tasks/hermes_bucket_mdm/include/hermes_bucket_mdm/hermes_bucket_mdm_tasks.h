@@ -400,7 +400,7 @@ struct GetOrCreateTagTask : public Task, TaskFlags<TF_SRL_SYM> {
   template<typename Ar>
   void SerializeStart(Ar &ar) {
     task_serialize<Ar>(ar);
-    ar(tag_name_, blob_owner_, traits_, backend_size_, flags_);
+    ar(tag_name_, blob_owner_, traits_, backend_size_, flags_, params_);
   }
 
   /** (De)serialize message return */

@@ -82,6 +82,7 @@ class Client : public ConfigurationManager {
     }
     main_alloc_ = mem_mngr->GetAllocator(main_alloc_id_);
     data_alloc_ = mem_mngr->GetAllocator(data_alloc_id_);
+    rdata_alloc_ = mem_mngr->GetAllocator(rdata_alloc_id_);
     header_ = main_alloc_->GetCustomHeader<HrunShm>();
     unique_ = &header_->unique_;
     node_id_ = header_->node_id_;
@@ -239,30 +240,86 @@ class Client : public ConfigurationManager {
     yield_task->Yield<THREAD_MODEL>();
   }
 
-  /** Allocate a buffer in a task */
-  template<int THREAD_MODEL>
+  /** Allocate a buffer */
   HSHM_ALWAYS_INLINE
-  LPointer<char> AllocateBufferServer(size_t size, Task *yield_task) {
-    LPointer<char> p;
-    p = main_alloc_->AllocateLocalPtr<char>(size);
-    return p;
+  LPointer<char> AllocateBufferClient(size_t size) {
+    return AllocateBufferSafe<TASK_YIELD_STD>(data_alloc_, size);
   }
 
   /** Allocate a buffer */
   template<int THREAD_MODEL>
   HSHM_ALWAYS_INLINE
   LPointer<char> AllocateBufferServer(size_t size) {
+    return AllocateBufferSafe<THREAD_MODEL>(rdata_alloc_, size);
+  }
+
+  /** Allocate a buffer */
+  template<int THREAD_MODEL>
+  HSHM_ALWAYS_INLINE
+  LPointer<char> AllocateBufferServer(size_t size, Task *yield_task) {
+    return AllocateBufferSafe<THREAD_MODEL>(rdata_alloc_, size,
+                                            yield_task);
+  }
+
+ private:
+  /** Allocate a buffer */
+  template<int THREAD_MODEL>
+  HSHM_ALWAYS_INLINE
+  LPointer<char> AllocateBufferSafe(Allocator *alloc, size_t size) {
+    HILOG(kDebug, "Heap size for {}/{}: {}",
+          alloc->GetId().bits_.major_,
+          alloc->GetId().bits_.minor_,
+          alloc->GetCurrentlyAllocatedSize());
     LPointer<char> p;
-    p = main_alloc_->AllocateLocalPtr<char>(size);
+    while (true) {
+      try {
+        p = alloc->AllocateLocalPtr<char>(size);
+      } catch (hshm::Error &e) {
+        p.shm_.SetNull();
+      }
+      if (!p.shm_.IsNull()) {
+        break;
+      }
+      // FlushRoot(DomainId::GetLocal());
+      Yield<THREAD_MODEL>();
+      HILOG(kDebug, "{} Waiting to allocate buffer of size {} (1)?", size);
+    }
     return p;
   }
 
+  /** Allocate a buffer */
+  template<int THREAD_MODEL>
+  HSHM_ALWAYS_INLINE
+  LPointer<char> AllocateBufferSafe(Allocator *alloc, size_t size,
+                                    Task *yield_task) {
+    HILOG(kDebug, "Heap size for {}/{}: {}",
+          alloc->GetId().bits_.major_,
+          alloc->GetId().bits_.minor_,
+          alloc->GetCurrentlyAllocatedSize());
+    LPointer<char> p;
+    while (true) {
+      try {
+        p = alloc->AllocateLocalPtr<char>(size);
+      } catch (hshm::Error &e) {
+        p.shm_.SetNull();
+      }
+      if (!p.shm_.IsNull()) {
+        break;
+      }
+      // FlushRoot(DomainId::GetLocal());
+      Yield<THREAD_MODEL>(yield_task);
+      HILOG(kDebug, "{} Waiting to allocate buffer of size {} (1)?", size);
+    }
+    return p;
+  }
+
+ public:
   /** Free a buffer */
   HSHM_ALWAYS_INLINE
   void FreeBuffer(hipc::Pointer &p) {
     auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(p.allocator_id_);
     alloc->Free(p);
-    HILOG(kDebug, "Heap size (1) for {}/{}: {}",
+    HILOG(kDebug, "Heap size for {}/{}: {}",
           alloc->GetId().bits_.major_,
           alloc->GetId().bits_.minor_,
           alloc->GetCurrentlyAllocatedSize());
@@ -273,7 +330,7 @@ class Client : public ConfigurationManager {
   void FreeBuffer(LPointer<char> &p) {
     auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(p.shm_.allocator_id_);
     alloc->FreeLocalPtr(p);
-    HILOG(kDebug, "Heap size (2) for {}/{}: {}",
+    HILOG(kDebug, "Heap size for {}/{}: {}",
           alloc->GetId().bits_.major_,
           alloc->GetId().bits_.minor_,
           alloc->GetCurrentlyAllocatedSize());

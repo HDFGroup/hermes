@@ -30,6 +30,11 @@ class Hermes {
     HERMES_CONF->ClientInit();
   }
 
+  /** Init hermes server */
+  void ServerInit() {
+    HERMES_CONF->ServerInit();
+  }
+
   /** Check if initialized */
   bool IsInitialized() {
     return HERMES_CONF->is_initialized_;

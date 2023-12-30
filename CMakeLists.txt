@@ -9,6 +9,7 @@ option(BUILD_MPI_TESTS "Build tests which depend on MPI" ON)
 option(BUILD_OpenMP_TESTS "Build tests which depend on OpenMP" ON)
 option(HERMES_ENABLE_COVERAGE "Check how well tests cover code" OFF)
 option(HERMES_ENABLE_DOXYGEN "Check how well the code is documented" OFF)
+option(HERMES_REMOTE_DEBUG "Enable remote debug mode on hrun" OFF)
 
 option(HERMES_ENABLE_POSIX_ADAPTER "Build the Hermes POSIX adapter." ON)
 option(HERMES_ENABLE_STDIO_ADAPTER "Build the Hermes stdio adapter." OFF)

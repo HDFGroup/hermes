@@ -59,8 +59,6 @@ class Client : public TaskLibClient {
                 TaskState *exec,
                 std::vector<DomainId> &domain_ids) {
     // Serialize task + create the wait task
-    HILOG(kDebug, "Beginning dispersion for (task_node={}, task_state={}, method={})",
-          orig_task->task_node_ + 1, orig_task->task_state_, orig_task->method_)
     orig_task->UnsetStarted();
     BinaryOutputArchive<true> ar(DomainId::GetNode(HRUN_CLIENT->node_id_));
     std::vector<DataTransfer> xfer =
@@ -71,10 +69,11 @@ class Client : public TaskLibClient {
     LPointer<PushTask> push_task = HRUN_CLIENT->NewTask<PushTask>(
         orig_task->task_node_ + 1, DomainId::GetLocal(), id_,
         domain_ids, orig_task, exec, orig_task->method_, xfer);
+    if (orig_task->IsRoot()) {
+      push_task->SetRoot();
+    }
     MultiQueue *queue = HRUN_CLIENT->GetQueue(queue_id_);
-    queue->Emplace(push_task->prio_, orig_task->lane_hash_, push_task.shm_);
-    HILOG(kDebug, "Did dispersion for (task_node={}, task_state={}, method={})",
-          orig_task->task_node_ + 1, orig_task->task_state_, orig_task->method_)
+    queue->Emplace(push_task->prio_, 0, push_task.shm_);
   }
 
   /** Disperse a task among each lane of this node */
@@ -82,8 +81,6 @@ class Client : public TaskLibClient {
   void DisperseLocal(Task *orig_task, TaskState *exec,
                      MultiQueue *orig_queue, LaneGroup *lane_group) {
     // Duplicate task
-//    HILOG(kDebug, "Beginning duplication for (task_node={}, task_state={}, method={})",
-//          orig_task->task_node_ + 1, orig_task->task_state_, orig_task->method_);
     std::vector<LPointer<Task>> dups(lane_group->num_lanes_);
     exec->Dup(orig_task->method_, orig_task, dups);
     for (size_t i = 0; i < dups.size(); ++i) {
@@ -100,7 +97,7 @@ class Client : public TaskLibClient {
         orig_task->task_node_ + 1, id_,
         orig_task, exec, orig_task->method_, dups);
     MultiQueue *queue = HRUN_CLIENT->GetQueue(queue_id_);
-    queue->Emplace(dup_task->prio_, orig_task->lane_hash_, dup_task.shm_);
+    queue->Emplace(dup_task->prio_, 0, dup_task.shm_);
   }
 
   /** Spawn task to accept new connections */

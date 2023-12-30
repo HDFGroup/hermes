@@ -323,7 +323,11 @@ class Worker {
           flush_.flushing_ = false;
         }
       } catch (hshm::Error &e) {
-        HELOG(kFatal, "(node {}) Worker {} caught an error: {}", HRUN_CLIENT->node_id_, id_, e.what());
+        HELOG(kError, "(node {}) Worker {} caught an error: {}", HRUN_CLIENT->node_id_, id_, e.what());
+      } catch (std::exception &e) {
+        HELOG(kError, "(node {}) Worker {} caught an exception: {}", HRUN_CLIENT->node_id_, id_, e.what());
+      } catch (...) {
+        HELOG(kError, "(node {}) Worker {} caught an unknown exception", HRUN_CLIENT->node_id_, id_);
       }
       if (!IsContinuousPolling()) {
         Yield();
@@ -351,7 +355,37 @@ class Worker {
         PollGrouped(work_entry, flushing);
       }
     }
+  }
 
+  /** Print all queues */
+  void PrintQueues(bool no_long_run = false) {
+    for (std::unique_ptr<Worker> &worker : HRUN_WORK_ORCHESTRATOR->workers_) {
+      for (WorkEntry &work_entry : worker->work_queue_) {
+        Lane *&lane = work_entry.lane_;
+        LaneData *entry;
+        int off = 0;
+        while (!lane->peek(entry, off).IsNull()) {
+          Task *task = HRUN_CLIENT->GetMainPointer<Task>(entry->p_);
+          TaskState *exec = HRUN_TASK_REGISTRY->GetTaskState(task->task_state_);
+          bool is_remote = task->domain_id_.IsRemote(HRUN_RPC->GetNumHosts(),
+                                                     HRUN_CLIENT->node_id_);
+          if (no_long_run && task->IsLongRunning()) {
+            off += 1;
+            continue;
+          }
+          HILOG(kInfo,
+                "(node {}, worker {}) Task {} state {}, method {}, is remote: {}, long_running: {}",
+                HRUN_CLIENT->node_id_,
+                worker->id_,
+                task->task_node_,
+                exec->name_,
+                task->method_,
+                is_remote,
+                task->IsLongRunning());
+          off += 1;
+        }
+      }
+    }
   }
 
   /** Allocate a stack for a task */
@@ -392,23 +426,27 @@ class Worker {
       TaskState *exec = HRUN_TASK_REGISTRY->GetTaskState(task->task_state_);
       rctx.exec_ = exec;
       if (!exec) {
-        for (std::pair<std::string, TaskStateId> entries  : HRUN_TASK_REGISTRY->task_state_ids_) {
-          HILOG(kInfo, "Task state: {} id: {} ptr: {} equal: {}",
-                entries.first, entries.second,
-                (size_t)HRUN_TASK_REGISTRY->task_states_[entries.second],
-                entries.second == task->task_state_);
-        }
         bool was_end = HRUN_TASK_REGISTRY->task_states_.find(task->task_state_) ==
             HRUN_TASK_REGISTRY->task_states_.end();
-        HILOG(kInfo, "Was end: {}", was_end);
         HELOG(kWarning, "(node {}) Could not find the task state: {}",
               HRUN_CLIENT->node_id_, task->task_state_);
+        off += 1;
+        // PrintQueues();
         // entry->complete_ = true;
         // EndTask(lane, exec, task, off);
         continue;
       }
       // Get task properties
       bool is_remote = task->domain_id_.IsRemote(HRUN_RPC->GetNumHosts(), HRUN_CLIENT->node_id_);
+// #define HERMES_REMOTE_DEBUG
+#ifdef HERMES_REMOTE_DEBUG
+      if (task->task_state_ != HRUN_QM_CLIENT->admin_task_state_ &&
+          !task->task_flags_.Any(TASK_REMOTE_DEBUG_MARK) &&
+          task->method_ != TaskMethod::kConstruct &&
+          HRUN_RUNTIME->remote_created_) {
+        is_remote = true;
+      }
+#endif
       bool group_avail = CheckTaskGroup(task, exec, work_entry.lane_id_, task->task_node_, is_remote);
       bool should_run = task->ShouldRun(work_entry.cur_time_, flushing);
       // Verify tasks
@@ -421,33 +459,19 @@ class Worker {
       }
       // Attempt to run the task if it's ready and runnable
       if (!task->IsRunDisabled() && group_avail && should_run) {
-// #define REMOTE_DEBUG
-#ifdef REMOTE_DEBUG
-        if (task->task_state_ != HRUN_QM_CLIENT->admin_task_state_ &&
-          !task->task_flags_.Any(TASK_REMOTE_DEBUG_MARK) &&
-          task->method_ != TaskMethod::kConstruct &&
-          HRUN_RUNTIME->remote_created_) {
-        is_remote = true;
-      }
-      task->task_flags_.SetBits(TASK_REMOTE_DEBUG_MARK);
-#endif
         // Execute or schedule task
         if (is_remote) {
           auto ids = HRUN_RUNTIME->ResolveDomainId(task->domain_id_);
           HRUN_REMOTE_QUEUE->Disperse(task, exec, ids);
           task->SetDisableRun();
-          task->SetUnordered();
-          task->UnsetCoroutine();
         } else if (task->IsLaneAll()) {
           HRUN_REMOTE_QUEUE->DisperseLocal(task, exec, work_entry.queue_, work_entry.group_);
           task->SetDisableRun();
-          task->SetUnordered();
-          task->UnsetCoroutine();
         } else if (task->IsCoroutine()) {
           if (!task->IsStarted()) {
             rctx.stack_ptr_ = AllocateStack();
             if (rctx.stack_ptr_ == nullptr) {
-              HILOG(kFatal, "The stack pointer of size {} is NULL",
+              HELOG(kFatal, "The stack pointer of size {} is NULL",
                     stack_size_, rctx.stack_ptr_);
             }
             rctx.jmp_.fctx = bctx::make_fcontext(
@@ -463,17 +487,22 @@ class Worker {
             task->SetStarted();
           }
         } else {
-          exec->Run(task->method_, task, rctx);
+          try {
+            exec->Run(task->method_, task, rctx);
+          } catch (std::exception &e) {
+            HELOG(kError, "(node {}) Worker {} caught an exception: {}", HRUN_CLIENT->node_id_, id_, e.what());
+          } catch (...) {
+            HELOG(kError, "(node {}) Worker {} caught an unknown exception", HRUN_CLIENT->node_id_, id_);
+
+          }
           task->SetStarted();
         }
         task->DidRun(work_entry.cur_time_);
       }
       // Cleanup on task completion
       if (task->IsModuleComplete()) {
-//      HILOG(kDebug, "(node {}) Ending task: task_node={} task_state={} worker={}",
-//            HRUN_CLIENT->node_id_, task->task_node_, task->task_state_, id_);
         entry->complete_ = true;
-        if (task->IsCoroutine()) {
+        if (task->IsCoroutine() && !is_remote && !task->IsLaneAll()) {
           FreeStack(rctx.stack_ptr_);
         }
         RemoveTaskGroup(task, exec, work_entry.lane_id_, is_remote);
@@ -540,7 +569,7 @@ class Worker {
   HSHM_ALWAYS_INLINE
   void RemoveTaskGroup(Task *task, TaskState *exec,
                        u32 lane_id, const bool &is_remote) {
-    if (is_remote) {
+    if (is_remote || task->IsLaneAll()) {
       return;
     }
     int ret = exec->GetGroup(task->method_, task, group_);

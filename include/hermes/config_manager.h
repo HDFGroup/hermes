@@ -62,6 +62,10 @@ class ConfigurationManager {
     is_initialized_ = true;
   }
 
+  void ServerInit() {
+    ClientInit();
+  }
+
   void LoadClientConfig(std::string config_path) {
     // Load hermes config
     if (config_path.empty()) {
