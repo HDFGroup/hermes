@@ -276,6 +276,7 @@ class Server : public TaskLib {
         HELOG(kFatal, "(IO) Thallium can't handle 0-sized I/O")
       }
     }
+    task->rep_ = task->num_reps_;
   }
 
   /** The RPC for processing a small message */
@@ -347,8 +348,9 @@ class Server : public TaskLib {
       }
       TaskState *exec;
       Task *orig_task;
-      RpcExec(req, state_id, method, task_addr, replica, ret_domain,
-              xfer, data, orig_task, exec);
+//      RpcExec(req, state_id, method, task_addr, replica, ret_domain,
+//              xfer, data, orig_task, exec);
+      HRUN_CLIENT->FreeBuffer(data);
       if (io_type == IoType::kRead) {
         HRUN_THALLIUM->IoCallServer(req, bulk, io_type, data.ptr_, data_size);
       }
