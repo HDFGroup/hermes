@@ -11,10 +11,8 @@ Hermes is a heterogeneous-aware, multi-tiered, dynamic, and distributed I/O buff
 * A C++ compiler that supports C++ 17.
 * [Thallium](https://mochi.readthedocs.io/en/latest/installing.html) - RPC library for HPC. Use a version greater than `0.5` for RoCE support.
 * [yaml-cpp](https://github.com/jbeder/yaml-cpp) - YAML file parser
-* MPI (tested with MPICH `3.3.2` and OpenMPI `4.0.3`). Note: The MPI-IO adapter
-      only supports MPICH. If you don't need the MPI-IO adapter you can use OpenMPI,
-      but you must define the CMake variable `HERMES_ENABLE_MPIIO_ADAPTER=OFF`.
 * HDF5 1.14.0 if compiling with VFD
+* MPI-IO adapter only tested with MPICH and OpenMPI.
 
 ## Building
 
@@ -53,68 +51,3 @@ make install
 ## Contributing
 
 We follow the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html). You can run `make lint` to ensure that your code conforms to the style. This requires the `cpplint` Python module (`pip install cpplint`). Alternatively, you can let the CI build inform you of required style changes.
-
-## Docker
-
-Build container with Hermes dependencies:
-```
-docker build -t lukemartinlogan/hermes_deps . -f docker/deps.Dockerfile
-```
-
-Run the container with the Hermes source mounted:
-```
-docker run -it --mount src=${PWD},target=/hermes,type=bind \
---name hermes_deps_c \
---network host \
---memory=4G \
---shm-size=4G \
--p 4000:4000 \
--p 4001:4001 \
-lukemartinlogan/hermes_deps
-```
-
-Build Hermes + Jarvis (in container):
-```
-bash /hermes/ci/build_hermes.sh
-```
-
-```
-docker commit hermes_deps_c lukemartinlogan/hermes_deps
-docker push lukemartinlogan/hermes_deps
-docker stop /hermes_deps_c
-docker rm /hermes_deps_c
-```
-
-## Remote Debug
-
-### On personal machine
-```
-ares_node=llogan@ares.cs.iit.edu
-
-local_port=4000
-remote_port=4000
-ssh -L ${local_port}:localhost:${remote_port} -fN ${ares_node}
-
-local_port=4001
-remote_port=4001
-ssh -L ${local_port}:localhost:${remote_port} -fN ${ares_node}
-```
-
-On Ares
-```
-ares_node=ares-comp-27
-
-local_port=4000
-remote_port=4000
-ssh -L ${local_port}:localhost:${remote_port} -fN ${ares_node}
-
-local_port=4001
-remote_port=4001
-ssh -L ${local_port}:localhost:${remote_port} -fN ${ares_node}
-```
-
-Find PIDs of processes using ports
-```
-lsof -i :4000
-lsof -i :4001
-```
