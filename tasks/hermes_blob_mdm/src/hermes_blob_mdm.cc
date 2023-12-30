@@ -70,7 +70,8 @@ class Server : public TaskLib {
       std::string dev_type;
       if (dev.mount_dir_.empty()) {
         dev_type = "ram_bdev";
-        dev.mount_point_ = hshm::Formatter::format("{}/{}", dev.mount_dir_, dev.dev_name_);
+        dev.mount_point_ =
+            hshm::Formatter::format("{}/{}", dev.mount_dir_, dev.dev_name_);
       } else {
         dev_type = "posix_bdev";
       }
