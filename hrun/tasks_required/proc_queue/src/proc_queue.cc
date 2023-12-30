@@ -47,9 +47,6 @@ class Server : public TaskLib {
           ptr->UnsetFireAndForget();
           task->is_fire_forget_ = true;
         }
-        if (ptr->task_node_.IsRoot() || task->task_node_.IsRoot()) {
-          ptr->SetRoot();
-        }
         MultiQueue *real_queue = HRUN_CLIENT->GetQueue(QueueId(ptr->task_state_));
         bool ret = real_queue->EmplaceFrac(
             ptr->prio_, ptr->lane_hash_, task->sub_run_.shm_);

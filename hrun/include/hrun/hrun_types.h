@@ -114,12 +114,13 @@ struct DomainId {
   /** Domain has the local node */
   HSHM_ALWAYS_INLINE
   bool IsRemote(size_t num_hosts, u32 this_node) const {
-    if (num_hosts == 1) {
+    if (num_hosts == 1 && !flags_.Any(kNoLocal)) {
       return false;
     } else {
-      return (flags_.Any(kGlobal | kSet) || (flags_.Any(kNode) && id_ != this_node));
+      return
+      (flags_.Any(kGlobal | kSet | kNoLocal) ||
+      (flags_.Any(kNode) && id_ != this_node));
     }
-    // return flags_.Any(kGlobal | kSet | kNode);
   }
 
   /** DomainId representing the local node */

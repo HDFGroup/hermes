@@ -402,21 +402,6 @@ struct Task : public hipc::ShmContainer {
     task_flags_.UnsetBits(TASK_LANE_ALL);
   }
 
-  /** This task is a root task */
-  HSHM_ALWAYS_INLINE bool IsRoot() {
-    return task_flags_.Any(TASK_IS_ROOT);
-  }
-
-  /** Set this task as a root task */
-  HSHM_ALWAYS_INLINE void SetRoot() {
-    task_flags_.SetBits(TASK_IS_ROOT);
-  }
-
-  /** Unset this task a sa root task */
-  HSHM_ALWAYS_INLINE void UnsetRoot() {
-    task_flags_.UnsetBits(TASK_IS_ROOT);
-  }
-
   /** Set period in nanoseconds */
   HSHM_ALWAYS_INLINE void SetPeriodNs(double ns) {
     period_ns_ = ns;
