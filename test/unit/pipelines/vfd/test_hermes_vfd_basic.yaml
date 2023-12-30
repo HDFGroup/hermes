@@ -1,0 +1,14 @@
+name: hermes_unit_hermes_vfd_basic
+env: hermes
+pkgs:
+  - pkg_type: hermes_run
+    pkg_name: hermes_run
+    sleep: 5
+  - pkg_type: hermes_api
+    pkg_name: hermes_api
+    vfd: true
+  - pkg_type: hermes_vfd_tests
+    pkg_name: hermes_vfd_tests
+    test_file: vfd_basic
+    hermes: true
+    mode: default

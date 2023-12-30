@@ -1,42 +1,75 @@
 #!/bin/bash
 
-# CD into git workspace
-cd ${GITHUB_WORKSPACE}
+# ARGS:
+# SPACK_DIR: the path to spack
 
+# THIS SCRIPT IS EXECUTED BY CONTAINER!!!
 set -x
 set -e
 set -o pipefail
 
-# Set spack env
-INSTALL_DIR="${HOME}"
-SPACK_DIR=${INSTALL_DIR}/spack
-. ${SPACK_DIR}/share/spack/setup-env.sh
+# Update jarvis-cd
+pushd jarvis-cd
+git pull
+pip install -e . -r requirements.txt
+popd
 
-mkdir -p "${HOME}/install"
-mkdir build
-cd build
+# Update scspkg
+pushd scspkg
+git pull
+pip install -e . -r requirements.txt
+popd
+
+# Load scspkg environment
+. /module_load.sh
+module use "$(scspkg module dir)"
+
+# Load hermes_shm
+. "${SPACK_DIR}/share/spack/setup-env.sh"
+spack module tcl refresh --delete-tree -y
 spack load hermes_shm
+# module use "${SPACK_DIR}/share/spack/modules/linux-ubuntu22.04-zen2"
+
+# Create Hermes module
+scspkg create hermes
+scspkg env prepend hermes PATH /hermes/build/bin
+scspkg env prepend hermes LIBRARY_PATH /hermes/build/bin
+scspkg env prepend hermes LD_LIBRARY_PATH /hermes/build/bin
+module load hermes
+
+# Initialize the Jarvis testing Hermes environment
+jarvis init \
+"${HOME}/jarvis-config" \
+"${HOME}/jarvis-priv" \
+"${HOME}/jarvis-shared"
+cp /hermes/ci/resource_graph.yaml /jarvis-cd/config/resource_graph.yaml
+jarvis env build hermes
+
+# CD into Hermes directory in container
+cd /hermes
+git config --global --add safe.directory '*'
+git submodule update --init
+
+# Build Hermes
+mkdir -p build
+cd build
 cmake ../ \
 -DCMAKE_BUILD_TYPE=Debug \
--DCMAKE_INSTALL_PREFIX="${HOME}/install"
+-DCMAKE_INSTALL_PREFIX="$(scspkg pkg root hermes)" \
+-DHERMES_ENABLE_MPIIO_ADAPTER=ON \
+-DHERMES_MPICH=ON \
+-DHERMES_ENABLE_STDIO_ADAPTER=ON \
+-DHERMES_ENABLE_POSIX_ADAPTER=ON \
+-DHERMES_ENABLE_COVERAGE=ON
 make -j8
 make install
 
+# Test Hermes
 export CXXFLAGS=-Wall
 ctest -VV
 
-# Set proper flags for cmake to find Hermes
-INSTALL_PREFIX="${HOME}/install"
-export LIBRARY_PATH="${INSTALL_PREFIX}/lib:${LIBRARY_PATH}"
-export LD_LIBRARY_PATH="${INSTALL_PREFIX}/lib:${LD_LIBRARY_PATH}"
-export LDFLAGS="-L${INSTALL_PREFIX}/lib:${LDFLAGS}"
-export CFLAGS="-I${INSTALL_PREFIX}/include:${CFLAGS}"
-export CPATH="${INSTALL_PREFIX}/include:${CPATH}"
-export CMAKE_PREFIX_PATH="${INSTALL_PREFIX}:${CMAKE_PREFIX_PATH}"
-export CXXFLAGS="-I${INSTALL_PREFIX}/include:${CXXFLAGS}"
-
 # Run make install unit test
-cd test/unit/external
+cd /hermes/test/unit/external
 mkdir build
 cd build
 cmake ../

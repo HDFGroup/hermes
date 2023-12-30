@@ -26,27 +26,52 @@ void Run(u32 method, Task *task, RunContext &rctx) override {
     }
   }
 }
+/** Execute a task */
+void Monitor(u32 mode, Task *task, RunContext &rctx) override {
+  switch (task->method_) {
+    case Method::kConstruct: {
+      MonitorConstruct(mode, reinterpret_cast<ConstructTask *>(task), rctx);
+      break;
+    }
+    case Method::kDestruct: {
+      MonitorDestruct(mode, reinterpret_cast<DestructTask *>(task), rctx);
+      break;
+    }
+    case Method::kMd: {
+      MonitorMd(mode, reinterpret_cast<MdTask *>(task), rctx);
+      break;
+    }
+    case Method::kIo: {
+      MonitorIo(mode, reinterpret_cast<IoTask *>(task), rctx);
+      break;
+    }
+    case Method::kMdPush: {
+      MonitorMdPush(mode, reinterpret_cast<MdPushTask *>(task), rctx);
+      break;
+    }
+  }
+}
 /** Delete a task */
 void Del(u32 method, Task *task) override {
   switch (method) {
     case Method::kConstruct: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<ConstructTask *>(task));
+      HRUN_CLIENT->DelTask<ConstructTask>(reinterpret_cast<ConstructTask *>(task));
       break;
     }
     case Method::kDestruct: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<DestructTask *>(task));
+      HRUN_CLIENT->DelTask<DestructTask>(reinterpret_cast<DestructTask *>(task));
       break;
     }
     case Method::kMd: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<MdTask *>(task));
+      HRUN_CLIENT->DelTask<MdTask>(reinterpret_cast<MdTask *>(task));
       break;
     }
     case Method::kIo: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<IoTask *>(task));
+      HRUN_CLIENT->DelTask<IoTask>(reinterpret_cast<IoTask *>(task));
       break;
     }
     case Method::kMdPush: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<MdPushTask *>(task));
+      HRUN_CLIENT->DelTask<MdPushTask>(reinterpret_cast<MdPushTask *>(task));
       break;
     }
   }

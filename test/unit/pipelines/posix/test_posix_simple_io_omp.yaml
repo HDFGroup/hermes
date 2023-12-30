@@ -1,0 +1,7 @@
+name: hermes_unit_posix_simple_io_omp
+env: hermes
+pkgs:
+  - pkg_type: hermes_posix_tests
+    pkg_name: hermes_posix_tests
+    test_file: posix_simple_io_omp
+    hermes: false

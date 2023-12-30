@@ -93,7 +93,8 @@ struct DestructTask : public DestroyTaskStateTask {
  * */
 struct RegisterStagerTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   hermes::BucketId bkt_id_;
-  hipc::ShmArchive<hipc::string> url_;
+  hipc::ShmArchive<hipc::string> tag_name_;
+  hipc::ShmArchive<hipc::string> params_;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -105,7 +106,8 @@ struct RegisterStagerTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
                      const TaskNode &task_node,
                      const TaskStateId &state_id,
                      hermes::BucketId bkt_id,
-                     const hshm::charbuf &url) : Task(alloc) {
+                     const hshm::charbuf &tag_name,
+                     const hshm::charbuf &params) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = bkt_id.hash_;
@@ -117,13 +119,15 @@ struct RegisterStagerTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
 
     // Custom params
     bkt_id_ = bkt_id;
-    HSHM_MAKE_AR(url_, alloc, url);
+    HSHM_MAKE_AR(tag_name_, alloc, tag_name);
+    HSHM_MAKE_AR(params_, alloc, params);
   }
 
   /** Destructor */
   HSHM_ALWAYS_INLINE
   ~RegisterStagerTask() {
-    HSHM_DESTROY_AR(url_)
+    HSHM_DESTROY_AR(tag_name_)
+    HSHM_DESTROY_AR(params_)
   }
 
   /** Duplicate message */
@@ -139,7 +143,7 @@ struct RegisterStagerTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   template<typename Ar>
   void SerializeStart(Ar &ar) {
     task_serialize<Ar>(ar);
-    ar(bkt_id_, url_);
+    ar(bkt_id_, tag_name_, params_);
   }
 
   /** (De)serialize message return */

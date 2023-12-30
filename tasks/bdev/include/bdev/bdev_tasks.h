@@ -5,6 +5,7 @@
 #ifndef HRUN_TASKS_BDEV_INCLUDE_BDEV_BDEV_TASKS_H_
 #define HRUN_TASKS_BDEV_INCLUDE_BDEV_BDEV_TASKS_H_
 
+// #include <libaio.h>
 #include "hrun/api/hrun_client.h"
 #include "hrun/task_registry/task_lib.h"
 #include "hrun_admin/hrun_admin.h"
@@ -60,7 +61,7 @@ struct DestructTask : public DestroyTaskStateTask {
                const TaskNode &task_node,
                TaskStateId &state_id,
                const DomainId &domain_id)
-  : DestroyTaskStateTask(alloc, task_node, domain_id, state_id) {}
+      : DestroyTaskStateTask(alloc, task_node, domain_id, state_id) {}
 
   /** Create group */
   HSHM_ALWAYS_INLINE
@@ -85,12 +86,12 @@ struct AllocateTask : public Task, TaskFlags<TF_LOCAL> {
   /** Emplace constructor */
   HSHM_ALWAYS_INLINE explicit
   AllocateTask(hipc::Allocator *alloc,
-            const TaskNode &task_node,
-            const DomainId &domain_id,
-            const TaskStateId &state_id,
-            size_t size,
-            float score,
-            std::vector<BufferInfo> *buffers) : Task(alloc) {
+               const TaskNode &task_node,
+               const DomainId &domain_id,
+               const TaskStateId &state_id,
+               size_t size,
+               float score,
+               std::vector<BufferInfo> *buffers) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = 0;
@@ -164,6 +165,8 @@ struct WriteTask : public Task, TaskFlags<TF_LOCAL> {
   IN const char *buf_;    /**< Data in memory */
   IN size_t disk_off_;    /**< Offset on disk */
   IN size_t size_;        /**< Size in buf */
+  TEMP int phase_ = 0;
+  // TEMP io_context_t ctx_ = 0;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -179,13 +182,19 @@ struct WriteTask : public Task, TaskFlags<TF_LOCAL> {
             size_t disk_off,
             size_t size) : Task(alloc) {
     // Initialize task
+    static int counter = 0;
     task_node_ = task_node;
-    lane_hash_ = 0;
-    prio_ = TaskPrio::kLowLatency;
+    lane_hash_ = ++counter;
+    if (size < KILOBYTES(8)) {
+      prio_ = TaskPrio::kLowLatency;
+    } else {
+      prio_ = TaskPrio::kHighLatency;
+    }
     task_state_ = state_id;
     method_ = Method::kWrite;
     task_flags_.SetBits(TASK_UNORDERED | TASK_REMOTE_DEBUG_MARK);
     domain_id_ = domain_id;
+    counter += 1;
 
     // Free params
     buf_ = buf;
@@ -207,6 +216,8 @@ struct ReadTask : public Task, TaskFlags<TF_LOCAL> {
   IN char *buf_;         /**< Data in memory */
   IN size_t disk_off_;   /**< Offset on disk */
   IN size_t size_;       /**< Size in disk buf */
+  TEMP int phase_ = 0;
+  // TEMP io_context_t ctx_ = 0;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -221,10 +232,16 @@ struct ReadTask : public Task, TaskFlags<TF_LOCAL> {
            char *buf,
            size_t disk_off,
            size_t size) : Task(alloc) {
+    static int counter = 0;
     // Initialize task
     task_node_ = task_node;
-    lane_hash_ = 0;
-    prio_ = TaskPrio::kLowLatency;
+    lane_hash_ = counter;
+    ++counter;
+    if (size < KILOBYTES(8)) {
+      prio_ = TaskPrio::kLowLatency;
+    } else {
+      prio_ = TaskPrio::kHighLatency;
+    }
     task_state_ = state_id;
     method_ = Method::kRead;
     task_flags_.SetBits(TASK_UNORDERED | TASK_REMOTE_DEBUG_MARK);
@@ -244,34 +261,35 @@ struct ReadTask : public Task, TaskFlags<TF_LOCAL> {
 };
 
 /** A task to monitor bdev statistics */
-struct MonitorTask : public Task, TaskFlags<TF_LOCAL> {
+struct StatBdevTask : public Task, TaskFlags<TF_LOCAL> {
   OUT size_t rem_cap_;  /**< Remaining capacity of the target */
-  // OUT Histogram score_hist_;  /**< Score distribution */
+  OUT Histogram score_hist_;  /**< Score distribution */
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
-  MonitorTask(hipc::Allocator *alloc) : Task(alloc) {}
+  StatBdevTask(hipc::Allocator *alloc) : Task(alloc) {}
 
   /** Emplace constructor */
   HSHM_ALWAYS_INLINE explicit
-  MonitorTask(hipc::Allocator *alloc,
-              const TaskNode &task_node,
-              const DomainId &domain_id,
-              const TaskStateId &state_id,
-              size_t freq_ms,
-              size_t rem_cap) : Task(alloc) {
+  StatBdevTask(hipc::Allocator *alloc,
+               const TaskNode &task_node,
+               const DomainId &domain_id,
+               const TaskStateId &state_id,
+               size_t freq_ms,
+               size_t rem_cap) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = 0;
     prio_ = TaskPrio::kLongRunning;
     task_state_ = state_id;
-    method_ = Method::kMonitor;
+    method_ = Method::kStatBdev;
     task_flags_.SetBits(TASK_LONG_RUNNING | TASK_REMOTE_DEBUG_MARK);
     SetPeriodMs(freq_ms);
     domain_id_ = domain_id;
 
     // Custom
     rem_cap_ = rem_cap;
+    score_hist_.Resize(10);
   }
 
   /** Create group */
@@ -293,10 +311,10 @@ struct UpdateScoreTask : public Task, TaskFlags<TF_LOCAL> {
   /** Emplace constructor */
   HSHM_ALWAYS_INLINE explicit
   UpdateScoreTask(hipc::Allocator *alloc,
-              const TaskNode &task_node,
-              const DomainId &domain_id,
-              const TaskStateId &state_id,
-              float old_score, float new_score) : Task(alloc) {
+                  const TaskNode &task_node,
+                  const DomainId &domain_id,
+                  const TaskStateId &state_id,
+                  float old_score, float new_score) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
     lane_hash_ = 0;

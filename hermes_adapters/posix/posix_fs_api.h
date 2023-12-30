@@ -18,15 +18,18 @@
 #include "hermes_adapters/filesystem/filesystem.h"
 #include "hermes_adapters/filesystem/filesystem_mdm.h"
 #include "posix_api.h"
-#include "posix_io_client.h"
 
-namespace hermes::adapter::fs {
+namespace hermes::adapter {
 
 /** A class to represent POSIX IO file system */
-class PosixFs : public hermes::adapter::fs::Filesystem {
+class PosixFs : public hermes::adapter::Filesystem {
  public:
-  PosixFs() : hermes::adapter::fs::Filesystem(HERMES_POSIX_IO_CLIENT,
-                                              AdapterType::kPosix) {}
+  HERMES_POSIX_API_T real_api_; /**< pointer to real APIs */
+  
+ public:
+  PosixFs() : Filesystem(AdapterType::kPosix) {
+    real_api_ = HERMES_POSIX_API;
+  }
 
   template<typename StatT>
   int Stat(File &f, StatT *buf) {
@@ -80,7 +83,7 @@ class PosixFs : public hermes::adapter::fs::Filesystem {
     if (!HERMES->IsInitialized() || fd < 8192) {
       return false;
     }
-    hermes::adapter::fs::File f;
+    hermes::adapter::File f;
     f.hermes_fd_ = fd;
     stat = HERMES_FS_METADATA_MANAGER->Find(f);
     return stat != nullptr;
@@ -98,16 +101,170 @@ class PosixFs : public hermes::adapter::fs::Filesystem {
     std::vector<char> filename(kMaxPathLen);
     snprintf(proclnk.data(), kMaxPathLen - 1, "/proc/self/fd/%d", fd);
     size_t r = readlink(proclnk.data(), filename.data(), kMaxPathLen);
-    filename[r] = '\0';
-    return std::string(filename.data(), filename.size());
+    return std::string(filename.data(), r);
+  }
+  
+ public:
+  /** Allocate an fd for the file f */
+  void RealOpen(File &f,
+                AdapterStat &stat,
+                const std::string &path) override {
+    if (stat.flags_ & O_APPEND) {
+      stat.hflags_.SetBits(HERMES_FS_APPEND);
+    }
+    if (stat.flags_ & O_CREAT || stat.flags_ & O_TMPFILE) {
+      stat.hflags_.SetBits(HERMES_FS_CREATE);
+    }
+    if (stat.flags_ & O_TRUNC) {
+      stat.hflags_.SetBits(HERMES_FS_TRUNC);
+    }
+
+    if (stat.hflags_.Any(HERMES_FS_CREATE)) {
+      if (stat.adapter_mode_ != AdapterMode::kScratch) {
+        stat.fd_ = real_api_->open(path.c_str(), stat.flags_, stat.st_mode_);
+      }
+    } else {
+      stat.fd_ = real_api_->open(path.c_str(), stat.flags_);
+    }
+
+    if (stat.fd_ >= 0) {
+      stat.hflags_.SetBits(HERMES_FS_EXISTS);
+    }
+    if (stat.fd_ < 0 && stat.adapter_mode_ != AdapterMode::kScratch) {
+      f.status_ = false;
+    }
+  }
+
+  /**
+   * Called after real open. Allocates the Hermes representation of
+   * identifying file information, such as a hermes file descriptor
+   * and hermes file handler. These are not the same as POSIX file
+   * descriptor and STDIO file handler.
+   * */
+  void HermesOpen(File &f,
+                  const AdapterStat &stat,
+                  FilesystemIoClientState &fs_mdm) override {
+    f.hermes_fd_ = fs_mdm.mdm_->AllocateFd();
+  }
+
+  /** Synchronize \a file FILE f */
+  int RealSync(const File &f,
+               const AdapterStat &stat) override {
+    (void) f;
+    if (stat.adapter_mode_ == AdapterMode::kScratch &&
+        stat.fd_ == -1) {
+      return 0;
+    }
+    return real_api_->fsync(stat.fd_);
+  }
+
+  /** Close \a file FILE f */
+  int RealClose(const File &f,
+                AdapterStat &stat) override {
+    (void) f;
+    if (stat.adapter_mode_ == AdapterMode::kScratch &&
+        stat.fd_ == -1) {
+      return 0;
+    }
+    return real_api_->close(stat.fd_);
+  }
+
+  /**
+   * Called before RealClose. Releases information provisioned during
+   * the allocation phase.
+   * */
+  void HermesClose(File &f,
+                   const AdapterStat &stat,
+                   FilesystemIoClientState &fs_mdm) override {
+    fs_mdm.mdm_->ReleaseFd(f.hermes_fd_);
+  }
+
+  /** Remove \a file FILE f */
+  int RealRemove(const std::string &path) override {
+    return real_api_->remove(path.c_str());
+  }
+
+  /** Get initial statistics from the backend */
+  size_t GetBackendSize(const hipc::charbuf &bkt_name) override {
+    size_t true_size = 0;
+    std::string filename = bkt_name.str();
+    int fd = real_api_->open(filename.c_str(), O_RDONLY);
+    if (fd < 0) { return 0; }
+    struct stat buf;
+    real_api_->fstat(fd, &buf);
+    true_size = buf.st_size;
+    real_api_->close(fd);
+
+    HILOG(kDebug, "The size of the file {} on disk is {}",
+          filename, true_size)
+    return true_size;
+  }
+
+  /** Write blob to backend */
+  void WriteBlob(const std::string &bkt_name,
+                 const Blob &full_blob,
+                 const FsIoOptions &opts,
+                 IoStatus &status) override {
+    (void) opts;
+    status.success_ = true;
+    HILOG(kDebug, "Writing to file: {}"
+                  " offset: {}"
+                  " size: {}",
+          bkt_name, opts.backend_off_, full_blob.size())
+    int fd = real_api_->open(bkt_name.c_str(), O_RDWR | O_CREAT);
+    if (fd < 0) {
+      status.size_ = 0;
+      status.success_ = false;
+      return;
+    }
+    status.size_ = real_api_->pwrite(fd,
+                                    full_blob.data(),
+                                    full_blob.size(),
+                                    opts.backend_off_);
+    if (status.size_ != full_blob.size()) {
+      status.success_ = false;
+    }
+    real_api_->close(fd);
+  }
+
+  /** Read blob from the backend */
+  void ReadBlob(const std::string &bkt_name,
+                Blob &full_blob,
+                const FsIoOptions &opts,
+                IoStatus &status) override {
+    (void) opts;
+    status.success_ = true;
+    HILOG(kDebug, "Reading from file: {}"
+                  " offset: {}"
+                  " size: {}",
+          bkt_name, opts.backend_off_, full_blob.size())
+    int fd = real_api_->open(bkt_name.c_str(), O_RDONLY);
+    if (fd < 0) {
+      status.size_ = 0;
+      status.success_ = false;
+      return;
+    }
+    status.size_ = real_api_->pread(fd,
+                                   full_blob.data(),
+                                   full_blob.size(),
+                                   opts.backend_off_);
+    if (status.size_ != full_blob.size()) {
+      status.success_ = false;
+    }
+    real_api_->close(fd);
+  }
+
+  void UpdateIoStatus(const FsIoOptions &opts, IoStatus &status) override {
+    (void) opts;
+    (void) status;
   }
 };
 
 /** Simplify access to the stateless PosixFs Singleton */
 #define HERMES_POSIX_FS \
-  hshm::EasySingleton<::hermes::adapter::fs::PosixFs>::GetInstance()
-#define HERMES_POSIX_FS_T hermes::adapter::fs::PosixFs*
+  hshm::EasySingleton<::hermes::adapter::PosixFs>::GetInstance()
+#define HERMES_POSIX_FS_T hermes::adapter::PosixFs*
 
-}  // namespace hermes::adapter::fs
+}  // namespace hermes::adapter
 
 #endif  // HERMES_ADAPTER_POSIX_NATIVE_H_

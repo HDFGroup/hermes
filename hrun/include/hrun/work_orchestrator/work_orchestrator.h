@@ -14,18 +14,21 @@
 #define HRUN_INCLUDE_HRUN_WORK_ORCHESTRATOR_WORK_ORCHESTRATOR_H_
 
 #include "hrun/hrun_types.h"
-#include "hrun/api/hrun_runtime.h"
 #include "hrun/queue_manager/queue_manager_runtime.h"
-#include "worker.h"
 #include "hrun/network/rpc_thallium.h"
 #include <thread>
 
 namespace hrun {
 
+class Worker;
+
 class WorkOrchestrator {
  public:
   ServerConfig *config_;  /**< The server configuration */
-  std::vector<Worker> workers_;  /**< Workers execute tasks */
+  std::vector<std::unique_ptr<Worker>> workers_;  /**< Workers execute tasks */
+  std::vector<Worker*> dworkers_;   /**< Core-dedicated workers */
+  std::vector<Worker*> oworkers_;   /**< Undedicated workers */
+  Worker* admin_worker_;   /**< Constantly polled admin worker */
   std::atomic<bool> stop_runtime_;  /**< Begin killing the runtime */
   std::atomic<bool> kill_requested_;  /**< Kill flushing threads eventually */
   ABT_xstream xstream_;
@@ -38,70 +41,40 @@ class WorkOrchestrator {
   ~WorkOrchestrator() = default;
 
   /** Create thread pool */
-  void ServerInit(ServerConfig *config, QueueManager &qm) {
-    config_ = config;
+  void ServerInit(ServerConfig *config, QueueManager &qm);
 
-    // Initialize argobots
-    ABT_init(0, nullptr);
-
-    // Create argobots xstream
-    int ret = ABT_xstream_create(ABT_SCHED_NULL, &xstream_);
-    if (ret != ABT_SUCCESS) {
-      HELOG(kFatal, "Could not create argobots xstream");
-    }
-
-    // Spawn workers on the stream
-    size_t num_workers = config_->wo_.max_workers_;
-    workers_.reserve(num_workers);
-    for (u32 worker_id = 0; worker_id < num_workers; ++worker_id) {
-      workers_.emplace_back(worker_id, xstream_);
-    }
-    stop_runtime_ = false;
-    kill_requested_ = false;
-
-    // Schedule admin queue on worker 0
-    MultiQueue *admin_queue = qm.GetQueue(qm.admin_queue_);
-    LaneGroup *admin_group = &admin_queue->GetGroup(0);
-    for (u32 lane_id = 0; lane_id < admin_group->num_lanes_; ++lane_id) {
-      Worker &worker = workers_[0];
-      worker.PollQueues({WorkEntry(0, lane_id, admin_queue)});
-    }
-    admin_group->num_scheduled_ = admin_group->num_lanes_;
-
-    HILOG(kInfo, "Started {} workers", num_workers);
-  }
+  /** Finalize thread pool */
+  void Join();
 
   /** Get worker with this id */
-  Worker& GetWorker(u32 worker_id) {
-    return workers_[worker_id];
-  }
+  Worker& GetWorker(u32 worker_id);
 
   /** Get the number of workers */
-  size_t GetNumWorkers() {
-    return workers_.size();
-  }
+  size_t GetNumWorkers();
+
+  /** Get all PIDs of active workers */
+  std::vector<int> GetWorkerPids();
+
+  /** Get the complement of worker cores */
+  std::vector<int> GetWorkerCoresComplement();
+
+  /** Begin dedicating core s*/
+  void DedicateCores();
 
   /** Begin finalizing the runtime */
+  HSHM_ALWAYS_INLINE
   void FinalizeRuntime() {
     stop_runtime_.store(true);
   }
 
-  /** Finalize thread pool */
-  void Join() {
-    kill_requested_.store(true);
-    for (Worker &worker : workers_) {
-      worker.thread_->join();
-      ABT_xstream_join(xstream_);
-      ABT_xstream_free(&xstream_);
-    }
-  }
-
   /** Whether threads should still be executing */
+  HSHM_ALWAYS_INLINE
   bool IsAlive() {
     return !kill_requested_.load();
   }
 
   /** Whether runtime should still be executing */
+  HSHM_ALWAYS_INLINE
   bool IsRuntimeAlive() {
     return !stop_runtime_.load();
   }

@@ -41,7 +41,7 @@ class QueueManagerRuntime : public QueueManager {
   void ServerInit(hipc::Allocator *alloc, u32 node_id, ServerConfig *config, QueueManagerShm &shm) {
     config_ = config;
     Init(node_id);
-    QueueManagerInfo &qm = config_->queue_manager_;
+    config::QueueManagerInfo &qm = config_->queue_manager_;
     // Initialize ticket queue (ticket 0 is for admin queue)
     max_queues_ = qm.max_queues_;
     max_lanes_ = qm.max_lanes_;
@@ -55,14 +55,31 @@ class QueueManagerRuntime : public QueueManager {
     queue_map_->resize(max_queues_);
     // Create the admin queue
     MultiQueue *queue;
+    std::vector<PriorityInfo> queue_info{
+        {TaskPrio::kAdmin, 1, 1, qm.queue_depth_, QUEUE_UNORDERED},
+        {TaskPrio::kLongRunning, 1, 1, qm.queue_depth_, QUEUE_LONG_RUNNING},
+        {TaskPrio::kLowLatency, qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY},
+        {TaskPrio::kLongRunningTether, qm.max_lanes_, qm.max_lanes_, qm.queue_depth_,
+         QUEUE_LONG_RUNNING | QUEUE_TETHERED, TaskPrio::kLowLatency},
+        {TaskPrio::kHighLatency, qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY}
+    };
     queue = CreateQueue(admin_queue_, {
-      {1, 1, qm.queue_depth_, QUEUE_UNORDERED}
+        {TaskPrio::kAdmin, 1, 1, qm.queue_depth_, QUEUE_UNORDERED},
+        {TaskPrio::kLongRunning, 1, 1, qm.queue_depth_, QUEUE_LONG_RUNNING},
+        {TaskPrio::kLowLatency, qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY},
+        {TaskPrio::kLongRunningTether, qm.max_lanes_, qm.max_lanes_, qm.queue_depth_,
+         QUEUE_LONG_RUNNING | QUEUE_TETHERED, TaskPrio::kLowLatency},
+        {TaskPrio::kHighLatency, qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY}
     });
     queue->flags_.SetBits(QUEUE_READY);
+    u32 depth = qm.proc_queue_depth_;
     queue = CreateQueue(process_queue_, {
-        {1, 1, qm.queue_depth_, QUEUE_UNORDERED},
-        {1, 1, qm.queue_depth_, QUEUE_LONG_RUNNING},
-        {qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY}
+        {TaskPrio::kAdmin, 1, 1, depth, QUEUE_UNORDERED},
+        {TaskPrio::kLongRunning, 1, 1, depth, QUEUE_LONG_RUNNING},
+        {TaskPrio::kLowLatency, qm.max_lanes_, qm.max_lanes_, depth, QUEUE_LOW_LATENCY},
+        {TaskPrio::kLongRunningTether, qm.max_lanes_, qm.max_lanes_, depth,
+         QUEUE_LONG_RUNNING | QUEUE_TETHERED, TaskPrio::kLowLatency},
+        {TaskPrio::kHighLatency, qm.max_lanes_, qm.max_lanes_, depth, QUEUE_LOW_LATENCY}
     });
     queue->flags_.SetBits(QUEUE_READY);
   }

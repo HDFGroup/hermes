@@ -42,5 +42,5 @@ install(TARGETS
 # Coverage
 #-----------------------------------------------------------------------------
 if(HERMES_ENABLE_COVERAGE)
-    set_coverage_flags(test_messages)
+    set_coverage_flags(test_ipc_exec)
 endif()

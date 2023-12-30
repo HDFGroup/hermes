@@ -26,11 +26,7 @@ class Client : public TaskLibClient {
                                       const TaskStateId &blob_mdm) {
     id_ = TaskStateId::GetNull();
     QueueManagerInfo &qm = HRUN_CLIENT->server_config_.queue_manager_;
-    std::vector<PriorityInfo> queue_info = {
-        {1, 1, qm.queue_depth_, 0},
-        {1, 1, qm.queue_depth_, QUEUE_LONG_RUNNING},
-        {qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY}
-    };
+    std::vector<PriorityInfo> queue_info;
     return HRUN_ADMIN->AsyncCreateTaskState<ConstructTask>(
         task_node, domain_id, state_name, id_, queue_info, blob_mdm);
   }
@@ -42,7 +38,7 @@ class Client : public TaskLibClient {
         AsyncCreateRoot(std::forward<Args>(args)...);
     task->Wait();
     id_ = task->id_;
-    queue_id_ = QueueId(id_);
+    Init(id_, HRUN_ADMIN->queue_id_);
     HRUN_CLIENT->DelTask(task);
   }
 
@@ -57,15 +53,17 @@ class Client : public TaskLibClient {
   void AsyncRegisterStagerConstruct(RegisterStagerTask *task,
                                     const TaskNode &task_node,
                                     const BucketId &bkt_id,
-                                    const hshm::charbuf &url) {
+                                    const hshm::charbuf &path,
+                                    const hshm::charbuf &params) {
     HRUN_CLIENT->ConstructTask<RegisterStagerTask>(
-        task, task_node, id_, bkt_id, url);
+        task, task_node, id_, bkt_id, path, params);
   }
   HSHM_ALWAYS_INLINE
   void RegisterStagerRoot(const BucketId &bkt_id,
-                          const hshm::charbuf &url) {
+                          const hshm::charbuf &path,
+                          const hshm::charbuf params) {
     LPointer<hrunpq::TypedPushTask<RegisterStagerTask>> task =
-        AsyncRegisterStagerRoot(bkt_id, url);
+        AsyncRegisterStagerRoot(bkt_id, path, params);
     task.ptr_->Wait();
   }
   HRUN_TASK_NODE_PUSH_ROOT(RegisterStager);

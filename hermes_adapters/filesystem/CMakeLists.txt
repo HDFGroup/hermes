@@ -7,8 +7,6 @@ include_directories(
 
 # Create the metadata manager singleton + FS base class
 add_library(hermes_fs_base SHARED
-        ${CMAKE_CURRENT_SOURCE_DIR}/filesystem.cc
-        ${CMAKE_CURRENT_SOURCE_DIR}/filesystem_mdm.cc
         ${CMAKE_CURRENT_SOURCE_DIR}/filesystem_mdm_singleton.cc)
 add_dependencies(hermes_fs_base
         hermes)

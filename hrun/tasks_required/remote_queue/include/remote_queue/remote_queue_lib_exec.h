@@ -22,23 +22,44 @@ void Run(u32 method, Task *task, RunContext &rctx) override {
     }
   }
 }
+/** Execute a task */
+void Monitor(u32 mode, Task *task, RunContext &rctx) override {
+  switch (task->method_) {
+    case Method::kConstruct: {
+      MonitorConstruct(mode, reinterpret_cast<ConstructTask *>(task), rctx);
+      break;
+    }
+    case Method::kDestruct: {
+      MonitorDestruct(mode, reinterpret_cast<DestructTask *>(task), rctx);
+      break;
+    }
+    case Method::kPush: {
+      MonitorPush(mode, reinterpret_cast<PushTask *>(task), rctx);
+      break;
+    }
+    case Method::kDup: {
+      MonitorDup(mode, reinterpret_cast<DupTask *>(task), rctx);
+      break;
+    }
+  }
+}
 /** Delete a task */
 void Del(u32 method, Task *task) override {
   switch (method) {
     case Method::kConstruct: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<ConstructTask *>(task));
+      HRUN_CLIENT->DelTask<ConstructTask>(reinterpret_cast<ConstructTask *>(task));
       break;
     }
     case Method::kDestruct: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<DestructTask *>(task));
+      HRUN_CLIENT->DelTask<DestructTask>(reinterpret_cast<DestructTask *>(task));
       break;
     }
     case Method::kPush: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<PushTask *>(task));
+      HRUN_CLIENT->DelTask<PushTask>(reinterpret_cast<PushTask *>(task));
       break;
     }
     case Method::kDup: {
-      HRUN_CLIENT->DelTask(reinterpret_cast<DupTask *>(task));
+      HRUN_CLIENT->DelTask<DupTask>(reinterpret_cast<DupTask *>(task));
       break;
     }
   }

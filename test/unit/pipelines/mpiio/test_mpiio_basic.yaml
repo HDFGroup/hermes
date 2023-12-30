@@ -1,0 +1,7 @@
+name: hermes_unit_mpiio_basic
+env: hermes
+pkgs:
+  - pkg_type: hermes_mpiio_tests
+    pkg_name: hermes_mpiio_tests
+    test_file: mpiio_basic
+    hermes: false

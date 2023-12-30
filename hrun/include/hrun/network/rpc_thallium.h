@@ -126,7 +126,6 @@ class ThalliumRpc {
       std::string server_name = GetServerName(node_id);
       tl::remote_procedure remote_proc = client_engine_->define(func_name);
       tl::endpoint server = client_engine_->lookup(server_name);
-      HILOG(kDebug, "Found the server: {}={}", node_id, server_name)
       if constexpr(!ASYNC) {
         if constexpr (std::is_same<RetT, void>::value) {
           remote_proc.disable_response();
@@ -195,6 +194,7 @@ class ThalliumRpc {
       tl::bulk bulk = client_engine_->expose(segments, flag);
       if constexpr (!ASYNC) {
         if constexpr (std::is_same_v<RetT, void>) {
+          remote_proc.disable_response();
           remote_proc.on(server)(bulk, std::forward<Args>(args)...);
         } else {
           return remote_proc.on(server)(bulk, std::forward<Args>(args)...);
@@ -291,7 +291,7 @@ class ThalliumRpc {
     return req.received();
   }
 
-  /** Wait for thallium to complete */
+  /** Wait for async thallium to complete */
   template<typename RetT>
   RetT Wait(thallium::async_response &req) {
     if constexpr(std::is_same_v<void, RetT>) {
@@ -299,6 +299,11 @@ class ThalliumRpc {
     } else {
       return req.wait();
     }
+  }
+
+  /** Check if async thallium complete */
+  bool IsComplete(thallium::async_response &req) {
+    return req.received();
   }
 };
 

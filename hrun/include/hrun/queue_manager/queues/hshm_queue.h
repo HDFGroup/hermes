@@ -6,14 +6,14 @@
 #define HRUN_INCLUDE_HRUN_QUEUE_MANAGER_HSHM_QUEUE_H_
 
 #include "hrun/queue_manager/queue.h"
+#include "mpsc_queue.h"
 
 namespace hrun {
 
 /** The data stored in a lane */
 struct LaneData {
-  hipc::Pointer p_;
-  bool complete_;
-  ABT_thread thread_;
+  hipc::Pointer p_;  /**< Pointer to SHM request */
+  bool complete_;    /**< Whether request is complete */
 
   LaneData() = default;
 
@@ -24,13 +24,14 @@ struct LaneData {
 };
 
 /** Represents a lane tasks can be stored */
-typedef hipc::mpsc_queue<LaneData> Lane;
+typedef hrun::mpsc_queue<LaneData> Lane;
 
 /** Prioritization of different lanes in the queue */
 struct LaneGroup : public PriorityInfo {
   u32 prio_;            /**< The priority of the lane group */
   u32 num_scheduled_;   /**< The number of lanes currently scheduled on workers */
   hipc::ShmArchive<hipc::vector<Lane>> lanes_;  /**< The lanes of the queue */
+  u32 tether_;       /**< Lanes should be pinned to the same workers as the tether's prio group */
 
   /** Default constructor */
   HSHM_ALWAYS_INLINE
@@ -39,40 +40,55 @@ struct LaneGroup : public PriorityInfo {
   /** Set priority info */
   HSHM_ALWAYS_INLINE
   LaneGroup(const PriorityInfo &priority) {
+    prio_ = priority.prio_;
     max_lanes_ = priority.max_lanes_;
     num_lanes_ = priority.num_lanes_;
     num_scheduled_ = 0;
     depth_ = priority.depth_;
     flags_ = priority.flags_;
-    // prio_ is set externally
+    tether_ = priority.tether_;
   }
 
   /** Copy constructor. Should never actually be called. */
   HSHM_ALWAYS_INLINE
   LaneGroup(const LaneGroup &priority) {
+    prio_ = priority.prio_;
     max_lanes_ = priority.max_lanes_;
     num_lanes_ = priority.num_lanes_;
     num_scheduled_ = priority.num_scheduled_;
     depth_ = priority.depth_;
     flags_ = priority.flags_;
-    // prio_ is set externally
+    tether_ = priority.tether_;
   }
 
   /** Move constructor. Should never actually be called. */
   HSHM_ALWAYS_INLINE
   LaneGroup(LaneGroup &&priority) noexcept {
+    prio_ = priority.prio_;
     max_lanes_ = priority.max_lanes_;
     num_lanes_ = priority.num_lanes_;
     num_scheduled_ = priority.num_scheduled_;
     depth_ = priority.depth_;
     flags_ = priority.flags_;
-    // prio_ is set externally
+    tether_ = priority.tether_;
+  }
+
+  /** Check if this group is tethered */
+  HSHM_ALWAYS_INLINE
+  bool IsTethered() {
+    return flags_.Any(QUEUE_TETHERED);
   }
 
   /** Check if this group is long-running or ADMIN */
   HSHM_ALWAYS_INLINE
   bool IsLowPriority() {
     return flags_.Any(QUEUE_LONG_RUNNING) || prio_ == 0;
+  }
+
+  /** Check if this group is long-running or ADMIN */
+  HSHM_ALWAYS_INLINE
+  bool IsLowLatency() {
+    return flags_.Any(QUEUE_LOW_LATENCY);
   }
 
   /** Get lane */
@@ -110,18 +126,15 @@ struct MultiQueueT<Hshm> : public hipc::ShmContainer {
                        const std::vector<PriorityInfo> &prios) {
     shm_init_container(alloc);
     id_ = id;
-    HSHM_MAKE_AR0(groups_, GetAllocator());
-    groups_->reserve(prios.size());
-    for (u32 prio = 0; prio < prios.size(); ++prio) {
-      const PriorityInfo &prio_info = prios[prio];
-      groups_->emplace_back(prio_info);
-      LaneGroup &lane_group = (*groups_)[prio];
+    HSHM_MAKE_AR(groups_, GetAllocator(), prios.size());
+    for (const PriorityInfo &prio_info : prios) {
+      groups_->replace(groups_->begin() + prio_info.prio_, prio_info);
+      LaneGroup &lane_group = (*groups_)[prio_info.prio_];
       // Initialize lanes
       HSHM_MAKE_AR0(lane_group.lanes_, GetAllocator());
       lane_group.lanes_->reserve(prio_info.max_lanes_);
-      lane_group.prio_ = prio;
       for (u32 lane_id = 0; lane_id < lane_group.num_lanes_; ++lane_id) {
-        lane_group.lanes_->emplace_back(lane_group.depth_);
+        lane_group.lanes_->emplace_back(lane_group.depth_, id_);
         Lane &lane = lane_group.lanes_->back();
         lane.flags_ = prio_info.flags_;
       }
@@ -226,8 +239,18 @@ struct MultiQueueT<Hshm> : public hipc::ShmContainer {
 
   /** Emplace a SHM pointer to a task */
   HSHM_ALWAYS_INLINE
-  bool Emplace(u32 prio, u32 lane_hash, hipc::Pointer &p, bool complete = false) {
+  bool Emplace(u32 prio, u32 lane_hash,
+               hipc::Pointer &p, bool complete = false) {
     return Emplace(prio, lane_hash, LaneData(p, complete));
+  }
+
+  /**
+   * Emplace a SHM pointer to a task if the queue utilization is less than 50%
+   * */
+  HSHM_ALWAYS_INLINE
+  bool EmplaceFrac(u32 prio, u32 lane_hash,
+                   hipc::Pointer &p, bool complete = false) {
+    return EmplaceFrac(prio, lane_hash, LaneData(p, complete));
   }
 
   /** Emplace a SHM pointer to a task */
@@ -238,6 +261,23 @@ struct MultiQueueT<Hshm> : public hipc::ShmContainer {
     LaneGroup &lane_group = GetGroup(prio);
     u32 lane_id = lane_hash % lane_group.num_lanes_;
     Lane &lane = GetLane(lane_group, lane_id);
+    hshm::qtok_t ret = lane.emplace(data);
+    return !ret.IsNull();
+  }
+
+  /**
+   * Emplace a SHM pointer to a task if the queue utilization is less than 50%
+   * */
+  bool EmplaceFrac(u32 prio, u32 lane_hash, const LaneData &data) {
+    if (IsEmplacePlugged()) {
+      WaitForEmplacePlug();
+    }
+    LaneGroup &lane_group = GetGroup(prio);
+    u32 lane_id = lane_hash % lane_group.num_lanes_;
+    Lane &lane = GetLane(lane_group, lane_id);
+    if (lane.GetSize() * 2 > lane.GetDepth()) {
+      return false;
+    }
     hshm::qtok_t ret = lane.emplace(data);
     return !ret.IsNull();
   }

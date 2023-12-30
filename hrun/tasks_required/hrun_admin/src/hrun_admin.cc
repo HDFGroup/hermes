@@ -24,24 +24,34 @@ class Server : public TaskLib {
  public:
   Server() : queue_sched_(nullptr), proc_sched_(nullptr) {}
 
+  /** Register a task library dynamically */
   void RegisterTaskLib(RegisterTaskLibTask *task, RunContext &rctx) {
     std::string lib_name = task->lib_name_->str();
     HRUN_TASK_REGISTRY->RegisterTaskLib(lib_name);
     task->SetModuleComplete();
   }
+  void MonitorRegisterTaskLib(u32 mode, RegisterTaskLibTask *task, RunContext &rctx) {
+  }
 
+  /** Destroy a task library */
   void DestroyTaskLib(DestroyTaskLibTask *task, RunContext &rctx) {
     std::string lib_name = task->lib_name_->str();
     HRUN_TASK_REGISTRY->DestroyTaskLib(lib_name);
     task->SetModuleComplete();
   }
+  void MonitorDestroyTaskLib(u32 mode, DestroyTaskLibTask *task, RunContext &rctx) {
+  }
 
+  /** Get a task state ID if it exists, and create otherwise */
   void GetOrCreateTaskStateId(GetOrCreateTaskStateIdTask *task, RunContext &rctx) {
     std::string state_name = task->state_name_->str();
     task->id_ = HRUN_TASK_REGISTRY->GetOrCreateTaskStateId(state_name);
     task->SetModuleComplete();
   }
+  void MonitorGetOrCreateTaskStateId(u32 mode, GetOrCreateTaskStateIdTask *task, RunContext &rctx) {
+  }
 
+  /** Create a task state */
   void CreateTaskState(CreateTaskStateTask *task, RunContext &rctx) {
     std::string lib_name = task->lib_name_->str();
     std::string state_name = task->state_name_->str();
@@ -78,9 +88,9 @@ class Server : public TaskLib {
       return;
     }
     // Create the task queue for the state
-    QueueId qid(task->id_);
-    MultiQueue *queue = HRUN_QM_RUNTIME->CreateQueue(
-        qid, task->queue_info_->vec());
+    // QueueId qid(task->id_);
+    // MultiQueue *queue = HRUN_QM_RUNTIME->CreateQueue(
+    //     qid, task->queue_info_->vec());
     // Allocate the task state
     task->method_ = Method::kConstruct;
     HRUN_TASK_REGISTRY->CreateTaskState(
@@ -88,28 +98,41 @@ class Server : public TaskLib {
         state_name.c_str(),
         task->id_,
         task);
-    queue->flags_.SetBits(QUEUE_READY);
+    // queue->flags_.SetBits(QUEUE_READY);
+    task->method_ = Method::kCreateTaskState;
     task->SetModuleComplete();
   }
+  void MonitorCreateTaskState(u32 mode, CreateTaskStateTask *task, RunContext &rctx) {
+  }
 
+  /** Get task state id, fail if DNE */
   void GetTaskStateId(GetTaskStateIdTask *task, RunContext &rctx) {
     std::string state_name = task->state_name_->str();
     task->id_ = HRUN_TASK_REGISTRY->GetTaskStateId(state_name);
     task->SetModuleComplete();
   }
+  void MonitorGetTaskStateId(u32 mode, GetTaskStateIdTask *task, RunContext &rctx) {
+  }
 
+  /** Destroy a task state */
   void DestroyTaskState(DestroyTaskStateTask *task, RunContext &rctx) {
     HRUN_TASK_REGISTRY->DestroyTaskState(task->id_);
     task->SetModuleComplete();
   }
+  void MonitorDestroyTaskState(u32 mode, DestroyTaskStateTask *task, RunContext &rctx) {
+  }
 
+  /** Stop this runtime */
   void StopRuntime(StopRuntimeTask *task, RunContext &rctx) {
     HILOG(kInfo, "Stopping (server mode)");
     HRUN_WORK_ORCHESTRATOR->FinalizeRuntime();
     HRUN_THALLIUM->StopThisDaemon();
     task->SetModuleComplete();
   }
+  void MonitorStopRuntime(u32 mode, StopRuntimeTask *task, RunContext &rctx) {
+  }
 
+  /** Set work orchestrator policy */
   void SetWorkOrchQueuePolicy(SetWorkOrchQueuePolicyTask *task, RunContext &rctx) {
     if (queue_sched_) {
       queue_sched_->SetModuleComplete();
@@ -124,7 +147,10 @@ class Server : public TaskLib {
     queue->Emplace(0, 0, queue_sched.shm_);
     task->SetModuleComplete();
   }
+  void MonitorSetWorkOrchQueuePolicy(u32 mode, SetWorkOrchQueuePolicyTask *task, RunContext &rctx) {
+  }
 
+  /** Set work orchestration policy */
   void SetWorkOrchProcPolicy(SetWorkOrchProcPolicyTask *task, RunContext &rctx) {
     if (proc_sched_) {
       proc_sched_->SetModuleComplete();
@@ -139,28 +165,34 @@ class Server : public TaskLib {
     queue->Emplace(0, 0, proc_sched.shm_);
     task->SetModuleComplete();
   }
+  void MonitorSetWorkOrchProcPolicy(u32 mode, SetWorkOrchProcPolicyTask *task, RunContext &rctx) {
+  }
 
+  /** Flush the runtime */
   void Flush(FlushTask *task, RunContext &rctx) {
     HILOG(kDebug, "Beginning to flush runtime");
-    for (Worker &worker : HRUN_WORK_ORCHESTRATOR->workers_) {
-      worker.flush_.flushing_ = true;
-    }
     while (true) {
+      // Make all workers flush locally
       int count = 0;
-      for (Worker &worker : HRUN_WORK_ORCHESTRATOR->workers_) {
-        if (worker.flush_.flushing_) {
-          count += 1;
-          break;
+      for (int i = 0; i < 2; ++i) {
+        for (std::unique_ptr<Worker>
+              &worker : HRUN_WORK_ORCHESTRATOR->workers_) {
+          worker->flush_.count_ = 0;
+          worker->flush_.flushing_ = true;
+          while (worker->flush_.flushing_) {
+            task->Yield<TASK_YIELD_CO>();
+          }
+          count += worker->flush_.count_;
         }
       }
-      if (count) {
-        task->Yield<TASK_YIELD_CO>();
-      } else {
+      if (!count) {
         break;
       }
     }
     HILOG(kDebug, "Flushing completed");
     task->SetModuleComplete();
+  }
+  void MonitorFlush(u32 mode, FlushTask *task, RunContext &rctx) {
   }
 
  public:

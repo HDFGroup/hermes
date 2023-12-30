@@ -38,7 +38,13 @@ class ConfigurationManager {
   ServerConfig server_config_;
   static inline const hipc::allocator_id_t main_alloc_id_ =
       hipc::allocator_id_t(0, 1);
+  static inline const hipc::allocator_id_t data_alloc_id_ =
+      hipc::allocator_id_t(1, 1);
+  static inline const hipc::allocator_id_t rdata_alloc_id_ =
+      hipc::allocator_id_t(2, 1);
   hipc::Allocator *main_alloc_;
+  hipc::Allocator *data_alloc_;
+  hipc::Allocator *rdata_alloc_;
   bool is_being_initialized_;
   bool is_initialized_;
   bool is_terminated_;

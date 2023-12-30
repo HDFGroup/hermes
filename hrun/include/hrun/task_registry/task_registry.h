@@ -220,7 +220,7 @@ class TaskRegistry {
                              Admin::CreateTaskStateTask *task) {
     // Ensure state_id is not NULL
     if (state_id.IsNull()) {
-      HILOG(kError, "The task state ID cannot be null");
+      HELOG(kError, "The task state ID cannot be null");
       task->SetModuleComplete();
       return nullptr;
     }

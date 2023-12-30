@@ -32,12 +32,7 @@ class Client : public TaskLibClient {
                                       const TaskStateId &state_id) {
     id_ = state_id;
     QueueManagerInfo &qm = HRUN_CLIENT->server_config_.queue_manager_;
-    std::vector<PriorityInfo> queue_info = {
-        {1, 1, qm.queue_depth_, 0},
-        {1, 1, qm.queue_depth_, QUEUE_LONG_RUNNING},
-        // {qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY}
-        {1, 1, qm.queue_depth_, QUEUE_LOW_LATENCY}
-    };
+    std::vector<PriorityInfo> queue_info;
     return HRUN_ADMIN->AsyncCreateTaskState<ConstructTask>(
         task_node, domain_id, state_name, id_, queue_info);
   }
@@ -48,8 +43,7 @@ class Client : public TaskLibClient {
     LPointer<ConstructTask> task =
         AsyncCreateRoot(std::forward<Args>(args)...);
     task->Wait();
-    id_ = task->id_;
-    queue_id_ = QueueId(id_);
+    Init(id_, HRUN_ADMIN->queue_id_);
     HRUN_CLIENT->DelTask(task);
   }
 
@@ -65,8 +59,7 @@ class Client : public TaskLibClient {
                 TaskState *exec,
                 std::vector<DomainId> &domain_ids) {
     // Serialize task + create the wait task
-    HILOG(kDebug, "Beginning dispersion for (task_node={}, task_state={}, method={})",
-          orig_task->task_node_ + 1, orig_task->task_state_, orig_task->method_)
+    orig_task->UnsetStarted();
     BinaryOutputArchive<true> ar(DomainId::GetNode(HRUN_CLIENT->node_id_));
     std::vector<DataTransfer> xfer =
         exec->SaveStart(orig_task->method_, ar, orig_task);
@@ -76,8 +69,11 @@ class Client : public TaskLibClient {
     LPointer<PushTask> push_task = HRUN_CLIENT->NewTask<PushTask>(
         orig_task->task_node_ + 1, DomainId::GetLocal(), id_,
         domain_ids, orig_task, exec, orig_task->method_, xfer);
+    if (orig_task->IsRoot()) {
+      push_task->SetRoot();
+    }
     MultiQueue *queue = HRUN_CLIENT->GetQueue(queue_id_);
-    queue->Emplace(TaskPrio::kLowLatency, orig_task->lane_hash_, push_task.shm_);
+    queue->Emplace(push_task->prio_, 0, push_task.shm_);
   }
 
   /** Disperse a task among each lane of this node */
@@ -85,8 +81,6 @@ class Client : public TaskLibClient {
   void DisperseLocal(Task *orig_task, TaskState *exec,
                      MultiQueue *orig_queue, LaneGroup *lane_group) {
     // Duplicate task
-//    HILOG(kDebug, "Beginning duplication for (task_node={}, task_state={}, method={})",
-//          orig_task->task_node_ + 1, orig_task->task_state_, orig_task->method_);
     std::vector<LPointer<Task>> dups(lane_group->num_lanes_);
     exec->Dup(orig_task->method_, orig_task, dups);
     for (size_t i = 0; i < dups.size(); ++i) {
@@ -103,7 +97,7 @@ class Client : public TaskLibClient {
         orig_task->task_node_ + 1, id_,
         orig_task, exec, orig_task->method_, dups);
     MultiQueue *queue = HRUN_CLIENT->GetQueue(queue_id_);
-    queue->Emplace(TaskPrio::kLowLatency, orig_task->lane_hash_, dup_task.shm_);
+    queue->Emplace(dup_task->prio_, 0, dup_task.shm_);
   }
 
   /** Spawn task to accept new connections */

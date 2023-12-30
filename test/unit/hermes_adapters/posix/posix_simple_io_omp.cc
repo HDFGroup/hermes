@@ -24,7 +24,7 @@
 #include <cstring>
 #include "basic_test.h"
 
-static const int kNumProcs = 1;
+static const int kNumProcs = 8;
 
 void TestThread(char *path,
                 int do_read,
@@ -34,7 +34,7 @@ void TestThread(char *path,
   int rank = omp_get_thread_num();
   size_t size = count * block_size;
   size_t total_size = size * kNumProcs;
-  int off = (rank * size) + block_off * block_size;
+  size_t off = (rank * size) + block_off * block_size;
 
   {
     std::stringstream ss;
@@ -56,7 +56,7 @@ void TestThread(char *path,
     std::cout << "Failed to open the file" << std::endl;
     exit(1);
   }
-  lseek(fd, off, SEEK_SET);
+  lseek64(fd, off, SEEK_SET);
 
   if (do_read) {
     struct stat st;
@@ -77,6 +77,7 @@ void TestThread(char *path,
 
 #pragma omp barrier
   for (int i = 0; i < count; ++i) {
+    HILOG(kInfo, "ITERATION: {} / {}", i, count);
     char nonce = i + 1;
     if (!do_read) {
       memset(buf.data(), nonce, block_size);

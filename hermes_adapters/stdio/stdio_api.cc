@@ -17,12 +17,13 @@ bool stdio_intercepted = true;
 #include <cstdio>
 #include "stdio_api.h"
 #include "stdio_fs_api.h"
-#include "hermes_adapters/interceptor.h"
 
-using hermes::adapter::fs::MetadataManager;
-using hermes::adapter::fs::SeekMode;
-using hermes::adapter::fs::AdapterStat;
-using hermes::adapter::fs::File;
+using hermes::adapter::MetadataManager;
+using hermes::adapter::SeekMode;
+using hermes::adapter::AdapterStat;
+using hermes::adapter::File;
+using hermes::adapter::IoStatus;
+using hermes::adapter::FsIoOptions;
 
 namespace stdfs = std::filesystem;
 

@@ -48,7 +48,7 @@ typedef int (*fsetpos64_t)(FILE * stream, const fpos64_t * pos);
 typedef long int (*ftell_t)(FILE * fp);
 }
 
-namespace hermes::adapter::fs {
+namespace hermes::adapter {
 
 /** Pointers to the real stdio API */
 class StdioApi : public RealApi {
@@ -161,13 +161,13 @@ class StdioApi : public RealApi {
     REQUIRE_API(ftell)
   }
 };
-}  // namespace hermes::adapter::fs
+}  // namespace hermes::adapter
 
 #include "hermes_shm/util/singleton.h"
 
 // Singleton macros
 #define HERMES_STDIO_API \
-  hshm::EasySingleton<::hermes::adapter::fs::StdioApi>::GetInstance()
-#define HERMES_STDIO_API_T hermes::adapter::fs::StdioApi*
+  hshm::EasySingleton<::hermes::adapter::StdioApi>::GetInstance()
+#define HERMES_STDIO_API_T hermes::adapter::StdioApi*
 
 #endif  // HERMES_ADAPTER_STDIO_H

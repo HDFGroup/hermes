@@ -26,7 +26,7 @@ void GatherTimes(std::string test_name, size_t io_size, MpiTimer &t) {
   if (t.rank_ == 0) {
     double max = t.GetSec();
     double mbps = io_size / t.GetUsec();
-    HIPRINT("{}: Time: {} sec, MBps (or MOps): {}, Count: {}, Nprocs: {}\n",
+    HILOG(kInfo, "{}: Time: {} sec, MBps (or MOps): {}, Count: {}, Nprocs: {}\n",
             test_name, max, mbps, io_size, t.nprocs_);
   }
 }
@@ -41,6 +41,7 @@ void PutTest(int nprocs, int rank,
   t.Resume();
   for (int j = 0; j < repeat; ++j) {
     for (size_t i = 0; i < blobs_per_rank; ++i) {
+      // HILOG(kInfo, "On blob {}", i)
       size_t blob_name_int = rank * blobs_per_rank + i;
       std::string name = std::to_string(blob_name_int);
       bkt.AsyncPut(name, blob, ctx);
@@ -77,7 +78,11 @@ void GetTest(int nprocs, int rank,
 void PutGetTest(int nprocs, int rank, int repeat,
                 size_t blobs_per_rank, size_t blob_size) {
   PutTest(nprocs, rank, repeat, blobs_per_rank, blob_size);
+  HILOG(kInfo, "Beginning barrier")
   MPI_Barrier(MPI_COMM_WORLD);
+  HILOG(kInfo, "Beginning flushing")
+  HRUN_ADMIN->FlushRoot(DomainId::GetGlobal());
+  HILOG(kInfo, "Finished flushing")
   GetTest(nprocs, rank, repeat, blobs_per_rank, blob_size);
 }
 
@@ -143,7 +148,6 @@ void CreateBucketTest(int nprocs, int rank,
   MpiTimer t(MPI_COMM_WORLD);
   t.Resume();
   hapi::Context ctx;
-  std::unordered_map<std::string, std::string> mdm_;
   for (size_t i = 0; i < bkts_per_rank; ++i) {
     int bkt_name_int = rank * bkts_per_rank + i;
     std::string bkt_name = std::to_string(bkt_name_int);
@@ -238,8 +242,7 @@ int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-  TRANSPARENT_HRUN();
-  HERMES->ClientInit();
+  TRANSPARENT_HERMES();
 
   // Get mode
   REQUIRE_ARGC_GE(2)

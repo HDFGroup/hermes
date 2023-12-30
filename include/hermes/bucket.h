@@ -23,8 +23,6 @@ namespace hermes {
 using hermes::blob_mdm::PutBlobTask;
 using hermes::blob_mdm::GetBlobTask;
 
-#define HERMES_BUCKET_IS_FILE BIT_OPT(u32, 1)
-
 class Bucket {
  public:
   mdm::Client *mdm_;
@@ -73,7 +71,7 @@ class Bucket {
     bkt_mdm_ = &HERMES_CONF->bkt_mdm_;
     id_ = bkt_mdm_->GetOrCreateTagRoot(
         hshm::charbuf(bkt_name), true,
-        std::vector<TraitId>(), backend_size, flags);
+        std::vector<TraitId>(), backend_size, flags, ctx);
     name_ = bkt_name;
   }
 
@@ -228,7 +226,7 @@ class Bucket {
     bitfield32_t flags, task_flags(
         TASK_FIRE_AND_FORGET | TASK_DATA_OWNER | TASK_LOW_LATENCY);
     // Copy data to shared memory
-    LPointer<char> p = HRUN_CLIENT->AllocateBuffer(blob.size());
+    LPointer<char> p = HRUN_CLIENT->AllocateBufferClient(blob.size());
     char *data = p.ptr_;
     memcpy(data, blob.data(), blob.size());
     // Put to shared memory
@@ -380,7 +378,7 @@ class Bucket {
    * Append \a blob_name Blob into the bucket (fully asynchronous)
    * */
   void Append(const Blob &blob, size_t page_size, Context &ctx) {
-    LPointer<char> p = HRUN_CLIENT->AllocateBuffer(blob.size());
+    LPointer<char> p = HRUN_CLIENT->AllocateBufferClient(blob.size());
     char *data = p.ptr_;
     memcpy(data, blob.data(), blob.size());
     bkt_mdm_->AppendBlobRoot(
@@ -447,7 +445,7 @@ class Bucket {
     }
     // Get from shared memory
     size_t data_size = blob.size();
-    LPointer data_p = HRUN_CLIENT->AllocateBuffer(data_size);
+    LPointer data_p = HRUN_CLIENT->AllocateBufferClient(blob.size());
     LPointer<hrunpq::TypedPushTask<GetBlobTask>> push_task;
     push_task = blob_mdm_->AsyncGetBlobRoot(id_, hshm::to_charbuf(blob_name),
                                             blob_id, blob_off,
@@ -465,7 +463,6 @@ class Bucket {
                  size_t blob_off,
                  Context &ctx) {
     // TODO(llogan): intercept mmap to avoid copy
-    // TODO(llogan): make GetBlobSize work with blob_name
     size_t data_size = blob.size();
     if (blob.size() == 0) {
       data_size = blob_mdm_->GetBlobSizeRoot(
@@ -479,8 +476,9 @@ class Bucket {
     push_task->Wait();
     GetBlobTask *task = push_task->get();
     blob_id = task->blob_id_;
-    char *data = HRUN_CLIENT->GetPrivatePointer(task->data_);
-    memcpy(blob.data(), data, data_size);
+    char *data = HRUN_CLIENT->GetDataPointer(task->data_);
+    memcpy(blob.data(), data, task->data_size_);
+    blob.resize(task->data_size_);
     HRUN_CLIENT->FreeBuffer(task->data_);
     HRUN_CLIENT->DelTask(push_task);
     return blob_id;
@@ -614,7 +612,6 @@ class Bucket {
    * Delete \a blob_id blob
    * */
   void DestroyBlob(const BlobId &blob_id, Context &ctx) {
-    // TODO(llogan): Make apart of bkt_mdm_ instead
     blob_mdm_->DestroyBlobRoot(id_, blob_id);
   }
 

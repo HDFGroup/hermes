@@ -31,22 +31,29 @@ class Server : public TaskLib {
  public:
   Server() = default;
 
+  /** Construct data operator table */
   void Construct(ConstructTask *task, RunContext &rctx) {
     task->Deserialize();
-    bkt_mdm_.Init(task->bkt_mdm_);
-    blob_mdm_.Init(task->blob_mdm_);
-    client_.Init(id_);
+    bkt_mdm_.Init(task->bkt_mdm_, HRUN_ADMIN->queue_id_);
+    blob_mdm_.Init(task->blob_mdm_, HRUN_ADMIN->queue_id_);
+    client_.Init(id_, HRUN_ADMIN->queue_id_);
     op_id_map_["min"] = 0;
     op_id_map_["max"] = 1;
     op_graphs_.resize(HRUN_QM_RUNTIME->max_lanes_);
     run_task_ = client_.AsyncRunOp(task->task_node_ + 1);
     task->SetModuleComplete();
   }
+  void MonitorConstruct(u32 mode, ConstructTask *task, RunContext &rctx) {
+  }
 
+  /** Destroy data operators */
   void Destruct(DestructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
+  void MonitorDestruct(u32 mode, DestructTask *task, RunContext &rctx) {
+  }
 
+  /** Registor operators */
   void RegisterOp(RegisterOpTask *task, RunContext &rctx) {
     // Load OpGraph
     op_graphs_[rctx.lane_id_].push_back(task->GetOpGraph());
@@ -99,7 +106,10 @@ class Server : public TaskLib {
     // Store the operator to perform
     task->SetModuleComplete();
   }
+  void MonitorRegisterOp(u32 mode, RegisterOpTask *task, RunContext &rctx) {
+  }
 
+  /** Inform that data is ready for operators */
   void RegisterData(RegisterDataTask *task, RunContext &rctx) {
     if (!op_data_lock_.TryLock(0)) {
       return;
@@ -110,7 +120,10 @@ class Server : public TaskLib {
     op_data_lock_.Unlock();
     task->SetModuleComplete();
   }
+  void MonitorRegisterData(u32 mode, RegisterDataTask *task, RunContext &rctx) {
+  }
 
+  /** Run the operator */
   void RunOp(RunOpTask *task, RunContext &rctx) {
     for (OpGraph &op_graph : op_graphs_[rctx.lane_id_]) {
       for (Op &op : op_graph.ops_) {
@@ -125,7 +138,10 @@ class Server : public TaskLib {
       }
     }
   }
+  void MonitorRunOp(u32 mode, RunOpTask *task, RunContext &rctx) {
+  }
 
+  /** Get pending data needed for the operator */
   std::list<OpData> GetPendingData(Op &op) {
     std::list<OpData> pending;
     if (!op_data_lock_.TryLock(0)) {
@@ -151,6 +167,7 @@ class Server : public TaskLib {
     return pending;
   }
 
+  /** Get the minimum of data */
   void RunMin(RunOpTask *task, Op &op) {
     // Get the pending data from Hermes
     std::list<OpData> op_data = GetPendingData(op);
@@ -165,7 +182,8 @@ class Server : public TaskLib {
     std::vector<DataPair> in_tasks;
     for (OpData &data : op_data) {
       // Get the input data
-      LPointer<char> data_ptr = HRUN_CLIENT->AllocateBuffer(data.size_);
+      LPointer<char> data_ptr =
+          HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_CO>(data.size_, task);
       LPointer<blob_mdm::GetBlobTask> in_task =
           blob_mdm_.AsyncGetBlob(task->task_node_ + 1,
                                  data.bkt_id_,
@@ -184,7 +202,8 @@ class Server : public TaskLib {
       in_task->Wait<TASK_YIELD_CO>(task);
 
       // Calaculate the minimum
-      LPointer<char> min_lptr = HRUN_CLIENT->AllocateBuffer(sizeof(float));
+      LPointer<char> min_lptr =
+          HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_CO>(sizeof(float), task);
       float *min_ptr = (float*)min_lptr.ptr_;
       *min_ptr = std::numeric_limits<float>::max();
       for (size_t i = 0; i < in_task->data_size_; i += sizeof(float)) {
@@ -199,9 +218,12 @@ class Server : public TaskLib {
                              BlobId::GetNull(),
                              0, sizeof(float),
                              min_lptr.shm_, 0, 0);
+      HRUN_CLIENT->FreeBuffer(in_task->data_);
+      HRUN_CLIENT->DelTask(in_task);
     }
   }
 
+  /** Get the maximum of data */
   void RunMax(RunOpTask *task, Op &op) {
   }
 

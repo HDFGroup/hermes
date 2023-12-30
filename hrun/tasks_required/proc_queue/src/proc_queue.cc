@@ -20,38 +20,57 @@ class Server : public TaskLib {
  public:
   Server() = default;
 
+  /** Construct proc queue */
   void Construct(ConstructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
+  void MonitorConstruct(u32 mode, ConstructTask *task, RunContext &rctx) {
+  }
 
+  /** Destroy proc queue */
   void Destruct(DestructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
+  void MonitorDestruct(u32 mode, DestructTask *task, RunContext &rctx) {
+  }
 
+  /** Push a task onto the process queue */
   void Push(PushTask *task, RunContext &rctx) {
     switch (task->phase_) {
       case PushTaskPhase::kSchedule: {
         task->sub_run_.shm_ = task->sub_cli_.shm_;
-        task->sub_run_.ptr_ = HRUN_CLIENT->GetPrivatePointer<Task>(task->sub_cli_.shm_);
+        task->sub_run_.ptr_ = HRUN_CLIENT->GetMainPointer<Task>(task->sub_cli_.shm_);
         Task *&ptr = task->sub_run_.ptr_;
 //        HILOG(kDebug, "Scheduling task {} on state {} tid {}",
 //              ptr->task_node_, ptr->task_state_, GetLinuxTid());
         if (ptr->IsFireAndForget()) {
           ptr->UnsetFireAndForget();
+          task->is_fire_forget_ = true;
+        }
+        if (ptr->task_node_.IsRoot() || task->task_node_.IsRoot()) {
+          ptr->SetRoot();
         }
         MultiQueue *real_queue = HRUN_CLIENT->GetQueue(QueueId(ptr->task_state_));
-        real_queue->Emplace(ptr->prio_, ptr->lane_hash_, task->sub_run_.shm_);
-        task->phase_ = PushTaskPhase::kWaitSchedule;
+        bool ret = real_queue->EmplaceFrac(
+            ptr->prio_, ptr->lane_hash_, task->sub_run_.shm_);
+        if (ret) {
+          task->phase_ = PushTaskPhase::kWaitSchedule;
+        }
       }
       case PushTaskPhase::kWaitSchedule: {
         Task *&ptr = task->sub_run_.ptr_;
         if (!ptr->IsComplete()) {
           return;
         }
-        // TODO(llogan): handle fire & forget tasks gracefully
+        if (task->is_fire_forget_) {
+          TaskState *exec = HRUN_TASK_REGISTRY->GetTaskState(ptr->task_state_);
+          exec->Del(ptr->method_, ptr);
+        }
         task->SetModuleComplete();
       }
     }
+  }
+  void MonitorPush(u32 mode, PushTask *task, RunContext &rctx) {
   }
 
  public:

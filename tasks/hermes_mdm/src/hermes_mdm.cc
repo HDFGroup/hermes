@@ -18,13 +18,14 @@ class Server : public TaskLib {
   /**====================================
    * Configuration
    * ===================================*/
-   u32 node_id_;
-   blob_mdm::Client blob_mdm_;
-   bucket_mdm::Client bkt_mdm_;
+  u32 node_id_;
+  blob_mdm::Client blob_mdm_;
+  bucket_mdm::Client bkt_mdm_;
 
  public:
   Server() = default;
 
+  /** Construct hermes MDM */
   void Construct(ConstructTask *task, RunContext &rctx) {
     HILOG(kDebug, "ConstructTaskPhase::kLoadConfig")
     std::string config_path = task->server_config_path_->str();
@@ -32,9 +33,14 @@ class Server : public TaskLib {
     node_id_ = HRUN_CLIENT->node_id_;
     task->SetModuleComplete();
   }
+  void MonitorConstruct(u32 mode, ConstructTask *task, RunContext &rctx) {
+  }
 
+  /** Destory hermes MDM */
   void Destruct(DestructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
+  }
+  void MonitorDestruct(u32 mode, DestructTask *task, RunContext &rctx) {
   }
 
  public:

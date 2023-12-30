@@ -11,7 +11,8 @@ namespace hermes::data_stager {
 
 class AbstractStager {
  public:
-  std::string url_;
+  std::string path_;
+  std::string params_;
 
   AbstractStager() = default;
   ~AbstractStager() = default;

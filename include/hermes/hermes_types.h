@@ -119,11 +119,11 @@ struct Context {
   /** The blob's score */
   float blob_score_;
 
-  /** Page size to use for FS reads / writes*/
-  size_t page_size_;
-
   /** Flags */
   bitfield32_t flags_;
+
+  /** Custom bucket parameters */
+  std::string bkt_params_;
 
   /** The node id the blob will be accessed from */
   u32 node_id_;
@@ -305,6 +305,7 @@ struct BlobInfo {
     blob_size_ = other.blob_size_;
     max_blob_size_ = other.max_blob_size_;
     score_ = other.score_;
+    user_score_ = other.user_score_;
     access_freq_ = other.access_freq_.load();
     last_access_ = other.last_access_;
     mod_count_ = other.mod_count_.load();
@@ -322,6 +323,13 @@ struct BlobInfo {
     last_access_.Now();
     access_freq_.fetch_add(1);
   }
+
+  /** Get name as std::string */
+  std::vector<char> GetName() {
+    std::vector<char> data(name_.size());
+    memcpy(data.data(), name_.data(), name_.size());
+    return data;
+  }
 };
 
 /** Data structure used to store Bucket information */
@@ -332,12 +340,20 @@ struct TagInfo {
   std::list<Task*> traits_;
   size_t internal_size_;
   size_t page_size_;
+  bitfield32_t flags_;
   bool owner_;
 
   /** Serialization */
   template<typename Ar>
   void serialize(Ar &ar) {
-    ar(tag_id_, name_, internal_size_, page_size_, owner_);
+    ar(tag_id_, name_, internal_size_, page_size_, owner_, flags_);
+  }
+
+  /** Get std::string of name */
+  std::vector<char> GetName() {
+    std::vector<char> data(name_.size());
+    memcpy(data.data(), name_.data(), name_.size());
+    return data;
   }
 };
 

@@ -28,11 +28,7 @@ class Client : public TaskLibClient {
                                       TaskStateId &blob_mdm_id) {
     id_ = TaskStateId::GetNull();
     QueueManagerInfo &qm = HRUN_CLIENT->server_config_.queue_manager_;
-    std::vector<PriorityInfo> queue_info = {
-        {1, 1, qm.queue_depth_, 0},
-        {1, 1, qm.queue_depth_, QUEUE_LONG_RUNNING},
-        {qm.max_lanes_, qm.max_lanes_, qm.queue_depth_, QUEUE_LOW_LATENCY}
-    };
+    std::vector<PriorityInfo> queue_info;
     return HRUN_ADMIN->AsyncCreateTaskState<ConstructTask>(
         task_node, domain_id, state_name, id_, queue_info,
         bkt_mdm_id, blob_mdm_id);
@@ -45,7 +41,7 @@ class Client : public TaskLibClient {
         AsyncCreateRoot(std::forward<Args>(args)...);
     task->Wait();
     id_ = task->id_;
-    queue_id_ = QueueId(id_);
+    Init(id_, HRUN_ADMIN->queue_id_);
     HRUN_CLIENT->DelTask(task);
   }
 

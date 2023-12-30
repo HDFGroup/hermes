@@ -23,8 +23,14 @@ namespace hrun::config {
 
 /** parse work orchestrator info from YAML config */
 void ServerConfig::ParseWorkOrchestrator(YAML::Node yaml_conf) {
-  if (yaml_conf["max_workers"]) {
-    wo_.max_workers_ = yaml_conf["max_workers"].as<size_t>();
+  if (yaml_conf["max_dworkers"]) {
+    wo_.max_dworkers_ = yaml_conf["max_dworkers"].as<size_t>();
+  }
+  if (yaml_conf["max_oworkers"]) {
+    wo_.max_oworkers_ = yaml_conf["max_oworkers"].as<size_t>();
+  }
+  if (yaml_conf["owork_per_core"]) {
+    wo_.owork_per_core_ = yaml_conf["owork_per_core"].as<size_t>();
   }
 }
 
@@ -32,6 +38,10 @@ void ServerConfig::ParseWorkOrchestrator(YAML::Node yaml_conf) {
 void ServerConfig::ParseQueueManager(YAML::Node yaml_conf) {
   if (yaml_conf["queue_depth"]) {
     queue_manager_.queue_depth_ = yaml_conf["queue_depth"].as<size_t>();
+  }
+  if (yaml_conf["proc_queue_depth"]) {
+    queue_manager_.proc_queue_depth_ =
+        yaml_conf["proc_queue_depth"].as<size_t>();
   }
   if (yaml_conf["max_lanes"]) {
     queue_manager_.max_lanes_ = yaml_conf["max_lanes"].as<size_t>();
@@ -43,11 +53,24 @@ void ServerConfig::ParseQueueManager(YAML::Node yaml_conf) {
     queue_manager_.shm_allocator_ = yaml_conf["shm_allocator"].as<std::string>();
   }
   if (yaml_conf["shm_name"]) {
-    queue_manager_.shm_name_ = yaml_conf["shm_name"].as<std::string>();
+    queue_manager_.shm_name_ =
+        hshm::ConfigParse::ExpandPath(yaml_conf["shm_name"].as<std::string>());
+    queue_manager_.data_shm_name_ =
+        hshm::ConfigParse::ExpandPath(queue_manager_.shm_name_ + "_data");
+    queue_manager_.rdata_shm_name_ =
+        hshm::ConfigParse::ExpandPath(queue_manager_.shm_name_ + "_rdata");
   }
   if (yaml_conf["shm_size"]) {
     queue_manager_.shm_size_ = hshm::ConfigParse::ParseSize(
         yaml_conf["shm_size"].as<std::string>());
+  }
+  if (yaml_conf["data_shm_size"]) {
+    queue_manager_.data_shm_size_ = hshm::ConfigParse::ParseSize(
+        yaml_conf["data_shm_size"].as<std::string>());
+  }
+  if (yaml_conf["rdata_shm_size"]) {
+    queue_manager_.rdata_shm_size_ = hshm::ConfigParse::ParseSize(
+        yaml_conf["rdata_shm_size"].as<std::string>());
   }
 }
 

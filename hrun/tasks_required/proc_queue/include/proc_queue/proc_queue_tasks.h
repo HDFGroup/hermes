@@ -81,6 +81,9 @@ class PushTaskPhase {
   TASK_METHOD_T kWaitSchedule = 1;
 };
 
+#define HERMES_PT_IS_FIRE_FORGET BIT_OPT(u32, 0)
+#define HERMES_PT_MARKED BIT_OPT(u32, 1)
+
 /**
  * Push a task into the per-process queue
  * */
@@ -89,6 +92,7 @@ struct TypedPushTask : public Task, TaskFlags<TF_LOCAL> {
   IN LPointer<TaskT> sub_cli_;  /**< Pointer to the subtask (client + SHM) */
   TEMP LPointer<TaskT> sub_run_;  /**< Pointer to the subtask (runtime) */
   TEMP int phase_ = PushTaskPhase::kSchedule;
+  TEMP bool is_fire_forget_ = false;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -105,11 +109,19 @@ struct TypedPushTask : public Task, TaskFlags<TF_LOCAL> {
     hshm::NodeThreadId tid;
     task_node_ = task_node;
     lane_hash_ = tid.bits_.tid_ + tid.bits_.pid_;
-    prio_ = TaskPrio::kLowLatency;
     task_state_ = state_id;
     method_ = Method::kPush;
     task_flags_.SetBits(TASK_DATA_OWNER | TASK_LOW_LATENCY | TASK_REMOTE_DEBUG_MARK);
     domain_id_ = domain_id;
+    if (subtask->IsFlush()) {
+      task_flags_.SetBits(TASK_FLUSH);
+    }
+    if (subtask->IsLongRunning()) {
+      task_flags_.SetBits(TASK_LONG_RUNNING);
+      prio_ = TaskPrio::kLongRunning;
+    } else {
+      prio_ = TaskPrio::kLowLatency;
+    }
 
     // Custom params
     sub_cli_ = subtask;
@@ -119,8 +131,6 @@ struct TypedPushTask : public Task, TaskFlags<TF_LOCAL> {
   ~TypedPushTask() {
     if (!IsFireAndForget()) {
       HRUN_CLIENT->DelTask(sub_cli_);
-    } else {
-      HRUN_CLIENT->DelTask(sub_run_);
     }
   }
 

@@ -22,8 +22,12 @@ namespace hrun::config {
  * Work orchestrator information defined in server config
  * */
 struct WorkOrchestratorInfo {
-  /** Maximum number of workers to spawn */
-  size_t max_workers_;
+  /** Maximum number of dedicated workers */
+  size_t max_dworkers_;
+  /** Maximum number of overlapping workers */
+  size_t max_oworkers_;
+  /** Overlapped workers per core */
+  size_t owork_per_core_;
 };
 
 /**
@@ -32,6 +36,8 @@ struct WorkOrchestratorInfo {
 struct QueueManagerInfo {
   /** Maximum depth of IPC queues */
   u32 queue_depth_;
+  /** Maximum depth of process queue */
+  u32 proc_queue_depth_;
   /** Maximum number of lanes per IPC queue */
   u32 max_lanes_;
   /** Maximum number of allocatable IPC queues */
@@ -42,6 +48,14 @@ struct QueueManagerInfo {
   std::string shm_name_;
   /** Shared memory region size */
   size_t shm_size_;
+  /** Shared memory data region name */
+  std::string data_shm_name_;
+  /** Shared memory runtime data region name */
+  std::string rdata_shm_name_;
+  /** Client data shared memory region size */
+  size_t data_shm_size_;
+  /** Runtime data shared memory region size */
+  size_t rdata_shm_size_;
 };
 
 /**

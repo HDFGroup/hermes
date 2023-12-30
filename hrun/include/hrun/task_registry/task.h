@@ -53,14 +53,14 @@ class TaskLib;
 #define TASK_DATA_OWNER BIT_OPT(u32, 14)
 /** This task uses co-routine wait */
 #define TASK_COROUTINE BIT_OPT(u32, 15)
-/** This task uses argobot wait */
-#define TASK_PREEMPTIVE BIT_OPT(u32, 17)
 /** This task can be scheduled on any lane */
 #define TASK_LANE_ANY BIT_OPT(u32, 18)
 /** This task should be scheduled on all lanes */
 #define TASK_LANE_ALL BIT_OPT(u32, 19)
 /** This task flushes the runtime */
 #define TASK_FLUSH BIT_OPT(u32, 20)
+/** This task is considered a root task */
+#define TASK_IS_ROOT BIT_OPT(u32, 21)
 /** This task is apart of remote debugging */
 #define TASK_REMOTE_DEBUG_MARK BIT_OPT(u32, 31)
 
@@ -189,9 +189,10 @@ static inline std::ostream &operator<<(std::ostream &os, const TaskNode &obj) {
 #define TF_SRL_ASYM (TF_SRL_ASYM_START | TF_SRL_ASYM_END)
 /** This task uses replication */
 #define TF_REPLICA BIT_OPT(u32, 31)
-/** This task uses duplication */
 /** This task is intended to be used only locally */
 #define TF_LOCAL BIT_OPT(u32, 5)
+/** This task supports monitoring of all sub-methods */
+#define TF_MONITOR BIT_OPT(u32, 6)
 
 /** All tasks inherit this to easily check if a class is a task using SFINAE */
 class IsTask {};
@@ -219,6 +220,7 @@ struct TaskFlags : public IsTask {
   TASK_FLAG_T SRL_SYM_START = FLAGS & TF_SRL_SYM_START;
   TASK_FLAG_T SRL_SYM_END = FLAGS & TF_SRL_SYM_END;
   TASK_FLAG_T REPLICA = FLAGS & TF_REPLICA;
+  TASK_FLAG_T MONITOR = FLAGS & TF_MONITOR;
 };
 
 /** The type of a compile-time task flag */
@@ -227,32 +229,32 @@ struct TaskFlags : public IsTask {
 /** Prioritization of tasks */
 class TaskPrio {
  public:
-  TASK_PRIO_T kAdmin = 0;
-  TASK_PRIO_T kLongRunning = 1;
-  TASK_PRIO_T kLowLatency = 2;
+  TASK_PRIO_T kAdmin = 0;              /**< Admin task lane */
+  TASK_PRIO_T kLongRunning = 1;        /**< Long-running task lane */
+  TASK_PRIO_T kLowLatency = 2;         /**< Low latency task lane */
+  TASK_PRIO_T kLongRunningTether = 3;  /**< Tethered to low latency workers */
+  TASK_PRIO_T kHighLatency = 4;        /**< High latency task lane */
 };
-
 
 /** Used to indicate the amount of work remaining to do when flushing */
 struct WorkPending {
   bool flushing_;
-  std::atomic<int> pending_;
+  std::atomic<int> count_;
 
   /** Default constructor */
   WorkPending()
-  : flushing_(false), pending_(0) {}
+  : flushing_(false), count_(0) {}
 
   /** Copy constructor */
   WorkPending(const WorkPending &other)
-  : flushing_(other.flushing_), pending_(other.pending_.load()) {}
+  : flushing_(other.flushing_), count_(other.count_.load()) {}
 };
 
 /** Context passed to the Run method of a task */
 struct RunContext {
-  u32 lane_id_;  /**< The lane id of the task */
+  u32 lane_id_;           /**< The lane id of the task */
   bctx::transfer_t jmp_;  /**< Current execution state of the task (runtime) */
-  size_t stack_size_ = KILOBYTES(64);  /**< The size of the stack for the task (runtime) */
-  void *stack_ptr_;                    /**< The pointer to the stack (runtime) */
+  void *stack_ptr_;   /**< The pointer to the stack (runtime) */
   TaskLib *exec_;
   WorkPending *flush_;
 
@@ -390,11 +392,6 @@ struct Task : public hipc::ShmContainer {
     task_flags_.UnsetBits(TASK_COROUTINE);
   }
 
-  /** Set this task as blocking */
-  HSHM_ALWAYS_INLINE bool IsPreemptive() {
-    return task_flags_.Any(TASK_PREEMPTIVE);
-  }
-
   /** This task should be dispersed across all lanes */
   HSHM_ALWAYS_INLINE bool IsLaneAll() {
     return task_flags_.Any(TASK_LANE_ALL);
@@ -403,6 +400,21 @@ struct Task : public hipc::ShmContainer {
   /** Unset this task as lane-dispersable */
   HSHM_ALWAYS_INLINE void UnsetLaneAll() {
     task_flags_.UnsetBits(TASK_LANE_ALL);
+  }
+
+  /** This task is a root task */
+  HSHM_ALWAYS_INLINE bool IsRoot() {
+    return task_flags_.Any(TASK_IS_ROOT);
+  }
+
+  /** Set this task as a root task */
+  HSHM_ALWAYS_INLINE void SetRoot() {
+    task_flags_.SetBits(TASK_IS_ROOT);
+  }
+
+  /** Unset this task a sa root task */
+  HSHM_ALWAYS_INLINE void UnsetRoot() {
+    task_flags_.UnsetBits(TASK_IS_ROOT);
   }
 
   /** Set period in nanoseconds */
@@ -437,15 +449,14 @@ struct Task : public hipc::ShmContainer {
 
   /** Determine if time has elapsed */
   HSHM_ALWAYS_INLINE bool ShouldRun(hshm::Timepoint &cur_time, bool flushing) {
+    if (!IsLongRunning()) {
+      return true;
+    }
     if (!IsStarted() || flushing) {
       start_ = cur_time;
       return true;
     }
-    if (IsLongRunning()) {
-      return start_.GetNsecFromStart(cur_time) >= period_ns_;
-    } else {
-      return true;
-    }
+    return start_.GetNsecFromStart(cur_time) >= period_ns_;
   }
 
   /** Mark this task as having been run */

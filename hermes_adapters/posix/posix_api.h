@@ -89,8 +89,7 @@ typedef int (*remove_t)(const char *pathname);
 typedef int (*unlink_t)(const char *pathname);
 }
 
-namespace hermes::adapter::fs {
-
+namespace hermes::adapter {
 
 /** Used for compatability with older kernel versions */
 static int fxstat_to_fstat(int fd, struct stat * stbuf);
@@ -225,22 +224,22 @@ class PosixApi : public RealApi {
   }
 };
 
-}  // namespace hermes::adapter::fs
+}  // namespace hermes::adapter
 
 // Singleton macros
 #include "hermes_shm/util/singleton.h"
 
 #define HERMES_POSIX_API \
-  hshm::EasySingleton<::hermes::adapter::fs::PosixApi>::GetInstance()
-#define HERMES_POSIX_API_T hermes::adapter::fs::PosixApi*
+  hshm::EasySingleton<::hermes::adapter::PosixApi>::GetInstance()
+#define HERMES_POSIX_API_T hermes::adapter::PosixApi*
 
-namespace hermes::adapter::fs {
+namespace hermes::adapter {
 /** Used for compatability with older kernel versions */
 static int fxstat_to_fstat(int fd, struct stat *stbuf) {
 #ifdef _STAT_VER
   return HERMES_POSIX_API->__fxstat(_STAT_VER, fd, stbuf);
 #endif
 }
-}  // namespace hermes::adapter::fs
+}  // namespace hermes::adapter
 
 #endif  // HERMES_ADAPTER_POSIX_H

@@ -13,6 +13,14 @@
 #ifndef HRUN_INCLUDE_HRUN_HRUN_TYPES_H_
 #define HRUN_INCLUDE_HRUN_HRUN_TYPES_H_
 
+#include <cereal/archives/binary.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/string.hpp>
+#include <cereal/types/list.hpp>
+#include <cereal/types/unordered_map.hpp>
+#include <cereal/types/unordered_set.hpp>
+#include <cereal/types/atomic.hpp>
+
 #include <hermes_shm/data_structures/ipc/unordered_map.h>
 #include <hermes_shm/data_structures/ipc/pod_array.h>
 #include <hermes_shm/data_structures/ipc/vector.h>

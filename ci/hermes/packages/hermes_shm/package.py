@@ -6,27 +6,33 @@ class HermesShm(CMakePackage):
     url = "https://github.com/lukemartinlogan/hermes_shm/archive/refs/tags/v1.0.0.tar.gz"
 
     version('master', branch='master')
+    version("1.1.0", sha256="080d5361cff22794b670e4544c532926ca8b6d6ec695af25596efe035bfffea5")
     version("1.0.0", sha256="a79f01d531ce89985ad59a2f62b41d74c2385e48d929e2f4ad895ae34137573b")
 
+    variant('mpiio', default=True, description='Enable MPI I/O adapter')
+    variant('stdio', default=True, description='Enable STDIO adapter')
+    variant('vfd', default=False, description='Enable HDF5 VFD')
     variant('ares', default=False, description='Enable full libfabric install')
     variant('only_verbs', default=False, description='Only verbs')
-    variant('vfd', default=False, description='Enable HDF5 VFD')
     variant('debug', default=False, description='Build shared libraries')
     variant('zmq', default=False, description='Build ZeroMQ tests')
+    variant('adios', default=False, description='Build Adios tests')
 
     depends_on('mochi-thallium~cereal@0.10.1')
     depends_on('catch2@3.0.1')
-    depends_on('mpich@3.3.2')
+    depends_on('mpi')
     depends_on('cereal')
     depends_on('yaml-cpp')
-    depends_on('doxygen@1.9.3')
+    depends_on('libaio')
+    depends_on('doxygen')  # @1.9.3
     depends_on('boost@1.7: +context +fiber +filesystem +system +atomic +chrono +serialization +signals +pic +regex')
-    depends_on('libfabric fabrics=sockets,tcp,udp,rxm,rxd,verbs',
+    depends_on('libfabric fabrics=sockets,tcp,udp,verbs',
                when='+ares')
     depends_on('libfabric fabrics=verbs',
                when='+only_verbs')
     depends_on('libzmq', '+zmq')
     depends_on('hdf5@1.14.0', when='+vfd')
+    depends_on('adios2', when='+adios')
 
     def cmake_args(self):
         args = []
@@ -34,6 +40,16 @@ class HermesShm(CMakePackage):
             args.append('-DCMAKE_BUILD_TYPE=Debug')
         else:
             args.append('-DCMAKE_BUILD_TYPE=Release')
+        if '+mpiio' in self.spec:
+            args.append('-DHERMES_ENABLE_MPIIO_ADAPTER=ON')
+            if 'openmpi' in self.spec:
+                args.append('-DHERMES_OPENMPI=ON')
+            elif 'mpich' in self.spec:
+                args.append('-DHERMES_MPICH=ON')
+        if '+stdio' in self.spec:
+            args.append('-HERMES_ENABLE_STDIO_ADAPTER=ON')
+        if '+vfd' in self.spec:
+            args.append('-HERMES_ENABLE_VFD=ON')
         return args
 
     def set_include(self, env, path):

@@ -16,6 +16,7 @@ add_dependencies(test_hermes_exec
         ${Hermes_CLIENT_DEPS} hermes)
 target_link_libraries(test_hermes_exec
         ${Hermes_CLIENT_LIBRARIES} hermes Catch2::Catch2 MPI::MPI_CXX)
+jarvis_test(hermes test_hermes)
 
 #------------------------------------------------------------------------------
 # Test Cases
@@ -40,5 +41,5 @@ install(TARGETS
 # Coverage
 #-----------------------------------------------------------------------------
 if(HERMES_ENABLE_COVERAGE)
-    set_coverage_flags(test_messages)
+    set_coverage_flags(test_hermes_exec)
 endif()

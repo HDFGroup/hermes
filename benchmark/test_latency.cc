@@ -10,7 +10,6 @@
 #include "hermes_shm/util/timer.h"
 #include "hrun/work_orchestrator/affinity.h"
 #include "hermes/hermes.h"
-#include "hrun/work_orchestrator/worker.h"
 #include "hrun/api/hrun_runtime.h"
 
 /** The performance of getting a queue */
@@ -95,7 +94,7 @@ TEST_CASE("TestHshmQueueEmplacePop") {
   hrun::QueueId qid(0, 3);
   u32 ops = (1 << 20);
   std::vector<PriorityInfo> queue_info = {
-      {16, 16, ops, 0}
+      {TaskPrio::kAdmin, 16, 16, ops, 0}
   };
   auto queue = hipc::make_uptr<hrun::MultiQueue>(
       qid, queue_info);
@@ -120,7 +119,7 @@ TEST_CASE("TestHshmQueueEmplacePop") {
 TEST_CASE("TestHshmQueueGetLane") {
   hrun::QueueId qid(0, 3);
   std::vector<PriorityInfo> queue_info = {
-      {16, 16, 256, 0}
+      {TaskPrio::kAdmin, 16, 16, 256, 0}
   };
   auto queue = hipc::make_uptr<hrun::MultiQueue>(
       qid, queue_info);
@@ -139,9 +138,10 @@ TEST_CASE("TestHshmQueueGetLane") {
 
 /** Single-thread performance of getting, emplacing, and popping a queue */
 TEST_CASE("TestHshmQueueAllocateEmplacePop") {
+  TRANSPARENT_HERMES();
   hrun::QueueId qid(0, 3);
   std::vector<PriorityInfo> queue_info = {
-      {16, 16, 256, 0}
+      {TaskPrio::kAdmin, 16, 16, 256, 0}
   };
   auto queue = hipc::make_uptr<hrun::MultiQueue>(
       qid, queue_info);
@@ -209,7 +209,7 @@ void TestWorkerIterationLatency(u32 num_queues, u32 num_lanes) {
   for (u32 i = 0; i < num_queues; ++i) {
     hrun::QueueId qid(0, i + 1);
     std::vector<PriorityInfo> queue_info = {
-        {num_lanes, num_lanes, 256, 0}
+        {TaskPrio::kAdmin, num_lanes, num_lanes, 256, 0}
     };
     auto queue = hipc::make_uptr<hrun::MultiQueue>(
         qid, queue_info);
@@ -233,7 +233,7 @@ void TestWorkerIterationLatency(u32 num_queues, u32 num_lanes) {
     task = client.AsyncMdPushEmplace(queues[num_queues - 1].get(),
                                      task_node,
                                      hrun::DomainId::GetLocal());
-    worker.Run();
+    worker.Run(false);
     HRUN_CLIENT->DelTask(task);
   }
   t.Pause();
@@ -252,8 +252,7 @@ TEST_CASE("TestWorkerLatency") {
 
 /** Time to process a request */
 TEST_CASE("TestRoundTripLatency") {
-  TRANSPARENT_HRUN();
-  HERMES->ClientInit();
+  TRANSPARENT_HERMES();
   hrun::small_message::Client client;
   HRUN_ADMIN->RegisterTaskLibRoot(hrun::DomainId::GetLocal(), "small_message");
 //  int count = 25;
@@ -264,13 +263,14 @@ TEST_CASE("TestRoundTripLatency") {
   client.CreateRoot(hrun::DomainId::GetLocal(), "ipc_test");
   hshm::Timer t;
 
-  int pid = getpid();
-  ProcessAffiner::SetCpuAffinity(pid, 8);
+  // int pid = getpid();
+  // ProcessAffiner::SetCpuAffinity(pid, 8);
 
   t.Resume();
   size_t ops = (1 << 20);
   // size_t ops = 1024;
   for (size_t i = 0; i < ops; ++i) {
+    // client.MdRoot(hrun::DomainId::GetLocal());
     client.MdPushRoot(hrun::DomainId::GetLocal());
   }
   t.Pause();

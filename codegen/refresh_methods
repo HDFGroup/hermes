@@ -29,6 +29,7 @@ def refresh_methods(TASK_ROOT):
     if TASK_NAME != 'hrun_admin':
         methods.insert(0, ('kConstruct', -2))
         methods.insert(1, ('kDestruct', -1))
+    monitor_modes = ['kEstTime', 'kTrainTime', 'kFlushStat']
 
     # Produce the TASK_NAME_methods.h file
     lines = []
@@ -67,6 +68,20 @@ def refresh_methods(TASK_ROOT):
     lines += ['  }']
     lines += ['}']
 
+    ## Create the Monitor method
+    lines += ['/** Execute a task */',
+              'void Monitor(u32 mode, Task *task, RunContext &rctx) override {',
+              '  switch (task->method_) {']
+    for method_enum_name, method_off in methods:
+        method_name = method_enum_name.replace('k', '', 1)
+        task_name = method_name + "Task"
+        lines += [f'    case Method::{method_enum_name}: {{',
+                  f'      Monitor{method_name}(mode, reinterpret_cast<{task_name} *>(task), rctx);',
+                  f'      break;',
+                  f'    }}']
+    lines += ['  }']
+    lines += ['}']
+
     ## Create the Del method
     lines += ['/** Delete a task */',
               'void Del(u32 method, Task *task) override {',
@@ -75,7 +90,7 @@ def refresh_methods(TASK_ROOT):
         method_name = method_enum_name.replace('k', '', 1)
         task_name = method_name + "Task"
         lines += [f'    case Method::{method_enum_name}: {{',
-                  f'      HRUN_CLIENT->DelTask(reinterpret_cast<{task_name} *>(task));',
+                  f'      HRUN_CLIENT->DelTask<{task_name}>(reinterpret_cast<{task_name} *>(task));',
                   f'      break;',
                   f'    }}']
     lines += ['  }']

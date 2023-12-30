@@ -22,6 +22,7 @@ using hermes::BlobId;
 using hermes::BucketId;
 using hermes::TagId;
 using hermes::TargetId;
+using hermes::BufferInfo;
 using hermes::BlobInfo;
 using hermes::TargetStats;
 using hermes::TagInfo;
@@ -54,6 +55,15 @@ void BindUniqueId(py::module &m, const std::string &name) {
       .def_readonly("unique", &UniqueT::unique_);
 }
 
+void BindBufferInfo(py::module &m) {
+  py::class_<BufferInfo>(m, "BufferInfo")
+      .def(py::init<>())
+      .def_readwrite("tid", &BufferInfo::tid_)
+      .def_readwrite("t_slab", &BufferInfo::t_slab_)
+      .def_readwrite("t_off", &BufferInfo::t_off_)
+      .def_readwrite("t_size", &BufferInfo::t_size_);
+}
+
 void BindBlobInfo(py::module &m) {
   py::class_<BlobInfo>(m, "BlobInfo")
       .def(py::init<>())
@@ -61,7 +71,7 @@ void BindBlobInfo(py::module &m) {
       .def("UpdateReadStats", &BlobInfo::UpdateReadStats)
       .def_readonly("tag_id", &BlobInfo::tag_id_)
       .def_readonly("blob_id", &BlobInfo::blob_id_)
-      .def_readonly("name", &BlobInfo::name_)
+      .def("get_name", &BlobInfo::GetName)
       .def_readonly("buffers", &BlobInfo::buffers_)
       .def_readonly("tags", &BlobInfo::tags_)
       .def_readonly("blob_size", &BlobInfo::blob_size_)
@@ -76,6 +86,7 @@ void BindTargetStats(py::module &m) {
   py::class_<TargetStats>(m, "TargetStats")
       .def(py::init<>())
       .def_readonly("tgt_id", &TargetStats::tgt_id_)
+      .def_readonly("node_id", &TargetStats::node_id_)
       .def_readonly("rem_cap", &TargetStats::rem_cap_)
       .def_readonly("max_cap", &TargetStats::max_cap_)
       .def_readonly("bandwidth", &TargetStats::bandwidth_)
@@ -87,7 +98,7 @@ void BindTagInfo(py::module &m) {
   py::class_<TagInfo>(m, "TagInfo")
       .def(py::init<>())
       .def_readonly("tag_id", &TagInfo::tag_id_)
-      .def_readonly("name", &TagInfo::name_)
+      .def("get_name", &TagInfo::GetName)
       .def_readonly("blobs", &TagInfo::blobs_)
       .def_readonly("traits", &TagInfo::traits_)
       .def_readonly("internal_size", &TagInfo::internal_size_)
@@ -118,8 +129,10 @@ PYBIND11_MODULE(py_hermes, m) {
   BindUniqueId<BucketId>(m, "BucketId");
   BindUniqueId<TagId>(m, "TagId");
   BindUniqueId<TargetId>(m, "TargetId");
+  BindBufferInfo(m);
   BindBlobInfo(m);
   BindTargetStats(m);
+  BindTagInfo(m);
   BindMetadataTable(m);
   BindHermes(m);
 }

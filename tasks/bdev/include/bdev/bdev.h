@@ -16,11 +16,14 @@ namespace hermes::bdev {
 class Client : public TaskLibClient {
  public:
   DomainId domain_id_;
-  MonitorTask *monitor_task_;
+  StatBdevTask *monitor_task_;
   size_t max_cap_;      /**< maximum capacity of the target */
   double bandwidth_;    /**< the bandwidth of the device */
   double latency_;      /**< the latency of the device */
   float score_;         /**< Relative importance of this tier */
+  float bw_score_;       /**< Relative importance of this tier */
+  f32 borg_min_thresh_;  /**< Capacity percentage too low */
+  f32 borg_max_thresh_;  /**< Capacity percentage too high */
 
  public:
   Client() : score_(0) {}
@@ -31,6 +34,8 @@ class Client : public TaskLibClient {
     bandwidth_ = dev_info.bandwidth_;
     latency_ = dev_info.latency_;
     score_ = 0;
+    borg_min_thresh_ = dev_info.borg_min_thresh_;
+    borg_max_thresh_ = dev_info.borg_max_thresh_;
   }
 
   /** Async create task state */
@@ -44,11 +49,7 @@ class Client : public TaskLibClient {
     id_ = TaskStateId::GetNull();
     CopyDevInfo(dev_info);
     QueueManagerInfo &qm = HRUN_CLIENT->server_config_.queue_manager_;
-    std::vector<PriorityInfo> queue_info = {
-        {1, 1, qm.queue_depth_, 0},
-        {1, 1, qm.queue_depth_, QUEUE_LONG_RUNNING},
-        {4, 4, qm.queue_depth_, QUEUE_LOW_LATENCY}
-    };
+    std::vector<PriorityInfo> queue_info;
     return HRUN_ADMIN->AsyncCreateTaskState<ConstructTask>(
         task_node, domain_id, state_name, lib_name, id_,
         queue_info, dev_info);
@@ -56,8 +57,8 @@ class Client : public TaskLibClient {
   void AsyncCreateComplete(ConstructTask *task) {
     if (task->IsModuleComplete()) {
       id_ = task->id_;
-      queue_id_ = QueueId(id_);
-      monitor_task_ = AsyncMonitor(task->task_node_ + 1, 100).ptr_;
+      Init(id_, HRUN_ADMIN->queue_id_);
+      monitor_task_ = AsyncStatBdev(task->task_node_ + 1, 100).ptr_;
       HRUN_CLIENT->DelTask(task);
     }
   }
@@ -80,13 +81,13 @@ class Client : public TaskLibClient {
 
   /** BDEV monitoring task */
   HSHM_ALWAYS_INLINE
-  void AsyncMonitorConstruct(MonitorTask *task,
+  void AsyncStatBdevConstruct(StatBdevTask *task,
                              const TaskNode &task_node,
                              size_t freq_ms) {
-    HRUN_CLIENT->ConstructTask<MonitorTask>(
+    HRUN_CLIENT->ConstructTask<StatBdevTask>(
         task, task_node, domain_id_, id_, freq_ms, max_cap_);
   }
-  HRUN_TASK_NODE_PUSH_ROOT(Monitor);
+  HRUN_TASK_NODE_PUSH_ROOT(StatBdev);
 
   /** Get bdev remaining capacity */
   HSHM_ALWAYS_INLINE
@@ -153,19 +154,25 @@ class Client : public TaskLibClient {
 class Server {
  public:
   ssize_t rem_cap_;       /**< Remaining capacity */
-  // Histogram score_hist_;  /**< Score distribution */
+  Histogram score_hist_;  /**< Score distribution */
 
  public:
+  /** Update the blob score in this tier */
   void UpdateScore(UpdateScoreTask *task, RunContext &ctx) {
-//    if (task->old_score_ >= 0) {
-//      score_hist_.Decrement(task->old_score_);
-//    }
-//    score_hist_.Increment(task->new_score_);
+    if (task->old_score_ >= 0) {
+      score_hist_.Decrement(task->old_score_);
+    }
+    score_hist_.Increment(task->new_score_);
+  }
+  void MonitorUpdateScore(u32 mode, UpdateScoreTask *task, RunContext &ctx) {
   }
 
-  void Monitor(MonitorTask *task, RunContext &ctx) {
+  /** Stat capacity and scores */
+  void StatBdev(StatBdevTask *task, RunContext &ctx) {
     task->rem_cap_ = rem_cap_;
-//    task->score_hist_ = score_hist_;
+    task->score_hist_ = score_hist_;
+  }
+  void MonitorStatBdev(u32 mode, StatBdevTask *task, RunContext &ctx) {
   }
 };
 
@@ -177,6 +184,7 @@ typedef bdev::Client TargetInfo;
 struct TargetStats {
  public:
   TargetId tgt_id_;
+  u32 node_id_;
   size_t rem_cap_;      /**< Current remaining capacity */
   size_t max_cap_;      /**< maximum capacity of the target */
   double bandwidth_;    /**< the bandwidth of the device */
@@ -187,7 +195,7 @@ struct TargetStats {
   /** Serialize */
   template<typename Ar>
   void serialize(Ar &ar) {
-    ar(tgt_id_, max_cap_, bandwidth_,
+    ar(tgt_id_, node_id_, max_cap_, bandwidth_,
        latency_, score_, rem_cap_);
   }
 };

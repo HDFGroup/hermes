@@ -1,5 +1,5 @@
 #------------------------------------------------------------------------------
-# Build Small Message Task Library
+# Build Hermes
 #------------------------------------------------------------------------------
 add_library(hermes SHARED
         hermes_config_manager.cc)
@@ -7,7 +7,7 @@ add_dependencies(hermes ${Hermes_RUNTIME_DEPS})
 target_link_libraries(hermes ${Hermes_RUNTIME_LIBRARIES})
 
 #------------------------------------------------------------------------------
-# Install Small Message Task Library
+# Install Hermes Library
 #------------------------------------------------------------------------------
 install(
         TARGETS

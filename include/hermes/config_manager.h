@@ -62,7 +62,11 @@ class ConfigurationManager {
     is_initialized_ = true;
   }
 
-  void LoadClientConfig(std::string &config_path) {
+  void ServerInit() {
+    ClientInit();
+  }
+
+  void LoadClientConfig(std::string config_path) {
     // Load hermes config
     if (config_path.empty()) {
       config_path = GetEnvSafe(Constant::kHermesClientConf);
@@ -71,7 +75,7 @@ class ConfigurationManager {
     client_config_.LoadFromFile(config_path);
   }
 
-  void LoadServerConfig(std::string &config_path) {
+  void LoadServerConfig(std::string config_path) {
     // Load hermes config
     if (config_path.empty()) {
       config_path = GetEnvSafe(Constant::kHermesServerConf);

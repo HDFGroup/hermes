@@ -18,20 +18,25 @@ namespace hrun::worch_proc_round_robin {
 
 class Server : public TaskLib {
  public:
+  /** Construct the work orchestrator process scheduler */
   void Construct(ConstructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
+  void MonitorConstruct(u32 mode, ConstructTask *task, RunContext &rctx) {
+  }
 
+  /** Destroy the work orchestrator process queue */
   void Destruct(DestructTask *task, RunContext &rctx) {
     task->SetModuleComplete();
   }
+  void MonitorDestruct(u32 mode, DestructTask *task, RunContext &rctx) {
+  }
 
+  /** Schedule running processes */
   void Schedule(ScheduleTask *task, RunContext &rctx) {
-    int rr = 0;
-    for (Worker &worker : HRUN_WORK_ORCHESTRATOR->workers_) {
-      worker.SetCpuAffinity(rr % HERMES_SYSTEM_INFO->ncpu_);
-      ++rr;
-    }
+    HRUN_WORK_ORCHESTRATOR->DedicateCores();
+  }
+  void MonitorSchedule(u32 mode, ScheduleTask *task, RunContext &rctx) {
   }
 
 #include "worch_proc_round_robin/worch_proc_round_robin_lib_exec.h"

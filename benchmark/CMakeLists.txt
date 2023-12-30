@@ -62,5 +62,5 @@ install(TARGETS
 #-----------------------------------------------------------------------------
 if(HERMES_ENABLE_COVERAGE)
     set_coverage_flags(test_performance_exec)
-    set_coverage_flags(test_hermes_api)
+    set_coverage_flags(hermes_api_bench)
 endif()
