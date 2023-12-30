@@ -487,14 +487,7 @@ class Worker {
             task->SetStarted();
           }
         } else {
-          try {
-            exec->Run(task->method_, task, rctx);
-          } catch (std::exception &e) {
-            HELOG(kError, "(node {}) Worker {} caught an exception: {}", HRUN_CLIENT->node_id_, id_, e.what());
-          } catch (...) {
-            HELOG(kError, "(node {}) Worker {} caught an unknown exception", HRUN_CLIENT->node_id_, id_);
-
-          }
+          exec->Run(task->method_, task, rctx);
           task->SetStarted();
         }
         task->DidRun(work_entry.cur_time_);

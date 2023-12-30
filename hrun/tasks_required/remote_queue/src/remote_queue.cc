@@ -395,7 +395,6 @@ class Server : public TaskLib {
     orig_task->UnsetStarted();
     orig_task->UnsetDataOwner();
     orig_task->UnsetLongRunning();
-    orig_task->UnsetRoot();
     orig_task->task_flags_.SetBits(TASK_REMOTE_DEBUG_MARK);
 
     // Execute task

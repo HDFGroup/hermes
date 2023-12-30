@@ -178,9 +178,14 @@ class Client : public TaskLibClient {
   }
   HRUN_TASK_NODE_ADMIN_ROOT(StopRuntime);
   void StopRuntimeRoot() {
+    HILOG(kInfo, "Beginning to flush the runtime.\n"
+                 "If you did async I/O, this may take some time.\n"
+                 "All unflushed data will be written to the PFS.")
     FlushRoot(DomainId::GetGlobal());
+    HILOG(kInfo, "Stopping the runtime")
     AsyncStopRuntimeRoot(DomainId::GetGlobalMinusLocal());
     AsyncStopRuntimeRoot(DomainId::GetLocal());
+    HILOG(kInfo, "All done!")
   }
 
   /** Set work orchestrator queue policy */
