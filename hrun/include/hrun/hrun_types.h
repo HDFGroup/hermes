@@ -90,10 +90,16 @@ enum class HrunMode {
 struct DomainId {
   bitfield32_t flags_;  /**< Flags indicating how to interpret id */
   u32 id_;              /**< The domain id, 0 is NULL */
-  DOMAIN_FLAG_T kLocal = BIT_OPT(u32, 0);   /**< Include local node in scheduling decision */
-  DOMAIN_FLAG_T kGlobal = BIT_OPT(u32, 1);  /**< Use all nodes in scheduling decision */
-  DOMAIN_FLAG_T kSet = BIT_OPT(u32, 2);     /**< ID represents node set ID, not a single node */
-  DOMAIN_FLAG_T kNode = BIT_OPT(u32, 3);    /**< ID represents a specific node */
+  DOMAIN_FLAG_T kLocal =
+      BIT_OPT(u32, 0);   /**< Use local node in scheduling decision */
+  DOMAIN_FLAG_T kGlobal =
+      BIT_OPT(u32, 1);  /**< Use all nodes in scheduling decision */
+  DOMAIN_FLAG_T kNoLocal =
+      BIT_OPT(u32, 4);    /**< Don't use local node in scheduling decision */
+  DOMAIN_FLAG_T kSet =
+      BIT_OPT(u32, 2);     /**< ID represents node set ID, not a single node */
+  DOMAIN_FLAG_T kNode =
+      BIT_OPT(u32, 3);    /**< ID represents a specific node */
 
   /** Serialize domain id */
   template<typename Ar>
@@ -168,6 +174,20 @@ struct DomainId {
       id.id_ = 0;
       id.flags_.SetBits(kGlobal);
       return id;
+  }
+
+  /** Domain doesn't include this node */
+  bool IsNoLocal() const {
+    return flags_.Any(kNoLocal);
+  }
+
+  /** DomainId representing all nodes, except this one */
+  HSHM_ALWAYS_INLINE
+  static DomainId GetGlobalMinusLocal() {
+    DomainId id;
+    id.id_ = 0;
+    id.flags_.SetBits(kGlobal | kNoLocal);
+    return id;
   }
 
   /** DomainId represents a named node set */

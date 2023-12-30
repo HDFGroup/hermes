@@ -88,8 +88,8 @@ void WorkOrchestrator::Join() {
   kill_requested_.store(true);
   for (std::unique_ptr<Worker> &worker : workers_) {
     worker->thread_->join();
-    ABT_xstream_join(xstream_);
-    ABT_xstream_free(&xstream_);
+//    ABT_xstream_join(xstream_);
+//    ABT_xstream_free(&xstream_);
   }
 }
 

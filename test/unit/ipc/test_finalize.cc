@@ -15,5 +15,5 @@
 #include "hrun_admin/hrun_admin.h"
 
 TEST_CASE("TestFinalize") {
-  HRUN_ADMIN->AsyncStopRuntimeRoot(hrun::DomainId::GetGlobal());
+  HRUN_ADMIN->StopRuntimeRoot();
 }

@@ -168,8 +168,16 @@ Runtime::ResolveDomainId(const DomainId &domain_id) {
   std::vector<DomainId> ids;
   if (domain_id.IsGlobal()) {
     ids.reserve(rpc_.hosts_.size());
-    for (HostInfo &host_info : rpc_.hosts_) {
-      ids.push_back(DomainId::GetNode(host_info.node_id_));
+    if (domain_id.IsNoLocal()) {
+      for (HostInfo &host_info : rpc_.hosts_) {
+        if (host_info.node_id_ != rpc_.node_id_) {
+          ids.push_back(DomainId::GetNode(host_info.node_id_));
+        }
+      }
+    } else {
+      for (HostInfo &host_info : rpc_.hosts_) {
+        ids.push_back(DomainId::GetNode(host_info.node_id_));
+      }
     }
   } else if (domain_id.IsNode()) {
     ids.reserve(1);
