@@ -177,9 +177,10 @@ class Client : public TaskLibClient {
         task, task_node, domain_id);
   }
   HRUN_TASK_NODE_ADMIN_ROOT(StopRuntime);
-  void StopRuntimeRoot(const DomainId &domain_id) {
-    FlushRoot(domain_id);
-    AsyncStopRuntimeRoot(domain_id);
+  void StopRuntimeRoot() {
+    FlushRoot(DomainId::GetGlobal());
+    AsyncStopRuntimeRoot(DomainId::GetGlobalMinusLocal());
+    AsyncStopRuntimeRoot(DomainId::GetLocal());
   }
 
   /** Set work orchestrator queue policy */

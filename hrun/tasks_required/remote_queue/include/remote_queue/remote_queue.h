@@ -58,6 +58,11 @@ class Client : public TaskLibClient {
   void Disperse(Task *orig_task,
                 TaskState *exec,
                 std::vector<DomainId> &domain_ids) {
+    if (domain_ids.size() == 0) {
+      orig_task->SetModuleComplete();
+      return;
+    }
+
     // Serialize task + create the wait task
     orig_task->UnsetStarted();
     BinaryOutputArchive<true> ar(DomainId::GetNode(HRUN_CLIENT->node_id_));
