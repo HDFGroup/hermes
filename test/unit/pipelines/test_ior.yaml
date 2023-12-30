@@ -8,10 +8,10 @@ pkgs:
     ram: 1g
   - pkg_type: hermes_api
     pkg_name: hermes_api
-    posix: true
+    mpi: true
   - pkg_type: ior
     pkg_name: ior
-    api: posix
+    api: mpiio
     out: /tmp/test_hermes/ior.bin
     xfer: 1m
     block: 32g

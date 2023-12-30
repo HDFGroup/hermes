@@ -438,8 +438,8 @@ class Worker {
       }
       // Get task properties
       bool is_remote = task->domain_id_.IsRemote(HRUN_RPC->GetNumHosts(), HRUN_CLIENT->node_id_);
-// #define REMOTE_DEBUG
-#ifdef REMOTE_DEBUG
+// #define HERMES_REMOTE_DEBUG
+#ifdef HERMES_REMOTE_DEBUG
       if (task->task_state_ != HRUN_QM_CLIENT->admin_task_state_ &&
           !task->task_flags_.Any(TASK_REMOTE_DEBUG_MARK) &&
           task->method_ != TaskMethod::kConstruct &&
@@ -487,7 +487,14 @@ class Worker {
             task->SetStarted();
           }
         } else {
-          exec->Run(task->method_, task, rctx);
+          try {
+            exec->Run(task->method_, task, rctx);
+          } catch (std::exception &e) {
+            HELOG(kError, "(node {}) Worker {} caught an exception: {}", HRUN_CLIENT->node_id_, id_, e.what());
+          } catch (...) {
+            HELOG(kError, "(node {}) Worker {} caught an unknown exception", HRUN_CLIENT->node_id_, id_);
+
+          }
           task->SetStarted();
         }
         task->DidRun(work_entry.cur_time_);
