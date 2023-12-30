@@ -14,5 +14,5 @@
 
 int main() {
   TRANSPARENT_HRUN();
-  HRUN_ADMIN->StopRuntimeRoot(hrun::DomainId::GetLocal());
+  HRUN_ADMIN->StopRuntimeRoot(hrun::DomainId::GetGlobal());
 }
