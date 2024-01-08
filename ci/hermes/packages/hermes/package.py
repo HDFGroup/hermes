@@ -38,6 +38,7 @@ class Hermes(CMakePackage):
     variant('only_verbs', default=False, description='Only verbs')
     variant('debug', default=False, description='Build shared libraries')
     variant('zmq', default=False, description='Build ZeroMQ tests')
+    variant('adios', default=False, description='Build Adios tests')
 
     depends_on('mochi-thallium~cereal@0.10.1')
     depends_on('catch2@3.0.1')
