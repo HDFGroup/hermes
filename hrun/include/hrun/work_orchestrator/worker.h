@@ -302,6 +302,23 @@ class Worker {
     }
   }
 
+  /** Allocate a stack for a task */
+  void* AllocateStack() {
+    void *stack;
+    if (!stacks_.pop(stack).IsNull()) {
+      return stack;
+    }
+    return malloc(stack_size_);
+  }
+
+  /** Free a stack */
+  void FreeStack(void *stack) {
+    if(!stacks_.emplace(stack).IsNull()) {
+      return;
+    }
+    stacks_.Resize(stacks_.size() + num_stacks_);
+  }
+
   /**===============================================================
    * Run tasks
    * =============================================================== */
@@ -355,54 +372,6 @@ class Worker {
         PollGrouped(work_entry, flushing);
       }
     }
-  }
-
-  /** Print all queues */
-  void PrintQueues(bool no_long_run = false) {
-    for (std::unique_ptr<Worker> &worker : HRUN_WORK_ORCHESTRATOR->workers_) {
-      for (WorkEntry &work_entry : worker->work_queue_) {
-        Lane *&lane = work_entry.lane_;
-        LaneData *entry;
-        int off = 0;
-        while (!lane->peek(entry, off).IsNull()) {
-          Task *task = HRUN_CLIENT->GetMainPointer<Task>(entry->p_);
-          TaskState *exec = HRUN_TASK_REGISTRY->GetTaskState(task->task_state_);
-          bool is_remote = task->domain_id_.IsRemote(HRUN_RPC->GetNumHosts(),
-                                                     HRUN_CLIENT->node_id_);
-          if (no_long_run && task->IsLongRunning()) {
-            off += 1;
-            continue;
-          }
-          HILOG(kInfo,
-                "(node {}, worker {}) Task {} state {}, method {}, is remote: {}, long_running: {}",
-                HRUN_CLIENT->node_id_,
-                worker->id_,
-                task->task_node_,
-                exec->name_,
-                task->method_,
-                is_remote,
-                task->IsLongRunning());
-          off += 1;
-        }
-      }
-    }
-  }
-
-  /** Allocate a stack for a task */
-  void* AllocateStack() {
-    void *stack;
-    if (!stacks_.pop(stack).IsNull()) {
-      return stack;
-    }
-    return malloc(stack_size_);
-  }
-
-  /** Free a stack */
-  void FreeStack(void *stack) {
-    if(!stacks_.emplace(stack).IsNull()) {
-      return;
-    }
-    stacks_.Resize(stacks_.size() + num_stacks_);
   }
 
   /** Run an iteration over a particular queue */
@@ -607,6 +576,37 @@ class Worker {
       lane->pop();
     } else {
       off += 1;
+    }
+  }
+
+  /** Print all queues */
+  void PrintQueues(bool no_long_run = false) {
+    for (std::unique_ptr<Worker> &worker : HRUN_WORK_ORCHESTRATOR->workers_) {
+      for (WorkEntry &work_entry : worker->work_queue_) {
+        Lane *&lane = work_entry.lane_;
+        LaneData *entry;
+        int off = 0;
+        while (!lane->peek(entry, off).IsNull()) {
+          Task *task = HRUN_CLIENT->GetMainPointer<Task>(entry->p_);
+          TaskState *exec = HRUN_TASK_REGISTRY->GetTaskState(task->task_state_);
+          bool is_remote = task->domain_id_.IsRemote(HRUN_RPC->GetNumHosts(),
+                                                     HRUN_CLIENT->node_id_);
+          if (no_long_run && task->IsLongRunning()) {
+            off += 1;
+            continue;
+          }
+          HILOG(kInfo,
+                "(node {}, worker {}) Task {} state {}, method {}, is remote: {}, long_running: {}",
+                HRUN_CLIENT->node_id_,
+                worker->id_,
+                task->task_node_,
+                exec->name_,
+                task->method_,
+                is_remote,
+                task->IsLongRunning());
+          off += 1;
+        }
+      }
     }
   }
 };

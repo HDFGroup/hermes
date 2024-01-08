@@ -38,6 +38,7 @@ class Hermes(CMakePackage):
     variant('only_verbs', default=False, description='Only verbs')
     variant('debug', default=False, description='Build shared libraries')
     variant('zmq', default=False, description='Build ZeroMQ tests')
+    variant('adios', default=False, description='Build Adios tests')
 
     depends_on('mochi-thallium~cereal@0.10.1')
     depends_on('catch2@3.0.1')
@@ -47,7 +48,7 @@ class Hermes(CMakePackage):
     depends_on('libaio')
     depends_on('doxygen')  # @1.9.3
     depends_on('boost@1.7: +context +fiber +filesystem +system +atomic +chrono +serialization +signals +pic +regex')
-    depends_on('libfabric fabrics=sockets,tcp,udp,verbs',
+    depends_on('libfabric fabrics=sockets,tcp,udp,verbs,mlx,rxm,rxd,shm',
                when='+ares')
     depends_on('libfabric fabrics=verbs',
                when='+only_verbs')
