@@ -11,7 +11,6 @@ find_path(
   Hermes_INCLUDE_DIR
         hermes/hermes_types.h
 )
-message("Hermes_INCLUDE_DIR: ${Hermes_INCLUDE_DIR}")
 
 if( Hermes_INCLUDE_DIR )
   get_filename_component(Hermes_DIR ${Hermes_INCLUDE_DIR} PATH)
@@ -24,7 +23,6 @@ if( Hermes_INCLUDE_DIR )
     NAMES hrun_client hrun_server
     HINTS ENV PATH LD_LIBRARY_PATH
   )
-  message("Hermes_LIBRARY: ${Hermes_LIBRARY}")
 
   # HermesShm
   find_package(HermesShm CONFIG REQUIRED)
