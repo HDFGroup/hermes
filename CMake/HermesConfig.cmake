@@ -22,8 +22,8 @@ if( Hermes_INCLUDE_DIR )
   find_library(
     Hermes_LIBRARY
     NAMES hrun_client hrun_server
+    HINTS ENV PATH LD_LIBRARY_PATH
   )
-
   message("Hermes_LIBRARY: ${Hermes_LIBRARY}")
 
   # HermesShm
