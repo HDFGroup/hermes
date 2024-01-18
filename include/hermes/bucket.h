@@ -494,6 +494,9 @@ class Bucket {
                     Context &ctx) {
     Blob blob;
     BlobId blob_id = BaseGet(blob_name, orig_blob_id, blob, 0, ctx);
+    if (blob.size() == 0) {
+      return BlobId::GetNull();
+    }
     std::stringstream ss(std::string(blob.data(), blob.size()));
     cereal::BinaryInputArchive ar(ss);
     ar >> data;
