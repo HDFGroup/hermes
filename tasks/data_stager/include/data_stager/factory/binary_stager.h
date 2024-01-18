@@ -23,16 +23,17 @@ class BinaryFileStager : public AbstractStager {
   ~BinaryFileStager() {}
 
   /** Build context for staging */
-  static Context BuildContext(size_t page_size) {
+  static Context BuildContext(size_t page_size, size_t elmt_size = 1) {
     Context ctx;
     ctx.flags_.SetBits(HERMES_SHOULD_STAGE);
-    ctx.bkt_params_ = BuildFileParams(page_size);
+    ctx.bkt_params_ = BuildFileParams(page_size, elmt_size);
     return ctx;
   }
 
   /** Build serialized file parameter pack */
-  static std::string BuildFileParams(size_t page_size) {
+  static std::string BuildFileParams(size_t page_size, size_t elmt_size = 1) {
     std::string params;
+    page_size = (page_size / elmt_size) * elmt_size;
     hrun::LocalSerialize srl(params);
     srl << std::string("file");
     srl << page_size;
