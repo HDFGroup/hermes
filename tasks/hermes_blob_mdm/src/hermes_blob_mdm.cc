@@ -469,14 +469,11 @@ class Server : public TaskLib {
 
     // Update information
     if (task->flags_.Any(HERMES_SHOULD_STAGE)) {
-      // TODO(llogan): Move to data stager
-      adapter::BlobPlacement p;
-      std::string blob_name_str = task->blob_name_->str();
-      p.DecodeBlobName(blob_name_str, 1 << 20);
-      bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
-                               task->tag_id_,
-                               p.bucket_off_ + task->blob_off_ + task->data_size_,
-                               bucket_mdm::UpdateSizeMode::kCap);
+      stager_mdm_.AsyncUpdateSize(task->task_node_ + 1,
+                                   task->tag_id_,
+                                   blob_info.name_,
+                                   task->blob_off_,
+                                   task->data_size_, 0);
     } else {
       bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
                                task->tag_id_,

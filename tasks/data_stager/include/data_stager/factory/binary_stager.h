@@ -69,8 +69,8 @@ class BinaryFileStager : public AbstractStager {
                                                 (off_t)plcmnt.bucket_off_);
     HERMES_POSIX_API->close(fd);
     if (real_size < 0) {
-      HELOG(kError, "Failed to stage in {} bytes from {}",
-            page_size_, path_);
+//      HELOG(kError, "Failed to stage in {} bytes from {}",
+//            page_size_, path_);
       HRUN_CLIENT->FreeBuffer(blob);
       return;
     } else if (real_size == 0) {
@@ -117,6 +117,16 @@ class BinaryFileStager : public AbstractStager {
     }
     HILOG(kDebug, "Staged out {} bytes to the backend file {}",
           real_size, path_);
+  }
+
+  void UpdateSize(bucket_mdm::Client &bkt_mdm, UpdateSizeTask *task, RunContext &rctx) override {
+    adapter::BlobPlacement p;
+    std::string blob_name_str = task->blob_name_->str();
+    p.DecodeBlobName(blob_name_str, page_size_);
+    bkt_mdm.AsyncUpdateSize(task->task_node_ + 1,
+                             task->bkt_id_,
+                             p.bucket_off_ + task->blob_off_ + task->data_size_,
+                             bucket_mdm::UpdateSizeMode::kCap);
   }
 };
 
