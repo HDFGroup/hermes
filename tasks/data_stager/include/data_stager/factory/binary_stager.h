@@ -32,12 +32,12 @@ class BinaryFileStager : public AbstractStager {
 
   /** Build serialized file parameter pack */
   static std::string BuildFileParams(size_t page_size, size_t elmt_size = 1) {
-    std::string params;
+    hshm::charbuf params(32);
     page_size = (page_size / elmt_size) * elmt_size;
     hrun::LocalSerialize srl(params);
     srl << std::string("file");
     srl << page_size;
-    return params;
+    return params.str();
   }
 
   /** Create the data stager payload */
