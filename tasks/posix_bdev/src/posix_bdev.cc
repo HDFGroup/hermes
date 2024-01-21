@@ -115,7 +115,7 @@ class Server : public TaskLib, public bdev::Server {
       }
     }
 #else
-    ssize_t count = pwrite(fd_, task->buf_, task->size_, (off_t)task->disk_off_);
+    ssize_t count = pwrite64(fd_, task->buf_, task->size_, (off64_t)task->disk_off_);
     if (count != task->size_) {
       HELOG(kError, "BORG: wrote {} bytes, but expected {}: {}",
             count, task->size_, strerror(errno));
@@ -169,7 +169,7 @@ class Server : public TaskLib, public bdev::Server {
       }
     }
 #else
-    ssize_t count = pread(fd_, task->buf_, task->size_, (off_t)task->disk_off_);
+    ssize_t count = pread64(fd_, task->buf_, task->size_, (off64_t)task->disk_off_);
     if (count != task->size_) {
       HELOG(kError, "BORG: read {} bytes, but expected {}",
             count, task->size_);
