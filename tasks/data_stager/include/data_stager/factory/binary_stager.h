@@ -14,6 +14,7 @@ class BinaryFileStager : public AbstractStager {
  public:
   size_t page_size_;
   std::string path_;
+  bitfield32_t flags_;
 
  public:
   /** Default constructor */
@@ -23,19 +24,24 @@ class BinaryFileStager : public AbstractStager {
   ~BinaryFileStager() {}
 
   /** Build context for staging */
-  static Context BuildContext(size_t page_size, size_t elmt_size = 1) {
+  static Context BuildContext(size_t page_size,
+                              u32 flags = 0,
+                              size_t elmt_size = 1) {
     Context ctx;
     ctx.flags_.SetBits(HERMES_SHOULD_STAGE);
-    ctx.bkt_params_ = BuildFileParams(page_size, elmt_size);
+    ctx.bkt_params_ = BuildFileParams(page_size, flags, elmt_size);
     return ctx;
   }
 
   /** Build serialized file parameter pack */
-  static std::string BuildFileParams(size_t page_size, size_t elmt_size = 1) {
+  static std::string BuildFileParams(size_t page_size,
+                                     u32 flags = 0,
+                                     size_t elmt_size = 1) {
     hshm::charbuf params(32);
     page_size = (page_size / elmt_size) * elmt_size;
     hrun::LocalSerialize srl(params);
     srl << std::string("file");
+    srl << flags;
     srl << page_size;
     return params.str();
   }
@@ -46,12 +52,16 @@ class BinaryFileStager : public AbstractStager {
     std::string protocol;
     hrun::LocalDeserialize srl(params);
     srl >> protocol;
+    srl >> flags_.bits_;
     srl >> page_size_;
     path_ = task->tag_name_->str();
   }
 
   /** Stage data in from remote source */
   void StageIn(blob_mdm::Client &blob_mdm, StageInTask *task, RunContext &rctx) override {
+    if (flags_.Any(HERMES_STAGE_NO_READ)) {
+      return;
+    }
     adapter::BlobPlacement plcmnt;
     plcmnt.DecodeBlobName(*task->blob_name_, page_size_);
     HILOG(kDebug, "Attempting to stage {} bytes from the backend file {} at offset {}",
@@ -96,6 +106,9 @@ class BinaryFileStager : public AbstractStager {
 
   /** Stage data out to remote source */
   void StageOut(blob_mdm::Client &blob_mdm, StageOutTask *task, RunContext &rctx) override {
+    if (flags_.Any(HERMES_STAGE_NO_WRITE)) {
+      return;
+    }
     adapter::BlobPlacement plcmnt;
     plcmnt.DecodeBlobName(*task->blob_name_, page_size_);
     HILOG(kDebug, "Attempting to stage {} bytes to the backend file {} at offset {}",
