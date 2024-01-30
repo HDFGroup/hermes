@@ -317,7 +317,7 @@ TEST_CASE("TestHermesReorganizeBlob") {
     hermes::Blob blob(KILOBYTES(4));
     memset(blob.data(), i % 256, blob.size());
     hermes::BlobId blob_id = bkt.Put(std::to_string(i), blob, ctx);
-    bkt.ReorganizeBlob(blob_id, .5, 0, ctx);
+    bkt.ReorganizeBlob(blob_id, .5, ctx);
     hermes::Blob blob2;
     bkt.Get(blob_id, blob2, ctx);
     REQUIRE(blob.size() == blob2.size());

@@ -389,9 +389,11 @@ class Bucket {
   /**
    * Reorganize a blob to a new score or node
    * */
-  void ReorganizeBlob(const BlobId &blob_id,
-                      float score) {
-    blob_mdm_->AsyncReorganizeBlobRoot(id_, blob_id, score, 0, true);
+  void ReorganizeBlob(const std::string &name,
+                      float score,
+                      const Context &ctx = Context()) {
+    blob_mdm_->AsyncReorganizeBlobRoot(
+        id_, hshm::charbuf(name), BlobId::GetNull(), score, true, ctx);
   }
 
   /**
@@ -399,18 +401,9 @@ class Bucket {
    * */
   void ReorganizeBlob(const BlobId &blob_id,
                       float score,
-                      Context &ctx) {
-    blob_mdm_->AsyncReorganizeBlobRoot(id_, blob_id, score, 0, true);
-  }
-
-  /**
-   * Reorganize a blob to a new score or node
-   * */
-  void ReorganizeBlob(const BlobId &blob_id,
-                      float score,
-                      u32 node_id,
-                      Context &ctx) {
-    blob_mdm_->AsyncReorganizeBlobRoot(id_, blob_id, score, node_id, true);
+                      const Context &ctx = Context()) {
+    blob_mdm_->AsyncReorganizeBlobRoot(
+        id_, hshm::charbuf(""), blob_id, score, true, ctx);
   }
 
   /**

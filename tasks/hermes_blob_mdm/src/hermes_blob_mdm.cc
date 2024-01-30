@@ -273,11 +273,13 @@ class Server : public TaskLib {
       float new_score = MakeScore(blob_info, now);
       blob_info.score_ = new_score;
       if (ShouldReorganize<true>(blob_info, new_score, task->task_node_)) {
+        Context ctx;
         LPointer<ReorganizeBlobTask> reorg_task =
             blob_mdm_.AsyncReorganizeBlob(task->task_node_ + 1,
                                           blob_info.tag_id_,
+                                          hshm::charbuf(""),
                                           blob_info.blob_id_,
-                                          new_score, 0, false,
+                                          new_score, false, ctx,
                                           TASK_LOW_LATENCY);
         reorg_task->Wait<TASK_YIELD_CO>(task);
         HRUN_CLIENT->DelTask(reorg_task);
@@ -856,6 +858,12 @@ class Server : public TaskLib {
   void ReorganizeBlob(ReorganizeBlobTask *task, RunContext &rctx) {
     switch (task->phase_) {
       case ReorganizeBlobPhase::kGet: {
+        hshm::charbuf blob_name = hshm::to_charbuf(*task->blob_name_);
+        if (task->blob_id_.IsNull()) {
+          bitfield32_t flags;
+          task->blob_id_ = GetOrCreateBlobId(task->tag_id_, task->lane_hash_,
+                                             blob_name, rctx, flags);
+        }
         BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
         auto it = blob_map.find(task->blob_id_);
         if (it == blob_map.end()) {
