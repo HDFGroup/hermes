@@ -407,6 +407,20 @@ class Bucket {
   }
 
   /**
+   * Reorganize a blob to a new score or node
+   *
+   * @depricated
+   * */
+  void ReorganizeBlob(const BlobId &blob_id,
+                      float score,
+                      u32 node_id,
+                      Context &ctx) {
+    ctx.node_id_ = node_id;
+    blob_mdm_->AsyncReorganizeBlobRoot(
+        id_, hshm::charbuf(""), blob_id, score, true, ctx);
+  }
+
+  /**
    * Get the current size of the blob in the bucket
    * */
   size_t GetBlobSize(const BlobId &blob_id) {
