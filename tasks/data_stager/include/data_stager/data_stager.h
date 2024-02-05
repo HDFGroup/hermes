@@ -23,12 +23,13 @@ class Client : public TaskLibClient {
   LPointer<ConstructTask> AsyncCreate(const TaskNode &task_node,
                                       const DomainId &domain_id,
                                       const std::string &state_name,
-                                      const TaskStateId &blob_mdm) {
+                                      const TaskStateId &blob_mdm,
+                                      const TaskStateId &bkt_mdm) {
     id_ = TaskStateId::GetNull();
     QueueManagerInfo &qm = HRUN_CLIENT->server_config_.queue_manager_;
     std::vector<PriorityInfo> queue_info;
     return HRUN_ADMIN->AsyncCreateTaskState<ConstructTask>(
-        task_node, domain_id, state_name, id_, queue_info, blob_mdm);
+        task_node, domain_id, state_name, id_, queue_info, blob_mdm, bkt_mdm);
   }
   HRUN_TASK_NODE_ROOT(AsyncCreate)
   template<typename ...Args>
@@ -131,6 +132,29 @@ class Client : public TaskLibClient {
     task.ptr_->Wait();
   }
   HRUN_TASK_NODE_PUSH_ROOT(StageOut);
+
+  /** Stage out data to a remote source */
+  HSHM_ALWAYS_INLINE
+  void AsyncUpdateSizeConstruct(UpdateSizeTask *task,
+                              const TaskNode &task_node,
+                              const BucketId &bkt_id,
+                              const hshm::charbuf &blob_name,
+                              size_t blob_off,
+                              size_t data_size,
+                              u32 task_flags) {
+    HRUN_CLIENT->ConstructTask<UpdateSizeTask>(
+        task, task_node, id_, bkt_id,
+        blob_name, blob_off, data_size, task_flags);
+  }
+  HSHM_ALWAYS_INLINE
+  void UpdateSizeRoot(const BucketId &bkt_id,
+                    const hshm::charbuf &blob_name,
+                    size_t blob_off,
+                    size_t data_size,
+                    u32 task_flags) {
+    AsyncUpdateSizeRoot(bkt_id, blob_name, blob_off, data_size, task_flags);
+  }
+  HRUN_TASK_NODE_PUSH_ROOT(UpdateSize);
 
   /** Parse url */
   static inline

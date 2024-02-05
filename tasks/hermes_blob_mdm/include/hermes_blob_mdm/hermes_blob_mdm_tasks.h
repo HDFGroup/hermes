@@ -229,10 +229,12 @@ class PutBlobPhase {
 #define HERMES_BLOB_APPEND BIT_OPT(u32, 1)
 #define HERMES_DID_STAGE_IN BIT_OPT(u32, 2)
 #define HERMES_SHOULD_STAGE BIT_OPT(u32, 3)
-#define HERMES_BLOB_DID_CREATE BIT_OPT(u32, 4)
-#define HERMES_GET_BLOB_ID BIT_OPT(u32, 5)
-#define HERMES_HAS_DERIVED BIT_OPT(u32, 6)
-#define HERMES_USER_SCORE_STATIONARY BIT_OPT(u32, 7)
+#define HERMES_STAGE_NO_WRITE BIT_OPT(u32, 4)
+#define HERMES_STAGE_NO_READ BIT_OPT(u32, 5)
+#define HERMES_BLOB_DID_CREATE BIT_OPT(u32, 6)
+#define HERMES_GET_BLOB_ID BIT_OPT(u32, 7)
+#define HERMES_HAS_DERIVED BIT_OPT(u32, 8)
+#define HERMES_USER_SCORE_STATIONARY BIT_OPT(u32, 9)
 
 /** A task to put data in a blob */
 struct PutBlobTask : public Task, TaskFlags<TF_SRL_ASYM_START | TF_SRL_SYM_END> {
@@ -1082,6 +1084,7 @@ struct ReorganizeBlobPhase {
 
 /** A task to reorganize a blob's composition in the hierarchy */
 struct ReorganizeBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
+  IN hipc::ShmArchive<hipc::charbuf> blob_name_;
   IN BlobId blob_id_;
   IN float score_;
   IN u32 node_id_;
@@ -1104,10 +1107,11 @@ struct ReorganizeBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
                      const DomainId &domain_id,
                      const TaskStateId &state_id,
                      const TagId &tag_id,
+                     const hshm::charbuf &blob_name,
                      const BlobId &blob_id,
                      float score,
-                     u32 node_id,
                      bool is_user_score,
+                     const Context &ctx,
                      u32 task_flags = TASK_LOW_LATENCY | TASK_FIRE_AND_FORGET) : Task(alloc) {
     // Initialize task
     task_node_ = task_node;
@@ -1120,17 +1124,23 @@ struct ReorganizeBlobTask : public Task, TaskFlags<TF_SRL_SYM> {
 
     // Custom params
     tag_id_ = tag_id;
+    HSHM_MAKE_AR(blob_name_, alloc, blob_name);
     blob_id_ = blob_id;
     score_ = score;
-    node_id_ = node_id;
+    node_id_ = ctx.node_id_;
     is_user_score_ = is_user_score;
+  }
+
+  /** Destructor */
+  ~ReorganizeBlobTask() {
+    HSHM_DESTROY_AR(blob_name_)
   }
 
   /** (De)serialize message call */
   template<typename Ar>
   void SerializeStart(Ar &ar) {
     task_serialize<Ar>(ar);
-    ar(tag_id_, blob_id_, score_, node_id_);
+    ar(tag_id_, blob_name_, blob_id_, score_, node_id_);
   }
 
   /** (De)serialize message return */

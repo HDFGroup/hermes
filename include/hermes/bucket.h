@@ -389,9 +389,11 @@ class Bucket {
   /**
    * Reorganize a blob to a new score or node
    * */
-  void ReorganizeBlob(const BlobId &blob_id,
-                      float score) {
-    blob_mdm_->AsyncReorganizeBlobRoot(id_, blob_id, score, 0, true);
+  void ReorganizeBlob(const std::string &name,
+                      float score,
+                      const Context &ctx = Context()) {
+    blob_mdm_->AsyncReorganizeBlobRoot(
+        id_, hshm::charbuf(name), BlobId::GetNull(), score, true, ctx);
   }
 
   /**
@@ -399,18 +401,9 @@ class Bucket {
    * */
   void ReorganizeBlob(const BlobId &blob_id,
                       float score,
-                      Context &ctx) {
-    blob_mdm_->AsyncReorganizeBlobRoot(id_, blob_id, score, 0, true);
-  }
-
-  /**
-   * Reorganize a blob to a new score or node
-   * */
-  void ReorganizeBlob(const BlobId &blob_id,
-                      float score,
-                      u32 node_id,
-                      Context &ctx) {
-    blob_mdm_->AsyncReorganizeBlobRoot(id_, blob_id, score, node_id, true);
+                      const Context &ctx = Context()) {
+    blob_mdm_->AsyncReorganizeBlobRoot(
+        id_, hshm::charbuf(""), blob_id, score, true, ctx);
   }
 
   /**
@@ -494,6 +487,9 @@ class Bucket {
                     Context &ctx) {
     Blob blob;
     BlobId blob_id = BaseGet(blob_name, orig_blob_id, blob, 0, ctx);
+    if (blob.size() == 0) {
+      return BlobId::GetNull();
+    }
     std::stringstream ss(std::string(blob.data(), blob.size()));
     cereal::BinaryInputArchive ar(ss);
     ar >> data;

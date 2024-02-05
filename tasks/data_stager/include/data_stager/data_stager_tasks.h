@@ -25,6 +25,7 @@ using hrun::proc_queue::PushTask;
 using hrun::Admin::CreateTaskStateTask;
 struct ConstructTask : public CreateTaskStateTask {
   TaskStateId blob_mdm_;
+  TaskStateId bkt_mdm_;
 
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
@@ -39,14 +40,16 @@ struct ConstructTask : public CreateTaskStateTask {
                 const std::string &state_name,
                 const TaskStateId &id,
                 const std::vector<PriorityInfo> &queue_info,
-                const TaskStateId &blob_mdm)
+                const TaskStateId &blob_mdm,
+                const TaskStateId &bkt_mdm)
       : CreateTaskStateTask(alloc, task_node, domain_id, state_name,
                             "data_stager", id, queue_info) {
     // Custom params
     blob_mdm_ = blob_mdm;
+    bkt_mdm_ = bkt_mdm;
     std::stringstream ss;
     cereal::BinaryOutputArchive ar(ss);
-    ar(blob_mdm_);
+    ar(blob_mdm_, bkt_mdm_);
     std::string data = ss.str();
     *custom_ = data;
   }
@@ -56,7 +59,7 @@ struct ConstructTask : public CreateTaskStateTask {
     std::string data = custom_->str();
     std::stringstream ss(data);
     cereal::BinaryInputArchive ar(ss);
-    ar(blob_mdm_);
+    ar(blob_mdm_, bkt_mdm_);
   }
 
   HSHM_ALWAYS_INLINE
@@ -328,6 +331,57 @@ struct StageOutTask : public Task, TaskFlags<TF_LOCAL> {
     if (IsDataOwner()) {
       HRUN_CLIENT->FreeBuffer(data_);
     }
+  }
+
+  /** Create group */
+  HSHM_ALWAYS_INLINE
+  u32 GetGroup(hshm::charbuf &group) {
+    return TASK_UNORDERED;
+  }
+};
+
+/**
+ * A task to stage data out in a Hermes deployment
+ * */
+struct UpdateSizeTask : public Task, TaskFlags<TF_LOCAL> {
+  IN hermes::BucketId bkt_id_;
+  IN hipc::ShmArchive<hipc::charbuf> blob_name_;
+  IN size_t blob_off_, data_size_;
+
+  /** SHM default constructor */
+  HSHM_ALWAYS_INLINE explicit
+  UpdateSizeTask(hipc::Allocator *alloc) : Task(alloc) {}
+
+  /** Emplace constructor */
+  HSHM_ALWAYS_INLINE explicit
+  UpdateSizeTask(hipc::Allocator *alloc,
+                 const TaskNode &task_node,
+                 const TaskStateId &state_id,
+                 const BucketId &bkt_id,
+                 const hshm::charbuf &blob_name,
+                 size_t blob_off,
+                 size_t data_size,
+                 u32 task_flags): Task(alloc) {
+    // Initialize task
+    task_node_ = task_node;
+    lane_hash_ = bkt_id.hash_;
+    prio_ = TaskPrio::kLowLatency;
+    task_state_ = state_id;
+    method_ = Method::kUpdateSize;
+    task_flags_.SetBits(task_flags | TASK_FIRE_AND_FORGET | TASK_LOW_LATENCY | TASK_REMOTE_DEBUG_MARK);
+    domain_id_ = DomainId::GetLocal();
+
+    // Custom params
+    bkt_id_ = bkt_id;
+    HSHM_MAKE_AR(blob_name_, alloc, blob_name);
+    blob_off_ = blob_off;
+    data_size_ = data_size;
+  }
+
+  /** Destructor */
+  HSHM_ALWAYS_INLINE
+  ~UpdateSizeTask() {
+    HSHM_DESTROY_AR(blob_name_)
   }
 
   /** Create group */

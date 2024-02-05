@@ -154,7 +154,8 @@ class Client : public TaskLibClient {
                      Context ctx = Context(),
                      u32 flags = 0) {
     LPointer<hrunpq::TypedPushTask<GetBlobTask>> push_task =
-                                                     AsyncGetBlobRoot(tag_id, hshm::charbuf(""), blob_id, off, data_size, data, ctx, flags);
+        AsyncGetBlobRoot(tag_id, hshm::charbuf(""),
+                         blob_id, off, data_size, data, ctx, flags);
     push_task->Wait();
     GetBlobTask *task = push_task->get();
     data = task->data_;
@@ -174,15 +175,16 @@ class Client : public TaskLibClient {
   void AsyncReorganizeBlobConstruct(ReorganizeBlobTask *task,
                                     const TaskNode &task_node,
                                     const TagId &tag_id,
+                                    const hshm::charbuf &blob_name,
                                     const BlobId &blob_id,
                                     float score,
-                                    u32 node_id,
                                     bool user_score,
+                                    const Context &ctx = Context(),
                                     u32 task_flags = TASK_LOW_LATENCY | TASK_FIRE_AND_FORGET) {
     // HILOG(kDebug, "Beginning REORGANIZE (task_node={})", task_node);
     HRUN_CLIENT->ConstructTask<ReorganizeBlobTask>(
         task, task_node, DomainId::GetNode(blob_id.node_id_), id_,
-        tag_id, blob_id, score, node_id, user_score, task_flags);
+        tag_id, blob_name, blob_id, score, user_score, ctx, task_flags);
   }
   HRUN_TASK_NODE_PUSH_ROOT(ReorganizeBlob);
 

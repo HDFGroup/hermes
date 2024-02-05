@@ -28,6 +28,10 @@ void Run(u32 method, Task *task, RunContext &rctx) override {
       StageOut(reinterpret_cast<StageOutTask *>(task), rctx);
       break;
     }
+    case Method::kUpdateSize: {
+      UpdateSize(reinterpret_cast<UpdateSizeTask *>(task), rctx);
+      break;
+    }
   }
 }
 /** Execute a task */
@@ -55,6 +59,10 @@ void Monitor(u32 mode, Task *task, RunContext &rctx) override {
     }
     case Method::kStageOut: {
       MonitorStageOut(mode, reinterpret_cast<StageOutTask *>(task), rctx);
+      break;
+    }
+    case Method::kUpdateSize: {
+      MonitorUpdateSize(mode, reinterpret_cast<UpdateSizeTask *>(task), rctx);
       break;
     }
   }
@@ -86,6 +94,10 @@ void Del(u32 method, Task *task) override {
       HRUN_CLIENT->DelTask<StageOutTask>(reinterpret_cast<StageOutTask *>(task));
       break;
     }
+    case Method::kUpdateSize: {
+      HRUN_CLIENT->DelTask<UpdateSizeTask>(reinterpret_cast<UpdateSizeTask *>(task));
+      break;
+    }
   }
 }
 /** Duplicate a task */
@@ -113,6 +125,10 @@ void Dup(u32 method, Task *orig_task, std::vector<LPointer<Task>> &dups) overrid
     }
     case Method::kStageOut: {
       hrun::CALL_DUPLICATE(reinterpret_cast<StageOutTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kUpdateSize: {
+      hrun::CALL_DUPLICATE(reinterpret_cast<UpdateSizeTask*>(orig_task), dups);
       break;
     }
   }
@@ -144,6 +160,10 @@ void DupEnd(u32 method, u32 replica, Task *orig_task, Task *dup_task) override {
       hrun::CALL_DUPLICATE_END(replica, reinterpret_cast<StageOutTask*>(orig_task), reinterpret_cast<StageOutTask*>(dup_task));
       break;
     }
+    case Method::kUpdateSize: {
+      hrun::CALL_DUPLICATE_END(replica, reinterpret_cast<UpdateSizeTask*>(orig_task), reinterpret_cast<UpdateSizeTask*>(dup_task));
+      break;
+    }
   }
 }
 /** Ensure there is space to store replicated outputs */
@@ -171,6 +191,10 @@ void ReplicateStart(u32 method, u32 count, Task *task) override {
     }
     case Method::kStageOut: {
       hrun::CALL_REPLICA_START(count, reinterpret_cast<StageOutTask*>(task));
+      break;
+    }
+    case Method::kUpdateSize: {
+      hrun::CALL_REPLICA_START(count, reinterpret_cast<UpdateSizeTask*>(task));
       break;
     }
   }
@@ -202,6 +226,10 @@ void ReplicateEnd(u32 method, Task *task) override {
       hrun::CALL_REPLICA_END(reinterpret_cast<StageOutTask*>(task));
       break;
     }
+    case Method::kUpdateSize: {
+      hrun::CALL_REPLICA_END(reinterpret_cast<UpdateSizeTask*>(task));
+      break;
+    }
   }
 }
 /** Serialize a task when initially pushing into remote */
@@ -229,6 +257,10 @@ std::vector<DataTransfer> SaveStart(u32 method, BinaryOutputArchive<true> &ar, T
     }
     case Method::kStageOut: {
       ar << *reinterpret_cast<StageOutTask*>(task);
+      break;
+    }
+    case Method::kUpdateSize: {
+      ar << *reinterpret_cast<UpdateSizeTask*>(task);
       break;
     }
   }
@@ -268,6 +300,11 @@ TaskPointer LoadStart(u32 method, BinaryInputArchive<true> &ar) override {
       ar >> *reinterpret_cast<StageOutTask*>(task_ptr.ptr_);
       break;
     }
+    case Method::kUpdateSize: {
+      task_ptr.ptr_ = HRUN_CLIENT->NewEmptyTask<UpdateSizeTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<UpdateSizeTask*>(task_ptr.ptr_);
+      break;
+    }
   }
   return task_ptr;
 }
@@ -296,6 +333,10 @@ std::vector<DataTransfer> SaveEnd(u32 method, BinaryOutputArchive<false> &ar, Ta
     }
     case Method::kStageOut: {
       ar << *reinterpret_cast<StageOutTask*>(task);
+      break;
+    }
+    case Method::kUpdateSize: {
+      ar << *reinterpret_cast<UpdateSizeTask*>(task);
       break;
     }
   }
@@ -328,6 +369,10 @@ void LoadEnd(u32 replica, u32 method, BinaryInputArchive<false> &ar, Task *task)
       ar.Deserialize(replica, *reinterpret_cast<StageOutTask*>(task));
       break;
     }
+    case Method::kUpdateSize: {
+      ar.Deserialize(replica, *reinterpret_cast<UpdateSizeTask*>(task));
+      break;
+    }
   }
 }
 /** Get the grouping of the task */
@@ -350,6 +395,9 @@ u32 GetGroup(u32 method, Task *task, hshm::charbuf &group) override {
     }
     case Method::kStageOut: {
       return reinterpret_cast<StageOutTask*>(task)->GetGroup(group);
+    }
+    case Method::kUpdateSize: {
+      return reinterpret_cast<UpdateSizeTask*>(task)->GetGroup(group);
     }
   }
   return -1;

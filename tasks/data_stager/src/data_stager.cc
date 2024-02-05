@@ -9,6 +9,7 @@
 #include "hermes_adapters/posix/posix_api.h"
 #include "hermes_blob_mdm/hermes_blob_mdm.h"
 #include "data_stager/factory/stager_factory.h"
+#include "hermes_bucket_mdm/hermes_bucket_mdm.h"
 
 namespace hermes::data_stager {
 
@@ -16,6 +17,7 @@ class Server : public TaskLib {
  public:
   std::vector<std::unordered_map<hermes::BucketId, std::unique_ptr<AbstractStager>>> url_map_;
   blob_mdm::Client blob_mdm_;
+  bucket_mdm::Client bkt_mdm_;
 
  public:
   Server() = default;
@@ -25,6 +27,7 @@ class Server : public TaskLib {
     task->Deserialize();
     url_map_.resize(HRUN_QM_RUNTIME->max_lanes_);
     blob_mdm_.Init(task->blob_mdm_, HRUN_ADMIN->queue_id_);
+    bkt_mdm_.Init(task->bkt_mdm_, HRUN_ADMIN->queue_id_);
     HILOG(kInfo, "(node {}) BLOB MDM: {}", HRUN_CLIENT->node_id_, blob_mdm_.id_);
     task->SetModuleComplete();
   }
@@ -97,6 +100,22 @@ class Server : public TaskLib {
     task->SetModuleComplete();
   }
   void MonitorStageOut(u32 mode, StageOutTask *task, RunContext &rctx) {
+  }
+
+  /** Update the size of the bucket */
+  void UpdateSize(UpdateSizeTask *task, RunContext &rctx) {
+    std::unordered_map<hermes::BucketId, std::unique_ptr<AbstractStager>>::iterator it =
+        url_map_[rctx.lane_id_].find(task->bkt_id_);
+    if (it == url_map_[rctx.lane_id_].end()) {
+      HELOG(kError, "Could not find stager for bucket: {}", task->bkt_id_);
+      task->SetModuleComplete();
+      return;
+    }
+    std::unique_ptr<AbstractStager> &stager = it->second;
+    stager->UpdateSize(bkt_mdm_, task, rctx);
+    task->SetModuleComplete();
+  }
+  void MonitorUpdateSize(u32 mode, UpdateSizeTask *task, RunContext &rctx) {
   }
 
  public:

@@ -45,7 +45,7 @@ class Client : public TaskLibClient {
     LPointer<ConstructTask> task =
         AsyncCreateRoot(std::forward<Args>(args)...);
     task->Wait();
-    Init(id_, HRUN_ADMIN->queue_id_);
+    Init(task->id_, HRUN_ADMIN->queue_id_);
     HRUN_CLIENT->DelTask(task);
   }
 

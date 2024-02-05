@@ -323,7 +323,7 @@ class Server : public TaskLib {
         }
         stager_mdm_.AsyncUnregisterStager(task->task_node_ + 1,
                                           task->tag_id_);
-        HILOG(kInfo, "Destroying the tag: {}", tag.name_.str());
+        HILOG(kDebug, "Destroying the tag: {}", tag.name_.str());
         task->phase_ = DestroyTagPhase::kWaitDestroyBlobs;
         return;
       }
@@ -340,7 +340,7 @@ class Server : public TaskLib {
         HSHM_DESTROY_AR(task->destroy_blob_tasks_);
         TAG_MAP_T &tag_map = tag_map_[rctx.lane_id_];
         tag_map.erase(task->tag_id_);
-        HILOG(kInfo, "Finished destroying the tag");
+        HILOG(kDebug, "Finished destroying the tag");
         task->SetModuleComplete();
       }
     }
