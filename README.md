@@ -1,52 +1,18 @@
 # Hermes
 
-Hermes is a heterogeneous-aware, multi-tiered, dynamic, and distributed I/O buffering system that aims to significantly accelerate I/O performance. See the [official site](http://www.cs.iit.edu/~scs/assets/projects/Hermes/Hermes.html) for more information. For design documents, architecture description, performance data, and individual component design, see the [wiki](https://grc.iit.edu/docs/category/hermes).
+Hermes is a heterogeneous-aware, multi-tiered, dynamic, and distributed I/O 
+buffering system that aims to significantly accelerate I/O performance. 
+See the [official site](http://www.cs.iit.edu/~scs/assets/projects/Hermes/Hermes.html) for more information. For design documents, 
+architecture description, performance data, and individual component design, 
+see the [wiki](https://grc.iit.edu/docs/category/hermes).
 
 ![Build](https://github.com/HDFGroup/hermes/workflows/GitHub%20Actions/badge.svg)
 
 [![Coverage Status](https://coveralls.io/repos/github/HDFGroup/hermes/badge.svg?branch=master)](https://coveralls.io/github/HDFGroup/hermes?branch=master)
 
-## Dependencies
-
-* A C++ compiler that supports C++ 17.
-* [Thallium](https://mochi.readthedocs.io/en/latest/installing.html) - RPC library for HPC. Use a version greater than `0.5` for RoCE support.
-* [yaml-cpp](https://github.com/jbeder/yaml-cpp) - YAML file parser
-* HDF5 1.14.0 if compiling with VFD
-* MPI-IO adapter only tested with MPICH and OpenMPI.
-
 ## Building
 
-### Spack
-
-[Spack](https://spack.io/) is the easiest way to get Hermes and all its dependencies installed.
-
-```bash
-# set location of hermes_file_staging
-git clone https://github.com/HDFGroup/hermes --recurse-submodules
-spack repo add ${HERMES_REPO}/ci/hermes
-# Master should include all stable updates
-spack install hermes@master
-```
-
-### CMake
-
-Hermes makes use of the CMake build system and requires an out of source build.
-
-Hermes has a corresponding package, hermes_shm, which has all the same dependencies as Hermes.
-```
-spack install hermes_shm
-spack load hermes_shm
-```
-
-You can then build Hermes with CMake:
-```
-cd /path/to/hermes
-mkdir build
-cd build
-cmake ../ -DCMAKE_BUILD_TYPE=Relase -DCMAKE_INSTALL_PREFIX=...
-make -j8
-make install
-```
+Read the guide on [Building Hermes](https://grc.iit.edu/docs/hermes/building-hermes).
 
 ## Contributing
 
