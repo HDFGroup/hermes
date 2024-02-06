@@ -517,13 +517,11 @@ static herr_t H5FD__hermes_write(H5FD_t *_file, H5FD_mem_t type,
  */
 H5PL_type_t
 H5PLget_plugin_type(void) {
-  TRANSPARENT_HERMES();
   return H5PL_TYPE_VFD;
 }
 
 const void*
 H5PLget_plugin_info(void) {
-  TRANSPARENT_HERMES();
   return &H5FD_hermes_g;
 }
 
