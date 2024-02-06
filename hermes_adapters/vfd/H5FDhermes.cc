@@ -229,6 +229,7 @@ H5FD__hermes_term(void) {
 static H5FD_t *
 H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
                   haddr_t maxaddr) {
+  TRANSPARENT_HERMES();
   H5FD_hermes_t  *file = NULL; /* hermes VFD info          */
   int fd = -1;
   int o_flags = 0;
