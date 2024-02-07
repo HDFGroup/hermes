@@ -42,20 +42,30 @@ struct UserPathInfo {
   /** Default constructor */
   UserPathInfo() = default;
 
+  static std::string ToRegex(const std::string &path) {
+    std::string regex_pattern = "^"; // Start of line anchor
+    for (char c : path) {
+      if (c == '.') {
+        regex_pattern += "\\."; // Escape period
+      } else if (c == '/') {
+        regex_pattern += "\\/"; // Escape forward slash
+      } else if (c == '*') {
+        regex_pattern += ".*"; // Match any character
+      } else {
+        regex_pattern += c;
+      }
+    }
+    return regex_pattern;
+  }
+
   /** Emplace Constructor */
   UserPathInfo(const std::string &path, bool include, bool is_directory)
   : path_(path), include_(include), is_directory_(is_directory) {
-    std::string regexPattern = "^"; // Start of line anchor
-    for (char c : path) {
-      if (c == '.') {
-        regexPattern += "\\."; // Escape period
-      } else if (c == '/') {
-        regexPattern += "\\/"; // Escape forward slash
-      } else {
-        regexPattern += c;
-      }
+    std::string regex_pattern = ToRegex(path);
+    if (is_directory) {
+      regex_pattern += ".*";
     }
-    regex_ = std::regex(regexPattern);
+    regex_ = std::regex(regex_pattern);
   }
 
   /** Detect if a path matches the input path */
