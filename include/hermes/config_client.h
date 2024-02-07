@@ -34,6 +34,7 @@ static inline const bool do_exclude = false;
 
 /** Stores information about path inclusions and exclusions */
 struct UserPathInfo {
+  std::regex regex_;   /**< The regex to match the path */
   std::string path_;   /**< The path the user specified */
   bool include_;       /**< Whether to track path. */
   bool is_directory_;  /**< Whether the path is a file or directory */
@@ -43,7 +44,25 @@ struct UserPathInfo {
 
   /** Emplace Constructor */
   UserPathInfo(const std::string &path, bool include, bool is_directory)
-  : path_(path), include_(include), is_directory_(is_directory) {}
+  : path_(path), include_(include), is_directory_(is_directory) {
+    std::string regexPattern = "^"; // Start of line anchor
+    for (char c : path) {
+      if (c == '.') {
+        regexPattern += "\\."; // Escape period
+      } else if (c == '/') {
+        regexPattern += "\\/"; // Escape forward slash
+      } else {
+        regexPattern += c;
+      }
+    }
+    regex_ = std::regex(regexPattern);
+  }
+
+  /** Detect if a path matches the input path */
+  bool Match(const std::string &abs_path) {
+    return std::regex_match(abs_path, regex_);
+    // return abs_path.rfind(path_) != std::string::npos;
+  }
 };
 
 /**

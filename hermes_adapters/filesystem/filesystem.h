@@ -692,7 +692,7 @@ class Filesystem : public FilesystemIoClient {
     auto &paths = HERMES_CLIENT_CONF.path_list_;
     // Check if path is included or excluded
     for (config::UserPathInfo &pth : paths) {
-      if (abs_path.rfind(pth.path_) != std::string::npos) {
+      if (pth.Match(abs_path)) {
         if (abs_path == pth.path_ && pth.is_directory_) {
           // Do not include if path is a tracked directory
           return false;
