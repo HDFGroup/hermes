@@ -43,14 +43,14 @@ struct UserPathInfo {
   UserPathInfo() = default;
 
   static std::string ToRegex(const std::string &path) {
-    std::string regex_pattern = "^"; // Start of line anchor
+    std::string regex_pattern = "^";
     for (char c : path) {
       if (c == '.') {
-        regex_pattern += "\\."; // Escape period
+        regex_pattern += "\\.";
       } else if (c == '/') {
-        regex_pattern += "\\/"; // Escape forward slash
+        regex_pattern += "\\/";
       } else if (c == '*') {
-        regex_pattern += ".*"; // Match any character
+        regex_pattern += ".*";
       } else {
         regex_pattern += c;
       }
