@@ -3,6 +3,9 @@
 # ARGS:
 # SPACK_DIR: the path to spack
 
+# Ensure environment modules are loaded
+. /hermes/ci/module_load.sh
+
 # THIS SCRIPT IS EXECUTED BY CONTAINER!!!
 set -x
 set -e
@@ -21,7 +24,6 @@ pip install -e . -r requirements.txt
 popd
 
 # Load scspkg environment
-. /module_load.sh
 module use "$(scspkg module dir)"
 
 # Load hermes_shm
@@ -61,7 +63,7 @@ cmake ../ \
 -DHERMES_ENABLE_STDIO_ADAPTER=ON \
 -DHERMES_ENABLE_POSIX_ADAPTER=ON \
 -DHERMES_ENABLE_COVERAGE=ON
-make -j8
+make -j4
 make install
 
 # Test Hermes
@@ -73,4 +75,4 @@ cd /hermes/test/unit/external
 mkdir build
 cd build
 cmake ../
-make -j8
+make -j4
