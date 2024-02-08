@@ -29,7 +29,7 @@ find_library(
 )
 if (NOT Hermes_LIBRARY)
     message(STATUS "FindHermes: Could not find libhrun_client.so")
-    set(Hermes_FOUND FALSE)
+    set(Hermes_FOUND OFF)
     message(STATUS "LIBS: $ENV{LD_LIBRARY_PATH}")
     return()
 endif()
