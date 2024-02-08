@@ -50,6 +50,8 @@ class Hermes(CMakePackage):
     depends_on('hermes_shm+zmq', when='+zmq')
     depends_on('hermes_shm+vfd', when='+vfd')
     depends_on('hermes_shm+adios', when='+adios')
+    depends_on('hermes_shm+encrypt', when='+encrypt')
+    depends_on('hermes_shm+compress', when='+compress')
 
     def cmake_args(self):
         args = []
@@ -67,6 +69,10 @@ class Hermes(CMakePackage):
             args.append('-HERMES_ENABLE_STDIO_ADAPTER=ON')
         if '+vfd' in self.spec:
             args.append('-HERMES_ENABLE_VFD=ON')
+        if '+compress' in self.spec:
+            args.append(self.define('HERMES_ENABLE_COMPRESSION', 'ON'))
+        if '+encrypt' in self.spec:
+            args.append(self.define('HERMES_ENABLE_ENCRYPTION', 'ON'))
         return args
 
     def set_include(self, env, path):

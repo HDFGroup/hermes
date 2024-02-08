@@ -28,7 +28,7 @@ class HermesShm(CMakePackage):
                when='+ares')
 
     # Main dependencies
-    depends_on('mochi-thallium~cereal@0.10.1', when='+mochi')
+    depends_on('mochi-thallium@0.10.1', when='+mochi')
     depends_on('cereal', when='+cereal')
     depends_on('boost@1.7: +context +fiber', when='+boost')
     depends_on('mpi', when='+mpiio')
@@ -58,6 +58,16 @@ class HermesShm(CMakePackage):
         args = []
         if '+debug' in self.spec:
             args.append('-DCMAKE_BUILD_TYPE=Debug')
+        if '+vfd' in self.spec:
+            args.append(self.define('HERMES_ENABLE_VFD', 'ON'))
+        if '+compress' in self.spec:
+            args.append(self.define('HERMES_ENABLE_COMPRESSION', 'ON'))
+        if '+encrypt' in self.spec:
+            args.append(self.define('HERMES_ENABLE_ENCRYPTION', 'ON'))
+        if '+mochi' in self.spec:
+            args.append(self.define('HERMES_RPC_THALLIUM', 'ON'))
+        if '+zmq' in self.spec:
+            args.append(self.define('HERMES_ENABLE_ZMQ_TESTS', 'ON'))
         return args
 
     def set_include(self, env, path):
