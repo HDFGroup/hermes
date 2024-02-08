@@ -1,17 +1,31 @@
 name: Build and Push Docker Images
 on:
   push:
+    branches:
+      - master
+      - main
+      - dev
   workflow_dispatch:
+    branches:
+        - master
+        - main
+        - dev
     inputs:
-      build_docker_images:
-        description: 'If ''true'', force a build of the docker images and push them to dockerhub'
-        required: false
-        default: false
+#      build_docker_images:
+#        description: 'If ''true'', force a build of the docker images and push them to dockerhub'
+#        required: false
+#        default: false
 jobs:
   build-docker-images:
     if: ${{ github.ref_type == 'tag' || github.event.inputs.build_docker_images }}
     runs-on: ubuntu-20.04
     steps:
+      - name: Cache Hermes deps Docker
+        uses: actions/cache@v3
+        id: docker-deps-cache
+        with:
+          path: ci/deps/deps.Dockerfile
+          key: docker-${{ hashFiles('ci/deps/deps.Dockerfile') }}
       - name: Checkout
         uses: actions/checkout@v3
       - name: Login to Docker Hub
@@ -19,16 +33,17 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-#      - name: Set up Docker Buildx
-#        uses: docker/setup-buildx-action@v2
-#      - name: Build and push deps.Dockerfile
-#        uses: docker/build-push-action@v4
-#        with:
-#          context: ./
-#          file: ./docker/deps.Dockerfile
-#          builder: ${{ steps.buildx.outputs.name }}
-#          push: true
-#          tags: hdfgroup/hermes-deps:latest
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Build and push deps.Dockerfile
+        uses: docker/build-push-action@v4
+        if: steps.docker-deps-cache.outputs.cache-hit != 'true'
+        with:
+          context: ./
+          file: ./docker/deps.Dockerfile
+          builder: ${{ steps.buildx.outputs.name }}
+          push: true
+          tags: hdfgroup/hermes-deps:latest
 #      - name: Build and push dev.Dockerfile
 #        uses: docker/build-push-action@v4
 #        with:

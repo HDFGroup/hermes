@@ -1,5 +1,5 @@
-# Install ubuntu 20.04
-FROM ubuntu:20.04
+# Install ubuntu 22.04
+FROM ubuntu:latest
 LABEL maintainer="llogan@hawk.iit.edu"
 LABEL version="0.0"
 LABEL description="Hermes Docker image with CI"
@@ -50,6 +50,7 @@ RUN . /module_load.sh && \
 # Install hermes
 RUN . /module_load.sh && \
     . "${SPACK_DIR}/share/spack/setup-env.sh" && \
+    spack external find && \
     spack install hermes@master+vfd+mpiio^mpich@3.3.2
 
 # Install jarvis-cd
