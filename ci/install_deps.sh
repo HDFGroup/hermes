@@ -10,8 +10,8 @@ docker run -d \
 --mount src=${PWD},target=/hermes,type=bind \
 --name hermes_deps_c \
 --network host \
---memory=4G \
---shm-size=4G \
+--memory=8G \
+--shm-size=8G \
 -p 4000:4000 \
 -p 4001:4001 \
 lukemartinlogan/hermes_deps \
