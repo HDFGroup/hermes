@@ -17,7 +17,7 @@ on:
 #        default: false
 jobs:
   build-docker-images:
-    if: ${{ github.ref_type == 'tag' || github.event.inputs.build_docker_images }}
+    if: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-20.04
     steps:
       - name: Cache Hermes deps Docker
