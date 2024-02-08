@@ -1,5 +1,5 @@
-# Install ubuntu 20.04
-FROM ubuntu:20.04
+# Install ubuntu 22.04
+FROM ubuntu:latest
 LABEL maintainer="llogan@hawk.iit.edu"
 LABEL version="0.0"
 LABEL description="Hermes Docker image with CI"

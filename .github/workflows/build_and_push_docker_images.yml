@@ -19,16 +19,16 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-#      - name: Set up Docker Buildx
-#        uses: docker/setup-buildx-action@v2
-#      - name: Build and push deps.Dockerfile
-#        uses: docker/build-push-action@v4
-#        with:
-#          context: ./
-#          file: ./docker/deps.Dockerfile
-#          builder: ${{ steps.buildx.outputs.name }}
-#          push: true
-#          tags: hdfgroup/hermes-deps:latest
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Build and push deps.Dockerfile
+        uses: docker/build-push-action@v4
+        with:
+          context: ./
+          file: ./docker/deps.Dockerfile
+          builder: ${{ steps.buildx.outputs.name }}
+          push: true
+          tags: hdfgroup/hermes-deps:latest
 #      - name: Build and push dev.Dockerfile
 #        uses: docker/build-push-action@v4
 #        with:
