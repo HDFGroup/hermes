@@ -24,7 +24,7 @@ get_filename_component(Hermes_DIR ${Hermes_INCLUDE_DIR} PATH)
 #-----------------------------------------------------------------------------
 find_library(
   Hermes_LIBRARY
-  NAMES hrun_client hrun_server
+  NAMES hrun_client
   HINTS ENV LD_LIBRARY_PATH ENV PATH
 )
 if (NOT Hermes_LIBRARY)
@@ -60,15 +60,11 @@ endif()
 
 # Cereal
 find_package(cereal REQUIRED)
-if(cereal)
-  message(STATUS "found cereal")
-endif()
+message(STATUS "found cereal")
 
 # Boost
 find_package(Boost REQUIRED COMPONENTS regex system filesystem fiber REQUIRED)
-if (Boost_FOUND)
-  message(STATUS "found boost at ${Boost_INCLUDE_DIRS}")
-endif()
+message(STATUS "found boost at ${Boost_INCLUDE_DIRS}")
 
 # Thallium
 find_package(thallium CONFIG REQUIRED)
