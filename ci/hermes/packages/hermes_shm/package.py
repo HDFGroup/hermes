@@ -28,7 +28,7 @@ class HermesShm(CMakePackage):
                when='+ares')
 
     # Main dependencies
-    depends_on('mochi-thallium@0.10.1', when='+mochi')
+    depends_on('mochi-thallium+cereal@0.10.1', when='+mochi')
     depends_on('cereal', when='+cereal')
     depends_on('boost@1.7: +context +fiber', when='+boost')
     depends_on('mpi', when='+mpiio')
