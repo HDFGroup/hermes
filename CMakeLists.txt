@@ -59,20 +59,20 @@ endif()
 #-----------------------------------------------------------------------------
 # Documentation
 #-----------------------------------------------------------------------------
-if (HERMES_ENABLE_DOXYGEN)
-    include(UseDoxygenDoc)
-
-    add_doxygen_doc(
-            BUILD_DIR
-            ${CMAKE_CURRENT_BINARY_DIR}/_build
-            DOXY_FILE
-            ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in
-            TARGET_NAME
-            dox
-            COMMENT
-            "HTML documentation"
-    )
-endif()
+#if (HERMES_ENABLE_DOXYGEN)
+#    include(UseDoxygenDoc)
+#
+#    add_doxygen_doc(
+#            BUILD_DIR
+#            ${CMAKE_CURRENT_BINARY_DIR}/_build
+#            DOXY_FILE
+#            ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in
+#            TARGET_NAME
+#            dox
+#            COMMENT
+#            "HTML documentation"
+#    )
+#endif()
 
 #-----------------------------------------------------------------------------
 # Code Coverage

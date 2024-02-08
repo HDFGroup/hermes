@@ -17,7 +17,7 @@
 namespace thallium {
 
 /** Serialize I/O type enum */
-SERIALIZE_ENUM(hrun::IoType);
+// SERIALIZE_ENUM(hrun::IoType);
 
 }  // namespace thallium
 
