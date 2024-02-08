@@ -2,6 +2,10 @@ name: Build and Push Docker Images
 on:
   push:
   workflow_dispatch:
+    branches:
+        - master
+        - main
+        - dev
     inputs:
 #      build_docker_images:
 #        description: 'If ''true'', force a build of the docker images and push them to dockerhub'
