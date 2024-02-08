@@ -34,6 +34,7 @@ static inline const bool do_exclude = false;
 
 /** Stores information about path inclusions and exclusions */
 struct UserPathInfo {
+  std::regex regex_;   /**< The regex to match the path */
   std::string path_;   /**< The path the user specified */
   bool include_;       /**< Whether to track path. */
   bool is_directory_;  /**< Whether the path is a file or directory */
@@ -41,9 +42,37 @@ struct UserPathInfo {
   /** Default constructor */
   UserPathInfo() = default;
 
+  static std::string ToRegex(const std::string &path) {
+    std::string regex_pattern = "^";
+    for (char c : path) {
+      if (c == '.') {
+        regex_pattern += "\\.";
+      } else if (c == '/') {
+        regex_pattern += "\\/";
+      } else if (c == '*') {
+        regex_pattern += ".*";
+      } else {
+        regex_pattern += c;
+      }
+    }
+    return regex_pattern;
+  }
+
   /** Emplace Constructor */
   UserPathInfo(const std::string &path, bool include, bool is_directory)
-  : path_(path), include_(include), is_directory_(is_directory) {}
+  : path_(path), include_(include), is_directory_(is_directory) {
+    std::string regex_pattern = ToRegex(path);
+    if (is_directory) {
+      regex_pattern += ".*";
+    }
+    regex_ = std::regex(regex_pattern);
+  }
+
+  /** Detect if a path matches the input path */
+  bool Match(const std::string &abs_path) {
+    return std::regex_match(abs_path, regex_);
+    // return abs_path.rfind(path_) != std::string::npos;
+  }
 };
 
 /**

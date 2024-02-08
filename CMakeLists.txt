@@ -2,13 +2,20 @@ cmake_minimum_required(VERSION 3.10)
 project(hermes)
 
 #-----------------------------------------------------------------------------
+# Define Constants
+#-----------------------------------------------------------------------------
+set(HERMES_VERSION_MAJOR 1)
+set(HERMES_VERSION_MINOR 1)
+set(HERMES_VERSION_PATCH 0)
+
+#-----------------------------------------------------------------------------
 # Define Options
 #-----------------------------------------------------------------------------
 option(BUILD_SHARED_LIBS "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" ON)
 option(BUILD_MPI_TESTS "Build tests which depend on MPI" ON)
 option(BUILD_OpenMP_TESTS "Build tests which depend on OpenMP" ON)
 option(HERMES_ENABLE_COVERAGE "Check how well tests cover code" OFF)
-option(HERMES_ENABLE_DOXYGEN "Check how well the code is documented" OFF)
+option(HERMES_ENABLE_DOXYGEN "Check how well the code is documented" ON)
 option(HERMES_REMOTE_DEBUG "Enable remote debug mode on hrun" OFF)
 
 option(HERMES_ENABLE_POSIX_ADAPTER "Build the Hermes POSIX adapter." ON)
@@ -48,8 +55,27 @@ if(NOT HERMES_EXPORTED_TARGETS)
     set(HERMES_EXPORTED_TARGETS "hrun-targets")
 endif()
 
+
 #-----------------------------------------------------------------------------
-# Coverage
+# Documentation
+#-----------------------------------------------------------------------------
+#if (HERMES_ENABLE_DOXYGEN)
+#    include(UseDoxygenDoc)
+#
+#    add_doxygen_doc(
+#            BUILD_DIR
+#            ${CMAKE_CURRENT_BINARY_DIR}/_build
+#            DOXY_FILE
+#            ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in
+#            TARGET_NAME
+#            dox
+#            COMMENT
+#            "HTML documentation"
+#    )
+#endif()
+
+#-----------------------------------------------------------------------------
+# Code Coverage
 #-----------------------------------------------------------------------------
 if(HERMES_ENABLE_COVERAGE)
     set(COVERAGE_FLAGS "-fprofile-arcs -ftest-coverage --coverage" CACHE STRING

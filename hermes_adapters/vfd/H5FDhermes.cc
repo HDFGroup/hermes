@@ -229,6 +229,7 @@ H5FD__hermes_term(void) {
 static H5FD_t *
 H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
                   haddr_t maxaddr) {
+  TRANSPARENT_HERMES();
   H5FD_hermes_t  *file = NULL; /* hermes VFD info          */
   int fd = -1;
   int o_flags = 0;
@@ -516,13 +517,11 @@ static herr_t H5FD__hermes_write(H5FD_t *_file, H5FD_mem_t type,
  */
 H5PL_type_t
 H5PLget_plugin_type(void) {
-  TRANSPARENT_HERMES();
   return H5PL_TYPE_VFD;
 }
 
 const void*
 H5PLget_plugin_info(void) {
-  TRANSPARENT_HERMES();
   return &H5FD_hermes_g;
 }
 

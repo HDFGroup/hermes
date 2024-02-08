@@ -7,6 +7,21 @@
 #  Hermes_LIBRARIES, the libraries to link against to use the Hermes library
 #  Hermes_LIBRARY_DIRS, the directory where the Hermes library is found.
 
+#-----------------------------------------------------------------------------
+# Define constants
+#-----------------------------------------------------------------------------
+set(HERMES_VERSION_MAJOR @HERMES_VERSION_MAJOR@)
+set(HERMES_VERSION_MINOR @HERMES_VERSION_MINOR@)
+set(HERMES_VERSION_PATCH @HERMES_VERSION_PATCH@)
+
+set(BUILD_MPI_TESTS @BUILD_MPI_TESTS@)
+set(BUILD_OpenMP_TESTS @BUILD_OpenMP_TESTS@)
+set(HERMES_ENABLE_COMPRESS @HERMES_ENABLE_COMPRESS@)
+set(HERMES_ENABLE_ENCRYPT @HERMES_ENABLE_ENCRYPT@)
+
+#-----------------------------------------------------------------------------
+# Find hermes header
+#-----------------------------------------------------------------------------
 find_path(
   Hermes_INCLUDE_DIR
         hermes/hermes_types.h
@@ -20,19 +35,23 @@ endif()
 get_filename_component(Hermes_DIR ${Hermes_INCLUDE_DIR} PATH)
 
 #-----------------------------------------------------------------------------
-# Find all packages needed by Hermes
+# Find hermes library
 #-----------------------------------------------------------------------------
 find_library(
-  Hermes_LIBRARY
-  NAMES hrun_client hrun_server
-  HINTS ENV LD_LIBRARY_PATH ENV PATH
+        Hermes_LIBRARY
+        NAMES hrun_client
+        HINTS ENV LD_LIBRARY_PATH ENV PATH
 )
 if (NOT Hermes_LIBRARY)
     message(STATUS "FindHermes: Could not find libhrun_client.so")
-    set(Hermes_FOUND FALSE)
+    set(Hermes_FOUND OFF)
     message(STATUS "LIBS: $ENV{LD_LIBRARY_PATH}")
     return()
 endif()
+
+#-----------------------------------------------------------------------------
+# Find all packages needed by Hermes
+#-----------------------------------------------------------------------------
 
 # HermesShm
 find_package(HermesShm CONFIG REQUIRED)
@@ -60,15 +79,11 @@ endif()
 
 # Cereal
 find_package(cereal REQUIRED)
-if(cereal)
-  message(STATUS "found cereal")
-endif()
+message(STATUS "found cereal")
 
 # Boost
 find_package(Boost REQUIRED COMPONENTS regex system filesystem fiber REQUIRED)
-if (Boost_FOUND)
-  message(STATUS "found boost at ${Boost_INCLUDE_DIRS}")
-endif()
+message(STATUS "found boost at ${Boost_INCLUDE_DIRS}")
 
 # Thallium
 find_package(thallium CONFIG REQUIRED)
@@ -83,6 +98,7 @@ set(Hermes_LIBRARY_DIR "")
 get_filename_component(Hermes_LIBRARY_DIRS ${Hermes_LIBRARY} PATH)
 # Set uncached variables as per standard.
 set(Hermes_FOUND ON)
+# Set Hermes dirs
 set(Hermes_INCLUDE_DIRS ${Boost_INCLUDE_DIRS} ${Hermes_INCLUDE_DIR})
 set(Hermes_LIBRARIES
         ${HermesShm_LIBRARIES}
@@ -92,9 +108,13 @@ set(Hermes_LIBRARIES
         thallium
         hermes
         ${Boost_LIBRARIES} ${Hermes_LIBRARY})
+set(Hermes_LIBRARY_DIRS ${HermeShm_LIBRARY_DIRS})
+# Set Hermes client dirs (equal to Hermes dirs)
 set(Hermes_CLIENT_LIBRARIES ${Hermes_LIBRARIES})
+set(Hermes_CLIENT_LIBRARY_DIRS ${Hermes_LIBRARY_DIRS})
+# Set Hermes runtime dirs
 set(Hermes_RUNTIME_LIBRARIES
         ${Hermes_CLIENT_LIBRARIES}
-        hrun_runtime
-        ${Boost_LIBRARIES})
+        hrun_runtime)
+set(Hermes_RUNTIME_LIBRARY_DIRS ${HermeShm_LIBRARY_DIRS})
 set(Hermes_RUNTIME_DEPS "")
