@@ -72,7 +72,7 @@ ctest -VV
 
 # Run make install unit test
 cd /hermes/test/unit/external
-mkdir build
+mkdir -p build
 cd build
 cmake ../
 make -j4
