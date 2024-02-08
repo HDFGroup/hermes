@@ -10,8 +10,9 @@
 #-----------------------------------------------------------------------------
 # Define constants
 #-----------------------------------------------------------------------------
-set(HERMES_SHM_VERSION_MAJOR @HERMES_SHM_VERSION_MAJOR@)
-set(HERMES_SHM_VERSION_MINOR @HERMES_SHM_VERSION_MINOR@)
+set(HERMES_VERSION_MAJOR @HERMES_VERSION_MAJOR@)
+set(HERMES_VERSION_MINOR @HERMES_VERSION_MINOR@)
+set(HERMES_VERSION_PATCH @HERMES_VERSION_PATCH@)
 
 set(BUILD_MPI_TESTS @BUILD_MPI_TESTS@)
 set(BUILD_OpenMP_TESTS @BUILD_OpenMP_TESTS@)

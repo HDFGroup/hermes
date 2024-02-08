@@ -2,6 +2,13 @@ cmake_minimum_required(VERSION 3.10)
 project(hermes)
 
 #-----------------------------------------------------------------------------
+# Define Constants
+#-----------------------------------------------------------------------------
+set(HERMES_VERSION_MAJOR 1)
+set(HERMES_VERSION_MINOR 1)
+set(HERMES_VERSION_PATCH 0)
+
+#-----------------------------------------------------------------------------
 # Define Options
 #-----------------------------------------------------------------------------
 option(BUILD_SHARED_LIBS "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" ON)
