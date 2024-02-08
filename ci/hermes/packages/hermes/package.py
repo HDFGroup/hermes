@@ -33,28 +33,23 @@ class Hermes(CMakePackage):
     # Common across hermes_shm and hermes
     variant('mpiio', default=True, description='Enable MPI I/O adapter')
     variant('stdio', default=True, description='Enable STDIO adapter')
+    variant('debug', default=False, description='Build shared libraries')
     variant('vfd', default=False, description='Enable HDF5 VFD')
     variant('ares', default=False, description='Enable full libfabric install')
-    variant('only_verbs', default=False, description='Only verbs')
-    variant('debug', default=False, description='Build shared libraries')
     variant('zmq', default=False, description='Build ZeroMQ tests')
     variant('adios', default=False, description='Build Adios tests')
+    variant('encrypt', default=False, description='Build Adios tests')
+    variant('compress', default=False, description='Build Adios tests')
 
-    depends_on('mochi-thallium~cereal@0.10.1')
-    depends_on('catch2@3.0.1')
-    depends_on('mpi')
-    depends_on('cereal')
-    depends_on('yaml-cpp')
-    depends_on('libaio')
-    depends_on('doxygen')  # @1.9.3
-    depends_on('boost@1.7: +context +fiber +filesystem +system +atomic +chrono +serialization +signals +pic +regex')
-    depends_on('libfabric fabrics=sockets,tcp,udp,verbs,mlx,rxm,rxd,shm',
-               when='+ares')
-    depends_on('libfabric fabrics=verbs',
-               when='+only_verbs')
-    depends_on('libzmq', '+zmq')
-    depends_on('hdf5@1.14.0', when='+vfd')
-    depends_on('adios2', when='+adios')
+    depends_on('hermes_shm+mochi')
+    depends_on('hermes_shm+debug', when='+debug')
+    depends_on('hermes_shm+mpiio')
+    depends_on('hermes_shm+cereal')
+    depends_on('hermes_shm+boost')
+    depends_on('hermes_shm+ares', when='+ares')
+    depends_on('hermes_shm+zmq', when='+zmq')
+    depends_on('hermes_shm+vfd', when='+vfd')
+    depends_on('hermes_shm+adios', when='+adios')
 
     def cmake_args(self):
         args = []
@@ -92,6 +87,7 @@ class Hermes(CMakePackage):
         self.set_lib(env, '{}/lib'.format(self.prefix))
         self.set_lib(env, '{}/lib64'.format(self.prefix))
         env.prepend_path('CMAKE_PREFIX_PATH', '{}/cmake'.format(self.prefix))
+        env.prepend_path('CMAKE_MODULE_PATH', '{}/cmake'.format(self.prefix))
 
     def setup_dependent_environment(self, spack_env, run_env, dependent_spec):
         self.set_flags(spack_env)
