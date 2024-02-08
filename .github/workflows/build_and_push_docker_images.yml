@@ -3,10 +3,10 @@ on:
   push:
   workflow_dispatch:
     inputs:
-      build_docker_images:
-        description: 'If ''true'', force a build of the docker images and push them to dockerhub'
-        required: false
-        default: false
+#      build_docker_images:
+#        description: 'If ''true'', force a build of the docker images and push them to dockerhub'
+#        required: false
+#        default: false
 jobs:
   build-docker-images:
     if: ${{ github.ref_type == 'tag' || github.event.inputs.build_docker_images }}

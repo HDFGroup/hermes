@@ -50,6 +50,7 @@ RUN . /module_load.sh && \
 # Install hermes_shm
 RUN . /module_load.sh && \
     . "${SPACK_DIR}/share/spack/setup-env.sh" && \
+    spack external find && \
     spack install hermes_shm@master+vfd+mpiio^mpich@3.3.2
 
 # Install jarvis-cd
