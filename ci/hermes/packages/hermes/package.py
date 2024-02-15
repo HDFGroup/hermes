@@ -38,6 +38,7 @@ class Hermes(CMakePackage):
     variant('ares', default=False, description='Enable full libfabric install')
     variant('zmq', default=False, description='Build ZeroMQ tests')
     variant('adios', default=False, description='Build Adios tests')
+    variant('python', default=False, description='Build Python Wrapper')
     variant('encrypt', default=False, description='Build Adios tests')
     variant('compress', default=False, description='Build Adios tests')
 
@@ -73,6 +74,10 @@ class Hermes(CMakePackage):
             args.append(self.define('HERMES_ENABLE_COMPRESSION', 'ON'))
         if '+encrypt' in self.spec:
             args.append(self.define('HERMES_ENABLE_ENCRYPTION', 'ON'))
+        if '+adios' in self.spec:
+            args.append(self.define('HERMES_ENABLE_ADIOS', 'ON'))
+        if '+python' in self.spec:
+            args.append(self.define('HERMES_ENABLE_PYTHON', 'ON'))
         return args
 
     def set_include(self, env, path):
