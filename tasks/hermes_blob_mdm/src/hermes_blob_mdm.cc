@@ -367,134 +367,22 @@ class Server : public TaskLib {
       blob_info.mod_count_ = 1;
       HRUN_CLIENT->DelTask(stage_task);
     }
-    if (task->flags_.Any(HERMES_SHOULD_STAGE)) {
-      HILOG(kDebug, "This is marked as a file: {} {}",
-            blob_info.mod_count_, blob_info.last_flush_);
-    }
-    ssize_t bkt_size_diff = 0;
-    if (task->flags_.Any(HERMES_BLOB_REPLACE)) {
-      bkt_size_diff -= blob_info.blob_size_;
-      PutBlobFreeBuffersPhase(blob_info, task, rctx);
-    }
 
-    // Determine amount of additional buffering space needed
-    size_t needed_space = task->blob_off_ + task->data_size_;
-    size_t size_diff = 0;
-    if (needed_space > blob_info.max_blob_size_) {
-      size_diff = needed_space - blob_info.max_blob_size_;
-    }
-    size_t min_blob_size = task->blob_off_ + task->data_size_;
-    if (min_blob_size > blob_info.blob_size_) {
-      blob_info.blob_size_ = task->blob_off_ + task->data_size_;
-    }
-    bkt_size_diff += (ssize_t)size_diff;
-    HILOG(kDebug, "The size diff is {} bytes (bkt diff {})", size_diff, bkt_size_diff)
 
-    // Use DPE
-    std::vector<PlacementSchema> schema_vec;
-    if (size_diff > 0) {
-      Context ctx;
-      auto *dpe = DpeFactory::Get(ctx.dpe_);
-      ctx.blob_score_ = task->score_;
-      dpe->Placement({size_diff}, targets_, ctx, schema_vec);
-    }
-
-    // Allocate blob buffers
-    for (PlacementSchema &schema : schema_vec) {
-      schema.plcmnts_.emplace_back(0, fallback_target_->id_);
-      for (size_t sub_idx = 0; sub_idx < schema.plcmnts_.size(); ++sub_idx) {
-        SubPlacement &placement = schema.plcmnts_[sub_idx];
-        TargetInfo &bdev = *target_map_[placement.tid_];
-        LPointer<bdev::AllocateTask> alloc_task =
-            bdev.AsyncAllocate(task->task_node_ + 1,
-                               blob_info.score_,
-                               placement.size_,
-                               blob_info.buffers_);
-        alloc_task->Wait<TASK_YIELD_CO>(task);
-//        HILOG(kInfo, "(node {}) Placing {}/{} bytes in target {} of bw {}",
-//              HRUN_CLIENT->node_id_,
-//              alloc_task->alloc_size_, task->data_size_,
-//              placement.tid_, bdev.bandwidth_)
-        if (alloc_task->alloc_size_ < alloc_task->size_) {
-          SubPlacement &next_placement = schema.plcmnts_[sub_idx + 1];
-          size_t diff = alloc_task->size_ - alloc_task->alloc_size_;
-          next_placement.size_ += diff;
-        }
-        // bdev.monitor_task_->rem_cap_ -= alloc_task->alloc_size_;
-        HRUN_CLIENT->DelTask(alloc_task);
-      }
-    }
-
-    // Place blob in buffers
-    std::vector<LPointer<bdev::WriteTask>> write_tasks;
-    write_tasks.reserve(blob_info.buffers_.size());
-    size_t blob_off = task->blob_off_, buf_off = 0;
-    size_t buf_left = 0, buf_right = 0;
-    size_t blob_right = task->blob_off_ + task->data_size_;
-    char *blob_buf = HRUN_CLIENT->GetDataPointer(task->data_);
-    HILOG(kDebug, "Number of buffers {}", blob_info.buffers_.size());
-    bool found_left = false;
-    for (BufferInfo &buf : blob_info.buffers_) {
-      buf_right = buf_left + buf.t_size_;
-      if (blob_off >= blob_right) {
-        break;
-      }
-      if (buf_left <= blob_off && blob_off < buf_right) {
-        found_left = true;
-      }
-      if (found_left) {
-        size_t rel_off = blob_off - buf_left;
-        size_t tgt_off = buf.t_off_ + rel_off;
-        size_t buf_size = buf.t_size_ - rel_off;
-        if (buf_right > blob_right) {
-          buf_size = blob_right - (buf_left + rel_off);
-        }
-        HILOG(kDebug, "Writing {} bytes at off {} from target {}", buf_size, tgt_off, buf.tid_)
-        TargetInfo &target = *target_map_[buf.tid_];
-        LPointer<bdev::WriteTask> write_task =
-            target.AsyncWrite(task->task_node_ + 1,
-                              blob_buf + buf_off,
-                              tgt_off, buf_size);
-        write_tasks.emplace_back(write_task);
-        buf_off += buf_size;
-        blob_off = buf_right;
-      }
-      buf_left += buf.t_size_;
-    }
-    blob_info.max_blob_size_ = blob_off;
-
-    // Wait for the placements to complete
-    for (LPointer<bdev::WriteTask> &write_task : write_tasks) {
-      write_task->Wait<TASK_YIELD_CO>(task);
-      HRUN_CLIENT->DelTask(write_task);
-    }
-
-    // Update information
-    if (task->flags_.Any(HERMES_SHOULD_STAGE)) {
-      stager_mdm_.AsyncUpdateSize(task->task_node_ + 1,
-                                   task->tag_id_,
-                                   blob_info.name_,
-                                   task->blob_off_,
-                                   task->data_size_, 0);
-    } else {
-      bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
-                               task->tag_id_,
-                               bkt_size_diff,
-                               bucket_mdm::UpdateSizeMode::kAdd);
-    }
+    size_t new_size = task->blob_off_ + task->data_size_;
     if (task->flags_.Any(HERMES_BLOB_DID_CREATE)) {
-      bkt_mdm_.AsyncTagAddBlob(task->task_node_ + 1,
-                               task->tag_id_,
-                               task->blob_id_);
+      blob_info.data_ = (char*)malloc(new_size);
+      blob_info.blob_size_ = task->data_size_;
+      blob_info.max_blob_size_ = task->data_size_;
+    } else if (blob_info.max_blob_size_ < new_size) {
+      blob_info.max_blob_size_ = new_size;
+      blob_info.blob_size_ = new_size;
+      blob_info.data_ = (char*)realloc(blob_info.data_, new_size);
     }
-    if (task->flags_.Any(HERMES_HAS_DERIVED)) {
-      op_mdm_.AsyncRegisterData(task->task_node_ + 1,
-                                task->tag_id_,
-                                task->blob_name_->str(),
-                                task->blob_id_,
-                                task->blob_off_,
-                                task->data_size_);
-    }
+
+    // Copy data to memory
+    char *data = HRUN_CLIENT->GetDataPointer(task->data_);
+    memcpy(blob_info.data_ + task->blob_off_, data, task->data_size_);
 
     // Free data
     HILOG(kDebug, "Completing PUT for {}", blob_name.str());
@@ -502,20 +390,6 @@ class Server : public TaskLib {
     task->SetModuleComplete();
   }
   void MonitorPutBlob(u32 mode, PutBlobTask *task, RunContext &rctx) {
-  }
-
-  /** Release buffers */
-  void PutBlobFreeBuffersPhase(BlobInfo &blob_info, PutBlobTask *task, RunContext &rctx) {
-    for (BufferInfo &buf : blob_info.buffers_) {
-      TargetInfo &target = *target_map_[buf.tid_];
-      std::vector<BufferInfo> buf_vec = {buf};
-      target.AsyncFree(task->task_node_ + 1,
-                       blob_info.score_,
-                       std::move(buf_vec), true);
-    }
-    blob_info.buffers_.clear();
-    blob_info.max_blob_size_ = 0;
-    blob_info.blob_size_ = 0;
   }
 
   /** Get a blob's data */
@@ -529,60 +403,21 @@ class Server : public TaskLib {
     BlobInfo &blob_info = blob_map[task->blob_id_];
 
     // Stage Blob
-    if (task->flags_.Any(HERMES_SHOULD_STAGE) && blob_info.last_flush_ == 0) {
-      // TODO(llogan): Don't hardcore score = 1
-      blob_info.last_flush_ = 1;
-      LPointer<data_stager::StageInTask> stage_task =
-          stager_mdm_.AsyncStageIn(task->task_node_ + 1,
-                                   task->tag_id_,
-                                   blob_info.name_,
-                                   1, 0);
-      stage_task->Wait<TASK_YIELD_CO>(task);
-      HRUN_CLIENT->DelTask(stage_task);
-    }
+//    if (task->flags_.Any(HERMES_SHOULD_STAGE) && blob_info.last_flush_ == 0) {
+//      // TODO(llogan): Don't hardcore score = 1
+//      blob_info.last_flush_ = 1;
+//      LPointer<data_stager::StageInTask> stage_task =
+//          stager_mdm_.AsyncStageIn(task->task_node_ + 1,
+//                                   task->tag_id_,
+//                                   blob_info.name_,
+//                                   1, 0);
+//      stage_task->Wait<TASK_YIELD_CO>(task);
+//      HRUN_CLIENT->DelTask(stage_task);
+//    }
 
-    // Read blob from buffers
-    std::vector<bdev::ReadTask*> read_tasks;
-    read_tasks.reserve(blob_info.buffers_.size());
-    HILOG(kDebug, "Getting blob {} of size {} starting at offset {} (total_blob_size={}, buffers={})",
-          task->blob_id_, task->data_size_, task->blob_off_, blob_info.blob_size_, blob_info.buffers_.size());
-    size_t blob_off = task->blob_off_;
-    size_t buf_left = 0, buf_right = 0;
-    size_t buf_off = 0;
-    size_t blob_right = task->blob_off_ + task->data_size_;
-    bool found_left = false;
-    char *blob_buf = HRUN_CLIENT->GetDataPointer(task->data_);
-    for (BufferInfo &buf : blob_info.buffers_) {
-      buf_right = buf_left + buf.t_size_;
-      if (blob_off >= blob_right) {
-        break;
-      }
-      if (buf_left <= blob_off && blob_off < buf_right) {
-        found_left = true;
-      }
-      if (found_left) {
-        size_t rel_off = blob_off - buf_left;
-        size_t tgt_off = buf.t_off_ + rel_off;
-        size_t buf_size = buf.t_size_ - rel_off;
-        if (buf_right > blob_right) {
-          buf_size = blob_right - (buf_left + rel_off);
-        }
-        HILOG(kDebug, "Loading {} bytes at off {} from target {}", buf_size, tgt_off, buf.tid_)
-        TargetInfo &target = *target_map_[buf.tid_];
-        bdev::ReadTask *read_task = target.AsyncRead(task->task_node_ + 1,
-                                                     blob_buf + buf_off,
-                                                     tgt_off, buf_size).ptr_;
-        read_tasks.emplace_back(read_task);
-        buf_off += buf_size;
-        blob_off = buf_right;
-      }
-      buf_left += buf.t_size_;
-    }
-    for (bdev::ReadTask *&read_task : read_tasks) {
-      read_task->Wait<TASK_YIELD_CO>(task);
-      HRUN_CLIENT->DelTask(read_task);
-    }
-    task->data_size_ = buf_off;
+    // Copy data from memory
+    char *data = HRUN_CLIENT->GetDataPointer(task->data_);
+    memcpy(data, blob_info.data_ + task->blob_off_, task->data_size_);
     task->SetModuleComplete();
   }
   void MonitorGetBlob(u32 mode, GetBlobTask *task, RunContext &rctx) {
