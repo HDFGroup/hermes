@@ -403,17 +403,17 @@ class Server : public TaskLib {
     BlobInfo &blob_info = blob_map[task->blob_id_];
 
     // Stage Blob
-//    if (task->flags_.Any(HERMES_SHOULD_STAGE) && blob_info.last_flush_ == 0) {
-//      // TODO(llogan): Don't hardcore score = 1
-//      blob_info.last_flush_ = 1;
-//      LPointer<data_stager::StageInTask> stage_task =
-//          stager_mdm_.AsyncStageIn(task->task_node_ + 1,
-//                                   task->tag_id_,
-//                                   blob_info.name_,
-//                                   1, 0);
-//      stage_task->Wait<TASK_YIELD_CO>(task);
-//      HRUN_CLIENT->DelTask(stage_task);
-//    }
+    if (task->flags_.Any(HERMES_SHOULD_STAGE) && blob_info.last_flush_ == 0) {
+      // TODO(llogan): Don't hardcore score = 1
+      blob_info.last_flush_ = 1;
+      LPointer<data_stager::StageInTask> stage_task =
+          stager_mdm_.AsyncStageIn(task->task_node_ + 1,
+                                   task->tag_id_,
+                                   blob_info.name_,
+                                   1, 0);
+      stage_task->Wait<TASK_YIELD_CO>(task);
+      HRUN_CLIENT->DelTask(stage_task);
+    }
 
     // Copy data from memory
     char *data = HRUN_CLIENT->GetDataPointer(task->data_);
