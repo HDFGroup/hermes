@@ -472,7 +472,7 @@ class Bucket {
     // Get the blob ID
     if (blob_id.IsNull()) {
       auto &blob_id_map = HERMES_CONF->blob_mdm_.blob_id_map_;
-      auto blob_name_buf = hipc::make_uptr<hipc::string>(blob_name);
+      auto blob_name_buf = blob_mdm::Client::GetBlobNameWithBucket(id_, blob_name);
       auto it = blob_id_map.find(*blob_name_buf);
       if (it == blob_id_map.end()) {
         blob_mdm_->GetBlobSizeRoot(
@@ -487,7 +487,7 @@ class Bucket {
       auto &blob_map = HERMES_CONF->blob_mdm_.blob_map_;
       auto it = blob_map.find(blob_id);
       if (it != blob_map.end()) {
-        BlobInfo blob_info = *it.val_->second_;
+        BlobInfo &blob_info = *it.val_->second_;
         if (blob_off + blob.size() > blob_info.blob_size_) {
           if (blob_info.blob_size_ < blob_off) {
             return BlobId::GetNull();

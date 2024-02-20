@@ -42,9 +42,6 @@ class ConstructTaskPhase : public CreateTaskStatePhase {
  * */
 using hrun::Admin::CreateTaskStateTask;
 struct ConstructTask : public CreateTaskStateTask {
-  hipc::Pointer blob_id_map_;
-  hipc::Pointer blob_map_;
-
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
   ConstructTask(hipc::Allocator *alloc) : CreateTaskStateTask(alloc) {}
@@ -154,6 +151,36 @@ struct SetBucketMdmTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   /** Finalize replication */
   void ReplicateEnd() {}
 };
+
+/** Set the BUCKET MDM ID */
+struct GetLocalTablesTask : public Task, TaskFlags<TF_LOCAL> {
+  OUT hipc::Pointer blob_id_map_;
+  OUT hipc::Pointer blob_map_;
+
+  /** SHM default constructor */
+  HSHM_ALWAYS_INLINE explicit
+  GetLocalTablesTask(hipc::Allocator *alloc) : Task(alloc) {}
+
+  /** Emplace constructor */
+  HSHM_ALWAYS_INLINE explicit
+  GetLocalTablesTask(hipc::Allocator *alloc,
+                   const TaskNode &task_node,
+                   const DomainId &domain_id,
+                   const TaskStateId &state_id) : Task(alloc) {
+    // Initialize task
+    task_node_ = task_node;
+    lane_hash_ = 0;
+    prio_ = TaskPrio::kAdmin;
+    task_state_ = state_id;
+    method_ = Method::kGetLocalTables;
+    task_flags_.SetBits(TASK_LOW_LATENCY);
+    domain_id_ = domain_id;
+  }
+
+  /** Destructor */
+  ~GetLocalTablesTask() {}
+};
+
 
 /**====================================
  * Blob Operations

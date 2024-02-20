@@ -21,6 +21,7 @@ struct Method : public TaskMethod {
   TASK_METHOD_T kFlushData = kLast + 17;
   TASK_METHOD_T kPollBlobMetadata = kLast + 18;
   TASK_METHOD_T kPollTargetMetadata = kLast + 19;
+  TASK_METHOD_T kGetLocalTables = kLast + 20;
 };
 
 #endif  // HRUN_HERMES_BLOB_MDM_METHODS_H_

@@ -79,6 +79,8 @@ class Client : public ConfigurationManager {
                               qm.shm_name_);
       mem_mngr->AttachBackend(hipc::MemoryBackendType::kPosixShmMmap,
                               qm.data_shm_name_);
+      mem_mngr->AttachBackend(hipc::MemoryBackendType::kPosixShmMmap,
+                              qm.rdata_shm_name_);
     }
     main_alloc_ = mem_mngr->GetAllocator(main_alloc_id_);
     data_alloc_ = mem_mngr->GetAllocator(data_alloc_id_);

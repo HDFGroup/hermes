@@ -69,8 +69,6 @@ class Server : public TaskLib {
                       HRUN_QM_RUNTIME->max_lanes_, 65536, 32);
     blob_map_.Init(HRUN_CLIENT->main_alloc_,
                    HRUN_QM_RUNTIME->max_lanes_, 65536, 32);
-    task->blob_id_map_ = blob_id_map_.GetShmPointer();
-    task->blob_map_ = blob_map_.GetShmPointer();
     // Initialize targets
     target_tasks_.reserve(HERMES_SERVER_CONF.devices_.size());
     for (DeviceInfo &dev : HERMES_SERVER_CONF.devices_) {
@@ -128,19 +126,18 @@ class Server : public TaskLib {
   void MonitorDestruct(u32 mode, DestructTask *task, RunContext &rctx) {
   }
 
- private:
-  /** Get the globally unique blob name */
-  const hipc::uptr<hipc::charbuf>
-  GetBlobNameWithBucket(TagId tag_id, const hshm::charbuf &blob_name) {
-    auto new_name = hipc::make_uptr<hipc::charbuf>(
-        sizeof(TagId) + blob_name.size());
-    hrun::LocalSerialize srl(*new_name);
-    srl << tag_id;
-    srl << blob_name;
-    return new_name;
+ public:
+  /**
+   * Get local tables map
+   * */
+  void GetLocalTables(GetLocalTablesTask *task, RunContext &rctx) {
+    task->blob_id_map_ = blob_id_map_.GetShmPointer();
+    task->blob_map_ = blob_map_.GetShmPointer();
+    task->SetModuleComplete();
+  }
+  void MonitorGetLocalTables(u32 mode, GetLocalTablesTask *task, RunContext &rctx) {
   }
 
- public:
   /**
    * Set the Bucket MDM
    * */
@@ -498,7 +495,7 @@ class Server : public TaskLib {
                            const hshm::charbuf &blob_name, RunContext &rctx,
                            bitfield32_t &flags) {
     hipc::uptr<hipc::charbuf> blob_name_unique =
-        GetBlobNameWithBucket(tag_id, blob_name);
+        Client::GetBlobNameWithBucket(tag_id, blob_name);
     BLOB_ID_MAP_T &blob_id_map = blob_id_map_;
     auto it = blob_id_map.find(*blob_name_unique);
     if (it == blob_id_map.end()) {
@@ -537,7 +534,7 @@ class Server : public TaskLib {
   void GetBlobId(GetBlobIdTask *task, RunContext &rctx) {
     hshm::charbuf blob_name = hshm::to_charbuf(*task->blob_name_);
     hipc::uptr<hipc::charbuf> blob_name_unique =
-        GetBlobNameWithBucket(task->tag_id_, blob_name);
+        Client::GetBlobNameWithBucket(task->tag_id_, blob_name);
     BLOB_ID_MAP_T &blob_id_map = blob_id_map_;
     auto it = blob_id_map.find(*blob_name_unique);
     if (it == blob_id_map.end()) {

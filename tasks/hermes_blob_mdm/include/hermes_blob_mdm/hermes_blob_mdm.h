@@ -20,6 +20,29 @@ class Client : public TaskLibClient {
   BLOB_MAP_T blob_map_;
 
  public:
+  /** Get the globally unique blob name */
+  static hipc::uptr<hipc::charbuf>
+  GetBlobNameWithBucket(TagId tag_id, const hshm::charbuf &blob_name) {
+    auto new_name = hshm::charbuf(
+        sizeof(TagId) + blob_name.size());
+    hrun::LocalSerialize srl(new_name);
+    srl << tag_id;
+    srl << blob_name;
+    return hipc::make_uptr<hipc::charbuf>(new_name);
+  }
+
+  /** Get the globally unique blob name */
+  static hipc::uptr<hipc::charbuf>
+  GetBlobNameWithBucket(TagId tag_id, const std::string &blob_name) {
+    auto new_name = hshm::charbuf(
+        sizeof(TagId) + blob_name.size());
+    hrun::LocalSerialize srl(new_name);
+    srl << tag_id;
+    srl << blob_name;
+    return hipc::make_uptr<hipc::charbuf>(new_name);
+  }
+
+ public:
   /** Default constructor */
   Client() = default;
 
@@ -41,8 +64,6 @@ class Client : public TaskLibClient {
     if (task->IsModuleComplete()) {
       id_ = task->id_;
       queue_id_ = QueueId(id_);
-      blob_id_map_.Connect(task->blob_id_map_);
-      blob_map_.Connect(task->blob_map_);
       HRUN_CLIENT->DelTask(task);
     }
   }
@@ -64,6 +85,24 @@ class Client : public TaskLibClient {
   /**====================================
    * Blob Operations
    * ===================================*/
+
+  /** Sets the BUCKET MDM */
+  void AsyncGetLocalTablesConstruct(GetLocalTablesTask *task,
+                                  const TaskNode &task_node,
+                                  const DomainId &domain_id) {
+    HRUN_CLIENT->ConstructTask<GetLocalTablesTask>(
+        task, task_node, domain_id, id_);
+  }
+  void GetLocalTablesRoot(const DomainId &domain_id) {
+    LPointer<hrunpq::TypedPushTask<GetLocalTablesTask>> push_task =
+        AsyncGetLocalTablesRoot(domain_id);
+    push_task->Wait();
+    GetLocalTablesTask *task = push_task->get();
+    blob_id_map_.Connect(task->blob_id_map_);
+    blob_map_.Connect(task->blob_map_);
+    HRUN_CLIENT->DelTask(push_task);
+  }
+  HRUN_TASK_NODE_PUSH_ROOT(GetLocalTables);
 
   /** Sets the BUCKET MDM */
   void AsyncSetBucketMdmConstruct(SetBucketMdmTask *task,
