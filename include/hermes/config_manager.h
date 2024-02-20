@@ -23,6 +23,7 @@
 #include "hermes/config_server.h"
 #include "data_stager/data_stager.h"
 
+
 namespace hermes {
 
 class ConfigurationManager {

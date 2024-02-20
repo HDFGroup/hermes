@@ -284,7 +284,7 @@ struct BlobInfo {
   std::atomic<size_t> mod_count_;   /**< The number of times blob modified */
   std::atomic<size_t> last_flush_;  /**< The last mod that was flushed */
   bitfield32_t flags_;  /**< Flags */
-  char *data_;
+  LPointer<char> data_;
 
   /** Serialization */
   template<typename Ar>

@@ -465,29 +465,40 @@ class Bucket {
    * Get \a blob_id Blob from the bucket (sync)
    * */
   BlobId BaseGet(const std::string &blob_name,
-                 const BlobId &orig_blob_id,
+                 BlobId blob_id,
                  Blob &blob,
                  size_t blob_off,
                  Context &ctx) {
-    // TODO(llogan): intercept mmap to avoid copy
-    size_t data_size = blob.size();
-    if (blob.size() == 0) {
-      data_size = blob_mdm_->GetBlobSizeRoot(
-          id_, hshm::charbuf(blob_name), orig_blob_id);
-      blob.resize(data_size);
+    // Get the blob ID
+    if (blob_id.IsNull()) {
+      auto &blob_id_map = HERMES_CONF->blob_mdm_.blob_id_map_;
+      auto blob_name_buf = hipc::make_uptr<hipc::string>(blob_name);
+      auto it = blob_id_map.find(*blob_name_buf);
+      if (it == blob_id_map.end()) {
+        blob_mdm_->GetBlobSizeRoot(
+            id_, hshm::charbuf(blob_name), blob_id);
+        it = blob_id_map.find(*blob_name_buf);
+      }
+      if (it != blob_id_map.end()) {
+        blob_id = *it.val_->second_;
+      }
     }
-    HILOG(kDebug, "Getting blob of size {}", data_size);
-    BlobId blob_id;
-    LPointer<hrunpq::TypedPushTask<GetBlobTask>> push_task;
-    push_task = AsyncBaseGet(blob_name, orig_blob_id, blob, blob_off, ctx);
-    push_task->Wait();
-    GetBlobTask *task = push_task->get();
-    blob_id = task->blob_id_;
-    char *data = HRUN_CLIENT->GetDataPointer(task->data_);
-    memcpy(blob.data(), data, task->data_size_);
-    blob.resize(task->data_size_);
-    HRUN_CLIENT->FreeBuffer(task->data_);
-    HRUN_CLIENT->DelTask(push_task);
+    if (!blob_id.IsNull()) {
+      auto &blob_map = HERMES_CONF->blob_mdm_.blob_map_;
+      auto it = blob_map.find(blob_id);
+      if (it != blob_map.end()) {
+        BlobInfo blob_info = *it.val_->second_;
+        if (blob_off + blob.size() > blob_info.blob_size_) {
+          if (blob_info.blob_size_ < blob_off) {
+            return BlobId::GetNull();
+          }
+          blob.resize(blob_info.blob_size_ - blob_off);
+        }
+        char *data = HRUN_CLIENT->GetDataPointer(blob_info.data_.shm_);
+        memcpy(blob.data(), data + blob_off, blob.size());
+        return blob_id;
+      }
+    }
     return blob_id;
   }
 

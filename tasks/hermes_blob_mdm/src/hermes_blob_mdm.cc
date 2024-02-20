@@ -12,12 +12,13 @@
 #include "data_stager/data_stager.h"
 #include "hermes_data_op/hermes_data_op.h"
 #include "hermes/score_histogram.h"
+#include "hrun/hrun_map.h"
 
 namespace hermes::blob_mdm {
 
 /** Type name simplification for the various map types */
-typedef std::unordered_map<hshm::charbuf, BlobId> BLOB_ID_MAP_T;
-typedef std::unordered_map<BlobId, BlobInfo> BLOB_MAP_T;
+typedef hrun::LockFreeMap<hipc::charbuf, BlobId> BLOB_ID_MAP_T;
+typedef hrun::LockFreeMap<BlobId, BlobInfo> BLOB_MAP_T;
 typedef hipc::mpsc_queue<IoStat> IO_PATTERN_LOG_T;
 
 class Server : public TaskLib {
@@ -30,8 +31,10 @@ class Server : public TaskLib {
   /**====================================
    * Maps
    * ===================================*/
-  std::vector<BLOB_ID_MAP_T> blob_id_map_;
-  std::vector<BLOB_MAP_T> blob_map_;
+  // std::vector<BLOB_ID_MAP_T> blob_id_map_;
+  // std::vector<BLOB_MAP_T> blob_map_;
+  BLOB_ID_MAP_T blob_id_map_;
+  BLOB_MAP_T blob_map_;
   std::atomic<u64> id_alloc_;
 
   /**====================================
@@ -62,8 +65,12 @@ class Server : public TaskLib {
     id_alloc_ = 0;
     node_id_ = HRUN_CLIENT->node_id_;
     // Initialize blob maps
-    blob_id_map_.resize(HRUN_QM_RUNTIME->max_lanes_);
-    blob_map_.resize(HRUN_QM_RUNTIME->max_lanes_);
+    blob_id_map_.Init(HRUN_CLIENT->main_alloc_,
+                      HRUN_QM_RUNTIME->max_lanes_, 65536, 32);
+    blob_map_.Init(HRUN_CLIENT->main_alloc_,
+                   HRUN_QM_RUNTIME->max_lanes_, 65536, 32);
+    task->blob_id_map_ = blob_id_map_.GetShmPointer();
+    task->blob_map_ = blob_map_.GetShmPointer();
     // Initialize targets
     target_tasks_.reserve(HERMES_SERVER_CONF.devices_.size());
     for (DeviceInfo &dev : HERMES_SERVER_CONF.devices_) {
@@ -123,9 +130,11 @@ class Server : public TaskLib {
 
  private:
   /** Get the globally unique blob name */
-  const hshm::charbuf GetBlobNameWithBucket(TagId tag_id, const hshm::charbuf &blob_name) {
-    hshm::charbuf new_name(sizeof(TagId) + blob_name.size());
-    hrun::LocalSerialize srl(new_name);
+  const hipc::uptr<hipc::charbuf>
+  GetBlobNameWithBucket(TagId tag_id, const hshm::charbuf &blob_name) {
+    auto new_name = hipc::make_uptr<hipc::charbuf>(
+        sizeof(TagId) + blob_name.size());
+    hrun::LocalSerialize srl(*new_name);
     srl << tag_id;
     srl << blob_name;
     return new_name;
@@ -264,57 +273,67 @@ class Server : public TaskLib {
     hshm::Timepoint now;
     now.Now();
     // Get the blob info data structure
-    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
+    BLOB_MAP_T &blob_map = blob_map_;
     std::vector<FlushInfo> stage_tasks;
     stage_tasks.reserve(256);
-    for (auto &it : blob_map) {
-      BlobInfo &blob_info = it.second;
-      // Update blob scores
-      float new_score = MakeScore(blob_info, now);
-      blob_info.score_ = new_score;
-      if (ShouldReorganize<true>(blob_info, new_score, task->task_node_)) {
-        Context ctx;
-        LPointer<ReorganizeBlobTask> reorg_task =
-            blob_mdm_.AsyncReorganizeBlob(task->task_node_ + 1,
-                                          blob_info.tag_id_,
-                                          hshm::charbuf(""),
-                                          blob_info.blob_id_,
-                                          new_score, false, ctx,
-                                          TASK_LOW_LATENCY);
-        reorg_task->Wait<TASK_YIELD_CO>(task);
-        HRUN_CLIENT->DelTask(reorg_task);
-      }
-      blob_info.access_freq_ = 0;
+    for (size_t bkt_id = blob_map.FirstBucket(rctx.lane_id_);
+         bkt_id < blob_map.LastBucket(rctx.lane_id_); ++bkt_id) {
+      BLOB_MAP_T::Bucket &bkt = blob_map.GetBucket(bkt_id);
+      BLOB_MAP_T::Pair *blob_infop;
+      size_t i = 0;
+      while (!bkt.peek(blob_infop, i).IsNull()) {
+        BlobInfo &blob_info = *blob_infop->second_;
+        // Update blob scores
+        float new_score = MakeScore(blob_info, now);
+        blob_info.score_ = new_score;
+        if (ShouldReorganize<true>(blob_info, new_score, task->task_node_)) {
+          Context ctx;
+          LPointer<ReorganizeBlobTask> reorg_task =
+              blob_mdm_.AsyncReorganizeBlob(task->task_node_ + 1,
+                                            blob_info.tag_id_,
+                                            hshm::charbuf(""),
+                                            blob_info.blob_id_,
+                                            new_score, false, ctx,
+                                            TASK_LOW_LATENCY);
+          reorg_task->Wait<TASK_YIELD_CO>(task);
+          HRUN_CLIENT->DelTask(reorg_task);
+        }
+        blob_info.access_freq_ = 0;
 
-      // Flush data
-      FlushInfo flush_info;
-      flush_info.blob_info_ = &blob_info;
-      flush_info.mod_count_ = blob_info.mod_count_;
-      if (blob_info.last_flush_ > 0 &&
-          flush_info.mod_count_ > blob_info.last_flush_) {
-        HILOG(kDebug, "Flushing blob {} (mod_count={}, last_flush={})",
-              blob_info.blob_id_, flush_info.mod_count_, blob_info.last_flush_);
-        LPointer<char> data = HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_CO>(
-            blob_info.blob_size_, task);
-        LPointer<GetBlobTask> get_blob =
-            blob_mdm_.AsyncGetBlob(task->task_node_ + 1,
-                                   blob_info.tag_id_,
-                                   blob_info.name_,
-                                   blob_info.blob_id_,
-                                   0, blob_info.blob_size_,
-                                   data.shm_);
-        get_blob->Wait<TASK_YIELD_CO>(task);
-        HRUN_CLIENT->DelTask(get_blob);
-        flush_info.stage_task_ =
-          stager_mdm_.AsyncStageOut(task->task_node_ + 1,
-                                    blob_info.tag_id_,
-                                    blob_info.name_,
-                                    data.shm_, blob_info.blob_size_,
-                                    TASK_DATA_OWNER);
-        stage_tasks.emplace_back(flush_info);
-      }
-      if (stage_tasks.size() == 256) {
-        break;
+        // Flush data
+        FlushInfo flush_info;
+        flush_info.blob_info_ = &blob_info;
+        flush_info.mod_count_ = blob_info.mod_count_;
+        if (blob_info.last_flush_ > 0 &&
+            flush_info.mod_count_ > blob_info.last_flush_) {
+          HILOG(kDebug,
+                "Flushing blob {} (mod_count={}, last_flush={})",
+                blob_info.blob_id_,
+                flush_info.mod_count_,
+                blob_info.last_flush_);
+          LPointer<char>
+              data = HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_CO>(
+              blob_info.blob_size_, task);
+          LPointer<GetBlobTask> get_blob =
+              blob_mdm_.AsyncGetBlob(task->task_node_ + 1,
+                                     blob_info.tag_id_,
+                                     blob_info.name_,
+                                     blob_info.blob_id_,
+                                     0, blob_info.blob_size_,
+                                     data.shm_);
+          get_blob->Wait<TASK_YIELD_CO>(task);
+          HRUN_CLIENT->DelTask(get_blob);
+          flush_info.stage_task_ =
+              stager_mdm_.AsyncStageOut(task->task_node_ + 1,
+                                        blob_info.tag_id_,
+                                        blob_info.name_,
+                                        data.shm_, blob_info.blob_size_,
+                                        TASK_DATA_OWNER);
+          stage_tasks.emplace_back(flush_info);
+        }
+        if (stage_tasks.size() == 256) {
+          break;
+        }
       }
     }
 
@@ -326,13 +345,19 @@ class Server : public TaskLib {
     }
   }
   void MonitorFlushData(u32 mode, FlushDataTask *task, RunContext &rctx) {
-    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
-    for (auto &it : blob_map) {
-      BlobInfo &blob_info = it.second;
-      if (blob_info.last_flush_ > 0 &&
-          blob_info.mod_count_ > blob_info.last_flush_) {
-        rctx.flush_->count_ += 1;
-        return;
+    BLOB_MAP_T &blob_map = blob_map_;
+    for (size_t bkt_id = blob_map.FirstBucket(rctx.lane_id_);
+         bkt_id < blob_map.LastBucket(rctx.lane_id_); ++bkt_id) {
+      BLOB_MAP_T::Bucket &bkt = blob_map.GetBucket(bkt_id);
+      BLOB_MAP_T::Pair *blob_infop;
+      size_t i = 0;
+      while (!bkt.peek(blob_infop, i).IsNull()) {
+        BlobInfo &blob_info = *blob_infop->second_;
+        if (blob_info.last_flush_ > 0 &&
+            blob_info.mod_count_ > blob_info.last_flush_) {
+          rctx.flush_->count_ += 1;
+          return;
+        }
       }
     }
   }
@@ -349,7 +374,7 @@ class Server : public TaskLib {
     }
     HILOG(kDebug, "Beginning PUT for (hash: {})",
           std::hash<hshm::charbuf>{}(blob_name));
-    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
+    BLOB_MAP_T &blob_map = blob_map_;
     BlobInfo &blob_info = blob_map[task->blob_id_];
     blob_info.score_ = task->score_;
     blob_info.user_score_ = task->score_;
@@ -371,18 +396,24 @@ class Server : public TaskLib {
 
     size_t new_size = task->blob_off_ + task->data_size_;
     if (task->flags_.Any(HERMES_BLOB_DID_CREATE)) {
-      blob_info.data_ = (char*)malloc(new_size);
+      blob_info.data_ = HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_CO>(
+          new_size, task);
       blob_info.blob_size_ = task->data_size_;
       blob_info.max_blob_size_ = task->data_size_;
     } else if (blob_info.max_blob_size_ < new_size) {
+      LPointer<char> old_data = blob_info.data_;
+      blob_info.data_ = HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_CO>(
+          new_size, task);
+      memcpy(blob_info.data_.ptr_, old_data.ptr_, blob_info.blob_size_);
+      HRUN_CLIENT->FreeBuffer(old_data);
       blob_info.max_blob_size_ = new_size;
       blob_info.blob_size_ = new_size;
-      blob_info.data_ = (char*)realloc(blob_info.data_, new_size);
     }
 
     // Copy data to memory
     char *data = HRUN_CLIENT->GetDataPointer(task->data_);
-    memcpy(blob_info.data_ + task->blob_off_, data, task->data_size_);
+    char *blob_data = blob_info.data_.ptr_;
+    memcpy(blob_data + task->blob_off_, data, task->data_size_);
 
     // Free data
     HILOG(kDebug, "Completing PUT for {}", blob_name.str());
@@ -399,7 +430,7 @@ class Server : public TaskLib {
       task->blob_id_ = GetOrCreateBlobId(task->tag_id_, task->lane_hash_,
                                          blob_name, rctx, task->flags_);
     }
-    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
+    BLOB_MAP_T &blob_map = blob_map_;
     BlobInfo &blob_info = blob_map[task->blob_id_];
 
     // Stage Blob
@@ -417,7 +448,8 @@ class Server : public TaskLib {
 
     // Copy data from memory
     char *data = HRUN_CLIENT->GetDataPointer(task->data_);
-    memcpy(data, blob_info.data_ + task->blob_off_, task->data_size_);
+    char *blob_data = blob_info.data_.ptr_;
+    memcpy(data, blob_data + task->blob_off_, task->data_size_);
     task->SetModuleComplete();
   }
   void MonitorGetBlob(u32 mode, GetBlobTask *task, RunContext &rctx) {
@@ -427,13 +459,13 @@ class Server : public TaskLib {
    * Tag a blob
    * */
   void TagBlob(TagBlobTask *task, RunContext &rctx) {
-    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
+    BLOB_MAP_T &blob_map = blob_map_;
     auto it = blob_map.find(task->blob_id_);
     if (it == blob_map.end()) {
       task->SetModuleComplete();
       return;
     }
-    BlobInfo &blob = it->second;
+    BlobInfo &blob = *it.val_->second_;
     blob.tags_.push_back(task->tag_);
     task->SetModuleComplete();
   }
@@ -444,13 +476,13 @@ class Server : public TaskLib {
    * Check if blob has a tag
    * */
   void BlobHasTag(BlobHasTagTask *task, RunContext &rctx) {
-    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
+    BLOB_MAP_T &blob_map = blob_map_;
     auto it = blob_map.find(task->blob_id_);
     if (it == blob_map.end()) {
       task->SetModuleComplete();
       return;
     }
-    BlobInfo &blob = it->second;
+    BlobInfo &blob = *it.val_->second_;
     task->has_tag_ = std::find(blob.tags_.begin(),
                                blob.tags_.end(),
                                task->tag_) != blob.tags_.end();
@@ -465,14 +497,15 @@ class Server : public TaskLib {
   BlobId GetOrCreateBlobId(TagId &tag_id, u32 lane_hash,
                            const hshm::charbuf &blob_name, RunContext &rctx,
                            bitfield32_t &flags) {
-    hshm::charbuf blob_name_unique = GetBlobNameWithBucket(tag_id, blob_name);
-    BLOB_ID_MAP_T &blob_id_map = blob_id_map_[rctx.lane_id_];
-    auto it = blob_id_map.find(blob_name_unique);
+    hipc::uptr<hipc::charbuf> blob_name_unique =
+        GetBlobNameWithBucket(tag_id, blob_name);
+    BLOB_ID_MAP_T &blob_id_map = blob_id_map_;
+    auto it = blob_id_map.find(*blob_name_unique);
     if (it == blob_id_map.end()) {
       BlobId blob_id = BlobId(node_id_, lane_hash, id_alloc_.fetch_add(1));
-      blob_id_map.emplace(blob_name_unique, blob_id);
+      blob_id_map.emplace(*blob_name_unique, blob_id);
       flags.SetBits(HERMES_BLOB_DID_CREATE);
-      BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
+      BLOB_MAP_T &blob_map = blob_map_;
       blob_map.emplace(blob_id, BlobInfo());
       BlobInfo &blob_info = blob_map[blob_id];
       blob_info.name_ = blob_name;
@@ -486,7 +519,7 @@ class Server : public TaskLib {
       blob_info.last_flush_ = 0;
       return blob_id;
     }
-    return it->second;
+    return *it.val_->second_;
   }
   void GetOrCreateBlobId(GetOrCreateBlobIdTask *task, RunContext &rctx) {
     hshm::charbuf blob_name = hshm::to_charbuf(*task->blob_name_);
@@ -503,16 +536,17 @@ class Server : public TaskLib {
   HSHM_ALWAYS_INLINE
   void GetBlobId(GetBlobIdTask *task, RunContext &rctx) {
     hshm::charbuf blob_name = hshm::to_charbuf(*task->blob_name_);
-    hshm::charbuf blob_name_unique = GetBlobNameWithBucket(task->tag_id_, blob_name);
-    BLOB_ID_MAP_T &blob_id_map = blob_id_map_[rctx.lane_id_];
-    auto it = blob_id_map.find(blob_name_unique);
+    hipc::uptr<hipc::charbuf> blob_name_unique =
+        GetBlobNameWithBucket(task->tag_id_, blob_name);
+    BLOB_ID_MAP_T &blob_id_map = blob_id_map_;
+    auto it = blob_id_map.find(*blob_name_unique);
     if (it == blob_id_map.end()) {
       task->blob_id_ = BlobId::GetNull();
       task->SetModuleComplete();
       HILOG(kDebug, "Failed to find blob {} in {}", blob_name.str(), task->tag_id_);
       return;
     }
-    task->blob_id_ = it->second;
+    task->blob_id_ = *it.val_->second_;
     HILOG(kDebug, "Found blob {} / {} in {}", task->blob_id_, blob_name.str(), task->tag_id_);
     task->SetModuleComplete();
   }
@@ -523,13 +557,13 @@ class Server : public TaskLib {
    * Get \a blob_name BLOB name from \a blob_id BLOB id
    * */
   void GetBlobName(GetBlobNameTask *task, RunContext &rctx) {
-    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
+    BLOB_MAP_T &blob_map = blob_map_;
     auto it = blob_map.find(task->blob_id_);
     if (it == blob_map.end()) {
       task->SetModuleComplete();
       return;
     }
-    BlobInfo &blob = it->second;
+    BlobInfo &blob = *it.val_->second_;
     (*task->blob_name_) = blob.name_;
     task->SetModuleComplete();
   }
@@ -546,14 +580,14 @@ class Server : public TaskLib {
                                          hshm::to_charbuf(*task->blob_name_),
                                          rctx, flags);
     }
-    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
+    BLOB_MAP_T &blob_map = blob_map_;
     auto it = blob_map.find(task->blob_id_);
     if (it == blob_map.end()) {
       task->size_ = 0;
       task->SetModuleComplete();
       return;
     }
-    BlobInfo &blob = it->second;
+    BlobInfo &blob = *it.val_->second_;
     task->size_ = blob.blob_size_;
     task->SetModuleComplete();
   }
@@ -564,13 +598,13 @@ class Server : public TaskLib {
    * Get \a score from \a blob_id BLOB id
    * */
   void GetBlobScore(GetBlobScoreTask *task, RunContext &rctx) {
-    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
+    BLOB_MAP_T &blob_map = blob_map_;
     auto it = blob_map.find(task->blob_id_);
     if (it == blob_map.end()) {
       task->SetModuleComplete();
       return;
     }
-    BlobInfo &blob = it->second;
+    BlobInfo &blob = *it.val_->second_;
     task->score_ = blob.score_;
     task->SetModuleComplete();
   }
@@ -581,13 +615,13 @@ class Server : public TaskLib {
    * Get \a blob_id blob's buffers
    * */
   void GetBlobBuffers(GetBlobBuffersTask *task, RunContext &rctx) {
-    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
+    BLOB_MAP_T &blob_map = blob_map_;
     auto it = blob_map.find(task->blob_id_);
     if (it == blob_map.end()) {
       task->SetModuleComplete();
       return;
     }
-    BlobInfo &blob = it->second;
+    BlobInfo &blob = *it.val_->second_;
     (*task->buffers_) = blob.buffers_;
     task->SetModuleComplete();
   }
@@ -599,17 +633,6 @@ class Server : public TaskLib {
    * in \a bkt_id bucket.
    * */
   void RenameBlob(RenameBlobTask *task, RunContext &rctx) {
-    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
-    auto it = blob_map.find(task->blob_id_);
-    if (it == blob_map.end()) {
-      task->SetModuleComplete();
-      return;
-    }
-    BLOB_ID_MAP_T &blob_id_map = blob_id_map_[rctx.lane_id_];
-    BlobInfo &blob = it->second;
-    blob_id_map.erase(blob.name_);
-    blob_id_map[blob.name_] = task->blob_id_;
-    blob.name_ = hshm::to_charbuf(*task->new_blob_name_);
     task->SetModuleComplete();
   }
   void MonitorRenameBlob(u32 mode, RenameBlobTask *task, RunContext &rctx) {
@@ -619,14 +642,6 @@ class Server : public TaskLib {
    * Truncate a blob to a new size
    * */
   void TruncateBlob(TruncateBlobTask *task, RunContext &rctx) {
-    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
-    auto it = blob_map.find(task->blob_id_);
-    if (it == blob_map.end()) {
-      task->SetModuleComplete();
-      return;
-    }
-    BlobInfo &blob_info = it->second;
-    // TODO(llogan): truncate blob
     task->SetModuleComplete();
   }
   void MonitorTruncateBlob(u32 mode, TruncateBlobTask *task, RunContext &rctx) {
@@ -636,53 +651,7 @@ class Server : public TaskLib {
    * Destroy \a blob_id blob in \a bkt_id bucket
    * */
   void DestroyBlob(DestroyBlobTask *task, RunContext &rctx) {
-    switch (task->phase_) {
-      case DestroyBlobPhase::kFreeBuffers: {
-        BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
-        auto it = blob_map.find(task->blob_id_);
-        if (it == blob_map.end()) {
-          task->SetModuleComplete();
-          return;
-        }
-        BLOB_ID_MAP_T &blob_id_map = blob_id_map_[rctx.lane_id_];
-        BlobInfo &blob_info = it->second;
-        hshm::charbuf unique_name = GetBlobNameWithBucket(blob_info.tag_id_, blob_info.name_);
-        blob_id_map.erase(unique_name);
-        HSHM_MAKE_AR0(task->free_tasks_, nullptr);
-        task->free_tasks_->reserve(blob_info.buffers_.size());
-        for (BufferInfo &buf : blob_info.buffers_) {
-          TargetInfo &tgt_info = *target_map_[buf.tid_];
-          std::vector<BufferInfo> buf_vec = {buf};
-          bdev::FreeTask *free_task = tgt_info.AsyncFree(
-              task->task_node_ + 1, blob_info.score_,
-              std::move(buf_vec), false).ptr_;
-          task->free_tasks_->emplace_back(free_task);
-        }
-        task->phase_ = DestroyBlobPhase::kWaitFreeBuffers;
-      }
-      case DestroyBlobPhase::kWaitFreeBuffers: {
-        std::vector<bdev::FreeTask *> &free_tasks = *task->free_tasks_;
-        for (bdev::FreeTask *&free_task : free_tasks) {
-          if (!free_task->IsComplete()) {
-            return;
-          }
-        }
-        for (bdev::FreeTask *&free_task : free_tasks) {
-          HRUN_CLIENT->DelTask(free_task);
-        }
-        BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
-        BlobInfo &blob_info = blob_map[task->blob_id_];
-        if (task->update_size_) {
-          bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
-                                   task->tag_id_,
-                                   -(ssize_t) blob_info.blob_size_,
-                                   bucket_mdm::UpdateSizeMode::kAdd);
-        }
-        HSHM_DESTROY_AR(task->free_tasks_);
-        blob_map.erase(task->blob_id_);
-        task->SetModuleComplete();
-      }
-    }
+    task->SetModuleComplete();
   }
   void MonitorDestroyBlob(u32 mode, DestroyBlobTask *task, RunContext &rctx) {
   }
@@ -699,13 +668,13 @@ class Server : public TaskLib {
           task->blob_id_ = GetOrCreateBlobId(task->tag_id_, task->lane_hash_,
                                              blob_name, rctx, flags);
         }
-        BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
+        BLOB_MAP_T &blob_map = blob_map_;
         auto it = blob_map.find(task->blob_id_);
         if (it == blob_map.end()) {
           task->SetModuleComplete();
           return;
         }
-        BlobInfo &blob_info = it->second;
+        BlobInfo &blob_info = *it.val_->second_;
         if (task->is_user_score_) {
           blob_info.user_score_ = task->score_;
           blob_info.score_ = blob_info.user_score_;
@@ -757,14 +726,6 @@ class Server : public TaskLib {
    * */
   HSHM_ALWAYS_INLINE
   void PollBlobMetadata(PollBlobMetadataTask *task, RunContext &rctx) {
-    BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
-    std::vector<BlobInfo> blob_mdms;
-    blob_mdms.reserve(blob_map.size());
-    for (const std::pair<BlobId, BlobInfo> &blob_part : blob_map) {
-      const BlobInfo &blob_info = blob_part.second;
-      blob_mdms.emplace_back(blob_info);
-    }
-    task->SerializeBlobMetadata(blob_mdms);
     task->SetModuleComplete();
   }
   void MonitorPollBlobMetadata(u32 mode, PollBlobMetadataTask *task, RunContext &rctx) {

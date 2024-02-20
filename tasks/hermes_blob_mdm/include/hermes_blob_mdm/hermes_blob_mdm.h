@@ -6,11 +6,18 @@
 #define HRUN_hermes_blob_mdm_H_
 
 #include "hermes_blob_mdm_tasks.h"
+#include "hrun/hrun_map.h"
 
 namespace hermes::blob_mdm {
 
+typedef hrun::LockFreeMap<hipc::charbuf, BlobId> BLOB_ID_MAP_T;
+typedef hrun::LockFreeMap<BlobId, BlobInfo> BLOB_MAP_T;
+
 /** Create hermes_blob_mdm requests */
 class Client : public TaskLibClient {
+ public:
+  BLOB_ID_MAP_T blob_id_map_;
+  BLOB_MAP_T blob_map_;
 
  public:
   /** Default constructor */
@@ -34,6 +41,8 @@ class Client : public TaskLibClient {
     if (task->IsModuleComplete()) {
       id_ = task->id_;
       queue_id_ = QueueId(id_);
+      blob_id_map_.Connect(task->blob_id_map_);
+      blob_map_.Connect(task->blob_map_);
       HRUN_CLIENT->DelTask(task);
     }
   }

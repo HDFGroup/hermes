@@ -42,6 +42,9 @@ class ConstructTaskPhase : public CreateTaskStatePhase {
  * */
 using hrun::Admin::CreateTaskStateTask;
 struct ConstructTask : public CreateTaskStateTask {
+  hipc::Pointer blob_id_map_;
+  hipc::Pointer blob_map_;
+
   /** SHM default constructor */
   HSHM_ALWAYS_INLINE explicit
   ConstructTask(hipc::Allocator *alloc) : CreateTaskStateTask(alloc) {}
