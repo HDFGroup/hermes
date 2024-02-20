@@ -84,6 +84,10 @@ void Run(u32 method, Task *task, RunContext &rctx) override {
       PollTargetMetadata(reinterpret_cast<PollTargetMetadataTask *>(task), rctx);
       break;
     }
+    case Method::kGetLocalTables: {
+      GetLocalTables(reinterpret_cast<GetLocalTablesTask *>(task), rctx);
+      break;
+    }
   }
 }
 /** Execute a task */
@@ -167,6 +171,10 @@ void Monitor(u32 mode, Task *task, RunContext &rctx) override {
     }
     case Method::kPollTargetMetadata: {
       MonitorPollTargetMetadata(mode, reinterpret_cast<PollTargetMetadataTask *>(task), rctx);
+      break;
+    }
+    case Method::kGetLocalTables: {
+      MonitorGetLocalTables(mode, reinterpret_cast<GetLocalTablesTask *>(task), rctx);
       break;
     }
   }
@@ -254,6 +262,10 @@ void Del(u32 method, Task *task) override {
       HRUN_CLIENT->DelTask<PollTargetMetadataTask>(reinterpret_cast<PollTargetMetadataTask *>(task));
       break;
     }
+    case Method::kGetLocalTables: {
+      HRUN_CLIENT->DelTask<GetLocalTablesTask>(reinterpret_cast<GetLocalTablesTask *>(task));
+      break;
+    }
   }
 }
 /** Duplicate a task */
@@ -337,6 +349,10 @@ void Dup(u32 method, Task *orig_task, std::vector<LPointer<Task>> &dups) overrid
     }
     case Method::kPollTargetMetadata: {
       hrun::CALL_DUPLICATE(reinterpret_cast<PollTargetMetadataTask*>(orig_task), dups);
+      break;
+    }
+    case Method::kGetLocalTables: {
+      hrun::CALL_DUPLICATE(reinterpret_cast<GetLocalTablesTask*>(orig_task), dups);
       break;
     }
   }
@@ -424,6 +440,10 @@ void DupEnd(u32 method, u32 replica, Task *orig_task, Task *dup_task) override {
       hrun::CALL_DUPLICATE_END(replica, reinterpret_cast<PollTargetMetadataTask*>(orig_task), reinterpret_cast<PollTargetMetadataTask*>(dup_task));
       break;
     }
+    case Method::kGetLocalTables: {
+      hrun::CALL_DUPLICATE_END(replica, reinterpret_cast<GetLocalTablesTask*>(orig_task), reinterpret_cast<GetLocalTablesTask*>(dup_task));
+      break;
+    }
   }
 }
 /** Ensure there is space to store replicated outputs */
@@ -507,6 +527,10 @@ void ReplicateStart(u32 method, u32 count, Task *task) override {
     }
     case Method::kPollTargetMetadata: {
       hrun::CALL_REPLICA_START(count, reinterpret_cast<PollTargetMetadataTask*>(task));
+      break;
+    }
+    case Method::kGetLocalTables: {
+      hrun::CALL_REPLICA_START(count, reinterpret_cast<GetLocalTablesTask*>(task));
       break;
     }
   }
@@ -594,6 +618,10 @@ void ReplicateEnd(u32 method, Task *task) override {
       hrun::CALL_REPLICA_END(reinterpret_cast<PollTargetMetadataTask*>(task));
       break;
     }
+    case Method::kGetLocalTables: {
+      hrun::CALL_REPLICA_END(reinterpret_cast<GetLocalTablesTask*>(task));
+      break;
+    }
   }
 }
 /** Serialize a task when initially pushing into remote */
@@ -677,6 +705,10 @@ std::vector<DataTransfer> SaveStart(u32 method, BinaryOutputArchive<true> &ar, T
     }
     case Method::kPollTargetMetadata: {
       ar << *reinterpret_cast<PollTargetMetadataTask*>(task);
+      break;
+    }
+    case Method::kGetLocalTables: {
+      ar << *reinterpret_cast<GetLocalTablesTask*>(task);
       break;
     }
   }
@@ -786,6 +818,11 @@ TaskPointer LoadStart(u32 method, BinaryInputArchive<true> &ar) override {
       ar >> *reinterpret_cast<PollTargetMetadataTask*>(task_ptr.ptr_);
       break;
     }
+    case Method::kGetLocalTables: {
+      task_ptr.ptr_ = HRUN_CLIENT->NewEmptyTask<GetLocalTablesTask>(task_ptr.shm_);
+      ar >> *reinterpret_cast<GetLocalTablesTask*>(task_ptr.ptr_);
+      break;
+    }
   }
   return task_ptr;
 }
@@ -870,6 +907,10 @@ std::vector<DataTransfer> SaveEnd(u32 method, BinaryOutputArchive<false> &ar, Ta
     }
     case Method::kPollTargetMetadata: {
       ar << *reinterpret_cast<PollTargetMetadataTask*>(task);
+      break;
+    }
+    case Method::kGetLocalTables: {
+      ar << *reinterpret_cast<GetLocalTablesTask*>(task);
       break;
     }
   }
@@ -958,6 +999,10 @@ void LoadEnd(u32 replica, u32 method, BinaryInputArchive<false> &ar, Task *task)
       ar.Deserialize(replica, *reinterpret_cast<PollTargetMetadataTask*>(task));
       break;
     }
+    case Method::kGetLocalTables: {
+      ar.Deserialize(replica, *reinterpret_cast<GetLocalTablesTask*>(task));
+      break;
+    }
   }
 }
 /** Get the grouping of the task */
@@ -1022,6 +1067,9 @@ u32 GetGroup(u32 method, Task *task, hshm::charbuf &group) override {
     }
     case Method::kPollTargetMetadata: {
       return reinterpret_cast<PollTargetMetadataTask*>(task)->GetGroup(group);
+    }
+    case Method::kGetLocalTables: {
+      return reinterpret_cast<GetLocalTablesTask*>(task)->GetGroup(group);
     }
   }
   return -1;

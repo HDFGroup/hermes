@@ -18,3 +18,4 @@ kSetBucketMdm: 16
 kFlushData: 17
 kPollBlobMetadata: 18
 kPollTargetMetadata: 19
+kGetLocalTables: 20
