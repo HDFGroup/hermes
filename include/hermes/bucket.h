@@ -474,11 +474,6 @@ class Bucket {
       auto &blob_id_map = HERMES_CONF->blob_mdm_.blob_id_map_;
       auto blob_name_buf = blob_mdm::Client::GetBlobNameWithBucket(id_, blob_name);
       auto it = blob_id_map.find(*blob_name_buf);
-      if (it == blob_id_map.end()) {
-        blob_mdm_->GetBlobSizeRoot(
-            id_, hshm::charbuf(blob_name), blob_id);
-        it = blob_id_map.find(*blob_name_buf);
-      }
       if (it != blob_id_map.end()) {
         blob_id = *it.val_->second_;
       }
@@ -498,6 +493,26 @@ class Bucket {
         memcpy(blob.data(), data + blob_off, blob.size());
         return blob_id;
       }
+    } else {
+      size_t data_size = blob.size();
+      if (blob.size() == 0) {
+        data_size = blob_mdm_->GetBlobSizeRoot(
+            id_, hshm::charbuf(blob_name), blob_id);
+        blob.resize(data_size);
+      }
+      HILOG(kDebug, "Getting blob of size {}", data_size);
+      BlobId blob_id;
+      LPointer<hrunpq::TypedPushTask<GetBlobTask>> push_task;
+      push_task = AsyncBaseGet(blob_name, blob_id, blob, blob_off, ctx);
+      push_task->Wait();
+      GetBlobTask *task = push_task->get();
+      blob_id = task->blob_id_;
+      char *data = HRUN_CLIENT->GetDataPointer(task->data_);
+      memcpy(blob.data(), data, task->data_size_);
+      blob.resize(task->data_size_);
+      HRUN_CLIENT->FreeBuffer(task->data_);
+      HRUN_CLIENT->DelTask(push_task);
+      return blob_id;
     }
     return blob_id;
   }
