@@ -463,6 +463,10 @@ class Server : public TaskLib {
     if (task->blob_off_ + task->data_size_ > blob_info.blob_size_) {
       task->data_size_ = blob_info.blob_size_ - task->blob_off_;
     }
+    if (blob_info.data_.shm_.IsNull()) {
+      task->SetModuleComplete();
+      return;
+    }
 
     // Copy data from memory
     char *data = HRUN_CLIENT->GetDataPointer(task->data_);
