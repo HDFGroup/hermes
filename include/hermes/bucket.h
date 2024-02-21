@@ -222,6 +222,7 @@ class Bucket {
                  const Blob &blob,
                  size_t blob_off,
                  Context &ctx) {
+    return orig_blob_id;
     BlobId blob_id = orig_blob_id;
     bitfield32_t flags, task_flags(
         TASK_FIRE_AND_FORGET | TASK_DATA_OWNER | TASK_LOW_LATENCY);
