@@ -469,6 +469,8 @@ class Bucket {
                  Blob &blob,
                  size_t blob_off,
                  Context &ctx) {
+    return blob_id;
+
     // Get the blob ID
     if (blob_id.IsNull()) {
       auto &blob_id_map = HERMES_CONF->blob_mdm_.blob_id_map_;
