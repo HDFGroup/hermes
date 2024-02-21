@@ -498,9 +498,7 @@ class Bucket {
     }
     size_t data_size = blob.size();
     if (blob.size() == 0) {
-      data_size = blob_mdm_->GetBlobSizeRoot(
-          id_, hshm::charbuf(blob_name), blob_id);
-      blob.resize(data_size);
+      data_size = std::numeric_limits<size_t>::max();
     }
     HILOG(kDebug, "Getting blob of size {}", data_size);
     LPointer<hrunpq::TypedPushTask<GetBlobTask>> push_task;

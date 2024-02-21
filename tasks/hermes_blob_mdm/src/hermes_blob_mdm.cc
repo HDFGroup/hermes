@@ -454,6 +454,15 @@ class Server : public TaskLib {
       stage_task->Wait<TASK_YIELD_CO>(task);
       HRUN_CLIENT->DelTask(stage_task);
     }
+    if (task->blob_off_ > blob_info.blob_size_) {
+      task->data_size_ = 0;
+    }
+    if (task->data_size_ == std::numeric_limits<size_t>::max()) {
+      task->data_size_ = blob_info.blob_size_ - task->blob_off_;
+    }
+    if (task->blob_off_ + task->data_size_ > blob_info.blob_size_) {
+      task->data_size_ = blob_info.blob_size_ - task->blob_off_;
+    }
 
     // Copy data from memory
     char *data = HRUN_CLIENT->GetDataPointer(task->data_);
