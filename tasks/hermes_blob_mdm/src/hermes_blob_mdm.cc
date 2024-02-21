@@ -416,8 +416,11 @@ class Server : public TaskLib {
     if (task->flags_.Any(HERMES_BLOB_DID_CREATE)) {
       blob_info.blob_size_ = task->data_size_;
       blob_info.max_blob_size_ = task->data_size_;
+      blob_info.data_ = new_blob_data;
     } else if (blob_info.max_blob_size_ < new_size) {
+      blob_info.blob_size_ = new_size;
       blob_info.max_blob_size_ = new_size;
+    } else if (blob_info.blob_size_ < new_size) {
       blob_info.blob_size_ = new_size;
     }
 
