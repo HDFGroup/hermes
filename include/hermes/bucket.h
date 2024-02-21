@@ -489,31 +489,30 @@ class Bucket {
           }
           blob.resize(blob_info.blob_size_ - blob_off);
         }
-        char *data = HRUN_CLIENT->GetDataPointer(blob_info.data_.shm_);
-        memcpy(blob.data(), data + blob_off, blob.size());
-        return blob_id;
+        if (!blob_info.data_.shm_.IsNull()) {
+          char *data = HRUN_CLIENT->GetDataPointer(blob_info.data_.shm_);
+          memcpy(blob.data(), data + blob_off, blob.size());
+          return blob_id;
+        }
       }
-    } else {
-      size_t data_size = blob.size();
-      if (blob.size() == 0) {
-        data_size = blob_mdm_->GetBlobSizeRoot(
-            id_, hshm::charbuf(blob_name), blob_id);
-        blob.resize(data_size);
-      }
-      HILOG(kDebug, "Getting blob of size {}", data_size);
-      BlobId blob_id;
-      LPointer<hrunpq::TypedPushTask<GetBlobTask>> push_task;
-      push_task = AsyncBaseGet(blob_name, blob_id, blob, blob_off, ctx);
-      push_task->Wait();
-      GetBlobTask *task = push_task->get();
-      blob_id = task->blob_id_;
-      char *data = HRUN_CLIENT->GetDataPointer(task->data_);
-      memcpy(blob.data(), data, task->data_size_);
-      blob.resize(task->data_size_);
-      HRUN_CLIENT->FreeBuffer(task->data_);
-      HRUN_CLIENT->DelTask(push_task);
-      return blob_id;
     }
+    size_t data_size = blob.size();
+    if (blob.size() == 0) {
+      data_size = blob_mdm_->GetBlobSizeRoot(
+          id_, hshm::charbuf(blob_name), blob_id);
+      blob.resize(data_size);
+    }
+    HILOG(kDebug, "Getting blob of size {}", data_size);
+    LPointer<hrunpq::TypedPushTask<GetBlobTask>> push_task;
+    push_task = AsyncBaseGet(blob_name, blob_id, blob, blob_off, ctx);
+    push_task->Wait();
+    GetBlobTask *task = push_task->get();
+    blob_id = task->blob_id_;
+    char *data = HRUN_CLIENT->GetDataPointer(task->data_);
+    memcpy(blob.data(), data, task->data_size_);
+    blob.resize(task->data_size_);
+    HRUN_CLIENT->FreeBuffer(task->data_);
+    HRUN_CLIENT->DelTask(push_task);
     return blob_id;
   }
 
