@@ -28,7 +28,7 @@ class HermesShm(CMakePackage):
     # Main dependencies
     depends_on('mochi-thallium+cereal@0.10.1', when='+mochi')
     depends_on('cereal', when='+cereal')
-    depends_on('boost@1.7: +context +fiber', when='+boost')
+    depends_on('boost@1.7: +context +fiber +coroutine +regex +filesystem +serialization +pic +math', when='+boost')
     depends_on('mpi', when='+mpiio')
     depends_on('hdf5@1.14.0', when='+vfd')
     depends_on('libzmq', '+zmq')
