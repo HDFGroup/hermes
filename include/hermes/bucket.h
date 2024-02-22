@@ -222,7 +222,6 @@ class Bucket {
                  const Blob &blob,
                  size_t blob_off,
                  Context &ctx) {
-    return orig_blob_id;
     BlobId blob_id = orig_blob_id;
     bitfield32_t flags, task_flags(
         TASK_FIRE_AND_FORGET | TASK_DATA_OWNER | TASK_LOW_LATENCY);
@@ -470,8 +469,6 @@ class Bucket {
                  Blob &blob,
                  size_t blob_off,
                  Context &ctx) {
-    return blob_id;
-
     // Get the blob ID
     if (blob_id.IsNull()) {
       auto &blob_id_map = HERMES_CONF->blob_mdm_.blob_id_map_;
