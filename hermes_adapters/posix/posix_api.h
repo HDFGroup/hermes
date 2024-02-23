@@ -97,6 +97,9 @@ static int fxstat_to_fstat(int fd, struct stat * stbuf);
 /** Pointers to the real posix API */
 class PosixApi : public RealApi {
  public:
+  bool is_loaded_ = false;
+
+ public:
   /** open */
   open_t open = nullptr;
   /** open64 */
@@ -222,6 +225,15 @@ class PosixApi : public RealApi {
     unlink = (unlink_t)dlsym(real_lib_, "unlink");
     REQUIRE_API(unlink)
   }
+
+  bool IsInterceptorLoaded() {
+    if (is_loaded_) {
+      return true;
+    }
+    InterceptorApi<PosixApi> check("open", "posix_intercepted");
+    is_loaded_ = check.is_loaded_;
+    return is_loaded_;
+  }
 };
 
 }  // namespace hermes::adapter
@@ -232,6 +244,7 @@ class PosixApi : public RealApi {
 #define HERMES_POSIX_API \
   hshm::EasySingleton<::hermes::adapter::PosixApi>::GetInstance()
 #define HERMES_POSIX_API_T hermes::adapter::PosixApi*
+
 
 namespace hermes::adapter {
 /** Used for compatability with older kernel versions */

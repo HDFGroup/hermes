@@ -70,8 +70,8 @@ struct UserPathInfo {
 
   /** Detect if a path matches the input path */
   bool Match(const std::string &abs_path) {
-    return std::regex_match(abs_path, regex_);
-    // return abs_path.rfind(path_) != std::string::npos;
+    return std::regex_match(abs_path, regex_) ||
+           abs_path.rfind(path_) != std::string::npos;
   }
 };
 
