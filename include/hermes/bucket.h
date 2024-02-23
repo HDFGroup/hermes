@@ -138,6 +138,13 @@ class Bucket {
   }
 
   /**
+   * Set the current size of the bucket
+   * */
+  void SetSize(size_t new_size) {
+    bkt_mdm_->AsyncUpdateSizeRoot(id_, new_size, UpdateSizeMode::kCap);
+  }
+
+  /**
    * Rename this bucket
    * */
   void Rename(const std::string &new_bkt_name) {
