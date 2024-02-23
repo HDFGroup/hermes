@@ -173,6 +173,7 @@ message("Boost: ${Boost_LIBRARIES}")
 pkg_check_modules(libelf REQUIRED libelf)
 message(STATUS "found libelf at ${libelf_INCLUDE_DIRS}")
 include_directories(${libelf_INCLUDE_DIRS})
+link_directories(${libelf_LIBRARY_DIRS})
 
 # HDF5
 if(HERMES_ENABLE_VFD)
