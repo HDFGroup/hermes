@@ -120,7 +120,7 @@ class ClientConfig : public BaseConfig {
   void CreateAdapterPathTracking(const std::string &path, bool include) {
     bool is_dir = stdfs::is_directory(path);
     path_list_.emplace_back(
-        stdfs::absolute(path).string(), include, is_dir);
+        path, include, is_dir);
     std::sort(path_list_.begin(),
               path_list_.end(),
               [](const UserPathInfo &a,
