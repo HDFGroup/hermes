@@ -1,5 +1,6 @@
 #!/bin/python3
 import h5py
+import numpy as np
 
 path = 'hello.h5'
 f = h5py.File(path, "w")
