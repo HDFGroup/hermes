@@ -80,7 +80,7 @@ int HERMES_DECL(open64)(const char *path, int flags, ...) {
   int mode = 0;
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
-  if (flags & O_CREAT) {
+  if (flags & O_CREAT || flags & O_TMPFILE) {
     va_list arg;
     va_start(arg, flags);
     mode = va_arg(arg, int);
@@ -98,7 +98,7 @@ int HERMES_DECL(open64)(const char *path, int flags, ...) {
     stat.st_mode_ = mode;
     return fs_api->Open(stat, path).hermes_fd_;
   }
-  if (flags & O_CREAT) {
+  if (flags & O_CREAT || flags & O_TMPFILE) {
     return real_api->open64(path, flags, mode);
   }
   return real_api->open64(path, flags);
