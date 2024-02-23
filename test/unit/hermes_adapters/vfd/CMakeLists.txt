@@ -24,3 +24,12 @@ target_link_libraries(hermes_vfd_adapter_test
 
 jarvis_test(vfd test_hermes_vfd_basic)
 jarvis_test(vfd test_hermes_vfd_scratch)
+
+
+install(
+    TARGETS
+    hermes_vfd_adapter_test
+    LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
+    ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
+    RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR}
+)
