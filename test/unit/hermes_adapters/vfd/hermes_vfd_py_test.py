@@ -1,9 +1,10 @@
-#!/bin/python3
 import h5py
 import numpy as np
 
-path = 'hello.h5'
+path = '/tmp/hello.h5'
+print('Beginning')
 f = h5py.File(path, "w")
+print('File created')
 prefix = 'train'
 for p in prefix:
     group = f.create_group(p)
