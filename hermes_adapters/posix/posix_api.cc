@@ -81,7 +81,7 @@ int HERMES_DECL(open)(const char *path, int flags, ...) {
   if (std::string(path) == "/home/llogan/experiments/arldm_run/input_data/vistsis_out.h5") {
     HILOG(kDebug, "Intercept open for filename: {}"
                   " and mode: {}"
-                  " and fd: .", path, flags, fd);
+                  " and fd: {}.", path, flags, fd);
     h5fd = fd;
   }
   return fd;
@@ -118,7 +118,7 @@ int HERMES_DECL(open64)(const char *path, int flags, ...) {
   if (std::string(path) == "/home/llogan/experiments/arldm_run/input_data/vistsis_out.h5") {
     HILOG(kDebug, "Intercept open for filename: {}"
                   " and mode: {}"
-                  " and fd: .", path, flags, fd);
+                  " and fd: {}.", path, flags, fd);
     h5fd = fd;
   }
   return fd;
