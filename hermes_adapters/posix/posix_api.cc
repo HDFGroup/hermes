@@ -121,6 +121,7 @@ int HERMES_DECL(open64)(const char *path, int flags, ...) {
                   " is tracked.", path, flags);
     h5fd = fd;
   }
+  return fd;
 }
 
 int HERMES_DECL(__open_2)(const char *path, int oflag) {
