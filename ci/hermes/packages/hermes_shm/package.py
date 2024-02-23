@@ -19,6 +19,7 @@ class HermesShm(CMakePackage):
     depends_on('catch2@3.0.1')
     depends_on('yaml-cpp')
     depends_on('doxygen@1.9.3')
+    depends_on('libelf')
 
     # Machine variants
     variant('ares', default=False, description='Build in ares')
@@ -28,7 +29,7 @@ class HermesShm(CMakePackage):
     # Main dependencies
     depends_on('mochi-thallium+cereal@0.10.1', when='+mochi')
     depends_on('cereal', when='+cereal')
-    depends_on('boost@1.7: +context +fiber', when='+boost')
+    depends_on('boost@1.7: +context +fiber +coroutine +regex +system +filesystem +serialization +pic +math', when='+boost')
     depends_on('mpi', when='+mpiio')
     depends_on('hdf5@1.14.0', when='+vfd')
     depends_on('libzmq', '+zmq')

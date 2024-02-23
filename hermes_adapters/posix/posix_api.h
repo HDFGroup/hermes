@@ -87,6 +87,8 @@ typedef int (*posix_fadvise_t)(int fd, off_t offset,
 typedef int (*flock_t)(int fd, int operation);
 typedef int (*remove_t)(const char *pathname);
 typedef int (*unlink_t)(const char *pathname);
+typedef int (*ftruncate_t)(int fd, off_t length);
+typedef int (*ftruncate64_t)(int fd, off64_t length);
 }
 
 namespace hermes::adapter {
@@ -96,6 +98,9 @@ static int fxstat_to_fstat(int fd, struct stat * stbuf);
 
 /** Pointers to the real posix API */
 class PosixApi : public RealApi {
+ public:
+  bool is_loaded_ = false;
+
  public:
   /** open */
   open_t open = nullptr;
@@ -160,6 +165,10 @@ class PosixApi : public RealApi {
   remove_t remove = nullptr;
   /** unlink */
   unlink_t unlink = nullptr;
+  /** ftruncate */
+  ftruncate_t ftruncate = nullptr;
+  /** ftruncate64 */
+  ftruncate64_t ftruncate64 = nullptr;
 
   PosixApi() : RealApi("open", "posix_intercepted") {
     open = (open_t)dlsym(real_lib_, "open");
@@ -221,6 +230,19 @@ class PosixApi : public RealApi {
     REQUIRE_API(remove)
     unlink = (unlink_t)dlsym(real_lib_, "unlink");
     REQUIRE_API(unlink)
+    ftruncate = (ftruncate_t)dlsym(real_lib_, "ftruncate");
+    REQUIRE_API(ftruncate)
+    ftruncate64 = (ftruncate64_t)dlsym(real_lib_, "ftruncate64");
+    REQUIRE_API(ftruncate64)
+  }
+
+  bool IsInterceptorLoaded() {
+    if (is_loaded_) {
+      return true;
+    }
+    InterceptorApi<PosixApi> check("open", "posix_intercepted");
+    is_loaded_ = check.is_loaded_;
+    return is_loaded_;
   }
 };
 
@@ -232,6 +254,7 @@ class PosixApi : public RealApi {
 #define HERMES_POSIX_API \
   hshm::EasySingleton<::hermes::adapter::PosixApi>::GetInstance()
 #define HERMES_POSIX_API_T hermes::adapter::PosixApi*
+
 
 namespace hermes::adapter {
 /** Used for compatability with older kernel versions */

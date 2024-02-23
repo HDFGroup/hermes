@@ -392,25 +392,37 @@ class Server : public TaskLib {
 
 
     size_t new_size = task->blob_off_ + task->data_size_;
+    LPointer<char> old_blob_data = blob_info.data_;
+    LPointer<char> new_blob_data = blob_info.data_;
+
     if (task->flags_.Any(HERMES_BLOB_DID_CREATE)) {
-      blob_info.data_ = HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_CO>(
+      new_blob_data = HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_CO>(
           new_size, task);
       blob_info.blob_size_ = task->data_size_;
       blob_info.max_blob_size_ = task->data_size_;
     } else if (blob_info.max_blob_size_ < new_size) {
-      LPointer<char> old_data = blob_info.data_;
-      blob_info.data_ = HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_CO>(
+      new_blob_data = HRUN_CLIENT->AllocateBufferServer<TASK_YIELD_CO>(
           new_size, task);
-      memcpy(blob_info.data_.ptr_, old_data.ptr_, blob_info.blob_size_);
-      HRUN_CLIENT->FreeBuffer(old_data);
-      blob_info.max_blob_size_ = new_size;
-      blob_info.blob_size_ = new_size;
+      memcpy(new_blob_data.ptr_, old_blob_data.ptr_, blob_info.blob_size_);
+      blob_info.data_ = new_blob_data;
+      HRUN_CLIENT->FreeBuffer(old_blob_data);
     }
 
     // Copy data to memory
     char *data = HRUN_CLIENT->GetDataPointer(task->data_);
-    char *blob_data = blob_info.data_.ptr_;
-    memcpy(blob_data + task->blob_off_, data, task->data_size_);
+    memcpy(new_blob_data.ptr_ + task->blob_off_, data, task->data_size_);
+
+    // Update metadata
+    if (task->flags_.Any(HERMES_BLOB_DID_CREATE)) {
+      blob_info.blob_size_ = task->data_size_;
+      blob_info.max_blob_size_ = task->data_size_;
+      blob_info.data_ = new_blob_data;
+    } else if (blob_info.max_blob_size_ < new_size) {
+      blob_info.blob_size_ = new_size;
+      blob_info.max_blob_size_ = new_size;
+    } else if (blob_info.blob_size_ < new_size) {
+      blob_info.blob_size_ = new_size;
+    }
 
     // Free data
     HILOG(kDebug, "Completing PUT for {}", blob_name.str());
@@ -441,6 +453,19 @@ class Server : public TaskLib {
                                    1, 0);
       stage_task->Wait<TASK_YIELD_CO>(task);
       HRUN_CLIENT->DelTask(stage_task);
+    }
+    if (task->blob_off_ > blob_info.blob_size_) {
+      task->data_size_ = 0;
+    }
+    if (task->data_size_ == std::numeric_limits<size_t>::max()) {
+      task->data_size_ = blob_info.blob_size_ - task->blob_off_;
+    }
+    if (task->blob_off_ + task->data_size_ > blob_info.blob_size_) {
+      task->data_size_ = blob_info.blob_size_ - task->blob_off_;
+    }
+    if (blob_info.data_.shm_.IsNull()) {
+      task->SetModuleComplete();
+      return;
     }
 
     // Copy data from memory
@@ -503,8 +528,7 @@ class Server : public TaskLib {
       blob_id_map.emplace(*blob_name_unique, blob_id);
       flags.SetBits(HERMES_BLOB_DID_CREATE);
       BLOB_MAP_T &blob_map = blob_map_;
-      blob_map.emplace(blob_id, BlobInfo());
-      BlobInfo &blob_info = blob_map[blob_id];
+      BlobInfo blob_info;
       blob_info.name_ = blob_name;
       blob_info.blob_id_ = blob_id;
       blob_info.tag_id_ = tag_id;
@@ -514,6 +538,8 @@ class Server : public TaskLib {
       blob_info.mod_count_ = 0;
       blob_info.access_freq_ = 0;
       blob_info.last_flush_ = 0;
+      blob_info.data_.shm_ = hipc::Pointer::GetNull();
+      blob_map.emplace(blob_id, blob_info);
       return blob_id;
     }
     return *it.val_->second_;

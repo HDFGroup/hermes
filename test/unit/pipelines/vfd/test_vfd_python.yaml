@@ -1,0 +1,8 @@
+name: hermes_unit_hermes_vfd_basic
+env: hermes
+pkgs:
+  - pkg_type: hermes_vfd_tests
+    pkg_name: hermes_vfd_tests
+    test_file: vfd_py_test
+    hermes: true
+    mode: default

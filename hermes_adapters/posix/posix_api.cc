@@ -37,17 +37,16 @@ namespace stdfs = std::filesystem;
 
 extern "C" {
 
-static __attribute__((constructor(101))) void init_posix(void) {
-  HERMES_POSIX_API;
-  HERMES_POSIX_FS;
-  TRANSPARENT_HERMES();;
-}/**/
+//static __attribute__((constructor(101))) void init_posix(void) {
+//  HERMES_POSIX_API;
+//  HERMES_POSIX_FS;
+//  TRANSPARENT_HERMES();;
+//}
 
 /**
  * POSIX
  */
 int HERMES_DECL(open)(const char *path, int flags, ...) {
-//  TRANSPARENT_HERMES();
   int mode = 0;
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
@@ -57,7 +56,10 @@ int HERMES_DECL(open)(const char *path, int flags, ...) {
     mode = va_arg(arg, int);
     va_end(arg);
   }
-  if (fs_api->IsPathTracked(path)) {
+  if (real_api->IsInterceptorLoaded()) {
+    TRANSPARENT_HERMES();
+  }
+  if (real_api->IsInterceptorLoaded() && fs_api->IsPathTracked(path)) {
     HILOG(kDebug, "Intercept open for filename: {}"
           " and mode: {}"
           " is tracked.", path, flags)
@@ -68,24 +70,29 @@ int HERMES_DECL(open)(const char *path, int flags, ...) {
     return f.hermes_fd_;
   }
 
+  int fd = -1;
   if (flags & O_CREAT || flags & O_TMPFILE) {
-    return real_api->open(path, flags, mode);
+    fd = real_api->open(path, flags, mode);
+  } else {
+    fd = real_api->open(path, flags);
   }
-  return real_api->open(path, flags);
+  return fd;
 }
 
 int HERMES_DECL(open64)(const char *path, int flags, ...) {
-//  TRANSPARENT_HERMES();
   int mode = 0;
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
-  if (flags & O_CREAT) {
+  if (flags & O_CREAT || flags & O_TMPFILE) {
     va_list arg;
     va_start(arg, flags);
     mode = va_arg(arg, int);
     va_end(arg);
   }
-  if (fs_api->IsPathTracked(path)) {
+  if (real_api->IsInterceptorLoaded()) {
+    TRANSPARENT_HERMES();
+  }
+  if (real_api->IsInterceptorLoaded() && fs_api->IsPathTracked(path)) {
     HILOG(kDebug, "Intercept open64 for filename: {}"
           " and mode: {}"
           " is tracked.", path, flags)
@@ -94,17 +101,22 @@ int HERMES_DECL(open64)(const char *path, int flags, ...) {
     stat.st_mode_ = mode;
     return fs_api->Open(stat, path).hermes_fd_;
   }
-  if (flags & O_CREAT) {
-    return real_api->open64(path, flags, mode);
+  int fd = -1;
+  if (flags & O_CREAT || flags & O_TMPFILE) {
+    fd = real_api->open64(path, flags, mode);
+  } else {
+    fd = real_api->open64(path, flags);
   }
-  return real_api->open64(path, flags);
+  return fd;
 }
 
 int HERMES_DECL(__open_2)(const char *path, int oflag) {
-//  TRANSPARENT_HERMES();
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
-  if (fs_api->IsPathTracked(path)) {
+  if (real_api->IsInterceptorLoaded()) {
+    TRANSPARENT_HERMES();
+  }
+  if (real_api->IsInterceptorLoaded() && fs_api->IsPathTracked(path)) {
     HILOG(kDebug, "Intercept __open_2 for filename: {}"
           " and mode: {}"
           " is tracked.", path, oflag)
@@ -117,11 +129,13 @@ int HERMES_DECL(__open_2)(const char *path, int oflag) {
 }
 
 int HERMES_DECL(creat)(const char *path, mode_t mode) {
-//  TRANSPARENT_HERMES();
   std::string path_str(path);
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
-  if (fs_api->IsPathTracked(path)) {
+  if (real_api->IsInterceptorLoaded()) {
+    TRANSPARENT_HERMES();
+  }
+  if (real_api->IsInterceptorLoaded() && fs_api->IsPathTracked(path)) {
     HILOG(kDebug, "Intercept creat for filename: {}"
           " and mode: {}"
           " is tracked.", path, mode)
@@ -134,11 +148,13 @@ int HERMES_DECL(creat)(const char *path, mode_t mode) {
 }
 
 int HERMES_DECL(creat64)(const char *path, mode_t mode) {
-//  TRANSPARENT_HERMES();
   std::string path_str(path);
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
-  if (fs_api->IsPathTracked(path)) {
+  if (real_api->IsInterceptorLoaded()) {
+    TRANSPARENT_HERMES();
+  }
+  if (real_api->IsInterceptorLoaded() && fs_api->IsPathTracked(path)) {
     HILOG(kDebug, "Intercept creat64 for filename: {}"
           " and mode: {}"
           " is tracked.", path, mode)
@@ -440,6 +456,30 @@ int HERMES_DECL(fsync)(int fd) {
   return real_api->fsync(fd);
 }
 
+int HERMES_DECL(ftruncate)(int fd, off_t length) {
+  bool stat_exists;
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
+  if (fs_api->IsFdTracked(fd)) {
+    File f; f.hermes_fd_ = fd;
+    HILOG(kDebug, "Intercepted ftruncate.")
+    return fs_api->Truncate(f, stat_exists, length);
+  }
+  return real_api->ftruncate(fd, length);
+}
+
+int HERMES_DECL(ftruncate64)(int fd, off64_t length) {
+  bool stat_exists;
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
+  if (fs_api->IsFdTracked(fd)) {
+    File f; f.hermes_fd_ = fd;
+    HILOG(kDebug, "Intercepted ftruncate.")
+    return fs_api->Truncate(f, stat_exists, length);
+  }
+  return real_api->ftruncate64(fd, length);
+}
+
 int HERMES_DECL(close)(int fd) {
   bool stat_exists;
   auto real_api = HERMES_POSIX_API;
@@ -462,7 +502,7 @@ int HERMES_DECL(flock)(int fd, int operation) {
     // TODO(llogan): implement?
     return 0;
   }
-  return real_api->close(fd);
+  return real_api->flock(fd, operation);
 }
 
 int HERMES_DECL(remove)(const char *pathname) {
