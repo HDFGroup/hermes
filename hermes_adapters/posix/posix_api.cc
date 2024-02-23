@@ -456,6 +456,32 @@ int HERMES_DECL(fsync)(int fd) {
   return real_api->fsync(fd);
 }
 
+int HERMES_DECL(ftruncate)(int fd, off_t length) {
+  bool stat_exists;
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
+  if (fs_api->IsFdTracked(fd)) {
+    File f; f.hermes_fd_ = fd;
+    HILOG(kDebug, "Intercepted ftruncate.")
+    // TODO(llogan)
+    return 0;
+  }
+  return real_api->ftruncate(fd, length);
+}
+
+int HERMES_DECL(ftruncate64)(int fd, off64_t length) {
+  bool stat_exists;
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
+  if (fs_api->IsFdTracked(fd)) {
+    File f; f.hermes_fd_ = fd;
+    HILOG(kDebug, "Intercepted ftruncate.")
+    // TODO(llogan)
+    return 0;
+  }
+  return real_api->ftruncate64(fd, length);
+}
+
 int HERMES_DECL(close)(int fd) {
   bool stat_exists;
   auto real_api = HERMES_POSIX_API;
