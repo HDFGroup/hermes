@@ -463,8 +463,7 @@ int HERMES_DECL(ftruncate)(int fd, off_t length) {
   if (fs_api->IsFdTracked(fd)) {
     File f; f.hermes_fd_ = fd;
     HILOG(kDebug, "Intercepted ftruncate.")
-    // TODO(llogan)
-    return 0;
+    return fs_api->Truncate(f, stat_exists, length);
   }
   return real_api->ftruncate(fd, length);
 }
@@ -476,8 +475,7 @@ int HERMES_DECL(ftruncate64)(int fd, off64_t length) {
   if (fs_api->IsFdTracked(fd)) {
     File f; f.hermes_fd_ = fd;
     HILOG(kDebug, "Intercepted ftruncate.")
-    // TODO(llogan)
-    return 0;
+    return fs_api->Truncate(f, stat_exists, length);
   }
   return real_api->ftruncate64(fd, length);
 }
