@@ -492,6 +492,9 @@ int HERMES_DECL(close)(int fd) {
     File f; f.hermes_fd_ = fd;
     return fs_api->Close(f, stat_exists);
   }
+  if (fd == h5fd) {
+    HILOG(kDebug, "Intercept pwrite for h5fd.");
+  }
   return real_api->close(fd);
 }
 
