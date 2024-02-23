@@ -170,10 +170,9 @@ include_directories(${Boost_INCLUDE_DIRS})
 message("Boost: ${Boost_LIBRARIES}")
 
 # Libelf
-find_package(LibElf REQUIRED)
-if(LibElf_FOUND)
-    message(STATUS "found libelf at ${LibElf_INCLUDE_DIRS}")
-endif()
+pkg_check_modules(libelf REQUIRED libelf)
+message(STATUS "found libelf at ${libelf_INCLUDE_DIRS}")
+include_directories(${libelf_INCLUDE_DIRS})
 
 # HDF5
 if(HERMES_ENABLE_VFD)

@@ -11,7 +11,7 @@ set(INTERCEPTOR_DEPS
 add_library(hermes_posix SHARED
         ${CMAKE_CURRENT_SOURCE_DIR}/posix_api.cc)
 add_dependencies(hermes_posix ${INTERCEPTOR_DEPS})
-target_link_libraries(hermes_posix MPI::MPI_CXX stdc++fs elf dl ${INTERCEPTOR_DEPS})
+target_link_libraries(hermes_posix MPI::MPI_CXX stdc++fs ${libelf_LIBRARIES} dl ${INTERCEPTOR_DEPS})
 
 #-----------------------------------------------------------------------------
 # Add Target(s) to CMake Install
