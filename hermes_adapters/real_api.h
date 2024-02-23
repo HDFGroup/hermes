@@ -13,6 +13,8 @@
 #ifndef HERMES_ADAPTER_API_H
 #define HERMES_ADAPTER_API_H
 
+#undef DEPRECATED
+
 #include <dlfcn.h>
 #include <link.h>
 // #include <libelf.h>
