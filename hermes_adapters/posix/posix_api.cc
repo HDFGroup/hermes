@@ -478,7 +478,7 @@ int HERMES_DECL(flock)(int fd, int operation) {
     // TODO(llogan): implement?
     return 0;
   }
-  return real_api->close(fd);
+  return real_api->flock(fd, operation);
 }
 
 int HERMES_DECL(remove)(const char *pathname) {
