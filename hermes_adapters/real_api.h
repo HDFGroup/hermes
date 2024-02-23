@@ -190,4 +190,6 @@ struct InterceptorApi {
 
 }  // namespace hermes::adapter
 
+#undef DEPRECATED
+
 #endif  // HERMES_ADAPTER_API_H
