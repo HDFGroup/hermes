@@ -179,6 +179,8 @@ struct InterceptorApi {
 
   InterceptorApi(const char *symbol_name,
                  const char *is_intercepted) : is_loaded_(false) {
+    is_loaded_ = true;
+    return;
     posix_ = hshm::EasySingleton<PosixT>::GetInstance();
     RealApiIter iter(symbol_name, is_intercepted);
     dl_iterate_phdr(callback, (void*)&iter);
