@@ -19,6 +19,7 @@ class HermesShm(CMakePackage):
     depends_on('catch2@3.0.1')
     depends_on('yaml-cpp')
     depends_on('doxygen@1.9.3')
+    depends_on('libelf')
 
     # Machine variants
     variant('ares', default=False, description='Build in ares')
