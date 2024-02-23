@@ -674,57 +674,7 @@ class Server : public TaskLib {
    * Destroy \a blob_id blob in \a bkt_id bucket
    * */
   void DestroyBlob(DestroyBlobTask *task, RunContext &rctx) {
-<<<<<<< HEAD
     task->SetModuleComplete();
-=======
-    switch (task->phase_) {
-      case DestroyBlobPhase::kFreeBuffers: {
-        BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
-        auto it = blob_map.find(task->blob_id_);
-        if (it == blob_map.end()) {
-          task->SetModuleComplete();
-          return;
-        }
-        BLOB_ID_MAP_T &blob_id_map = blob_id_map_[rctx.lane_id_];
-        BlobInfo &blob_info = it->second;
-        hshm::charbuf unique_name = GetBlobNameWithBucket(blob_info.tag_id_, blob_info.name_);
-        blob_id_map.erase(unique_name);
-        HSHM_MAKE_AR0(task->free_tasks_, nullptr);
-        task->free_tasks_->reserve(blob_info.buffers_.size());
-        for (BufferInfo &buf : blob_info.buffers_) {
-          TargetInfo &tgt_info = *target_map_[buf.tid_];
-          std::vector<BufferInfo> buf_vec = {buf};
-          bdev::FreeTask *free_task = tgt_info.AsyncFree(
-              task->task_node_ + 1, blob_info.score_,
-              std::move(buf_vec), false).ptr_;
-          task->free_tasks_->emplace_back(free_task);
-        }
-        task->phase_ = DestroyBlobPhase::kWaitFreeBuffers;
-      }
-      case DestroyBlobPhase::kWaitFreeBuffers: {
-        std::vector<bdev::FreeTask *> &free_tasks = *task->free_tasks_;
-        for (bdev::FreeTask *&free_task : free_tasks) {
-          if (!free_task->IsComplete()) {
-            return;
-          }
-        }
-        for (bdev::FreeTask *&free_task : free_tasks) {
-          HRUN_CLIENT->DelTask(free_task);
-        }
-        BLOB_MAP_T &blob_map = blob_map_[rctx.lane_id_];
-        BlobInfo &blob_info = blob_map[task->blob_id_];
-        if (task->update_size_) {
-          bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
-                                   task->tag_id_,
-                                   -(ssize_t) blob_info.blob_size_,
-                                   UpdateSizeMode::kAdd);
-        }
-        HSHM_DESTROY_AR(task->free_tasks_);
-        blob_map.erase(task->blob_id_);
-        task->SetModuleComplete();
-      }
-    }
->>>>>>> master
   }
   void MonitorDestroyBlob(u32 mode, DestroyBlobTask *task, RunContext &rctx) {
   }
