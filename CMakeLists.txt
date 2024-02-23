@@ -169,6 +169,12 @@ endif()
 include_directories(${Boost_INCLUDE_DIRS})
 message("Boost: ${Boost_LIBRARIES}")
 
+# Libelf
+find_package(LibElf REQUIRED)
+if(LibElf_FOUND)
+    message(STATUS "found libelf at ${LibElf_INCLUDE_DIRS}")
+endif()
+
 # HDF5
 if(HERMES_ENABLE_VFD)
     set(HERMES_REQUIRED_HDF5_VERSION 1.14.0)
