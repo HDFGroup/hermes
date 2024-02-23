@@ -43,8 +43,6 @@ extern "C" {
 //  TRANSPARENT_HERMES();;
 //}
 
-int h5fd = -1;
-
 /**
  * POSIX
  */
@@ -78,12 +76,6 @@ int HERMES_DECL(open)(const char *path, int flags, ...) {
   } else {
     fd = real_api->open(path, flags);
   }
-  if (std::string(path) == "/home/llogan/experiments/arldm_run/input_data/vistsis_out.h5") {
-    HILOG(kDebug, "Intercept open for filename: {}"
-                  " and mode: {}"
-                  " and fd: {}.", path, flags, fd);
-    h5fd = fd;
-  }
   return fd;
 }
 
@@ -114,12 +106,6 @@ int HERMES_DECL(open64)(const char *path, int flags, ...) {
     fd = real_api->open64(path, flags, mode);
   } else {
     fd = real_api->open64(path, flags);
-  }
-  if (std::string(path) == "/home/llogan/experiments/arldm_run/input_data/vistsis_out.h5") {
-    HILOG(kDebug, "Intercept open for filename: {}"
-                  " and mode: {}"
-                  " and fd: {}.", path, flags, fd);
-    h5fd = fd;
   }
   return fd;
 }
@@ -190,9 +176,6 @@ ssize_t HERMES_DECL(read)(int fd, void *buf, size_t count) {
     size_t ret = fs_api->Read(f, stat_exists, buf, count, io_status);
     if (stat_exists) return ret;
   }
-  if (fd == h5fd) {
-    HILOG(kDebug, "Intercept read for h5fd.");
-  }
   return real_api->read(fd, buf, count);
 }
 
@@ -205,9 +188,6 @@ ssize_t HERMES_DECL(write)(int fd, const void *buf, size_t count) {
     File f; f.hermes_fd_ = fd; IoStatus io_status;
     size_t ret = fs_api->Write(f, stat_exists, buf, count, io_status);
     if (stat_exists) return ret;
-  }
-  if (fd == h5fd) {
-    HILOG(kDebug, "Intercept write for h5fd.");
   }
   return real_api->write(fd, buf, count);
 }
@@ -222,9 +202,6 @@ ssize_t HERMES_DECL(pread)(int fd, void *buf, size_t count, off_t offset) {
     size_t ret = fs_api->Read(f, stat_exists, buf, offset, count, io_status);
     if (stat_exists) return ret;
   }
-  if (fd == h5fd) {
-    HILOG(kDebug, "Intercept pread for h5fd.");
-  }
   return real_api->pread(fd, buf, count, offset);
 }
 
@@ -238,9 +215,6 @@ ssize_t HERMES_DECL(pwrite)(int fd, const void *buf, size_t count,
     HILOG(kDebug, "Intercept pwrite.");
     size_t ret = fs_api->Write(f, stat_exists, buf, offset, count, io_status);
     if (stat_exists) return ret;
-  }
-  if (fd == h5fd) {
-    HILOG(kDebug, "Intercept pwrite for h5fd.");
   }
   return real_api->pwrite(fd, buf, count, offset);
 }
@@ -491,9 +465,6 @@ int HERMES_DECL(close)(int fd) {
           fd)
     File f; f.hermes_fd_ = fd;
     return fs_api->Close(f, stat_exists);
-  }
-  if (fd == h5fd) {
-    HILOG(kDebug, "Intercept pwrite for h5fd.");
   }
   return real_api->close(fd);
 }
