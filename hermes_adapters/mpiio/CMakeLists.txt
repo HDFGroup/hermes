@@ -18,7 +18,7 @@ set(INTERCEPTOR_DEPS
 add_library(hermes_mpiio SHARED
         ${CMAKE_CURRENT_SOURCE_DIR}/mpiio_api.cc)
 add_dependencies(hermes_mpiio ${INTERCEPTOR_DEPS})
-target_link_libraries(hermes_mpiio MPI::MPI_CXX stdc++fs dl ${INTERCEPTOR_DEPS})
+target_link_libraries(hermes_mpiio MPI::MPI_CXX stdc++fs elf dl ${INTERCEPTOR_DEPS})
 
 #-----------------------------------------------------------------------------
 # Add Target(s) to CMake Install
