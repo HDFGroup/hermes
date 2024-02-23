@@ -15,7 +15,7 @@
 
 #include <dlfcn.h>
 #include <link.h>
-#include <libelf.h>
+// #include <libelf.h>
 #include <gelf.h>
 
 
