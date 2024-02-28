@@ -239,6 +239,7 @@ endif()
 #-----------------------------------------------------------------------------
 # Main includes
 include_directories(${HermesShm_INCLUDE_DIRS})
+link_directories(${HermesShm_LIBRARY_DIRS})
 include_directories(${CMAKE_SOURCE_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/include)
 # Required Task includes

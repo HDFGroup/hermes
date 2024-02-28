@@ -1,4 +1,4 @@
-name: hermes_unit_hermes_vfd_basic
+name: hermes_unit_vfd_python
 env: hermes
 pkgs:
   - pkg_type: hermes_vfd_tests
