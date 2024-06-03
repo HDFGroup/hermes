@@ -362,6 +362,7 @@ class Server : public TaskLib {
           stager_mdm_.AsyncStageIn(task->task_node_ + 1,
                                    task->tag_id_,
                                    blob_info.name_,
+                                   task->data_size_,
                                    task->score_, 0);
       stage_task->Wait<TASK_YIELD_CO>(task);
       blob_info.mod_count_ = 1;
@@ -536,6 +537,7 @@ class Server : public TaskLib {
           stager_mdm_.AsyncStageIn(task->task_node_ + 1,
                                    task->tag_id_,
                                    blob_info.name_,
+                                   task->data_size_,
                                    1, 0);
       stage_task->Wait<TASK_YIELD_CO>(task);
       HRUN_CLIENT->DelTask(stage_task);

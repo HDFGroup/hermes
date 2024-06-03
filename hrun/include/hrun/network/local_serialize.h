@@ -54,9 +54,17 @@ class LocalSerialize {
       memcpy(data_.data() + off, &size, sizeof(size_t));
       off += sizeof(size_t);
       memcpy(data_.data() + off, obj.data(), size);
+    } else if (std::is_enum<T>::value) {
+      size_t size = sizeof(T);
+      size_t off = data_.size();
+      data_.resize(off + size);
+      memcpy(data_.data() + off, &obj, size);
     } else {
       throw std::runtime_error("Cannot serialize object");
     }
+
+    // Check if the type is an enum
+
     return *this;
   }
 };
@@ -96,6 +104,9 @@ class LocalDeserialize {
       off += sizeof(size_t);
       obj.resize(str_size);
       memcpy(obj.data(), data_.data() + off, str_size);
+    } else if (std::is_enum<T>::value) {
+      size = sizeof(T);
+      memcpy(&obj, data_.data() + off, size);
     } else {
       throw std::runtime_error("Cannot serialize object");
     }

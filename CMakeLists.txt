@@ -206,6 +206,14 @@ if(HERMES_ENABLE_VFD)
     endif()
 endif()
 
+# ADIOS
+if(HERMES_ENABLE_ADIOS)
+    find_package(ADIOS2 REQUIRED)
+    message(STATUS "found adios2 at ${ADIOS2_INCLUDE_DIRS}")
+    include_directories(${ADIOS2_INCLUDE_DIRS})
+    link_directories(${ADIOS2_LIBRARY_DIRS})
+    add_compile_definitions(HERMES_ENABLE_ADIOS)
+endif()
 
 #------------------------------------------------------------------------------
 # Setup CMake Environment
@@ -270,13 +278,15 @@ set(Hermes_CLIENT_LIBRARIES
         ${HermesShm_LIBRARIES}
         yaml-cpp
         cereal::cereal
-        -ldl -lrt -lc -pthread hrun_client)
+        -ldl -lrt -lc -pthread hrun_client
+        ${ADIOS2_LIBRARIES})
 set(Hermes_CLIENT_DEPS
         hrun_client)
 set(Hermes_RUNTIME_LIBRARIES
         ${Hermes_CLIENT_LIBRARIES}
         hrun_runtime
-        ${Boost_LIBRARIES})
+        ${Boost_LIBRARIES}
+        ${ADIOS2_LIBRARIES})
 set(Hermes_RUNTIME_DEPS
         hrun_client hrun_runtime)
 

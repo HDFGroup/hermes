@@ -15,7 +15,7 @@
 #include "hrun_admin/hrun_admin.h"
 #include "hermes/hermes.h"
 #include "hermes/bucket.h"
-#include "data_stager/factory/binary_stager.h"
+#include "data_stager/factory/stager_factory.h"
 #include <mpi.h>
 
 TEST_CASE("TestHermesConnect") {
@@ -523,6 +523,83 @@ TEST_CASE("TestHermesDataStager") {
   HRUN_ADMIN->FlushRoot(DomainId::GetGlobal());
   HILOG(kInfo, "Flushing finished")
 }
+
+#ifdef HERMES_ENABLE_ADIOS
+TEST_CASE("TestHermesAdios2") {
+  int rank, nprocs;
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+
+  // create dataset
+  std::string config_path = "/home/llogan/Documents/Projects/hermes/test/unit/hermes/adios2.xml";
+  std::string home_dir = getenv("HOME");
+  std::string path = home_dir + "/test.bp";
+  size_t count_per_proc = 16;
+  size_t off = rank * count_per_proc;
+  size_t proc_count = off + count_per_proc;
+  size_t var_count = KILOBYTES(1);
+  size_t var_size = var_count * sizeof(double);
+
+  // Create an ADIOS file
+  adios2::ADIOS adios;
+
+  // Initialize Hermes on all nodes
+  HERMES->ClientInit();
+
+  // ADIOS2 Hermes Context
+  using hermes::data_stager::Adios2Stager;
+  hermes::Context bkt_ctx = Adios2Stager::BuildContext(
+      config_path, "SimulationOutput", 0);
+  adios2::IO io = adios.DeclareIO("SimulationOutput");
+
+  // Create a stageable bucket
+  hermes::Bucket write_bkt(path, bkt_ctx);
+
+  // Put a few blobs in the bucket
+  for (size_t i = off; i < proc_count; ++i) {
+    HILOG(kInfo, "Iteration: {}", i);
+    std::string var_name = "var" + std::to_string(i);
+    adios2::Variable<double> ad_var =
+        io.DefineVariable<double>(var_name,
+                                  {var_count, 1, 1},
+                                  {0, 0, 0},
+                                  {var_count, 1, 1});
+    hermes::Context blob_ctx = Adios2Stager::BuildPutContext();
+    std::vector<double> var(var_count, (double)i);
+    hermes::Blob blob(var_size);
+    memcpy(blob.data(), var.data(), blob.size());
+    std::string blob_name = Adios2Stager::CreateBlobName<double>(ad_var);
+    write_bkt.Put(blob_name, blob, blob_ctx);
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+  HRUN_ADMIN->FlushRoot(DomainId::GetGlobal());
+
+  // Destroy bucket
+  write_bkt.Destroy();
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (rank == 0) { HILOG(kInfo, "Flushing (write) began"); }
+  HRUN_ADMIN->FlushRoot(DomainId::GetGlobal());
+  if (rank == 0) { HILOG(kInfo, "Flushing (write) done"); }
+
+  // Re-create bucket + read
+  hermes::Bucket read_bkt(path, bkt_ctx);
+  for (size_t i = off; i < proc_count; ++i) {
+    std::string var_name = "var" + std::to_string(i);
+    adios2::Variable<double> ad_var =
+        io.InquireVariable<double>(var_name);
+    std::string blob_name = Adios2Stager::CreateBlobName(ad_var);
+    hermes::Blob blob;
+    read_bkt.Get(blob_name, blob, bkt_ctx);
+    std::vector<double> var(var_count, (double)i);
+    REQUIRE(blob.size() == var_size);
+    REQUIRE(memcmp(blob.data(), var.data(), blob.size()) == 0);
+  }
+  if (rank == 0) { HILOG(kInfo, "Flushing (read) began"); }
+  HRUN_ADMIN->FlushRoot(DomainId::GetGlobal());
+  if (rank == 0) { HILOG(kInfo, "Flushing (read) done"); }
+}
+#endif
 
 TEST_CASE("TestHermesDataOp") {
   int rank, nprocs;

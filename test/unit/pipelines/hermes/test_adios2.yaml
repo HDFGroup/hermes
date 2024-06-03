@@ -1,0 +1,14 @@
+name: hermes_unit_hermes_mpiio_basic_large
+env: hermes
+pkgs:
+  - pkg_type: hermes_run
+    pkg_name: hermes_run
+    ram: 16m
+    sleep: 5
+    do_dbg: true
+    dbg_port: 4000
+  - pkg_type: hermes_unit_tests
+    pkg_name: hermes_unit_tests
+    TEST_CASE: TestHermesAdios2
+    do_dbg: true
+    dbg_port: 4001
