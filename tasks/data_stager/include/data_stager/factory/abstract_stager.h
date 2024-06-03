@@ -18,6 +18,13 @@ class AbstractStager {
   AbstractStager() = default;
   ~AbstractStager() = default;
 
+  /** Build context for staging */
+  static Context BuildPutContext() {
+    Context ctx;
+    ctx.flags_.SetBits(HERMES_SHOULD_STAGE);
+    return ctx;
+  }
+
   virtual void RegisterStager(RegisterStagerTask *task, RunContext &rctx) = 0;
   virtual void StageIn(blob_mdm::Client &blob_mdm, StageInTask *task, RunContext &rctx) = 0;
   virtual void StageOut(blob_mdm::Client &blob_mdm, StageOutTask *task, RunContext &rctx) = 0;

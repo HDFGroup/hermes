@@ -134,12 +134,6 @@ struct SetBlobMdmTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
   void ReplicateEnd() {}
 };
 
-class UpdateSizeMode {
- public:
-  TASK_METHOD_T kAdd = 0;
-  TASK_METHOD_T kCap = 1;
-};
-
 /** Update bucket size */
 struct UpdateSizeTask : public Task, TaskFlags<TF_SRL_SYM> {
   IN TagId tag_id_;

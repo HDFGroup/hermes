@@ -1,5 +1,5 @@
 # NOTE(llogan): This dockerfile assumes that
-# hermes github is mounted on /hermes
+# hermes github is the current working directory
 
 # Install ubuntu 22.04
 FROM ubuntu:22.04
@@ -38,9 +38,10 @@ ENV SPACK_DIR="${HOME}/spack"
 ENV SPACK_VERSION="v0.20.2"
 ENV HERMES_DEPS_DIR="${HOME}/hermes_deps"
 ENV HERMES_DIR="${HOME}/hermes"
+COPY ci/module_load.sh module_load.sh
 
 # Install Spack
-RUN . /hermes/ci/module_load.sh && \
+RUN . /module_load.sh && \
     git clone -b ${SPACK_VERSION} https://github.com/spack/spack ${SPACK_DIR} && \
     . "${SPACK_DIR}/share/spack/setup-env.sh" && \
     git clone -b dev https://github.com/lukemartinlogan/hermes.git ${HERMES_DEPS_DIR} && \
@@ -50,7 +51,7 @@ RUN . /hermes/ci/module_load.sh && \
     spack external find
 
 # Install hermes_shm
-RUN . /hermes/ci/module_load.sh && \
+RUN . /module_load.sh && \
     . "${SPACK_DIR}/share/spack/setup-env.sh" && \
     spack external find && \
     spack install hermes_shm@master+vfd+mpiio^mpich@3.3.2

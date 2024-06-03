@@ -332,6 +332,13 @@ struct BlobInfo {
   }
 };
 
+/** The mode used to update size */
+class UpdateSizeMode {
+ public:
+  TASK_METHOD_T kAdd = 0;
+  TASK_METHOD_T kCap = 1;
+};
+
 /** Data structure used to store Bucket information */
 struct TagInfo {
   TagId tag_id_;

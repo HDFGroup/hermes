@@ -362,6 +362,7 @@ class Server : public TaskLib {
           stager_mdm_.AsyncStageIn(task->task_node_ + 1,
                                    task->tag_id_,
                                    blob_info.name_,
+                                   task->data_size_,
                                    task->score_, 0);
       stage_task->Wait<TASK_YIELD_CO>(task);
       blob_info.mod_count_ = 1;
@@ -480,7 +481,7 @@ class Server : public TaskLib {
       bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
                                task->tag_id_,
                                bkt_size_diff,
-                               bucket_mdm::UpdateSizeMode::kAdd);
+                               UpdateSizeMode::kAdd);
     }
     if (task->flags_.Any(HERMES_BLOB_DID_CREATE)) {
       bkt_mdm_.AsyncTagAddBlob(task->task_node_ + 1,
@@ -536,6 +537,7 @@ class Server : public TaskLib {
           stager_mdm_.AsyncStageIn(task->task_node_ + 1,
                                    task->tag_id_,
                                    blob_info.name_,
+                                   task->data_size_,
                                    1, 0);
       stage_task->Wait<TASK_YIELD_CO>(task);
       HRUN_CLIENT->DelTask(stage_task);
@@ -841,7 +843,7 @@ class Server : public TaskLib {
           bkt_mdm_.AsyncUpdateSize(task->task_node_ + 1,
                                    task->tag_id_,
                                    -(ssize_t) blob_info.blob_size_,
-                                   bucket_mdm::UpdateSizeMode::kAdd);
+                                   UpdateSizeMode::kAdd);
         }
         HSHM_DESTROY_AR(task->free_tasks_);
         blob_map.erase(task->blob_id_);

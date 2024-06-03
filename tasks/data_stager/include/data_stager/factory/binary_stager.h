@@ -139,7 +139,7 @@ class BinaryFileStager : public AbstractStager {
     bkt_mdm.AsyncUpdateSize(task->task_node_ + 1,
                              task->bkt_id_,
                              p.bucket_off_ + task->blob_off_ + task->data_size_,
-                             bucket_mdm::UpdateSizeMode::kCap);
+                             UpdateSizeMode::kCap);
   }
 };
 

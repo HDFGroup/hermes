@@ -236,6 +236,7 @@ struct UnregisterStagerTask : public Task, TaskFlags<TF_SRL_SYM | TF_REPLICA> {
 struct StageInTask : public Task, TaskFlags<TF_LOCAL> {
   IN hermes::BucketId bkt_id_;
   IN hipc::ShmArchive<hipc::charbuf> blob_name_;
+  IN size_t data_size_;
   IN float score_;
   IN u32 node_id_;
 
@@ -250,6 +251,7 @@ struct StageInTask : public Task, TaskFlags<TF_LOCAL> {
               const TaskStateId &state_id,
               const BucketId &bkt_id,
               const hshm::charbuf &blob_name,
+              size_t data_size,
               float score,
               u32 node_id) : Task(alloc) {
     // Initialize task
@@ -266,6 +268,7 @@ struct StageInTask : public Task, TaskFlags<TF_LOCAL> {
     HSHM_MAKE_AR(blob_name_, alloc, blob_name);
     score_ = score;
     node_id_ = node_id;
+    data_size_ = data_size;
   }
 
   /** Destructor */

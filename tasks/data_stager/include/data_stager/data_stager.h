@@ -91,19 +91,21 @@ class Client : public TaskLibClient {
                             const TaskNode &task_node,
                             const BucketId &bkt_id,
                             const hshm::charbuf &blob_name,
+                            size_t data_size,
                             float score,
                             u32 node_id) {
     HRUN_CLIENT->ConstructTask<StageInTask>(
         task, task_node, id_, bkt_id,
-        blob_name, score, node_id);
+        blob_name, data_size, score, node_id);
   }
   HSHM_ALWAYS_INLINE
   void StageInRoot(const BucketId &bkt_id,
                const hshm::charbuf &blob_name,
+               size_t data_size,
                float score,
                u32 node_id) {
     LPointer<hrunpq::TypedPushTask<StageInTask>> task =
-        AsyncStageInRoot(bkt_id, blob_name, score, node_id);
+        AsyncStageInRoot(bkt_id, blob_name, data_size, score, node_id);
     task.ptr_->Wait();
   }
   HRUN_TASK_NODE_PUSH_ROOT(StageIn);

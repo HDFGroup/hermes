@@ -8,6 +8,10 @@
 #include "../data_stager.h"
 #include "abstract_stager.h"
 #include "binary_stager.h"
+#ifdef HERMES_ENABLE_ADIOS
+#include "adios2.h"
+#include "adios2_stager.h"
+#endif
 
 namespace hermes::data_stager {
 
@@ -24,6 +28,10 @@ class StagerFactory {
       stager = std::make_unique<BinaryFileStager>();
     } else if (protocol == "parquet") {
     } else if (protocol == "hdf5") {
+    } else if (protocol == "adios2") {
+#ifdef HERMES_ENABLE_ADIOS
+      stager = std::make_unique<Adios2Stager>();
+#endif
     } else {
       throw std::runtime_error("Unknown stager type");
     }

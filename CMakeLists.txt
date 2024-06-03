@@ -24,8 +24,8 @@ option(HERMES_ENABLE_MPIIO_ADAPTER "Build the Hermes MPI-IO adapter." OFF)
 option(HERMES_ENABLE_VFD "Build the Hermes HDF5 Virtual File Driver" OFF)
 option(HERMES_ENABLE_PUBSUB_ADAPTER "Build the Hermes pub/sub adapter." OFF)
 option(HERMES_ENABLE_KVSTORE "Build the Hermes KVStore adapter." OFF)
-option(HERMES_ENABLE_PYTHON "Build the Hermes Python wrapper" ON)
-option(HERMES_ENABLE_ADIOS "Build the Hermes Python wrapper" ON)
+option(HERMES_ENABLE_PYTHON "Build the Hermes Python wrapper" OFF)
+option(HERMES_ENABLE_ADIOS "Build the Hermes Python wrapper" OFF)
 
 option(HERMES_MPICH "Specify that this a MPICH build" OFF)
 option(HERMES_OPENMPI "Specify that this a OpenMPI build" OFF)
@@ -169,6 +169,12 @@ endif()
 include_directories(${Boost_INCLUDE_DIRS})
 message("Boost: ${Boost_LIBRARIES}")
 
+# Libelf
+pkg_check_modules(libelf REQUIRED libelf)
+message(STATUS "found libelf at ${libelf_INCLUDE_DIRS}")
+include_directories(${libelf_INCLUDE_DIRS})
+link_directories(${libelf_LIBRARY_DIRS})
+
 # HDF5
 if(HERMES_ENABLE_VFD)
     set(HERMES_REQUIRED_HDF5_VERSION 1.14.0)
@@ -200,6 +206,14 @@ if(HERMES_ENABLE_VFD)
     endif()
 endif()
 
+# ADIOS
+if(HERMES_ENABLE_ADIOS)
+    find_package(ADIOS2 REQUIRED)
+    message(STATUS "found adios2 at ${ADIOS2_INCLUDE_DIRS}")
+    include_directories(${ADIOS2_INCLUDE_DIRS})
+    link_directories(${ADIOS2_LIBRARY_DIRS})
+    add_compile_definitions(HERMES_ENABLE_ADIOS)
+endif()
 
 #------------------------------------------------------------------------------
 # Setup CMake Environment
@@ -233,6 +247,7 @@ endif()
 #-----------------------------------------------------------------------------
 # Main includes
 include_directories(${HermesShm_INCLUDE_DIRS})
+link_directories(${HermesShm_LIBRARY_DIRS})
 include_directories(${CMAKE_SOURCE_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/include)
 # Required Task includes
@@ -263,13 +278,15 @@ set(Hermes_CLIENT_LIBRARIES
         ${HermesShm_LIBRARIES}
         yaml-cpp
         cereal::cereal
-        -ldl -lrt -lc -pthread hrun_client)
+        -ldl -lrt -lc -pthread hrun_client
+        ${ADIOS2_LIBRARIES})
 set(Hermes_CLIENT_DEPS
         hrun_client)
 set(Hermes_RUNTIME_LIBRARIES
         ${Hermes_CLIENT_LIBRARIES}
         hrun_runtime
-        ${Boost_LIBRARIES})
+        ${Boost_LIBRARIES}
+        ${ADIOS2_LIBRARIES})
 set(Hermes_RUNTIME_DEPS
         hrun_client hrun_runtime)
 

@@ -91,6 +91,15 @@ if(thallium_FOUND)
   message(STATUS "found thallium at ${thallium_DIR}")
 endif()
 
+# ADIOS
+if(HERMES_ENABLE_ADIOS)
+    find_package(ADIOS2 REQUIRED)
+    message(STATUS "found adios2")
+    include_directories(${ADIOS2_INCLUDE_DIRS})
+    link_directories(${ADIOS2_LIBRARY_DIRS})
+    add_compile_definitions(HERMES_ENABLE_ADIOS)
+endif()
+
 #-----------------------------------------------------------------------------
 # Mark hermes as found and set all needed packages
 #-----------------------------------------------------------------------------
@@ -107,6 +116,7 @@ set(Hermes_LIBRARIES
         -ldl -lrt -lc -pthread
         thallium
         hermes
+        ${ADIOS2_LIBRARIES}
         ${Boost_LIBRARIES} ${Hermes_LIBRARY})
 set(Hermes_LIBRARY_DIRS ${HermeShm_LIBRARY_DIRS})
 # Set Hermes client dirs (equal to Hermes dirs)
