@@ -68,9 +68,9 @@ class Hermes(CMakePackage):
             elif 'mpich' in self.spec:
                 args.append('-DHERMES_MPICH=ON')
         if '+stdio' in self.spec:
-            args.append('-HERMES_ENABLE_STDIO_ADAPTER=ON')
+            args.append('-DHERMES_ENABLE_STDIO_ADAPTER=ON')
         if '+vfd' in self.spec:
-            args.append('-HERMES_ENABLE_VFD=ON')
+            args.append('-DHERMES_ENABLE_VFD=ON')
         if '+compress' in self.spec:
             args.append(self.define('HERMES_ENABLE_COMPRESSION', 'ON'))
         if '+encrypt' in self.spec:
