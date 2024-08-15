@@ -107,6 +107,8 @@ SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 # HermesShm
 find_package(HermesShm CONFIG REQUIRED)
 message(STATUS "found hermes_shm.h at ${HermesShm_INCLUDE_DIRS}")
+include_directories(${HermesShm_INCLUDE_DIRS})
+link_directories(${HermesShm_LIBRARY_DIRS})
 
 # YAML-CPP
 find_package(yaml-cpp REQUIRED)
@@ -238,7 +240,6 @@ endif()
 # Build Hermes Main Packages
 #-----------------------------------------------------------------------------
 # Main includes
-include_directories(${HermesShm_INCLUDE_DIRS})
 include_directories(${CMAKE_SOURCE_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/include)
 # Required Task includes
