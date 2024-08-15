@@ -129,7 +129,7 @@ class ClientConfig : public BaseConfig {
                   return a.path_.size() > b.path_.size();
                 });
     } catch (const std::exception &e) {
-      HILOG(kError, "Error checking path: {}", e.what())
+      HELOG(kError, "Error checking path: {}", e.what())
     }
   }
 
@@ -232,7 +232,7 @@ class ClientConfig : public BaseConfig {
       }
       SetAdapterConfig(path, conf);
     } catch (const std::exception &e) {
-      HILOG(kError, "Error checking path: {}", e.what())
+      HELOG(kError, "Error checking path: {}", e.what())
       return;
     }
   }

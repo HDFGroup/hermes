@@ -125,7 +125,7 @@ class Filesystem : public FilesystemIoClient {
         exists->UpdateTime();
       }
     } catch (const std::exception &e) {
-      HILOG(kError, "Error opening file: {}", e.what())
+      HELOG(kError, "Error opening file: {}", e.what())
       f.status_ = false;
     }
   }
@@ -459,7 +459,7 @@ class Filesystem : public FilesystemIoClient {
       }
       return ret;
     } catch (const std::exception &e) {
-      HILOG(kError, "Error removing path: {}", e.what())
+      HELOG(kError, "Error removing path: {}", e.what())
       return -1;
     }
   }
@@ -714,7 +714,7 @@ class Filesystem : public FilesystemIoClient {
       // Assume it is excluded
       return false;
     } catch (const std::exception &e) {
-      HILOG(kError, "Error checking path: {}", e.what())
+      HELOG(kError, "Error checking path: {}", e.what())
       return false;
     }
   }
