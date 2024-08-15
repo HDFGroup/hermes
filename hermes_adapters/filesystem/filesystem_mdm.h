@@ -133,7 +133,7 @@ class MetadataManager {
       else
         return &iter->second;
     } catch(const std::exception &e) {
-      HILOG(kError, "Error finding path: {}", e.what())
+      HELOG(kError, "Error finding path: {}", e.what())
       return nullptr;
     }
   }
