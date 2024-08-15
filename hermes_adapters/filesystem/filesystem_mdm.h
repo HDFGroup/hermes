@@ -124,13 +124,18 @@ class MetadataManager {
    * @return The hermes file.
    * */
   std::list<File>* Find(const std::string &path) {
-    std::string canon_path = stdfs::absolute(path).string();
-    ScopedRwReadLock md_lock(lock_, kMDM_Find);
-    auto iter = path_to_hermes_file_.find(canon_path);
-    if (iter == path_to_hermes_file_.end())
+    try {
+      std::string canon_path = stdfs::absolute(path).string();
+      ScopedRwReadLock md_lock(lock_, kMDM_Find);
+      auto iter = path_to_hermes_file_.find(canon_path);
+      if (iter == path_to_hermes_file_.end())
+        return nullptr;
+      else
+        return &iter->second;
+    } catch(const std::exception &e) {
+      HILOG(kError, "Error finding path: {}", e.what())
       return nullptr;
-    else
-      return &iter->second;
+    }
   }
 
   /**

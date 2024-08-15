@@ -107,6 +107,8 @@ SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 # HermesShm
 find_package(HermesShm CONFIG REQUIRED)
 message(STATUS "found hermes_shm.h at ${HermesShm_INCLUDE_DIRS}")
+include_directories(${HermesShm_INCLUDE_DIRS})
+link_directories(${HermesShm_LIBRARY_DIRS})
 
 # YAML-CPP
 find_package(yaml-cpp REQUIRED)
@@ -168,6 +170,12 @@ if (Boost_FOUND)
 endif()
 include_directories(${Boost_INCLUDE_DIRS})
 message("Boost: ${Boost_LIBRARIES}")
+
+# Libelf
+pkg_check_modules(libelf REQUIRED libelf)
+message(STATUS "found libelf at ${libelf_INCLUDE_DIRS}")
+include_directories(${libelf_INCLUDE_DIRS})
+link_directories(${libelf_LIBRARY_DIRS})
 
 # HDF5
 if(HERMES_ENABLE_VFD)
@@ -232,7 +240,6 @@ endif()
 # Build Hermes Main Packages
 #-----------------------------------------------------------------------------
 # Main includes
-include_directories(${HermesShm_INCLUDE_DIRS})
 include_directories(${CMAKE_SOURCE_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/include)
 # Required Task includes

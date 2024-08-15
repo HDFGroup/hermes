@@ -70,8 +70,8 @@ struct UserPathInfo {
 
   /** Detect if a path matches the input path */
   bool Match(const std::string &abs_path) {
-    return std::regex_match(abs_path, regex_);
-    // return abs_path.rfind(path_) != std::string::npos;
+    return std::regex_match(abs_path, regex_) ||
+           abs_path.rfind(path_) != std::string::npos;
   }
 };
 
@@ -118,15 +118,19 @@ class ClientConfig : public BaseConfig {
   }
 
   void CreateAdapterPathTracking(const std::string &path, bool include) {
-    bool is_dir = stdfs::is_directory(path);
-    path_list_.emplace_back(
-        stdfs::absolute(path).string(), include, is_dir);
-    std::sort(path_list_.begin(),
-              path_list_.end(),
-              [](const UserPathInfo &a,
-                 const UserPathInfo &b) {
-                return a.path_.size() > b.path_.size();
-              });
+    try {
+      bool is_dir = stdfs::is_directory(path);
+      path_list_.emplace_back(
+          stdfs::absolute(path).string(), include, is_dir);
+      std::sort(path_list_.begin(),
+                path_list_.end(),
+                [](const UserPathInfo &a,
+                   const UserPathInfo &b) {
+                  return a.path_.size() > b.path_.size();
+                });
+    } catch (const std::exception &e) {
+      HILOG(kError, "Error checking path: {}", e.what())
+    }
   }
 
   void SetAdapterPathTracking(const std::string &path, bool include) {
@@ -214,18 +218,23 @@ class ClientConfig : public BaseConfig {
 
   void ParseAdapterConfig(YAML::Node &yaml_conf,
                           AdapterObjectConfig &conf) {
-    std::string path = yaml_conf["path"].as<std::string>();
-    path = hshm::ConfigParse::ExpandPath(path);
-    path = stdfs::absolute(path).string();
-    if (yaml_conf["mode"]) {
-      conf.mode_ = AdapterModeConv::to_enum(
-          yaml_conf["mode"].as<std::string>());
+    try {
+      std::string path = yaml_conf["path"].as<std::string>();
+      path = hshm::ConfigParse::ExpandPath(path);
+      path = stdfs::absolute(path).string();
+      if (yaml_conf["mode"]) {
+        conf.mode_ = AdapterModeConv::to_enum(
+            yaml_conf["mode"].as<std::string>());
+      }
+      if (yaml_conf["page_size"]) {
+        conf.page_size_ = hshm::ConfigParse::ParseSize(
+            yaml_conf["page_size"].as<std::string>());
+      }
+      SetAdapterConfig(path, conf);
+    } catch (const std::exception &e) {
+      HILOG(kError, "Error checking path: {}", e.what())
+      return;
     }
-    if (yaml_conf["page_size"]) {
-      conf.page_size_ = hshm::ConfigParse::ParseSize(
-          yaml_conf["page_size"].as<std::string>());
-    }
-    SetAdapterConfig(path, conf);
   }
 };
 

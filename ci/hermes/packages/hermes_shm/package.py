@@ -4,8 +4,6 @@ class HermesShm(CMakePackage):
     homepage = "https://github.com/lukemartinlogan/hermes_shm/wiki"
     git = "https://github.com/lukemartinlogan/hermes_shm.git"
     version('master', branch='master')
-    version("1.1.0", sha256="080d5361cff22794b670e4544c532926ca8b6d6ec695af25596efe035bfffea5")
-    version("1.0.0", sha256="a79f01d531ce89985ad59a2f62b41d74c2385e48d929e2f4ad895ae34137573b")
 
     # Main variants
     variant('debug', default=False, description='Build shared libraries')
@@ -21,6 +19,7 @@ class HermesShm(CMakePackage):
     depends_on('catch2@3.0.1')
     depends_on('yaml-cpp')
     depends_on('doxygen@1.9.3')
+    depends_on('libelf')
 
     # Machine variants
     variant('ares', default=False, description='Build in ares')
@@ -30,7 +29,7 @@ class HermesShm(CMakePackage):
     # Main dependencies
     depends_on('mochi-thallium+cereal@0.10.1', when='+mochi')
     depends_on('cereal', when='+cereal')
-    depends_on('boost@1.7: +context +fiber', when='+boost')
+    depends_on('boost@1.7: +context +fiber +coroutine +regex +system +filesystem +serialization +pic +math', when='+boost')
     depends_on('mpi', when='+mpiio')
     depends_on('hdf5@1.14.0', when='+vfd')
     depends_on('libzmq', '+zmq')

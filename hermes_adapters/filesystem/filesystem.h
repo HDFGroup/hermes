@@ -78,50 +78,55 @@ class Filesystem : public FilesystemIoClient {
     ctx.flags_.SetBits(HERMES_SHOULD_STAGE);
 
     std::shared_ptr<AdapterStat> exists = mdm->Find(f);
-    if (!exists) {
-      HILOG(kDebug, "File not opened before by adapter")
-      // Normalize path strings
-      stat.path_ = stdfs::absolute(path).string();
-      auto path_shm = hipc::make_uptr<hipc::charbuf>(stat.path_);
-      // Verify the bucket exists if not in CREATE mode
-      if (stat.adapter_mode_ == AdapterMode::kScratch &&
-          !stat.hflags_.Any(HERMES_FS_EXISTS) &&
-          !stat.hflags_.Any(HERMES_FS_CREATE)) {
-        TagId bkt_id = HERMES->GetTagId(stat.path_);
-        if (bkt_id.IsNull()) {
-          f.status_ = false;
-          return;
+    try {
+      if (!exists) {
+        HILOG(kDebug, "File not opened before by adapter")
+        // Normalize path strings
+        stat.path_ = stdfs::absolute(path).string();
+        auto path_shm = hipc::make_uptr<hipc::charbuf>(stat.path_);
+        // Verify the bucket exists if not in CREATE mode
+        if (stat.adapter_mode_ == AdapterMode::kScratch &&
+            !stat.hflags_.Any(HERMES_FS_EXISTS) &&
+            !stat.hflags_.Any(HERMES_FS_CREATE)) {
+          TagId bkt_id = HERMES->GetTagId(stat.path_);
+          if (bkt_id.IsNull()) {
+            f.status_ = false;
+            return;
+          }
         }
-      }
-      // Update page size
-      stat.page_size_ = mdm->GetAdapterPageSize(path);
-      // Bucket parameters
-      ctx.bkt_params_ = hermes::data_stager::BinaryFileStager::BuildFileParams(stat.page_size_);
-      // Get or create the bucket
-      if (stat.hflags_.Any(HERMES_FS_TRUNC)) {
-        // The file was opened with TRUNCATION
-        stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, 0, HERMES_SHOULD_STAGE);
-        stat.bkt_id_.Clear();
+        // Update page size
+        stat.page_size_ = mdm->GetAdapterPageSize(path);
+        // Bucket parameters
+        ctx.bkt_params_ = hermes::data_stager::BinaryFileStager::BuildFileParams(stat.page_size_);
+        // Get or create the bucket
+        if (stat.hflags_.Any(HERMES_FS_TRUNC)) {
+          // The file was opened with TRUNCATION
+          stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, 0, HERMES_SHOULD_STAGE);
+          stat.bkt_id_.Clear();
+        } else {
+          // The file was opened regularly
+          stat.file_size_ = GetBackendSize(*path_shm);
+          stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, stat.file_size_, HERMES_SHOULD_STAGE);
+        }
+        HILOG(kDebug, "BKT vs file size: {} {}", stat.bkt_id_.GetSize(), stat.file_size_);
+        // Update file position pointer
+        if (stat.hflags_.Any(HERMES_FS_APPEND)) {
+          stat.st_ptr_ = std::numeric_limits<size_t>::max();
+        } else {
+          stat.st_ptr_ = 0;
+        }
+        // Allocate internal hermes data
+        auto stat_ptr = std::make_shared<AdapterStat>(stat);
+        FilesystemIoClientState fs_ctx(&mdm->fs_mdm_, (void *) stat_ptr.get());
+        HermesOpen(f, stat, fs_ctx);
+        mdm->Create(f, stat_ptr);
       } else {
-        // The file was opened regularly
-        stat.file_size_ = GetBackendSize(*path_shm);
-        stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, stat.file_size_, HERMES_SHOULD_STAGE);
+        HILOG(kDebug, "File already opened by adapter")
+        exists->UpdateTime();
       }
-      HILOG(kDebug, "BKT vs file size: {} {}", stat.bkt_id_.GetSize(), stat.file_size_);
-      // Update file position pointer
-      if (stat.hflags_.Any(HERMES_FS_APPEND)) {
-        stat.st_ptr_ = std::numeric_limits<size_t>::max();
-      } else {
-        stat.st_ptr_ = 0;
-      }
-      // Allocate internal hermes data
-      auto stat_ptr = std::make_shared<AdapterStat>(stat);
-      FilesystemIoClientState fs_ctx(&mdm->fs_mdm_, (void*)stat_ptr.get());
-      HermesOpen(f, stat, fs_ctx);
-      mdm->Create(f, stat_ptr);
-    } else {
-      HILOG(kDebug, "File already opened by adapter")
-      exists->UpdateTime();
+    } catch (const std::exception &e) {
+      HILOG(kError, "Error opening file: {}", e.what())
+      f.status_ = false;
     }
   }
 
@@ -430,28 +435,33 @@ class Filesystem : public FilesystemIoClient {
     auto mdm = HERMES_FS_METADATA_MANAGER;
     int ret = RealRemove(pathname);
     // Destroy the bucket
-    std::string canon_path = stdfs::absolute(pathname).string();
-    Bucket bkt = HERMES->GetBucket(canon_path);
-    bkt.Destroy();
-    // Destroy all file descriptors
-    std::list<File>* filesp = mdm->Find(pathname);
-    if (filesp == nullptr) {
-      return ret;
-    }
-    HILOG(kDebug, "Destroying the file descriptors: {}", pathname);
-    std::list<File> files = *filesp;
-    for (File &f : files) {
-      std::shared_ptr<AdapterStat> stat = mdm->Find(f);
-      if (stat == nullptr) { continue; }
-      FilesystemIoClientState fs_ctx(&mdm->fs_mdm_, (void *)&stat);
-      HermesClose(f, *stat, fs_ctx);
-      RealClose(f, *stat);
-      mdm->Delete(stat->path_, f);
-      if (stat->adapter_mode_ == AdapterMode::kScratch) {
-        ret = 0;
+    try {
+      std::string canon_path = stdfs::absolute(pathname).string();
+      Bucket bkt = HERMES->GetBucket(canon_path);
+      bkt.Destroy();
+      // Destroy all file descriptors
+      std::list<File> *filesp = mdm->Find(pathname);
+      if (filesp == nullptr) {
+        return ret;
       }
+      HILOG(kDebug, "Destroying the file descriptors: {}", pathname);
+      std::list<File> files = *filesp;
+      for (File &f : files) {
+        std::shared_ptr<AdapterStat> stat = mdm->Find(f);
+        if (stat == nullptr) { continue; }
+        FilesystemIoClientState fs_ctx(&mdm->fs_mdm_, (void *) &stat);
+        HermesClose(f, *stat, fs_ctx);
+        RealClose(f, *stat);
+        mdm->Delete(stat->path_, f);
+        if (stat->adapter_mode_ == AdapterMode::kScratch) {
+          ret = 0;
+        }
+      }
+      return ret;
+    } catch (const std::exception &e) {
+      HILOG(kError, "Error removing path: {}", e.what())
+      return -1;
     }
-    return ret;
   }
 
   /**
@@ -688,20 +698,25 @@ class Filesystem : public FilesystemIoClient {
     if (!HERMES_CONF->is_initialized_) {
       return false;
     }
-    std::string abs_path = stdfs::absolute(path).string();
-    auto &paths = HERMES_CLIENT_CONF.path_list_;
-    // Check if path is included or excluded
-    for (config::UserPathInfo &pth : paths) {
-      if (pth.Match(abs_path)) {
-        if (abs_path == pth.path_ && pth.is_directory_) {
-          // Do not include if path is a tracked directory
-          return false;
+    try {
+      std::string abs_path = stdfs::absolute(path).string();
+      auto &paths = HERMES_CLIENT_CONF.path_list_;
+      // Check if path is included or excluded
+      for (config::UserPathInfo &pth : paths) {
+        if (pth.Match(abs_path)) {
+          if (abs_path == pth.path_ && pth.is_directory_) {
+            // Do not include if path is a tracked directory
+            return false;
+          }
+          return pth.include_;
         }
-        return pth.include_;
       }
+      // Assume it is excluded
+      return false;
+    } catch (const std::exception &e) {
+      HILOG(kError, "Error checking path: {}", e.what())
+      return false;
     }
-    // Assume it is excluded
-    return false;
   }
 };
 

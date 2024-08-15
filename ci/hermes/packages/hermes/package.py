@@ -53,6 +53,7 @@ class Hermes(CMakePackage):
     depends_on('hermes_shm+adios', when='+adios')
     depends_on('hermes_shm+encrypt', when='+encrypt')
     depends_on('hermes_shm+compress', when='+compress')
+    depends_on('libelf')
 
     def cmake_args(self):
         args = []
