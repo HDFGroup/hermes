@@ -28,7 +28,7 @@ RUN apt install -y \
     build-essential ca-certificates \
     coreutils curl environment-modules \
     gfortran git gpg lsb-release \
-    unzip zip \
+    unzip zip libelf-dev \
     bash jq gdbserver gdb
 
 # Setup basic environment
