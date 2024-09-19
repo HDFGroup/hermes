@@ -65,7 +65,7 @@ jobs:
 
       - name: Build and Test
 #        if: steps.hermes-cache.outputs.cache-hit != 'true'
-        run: docker exec /hermes_deps_c bash hermes/ci/build_hermes.sh
+        run: docker exec /hermes_deps_c bash /hermes/ci/build_hermes.sh
 
 #      - name: Test
 #        run: bash ci/test_hermes.sh
