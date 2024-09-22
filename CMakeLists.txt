@@ -203,7 +203,7 @@ if(HERMES_ENABLE_VFD)
                     ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES}
                     ${HDF5_LIBRARIES})
         else()
-            message(FATAL_ERROR "Could not find HDF5, please set HDF5_DIR (1.13.0) or HDF5_ROOT (1.13.1).")
+            message(FATAL_ERROR "Could not find HDF5, please set HDF5_DIR (1.14.0) or HDF5_ROOT (1.14.0).")
         endif()
     endif()
 endif()

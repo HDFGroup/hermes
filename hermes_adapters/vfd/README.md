@@ -7,7 +7,7 @@ HDF5 that can be used to interface with the Hermes API. The driver is built as a
 plugin library that is external to HDF5.
 
 ## 2. Dependencies
-The Hermes VFD requires [HDF5](https://github.com/HDFGroup/hdf5) >= `1.13.0`,
+The Hermes VFD requires [HDF5](https://github.com/HDFGroup/hdf5) >= `1.14.0`,
 which is the version that first introduced dynamically loadable VFDs.
 
 ## 3. Usage
@@ -18,7 +18,7 @@ plugin because it does not require code changes or recompilation.
 
 ### Method 1: Dynamically loaded by environment variable (recommended)
 
-As of HDF5 `1.13.0` each file in an HDF5 app opened or created with the default
+As of HDF5 `1.14.0` each file in an HDF5 app opened or created with the default
 file access property list (FAPL) will use the VFD specified in the `HDF5_DRIVER`
 environment variable rather than the default "sec2" (POSIX) driver. To use the
 Hermes VFD, simply set
