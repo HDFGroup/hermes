@@ -8,4 +8,4 @@ pkgs:
     pkg_name: hermes_mpiio_tests
     test_file: mpiio_basic
     hermes: true
-    size: large
+
