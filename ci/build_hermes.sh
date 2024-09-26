@@ -68,7 +68,7 @@ make install
 
 # Test Hermes
 export CXXFLAGS=-Wall
-ctest -VV
+ctest -D Experimental
 
 # Run make install unit test
 cd /hermes/test/unit/external
