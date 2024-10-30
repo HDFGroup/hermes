@@ -48,7 +48,7 @@ typedef UniqueId<101> BucketId;
 /** Represents a tag */
 typedef UniqueId<102> TagId;
 
-/** Represetnts a storage target */
+/** Represents a storage target */
 typedef TaskStateId TargetId;
 
 /** Represents a trait */
