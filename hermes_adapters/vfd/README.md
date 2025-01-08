@@ -68,7 +68,7 @@ HERMES_CONF=<path_to>/hermes.yaml
 LD_PRELOAD=<HRUN_INSTALL_prefix>/hermes_vfd/libhdf5_hermes_vfd.so
 ```
 
-Heres is a full example of running an HDF5 app with the Hermes VFD:
+Here is a full example of running an HDF5 app with the Hermes VFD:
 
 ```sh
 HDF5_DRIVER=hermes                                                    \
