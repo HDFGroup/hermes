@@ -181,8 +181,7 @@ link_directories(${libelf_LIBRARY_DIRS})
 if(HERMES_ENABLE_VFD)
     set(HERMES_REQUIRED_HDF5_VERSION 1.14.0)
     set(HERMES_REQUIRED_HDF5_COMPONENTS C)
-    find_package(HDF5 ${HERMES_REQUIRED_HDF5_VERSION} CONFIG NAMES hdf5
-            COMPONENTS ${HERMES_REQUIRED_HDF5_COMPONENTS} shared)
+    find_package(HDF5 REQUIRED)
     if(HDF5_FOUND)
         message(STATUS "found HDF5 ${HDF5_VERSION} at ${HDF5_INCLUDE_DIR}")
         set(HDF5_HERMES_VFD_EXT_INCLUDE_DEPENDENCIES
@@ -190,7 +189,7 @@ if(HERMES_ENABLE_VFD)
                 ${HDF5_INCLUDE_DIR})
         set(HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES
                 ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES}
-                ${HDF5_C_SHARED_LIBRARY})
+                ${HDF5_C_LIBRARIES})
     else()
         # Allow for HDF5 autotools builds
         find_package(HDF5 ${HERMES_REQUIRED_HDF5_VERSION} MODULE REQUIRED
